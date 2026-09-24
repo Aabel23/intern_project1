@@ -80,6 +80,24 @@ class DashboardController extends ChangeNotifier {
     await selectMachine(id);
   }
 
+  // Máy vừa bị gỡ: bỏ khỏi danh sách, đang chọn thì chuyển sang máy khác (nếu còn).
+  Future<void> forgetMachine(String id) async {
+    machines.remove(id);
+    names.remove(id);
+    roles.remove(id);
+    online.remove(id);
+    if (machineId == id) {
+      _session++;
+      machineId = null;
+      products.reset();
+      ingredients = const [];
+      ingredientError = null;
+      loadingIngredients = false;
+    }
+    notifyListeners();
+    await loadMyMachines();
+  }
+
   Future<void> selectMachine(String id) async {
     _session++;
     machineId = id;

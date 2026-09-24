@@ -31,9 +31,9 @@ def get_by_id(user_id: int):
 
 
 def get_by_username(username: str):
-    """Tìm một người dùng theo tên đăng nhập."""
+    """Tìm một người dùng theo tên đăng nhập, không phân biệt hoa/thường."""
     columns = ", ".join(PUBLIC_COLUMNS)
-    sql = f"SELECT {columns} FROM users WHERE username = ?"
+    sql = f"SELECT {columns} FROM users WHERE username = ? COLLATE NOCASE"
 
     with get_connection() as conn:
         row = conn.execute(sql, (username,)).fetchone()
@@ -45,13 +45,16 @@ def get_by_username(username: str):
 
 def get_by_email(email):
     with get_connection() as conn:
-        row = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        row = conn.execute("SELECT id FROM users WHERE email = ? COLLATE NOCASE", (email,)).fetchone()
     return dict(row) if row else None
 
 
 def get_credentials(username: str):
-    """Đọc mật khẩu đã băm để kiểm tra đăng nhập; không trả ra app."""
-    sql = "SELECT id, username, password FROM users WHERE username = ?"
+    """Đọc mật khẩu đã băm để kiểm tra đăng nhập; không trả ra app.
+
+    Không phân biệt hoa/thường để "An" và "an" là cùng một tài khoản.
+    """
+    sql = "SELECT id, username, password FROM users WHERE username = ? COLLATE NOCASE"
 
     with get_connection() as conn:
         row = conn.execute(sql, (username,)).fetchone()

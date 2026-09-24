@@ -8,3 +8,8 @@ __pycache__/
 *.db-journal
 # Tem QR in ra chứa product key của máy.
 tem_*.png
+# Tên, product key và server riêng của từng máy.
+machine/config/machine.env
+
+# Log, ảnh chụp của test tự động trên điện thoại.
+sandbox/e2e/logs/

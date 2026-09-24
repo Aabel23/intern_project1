@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simple_app/UI/dashboard/dashboard/main_dashboard.dart';
+import 'package:simple_app/UI/login/auth_page.dart';
 import 'package:simple_app/feature/machine_register/machine_register_qr.dart';
 
 // Server giả trả trạng thái online, menu và kho theo đúng giao thức thật.
@@ -20,36 +21,38 @@ Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {
     } else {
       final body = jsonDecode(await utf8.decoder.bind(request).join());
       received.add(body as Map<String, dynamic>);
-      reply = switch (body['ten']) {
-        'xem_menu' => {
-          'drinks': [
-            {
-              'drinkId': 1,
-              'name': 'Cà phê sữa',
-              'price': 25000.0,
-              'category': 'Cà phê',
-              'available': true,
-              'inStock': true,
-            },
-            {
-              'drinkId': 2,
-              'name': 'Trà đào',
-              'price': 30000.0,
-              'category': 'Trà',
-              'available': true,
-              'inStock': false,
-              'unavailableReason': 'Hết đào',
-            },
-          ],
-        },
-        'xem_nguyen_lieu' => {
-          'ingredients': [
-            {'id': 1, 'name': 'Sữa', 'amount': 500, 'in_stock': true},
-            {'id': 2, 'name': 'Đào', 'amount': 0, 'in_stock': false},
-          ],
-        },
-        _ => {'ok': true},
-      };
+      reply = request.uri.path == '/app/may-cua-toi'
+          ? {'valid': true, 'machines': []}
+          : switch (body['ten']) {
+              'xem_menu' => {
+                'drinks': [
+                  {
+                    'drinkId': 1,
+                    'name': 'Cà phê sữa',
+                    'price': 25000.0,
+                    'category': 'Cà phê',
+                    'available': true,
+                    'inStock': true,
+                  },
+                  {
+                    'drinkId': 2,
+                    'name': 'Trà đào',
+                    'price': 30000.0,
+                    'category': 'Trà',
+                    'available': true,
+                    'inStock': false,
+                    'unavailableReason': 'Hết đào',
+                  },
+                ],
+              },
+              'xem_nguyen_lieu' => {
+                'ingredients': [
+                  {'id': 1, 'name': 'Sữa', 'amount': 500, 'in_stock': true},
+                  {'id': 2, 'name': 'Đào', 'amount': 0, 'in_stock': false},
+                ],
+              },
+              _ => {'ok': true},
+            };
     }
     request.response.headers.contentType = ContentType.json;
     request.response.write(jsonEncode(reply));
@@ -77,7 +80,10 @@ void main() {
       try {
         await tester.pumpWidget(
           MaterialApp(
-            home: MainDashboard(serverUrl: 'http://127.0.0.1:${server.port}'),
+            home: MainDashboard(
+              serverUrl: 'http://127.0.0.1:${server.port}',
+              token: 'token-1',
+            ),
           ),
         );
         expect(find.text('Chưa chọn máy'), findsWidgets);
@@ -105,12 +111,60 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Cần xử lý'), findsOneWidget);
 
-        expect(received.map((r) => r['ten']).toSet(), {
+        final commands = received.where((r) => r['ten'] != null);
+        expect(commands.map((r) => r['ten']).toSet(), {
           'xem_menu',
           'xem_nguyen_lieu',
         });
-        expect(received.first['machine_id'], 'MAY-TEST');
+        // Relay chỉ nhận lệnh kèm token của người quản lý máy.
+        expect(commands.every((r) => r['token'] == 'token-1'), isTrue);
+        expect(commands.first['machine_id'], 'MAY-TEST');
         expect(tester.takeException(), isNull);
+      } finally {
+        await server.close(force: true);
+        HttpOverrides.global = previous;
+      }
+    });
+  });
+
+  testWidgets('Token hết hạn thì quay về màn hình đăng nhập', (tester) async {
+    await tester.runAsync(() async {
+      final previous = HttpOverrides.current;
+      HttpOverrides.global = null;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) async {
+        await utf8.decoder.bind(request).join();
+        request.response.statusCode = 400;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'valid': false,
+            'login_required': true,
+            'message': 'Phiên đăng nhập hết hạn, hãy đăng nhập lại',
+          }),
+        );
+        await request.response.close();
+      });
+      try {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MainDashboard(
+              serverUrl: 'http://127.0.0.1:${server.port}',
+              token: 'token-cu',
+            ),
+          ),
+        );
+        await _pumpUntil(tester, find.byType(AuthPage));
+        // Chờ hiệu ứng chuyển trang xong thì dashboard mới bị gỡ khỏi cây.
+        for (var i = 0; i < 20; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(find.byType(AuthPage), findsOneWidget);
+        expect(find.byType(MainDashboard), findsNothing);
+        expect(
+          find.text('Phiên đăng nhập hết hạn, hãy đăng nhập lại.'),
+          findsOneWidget,
+        );
       } finally {
         await server.close(force: true);
         HttpOverrides.global = previous;

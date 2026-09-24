@@ -28,4 +28,5 @@ def verify_user(data):
     if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", data["email"].strip()):
         return "Email không hợp lệ"
 
-    return check_duplicate(data["username"].strip(), data["email"].strip())
+    # Email lưu dạng chữ thường nên so trùng cũng bằng chữ thường.
+    return check_duplicate(data["username"].strip(), data["email"].strip().lower())

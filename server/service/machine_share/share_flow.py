@@ -11,10 +11,8 @@ from server.config.config import (
     INVITE_TTL_SECONDS,
 )
 from server.database.connection import get_connection
-from server.service.user_login.session import user_from_request
-
-
-NOT_LOGGED_IN = {"valid": False, "message": "Phiên đăng nhập hết hạn, hãy đăng nhập lại"}
+from server.database.machine import machine_invite, machine_read, machine_write
+from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
 
 
 def hash_code(code):
@@ -32,17 +30,11 @@ def create_invite(data):
     code = secrets.token_urlsafe(INVITE_CODE_BYTES)
     expires_at = time.time() + INVITE_TTL_SECONDS
     with get_connection() as conn:
-        owner = conn.execute(
-            "SELECT 1 FROM machine_managers WHERE machine_id=? AND user_id=? AND role='owner'",
-            (machine_id, user_id),
-        ).fetchone()
-        if owner is None:
+        if not machine_read.is_owner(machine_id, user_id, conn):
             return {"valid": False, "message": "Chỉ chủ máy mới chia sẻ được máy này"}
-        conn.execute("DELETE FROM machine_invites WHERE expires_at <= ?", (time.time(),))
-        conn.execute(
-            "INSERT INTO machine_invites (code_hash, machine_id, created_by, expires_at)"
-            " VALUES (?, ?, ?, ?)",
-            (hash_code(code), machine_id, user_id, expires_at),
+        # Tạo mã mới thì mã cũ chưa dùng của máy này hết hiệu lực.
+        machine_invite.replace_invite(
+            conn, hash_code(code), machine_id, user_id, expires_at, time.time()
         )
     return {
         "valid": True,
@@ -64,23 +56,12 @@ def accept_invite(data):
     # Khóa ghi để một mã không được hai người dùng cùng lúc.
     with get_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        invite = conn.execute(
-            "SELECT i.machine_id, m.name FROM machine_invites i"
-            " JOIN machines m ON m.machine_id = i.machine_id"
-            " WHERE i.code_hash=? AND i.used_at IS NULL AND i.expires_at > ?",
-            (hash_code(code), time.time()),
-        ).fetchone()
+        invite = machine_invite.find_valid_invite(conn, hash_code(code), time.time())
         if invite is None:
             return {"valid": False, "message": "Mã chia sẻ đã dùng hoặc hết hạn. Nhờ chủ máy tạo mã mới."}
-        conn.execute(
-            "UPDATE machine_invites SET used_by=?, used_at=datetime('now') WHERE code_hash=?",
-            (user_id, hash_code(code)),
-        )
+        machine_invite.mark_used(conn, hash_code(code), user_id)
         # Chủ quét mã của chính mình thì giữ nguyên quyền owner.
-        conn.execute(
-            "INSERT OR IGNORE INTO machine_managers (machine_id, user_id, role) VALUES (?, ?, 'manager')",
-            (invite["machine_id"], user_id),
-        )
+        machine_write.add_manager(conn, invite["machine_id"], user_id)
     return {
         "valid": True,
         "machine_id": invite["machine_id"],
@@ -93,11 +74,35 @@ def list_my_machines(data):
     user_id = user_from_request(data)
     if user_id is None:
         return NOT_LOGGED_IN
+    return {"valid": True, "machines": machine_read.list_by_user(user_id)}
+
+
+def list_staff(data):
+    """Chủ máy xem nhân viên đang được giao máy để thu hồi khi cần."""
+    user_id = user_from_request(data)
+    if user_id is None:
+        return NOT_LOGGED_IN
+    machine_id = data.get("machine_id")
+    if not isinstance(machine_id, str) or not machine_id:
+        return {"valid": False, "message": "Thiếu mã máy hợp lệ"}
     with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT m.machine_id, m.name, mm.role FROM machine_managers mm"
-            " JOIN machines m ON m.machine_id = mm.machine_id"
-            " WHERE mm.user_id=? ORDER BY mm.created_at, m.name",
-            (user_id,),
-        ).fetchall()
-    return {"valid": True, "machines": [dict(row) for row in rows]}
+        if not machine_read.is_owner(machine_id, user_id, conn):
+            return {"valid": False, "message": "Chỉ chủ máy mới xem được nhân viên"}
+        staff = machine_read.list_staff(machine_id, conn)
+    return {"valid": True, "staff": staff}
+
+
+def revoke_staff(data):
+    """Chủ máy thu hồi quyền của một nhân viên; không xóa được quyền chủ."""
+    user_id = user_from_request(data)
+    if user_id is None:
+        return NOT_LOGGED_IN
+    machine_id = data.get("machine_id")
+    staff_id = data.get("user_id")
+    if not isinstance(machine_id, str) or not machine_id or not isinstance(staff_id, int):
+        return {"valid": False, "message": "Thiếu mã máy hoặc nhân viên"}
+    with get_connection() as conn:
+        if not machine_read.is_owner(machine_id, user_id, conn):
+            return {"valid": False, "message": "Chỉ chủ máy mới thu hồi được quyền"}
+        machine_write.remove_manager(conn, machine_id, staff_id)
+    return {"valid": True, "message": "Đã thu hồi quyền nhân viên"}

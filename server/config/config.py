@@ -7,7 +7,7 @@ SERVER_PORT = 8000
 HEARTBEAT_TIMEOUT_SECONDS = 15
 COMMAND_TIMEOUT_SECONDS = 20
 
-SERVICE_EMAIL = "vananhbo2@gmail.com"
+# Tài khoản gửi mail và mật khẩu nằm trong config/.env, không ghi vào mã nguồn.
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 465
 SMTP_TIMEOUT_SECONDS = 10
@@ -28,12 +28,20 @@ INVITE_CODE_MIN_LENGTH = 20
 INVITE_CODE_MAX_LENGTH = 100
 
 
-def get_smtp_password() -> str:
-    """Đọc mật khẩu khi cần gửi mail, tránh nạp secret lúc import module."""
+def read_env(name: str) -> str:
+    """Đọc một khóa trong config/.env khi cần, tránh nạp secret lúc import module."""
     for line in EMAIL_ENV_PATH.read_text(encoding="utf-8").splitlines():
         key, separator, value = line.partition("=")
-        if separator and key.strip() == "SMTP_PASSWORD":
-            password = value.strip().strip('"\'')
-            if password:
-                return password
-    raise ValueError(f"Thiếu SMTP_PASSWORD trong {EMAIL_ENV_PATH}")
+        if separator and key.strip() == name:
+            value = value.strip().strip('"\'')
+            if value:
+                return value
+    raise ValueError(f"Thiếu {name} trong {EMAIL_ENV_PATH}")
+
+
+def get_smtp_password() -> str:
+    return read_env("SMTP_PASSWORD")
+
+
+def get_service_email() -> str:
+    return read_env("SERVICE_EMAIL")

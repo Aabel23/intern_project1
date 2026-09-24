@@ -8,17 +8,17 @@ import urllib.request
 from config.machine_config import (
     HEARTBEAT_INTERVAL_SECONDS,
     HEARTBEAT_PATH,
-    MACHINE_ID,
-    SERVER_URL,
+    get_product_key,
+    get_server_url,
 )
 
 
 def send_heartbeat():
-    # Gửi mã máy; server tự ghi lại thời điểm nhận được.
-    data = {"machine_id": MACHINE_ID}
+    # Máy xưng danh bằng product key; server tự tra machine_id và ghi thời điểm nhận.
+    data = {"product_key": get_product_key()}
     body = json.dumps(data).encode("utf-8")
     request = urllib.request.Request(
-        SERVER_URL + HEARTBEAT_PATH,
+        get_server_url() + HEARTBEAT_PATH,
         data=body,
         headers={"Content-Type": "application/json"},
     )
@@ -30,6 +30,6 @@ def run_heartbeat():
     while True:
         try:
             send_heartbeat()
-        except (urllib.error.URLError, OSError) as error:
+        except (urllib.error.URLError, OSError, ValueError) as error:
             print("Khong gui duoc heartbeat:", error, flush=True)
         time.sleep(HEARTBEAT_INTERVAL_SECONDS)

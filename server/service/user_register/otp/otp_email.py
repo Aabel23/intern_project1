@@ -9,10 +9,10 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 
 from server.config.config import (
-    SERVICE_EMAIL,
     SMTP_HOST,
     SMTP_PORT,
     SMTP_TIMEOUT_SECONDS,
+    get_service_email,
     get_smtp_password,
 )
 from .otp_generator import OTP_TTL_SECONDS
@@ -24,7 +24,7 @@ def build_email(client_mail, code):
     """Tạo email chứa mã OTP."""
     minutes = OTP_TTL_SECONDS // 60
     email = EmailMessage()
-    email["From"] = SERVICE_EMAIL
+    email["From"] = get_service_email()
     email["To"] = client_mail
     email["Subject"] = SUBJECT
     email.set_content(
@@ -38,7 +38,7 @@ def build_email(client_mail, code):
 def send_email(email):
     """Gửi email qua SMTP. Tách riêng để dễ thay thế khi test."""
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as smtp:
-        smtp.login(SERVICE_EMAIL, get_smtp_password())
+        smtp.login(get_service_email(), get_smtp_password())
         smtp.send_message(email)
 
 

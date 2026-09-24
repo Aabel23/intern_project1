@@ -73,30 +73,89 @@ class StartpointTest(unittest.TestCase):
         self.assertEqual(status, 200)
         status, mine = self.request('/app/may-cua-toi', {'token': token})
         self.assertEqual(mine['machines'][0]['role'], 'owner')
-        self.request('/machine/heartbeat', {'machine_id': 'TEST'})
-        status, result = self.request('/machine/trang-thai?machine_id=TEST')
+        # Máy xưng danh bằng product key, server tự tra machine_id đã cấp.
+        status, _ = self.request('/machine/heartbeat', {'product_key': 'test-key'})
+        self.assertEqual(status, 200)
+        status, result = self.request(f"/machine/trang-thai?machine_id={machine['machine_id']}")
         self.assertTrue(result['online'])
         self.assertEqual(self.request('/missing', {})[0], 404)
 
+    def make_owner_machine(self, username='owner', key='relay-key'):
+        with get_connection() as conn:
+            user_id = conn.execute(
+                "INSERT INTO users (full_name, username, password, email) VALUES (?, ?, 'x', ?)",
+                (username, username, f'{username}@test.local'),
+            ).lastrowid
+        token = create_session(user_id)
+        _, machine = self.request('/app/dang-ky-may', {
+            'machine_name': 'FlexMix-Relay', 'product_key': key, 'token': token,
+        })
+        return token, machine['machine_id']
+
     def test_waiting_app_does_not_block_machine(self):
         from server import server as relay
-        queued = threading.Event()
-        original_put = relay.HOP_THU.put
-
-        def put(command):
-            original_put(command)
-            queued.set()
-
-        with patch.object(relay.HOP_THU, 'put', side_effect=put):
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                app = pool.submit(self.request, '/app/gui-lenh', {
-                    'machine_id': 'TEST', 'ten': 'xem_menu', 'thamso': {},
-                })
-                self.assertTrue(queued.wait(3))
-                status, data = self.request('/machine/hoi-lenh')
+        token, machine_id = self.make_owner_machine()
+        self.request('/machine/heartbeat', {'product_key': 'relay-key'})
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            app = pool.submit(self.request, '/app/gui-lenh', {
+                'token': token, 'machine_id': machine_id, 'ten': 'xem_menu', 'thamso': {},
+            })
+            # App đang chờ kết quả trong khi máy vẫn hỏi lệnh được.
+            command = None
+            for _ in range(100):
+                status, data = self.request('/machine/hoi-lenh', {'product_key': 'relay-key'})
                 command = data['lenh']
-                self.request('/machine/tra-ket-qua', {'id': command['id'], 'ket_qua': {'ok': True}})
-                self.assertEqual(app.result(timeout=3), (200, {'ok': True}))
+                if command is not None:
+                    break
+                threading.Event().wait(0.02)
+            self.assertEqual(command['ten'], 'xem_menu')
+            self.assertNotIn('token', command)
+            self.request('/machine/tra-ket-qua', {
+                'product_key': 'relay-key', 'id': command['id'], 'ket_qua': {'ok': True},
+            })
+            self.assertEqual(app.result(timeout=3), (200, {'ok': True}))
+        self.assertEqual(relay.HOP_THU.get(machine_id), [])
+
+    def test_relay_checks_login_owner_and_product_key(self):
+        from server import server as relay
+        token, machine_id = self.make_owner_machine()
+        other, other_machine = self.make_owner_machine('other', 'other-key')
+        status, data = self.request('/app/gui-lenh', {'machine_id': machine_id, 'ten': 'xem_menu'})
+        self.assertEqual(status, 401)
+        self.assertTrue(data['login_required'])
+        status, _ = self.request('/app/gui-lenh', {
+            'token': other, 'machine_id': machine_id, 'ten': 'xem_menu',
+        })
+        self.assertEqual(status, 403)
+        self.assertEqual(self.request('/machine/heartbeat', {'product_key': 'sai-key'})[0], 403)
+        self.assertEqual(self.request('/machine/hoi-lenh', {})[0], 403)
+        # Máy chưa heartbeat thì báo offline ngay, không để app chờ.
+        status, data = self.request('/app/gui-lenh', {
+            'token': token, 'machine_id': machine_id, 'ten': 'xem_menu',
+        })
+        self.assertEqual(data, {'loi': 'Máy đang offline'})
+        # Máy khác không lấy được hay trả kết quả cho lệnh không thuộc về nó.
+        self.request('/machine/heartbeat', {'product_key': 'relay-key'})
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            app = pool.submit(self.request, '/app/gui-lenh', {
+                'token': token, 'machine_id': machine_id, 'ten': 'xem_menu',
+            })
+            for _ in range(100):
+                with relay.KHOA:
+                    pending = list(relay.HOP_THU.get(machine_id, []))
+                if pending:
+                    break
+                threading.Event().wait(0.02)
+            _, data = self.request('/machine/hoi-lenh', {'product_key': 'other-key'})
+            self.assertIsNone(data['lenh'])
+            self.request('/machine/tra-ket-qua', {
+                'product_key': 'other-key', 'id': pending[0]['id'], 'ket_qua': {'gia': True},
+            })
+            _, data = self.request('/machine/hoi-lenh', {'product_key': 'relay-key'})
+            self.request('/machine/tra-ket-qua', {
+                'product_key': 'relay-key', 'id': data['lenh']['id'], 'ket_qua': {'that': True},
+            })
+            self.assertEqual(app.result(timeout=3), (200, {'that': True}))
 
     def test_cleanup_callbacks(self):
         with patch.object(main, 'cleanup_registration') as registration:

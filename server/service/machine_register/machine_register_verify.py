@@ -2,7 +2,7 @@
 
 import hashlib
 
-from server.database.connection import get_connection
+from server.database.machine.machine_read import matches_key
 
 
 def verify_machine(data):
@@ -32,13 +32,7 @@ def verify_registration(data):
     if not isinstance(key, str) or not key.strip() or len(key) > 1024:
         return {"valid": False, "message": "Product key không hợp lệ"}
 
-    key_hash = hash_product_key(key)
-    with get_connection() as conn:
-        row = conn.execute(
-            "SELECT machine_id FROM machines WHERE machine_id=? AND product_key_hash=?",
-            (machine_id, key_hash),
-        ).fetchone()
-    if row is None:
+    if not matches_key(machine_id, hash_product_key(key)):
         return {"valid": False, "verified": False, "message": "Thông tin đăng ký máy không khớp"}
-    return {"valid": True, "verified": True, "machine_id": row["machine_id"],
+    return {"valid": True, "verified": True, "machine_id": machine_id,
             "message": "Đã xác minh đăng ký máy"}

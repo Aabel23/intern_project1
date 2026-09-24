@@ -1,6 +1,7 @@
-"""Tạo tem QR đăng ký máy cho app (xem app/flutter_app/lib/feature/device/QR.md).
+"""Tạo tem QR đăng ký máy cho app (xem app/flutter_app/lib/feature/machine_share/QR.md).
 
     python machine_qr.py <ten_may> <product_key> [-o file.png]
+    python machine_qr.py --from-env [-o file.png]   # đọc machine/config/machine.env
 """
 import argparse
 import json
@@ -26,10 +27,17 @@ def main() -> None:
     # Console Windows mặc định cp1252, không in được tiếng Việt.
     sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description='Tạo QR đăng ký máy.')
-    parser.add_argument('machine_name')
-    parser.add_argument('product_key')
+    parser.add_argument('machine_name', nargs='?')
+    parser.add_argument('product_key', nargs='?')
+    parser.add_argument('--from-env', action='store_true',
+                        help='lấy tên và key trong machine.env của máy')
     parser.add_argument('-o', '--output', help='Mặc định: <ten_may>.png')
     args = parser.parse_args()
+    if args.from_env:
+        from machine.config.machine_config import get_machine_name, get_product_key
+        args.machine_name, args.product_key = get_machine_name(), get_product_key()
+    elif not args.machine_name or not args.product_key:
+        parser.error('cần <ten_may> <product_key> hoặc --from-env')
 
     payload = build_payload(args.machine_name, args.product_key)
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=4)

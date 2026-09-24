@@ -56,3 +56,16 @@ SELECT m.* FROM machines m
 JOIN machine_managers mm ON mm.machine_id = m.machine_id
 WHERE mm.user_id = 1;
 ```
+
+## File quản lý dữ liệu máy
+
+Các service không viết SQL bảng máy trực tiếp mà gọi qua ba file:
+
+| File | Nội dung |
+| --- | --- |
+| `machine_read.py` | tra máy theo product key, khớp ID/key, chủ máy, quyền quản lý, máy của một tài khoản, danh sách nhân viên |
+| `machine_write.py` | thêm máy, gán chủ, thêm/xóa quyền nhân viên |
+| `machine_invite.py` | lưu mã mời mới (xóa mã cũ), tìm mã còn hiệu lực, đánh dấu đã dùng |
+
+Hàm ghi luôn nhận `conn` để nơi gọi giữ giao dịch (`BEGIN IMMEDIATE`); hàm đọc nhận
+`conn` tùy chọn, bỏ trống thì tự mở kết nối.

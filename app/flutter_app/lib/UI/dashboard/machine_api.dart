@@ -10,13 +10,21 @@ class MachineException implements Exception {
   String toString() => message;
 }
 
+// Server báo phiên đăng nhập hết hạn hoặc đã đăng xuất (login_required).
+class LoginRequiredException extends MachineException {
+  const LoginRequiredException(super.message);
+}
+
 // Gọi server theo đúng giao thức hiện có: app gửi lệnh, server chuyển cho máy.
 class MachineApi {
-  MachineApi(this.serverUrl, {this.token});
+  MachineApi(this.serverUrl, {this.token, this.onLoginRequired});
   final String serverUrl;
 
   // Token phiên đăng nhập; server dùng để biết ai là chủ/nhân viên của máy.
   final String? token;
+
+  // Dashboard truyền vào để quay về màn hình đăng nhập khi token hết hạn.
+  final void Function()? onLoginRequired;
 
   Future<Map<String, dynamic>> registerMachine(
     Map<String, String> packet,
@@ -41,6 +49,45 @@ class MachineApi {
 
   Future<Map<String, dynamic>> acceptShare(String code) =>
       _account('/app/nhan-chia-se', {'code': code});
+
+  // Chủ máy xem nhân viên đang được giao máy.
+  Future<List<Map<String, dynamic>>> listStaff(String machineId) async {
+    final result = await _account('/app/nhan-vien-may', {
+      'machine_id': machineId,
+    });
+    final rows = result['staff'];
+    if (rows is! List) {
+      throw const MachineException(
+        'Server trả danh sách nhân viên không hợp lệ.',
+      );
+    }
+    return rows.whereType<Map<String, dynamic>>().toList();
+  }
+
+  // Chủ máy thu hồi quyền của một nhân viên.
+  Future<Map<String, dynamic>> revokeStaff(String machineId, int userId) =>
+      _account('/app/thu-hoi-quyen', {
+        'machine_id': machineId,
+        'user_id': userId,
+      });
+
+  // Chủ máy đổi tên hiển thị của máy.
+  Future<Map<String, dynamic>> renameMachine(String machineId, String name) =>
+      _account('/app/doi-ten-may', {'machine_id': machineId, 'name': name});
+
+  // Chủ: xóa máy khỏi quán. Nhân viên: bỏ quyền quản lý của mình.
+  Future<Map<String, dynamic>> removeMachine(String machineId) =>
+      _account('/app/go-may', {'machine_id': machineId});
+
+  // Xóa token trên server; mất mạng thì app vẫn đăng xuất tại chỗ.
+  Future<void> logout() async {
+    if (token == null) return;
+    try {
+      await _request('POST', '/app/dang-xuat', body: {'token': token});
+    } on MachineException {
+      // Token cũ sẽ tự hết hạn trên server.
+    }
+  }
 
   // Các máy tài khoản đang là chủ (owner) hoặc được giao quản lý (manager).
   Future<List<Map<String, dynamic>>> myMachines() async {
@@ -93,7 +140,12 @@ class MachineApi {
     final result = await _request(
       'POST',
       '/app/gui-lenh',
-      body: {'machine_id': machineId, 'ten': command, 'thamso': params},
+      body: {
+        'machine_id': machineId,
+        'ten': command,
+        'thamso': params,
+        'token': ?token,
+      },
     );
     if (result is Map && result['loi'] != null) {
       throw MachineException(result['loi'].toString());
@@ -127,14 +179,24 @@ class MachineApi {
         final response = await request.close();
         final text = await utf8.decoder.bind(response).join();
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          // Các API tài khoản trả message tiếng Việt, hiện thẳng cho người dùng.
+          // API tài khoản trả "message", relay trả "loi"; hiện thẳng cho người dùng.
+          Object? error;
           try {
-            final error = jsonDecode(text);
-            if (error is Map && error['message'] is String) {
-              throw MachineException(error['message'] as String);
-            }
+            error = jsonDecode(text);
           } on FormatException {
             // Không phải JSON, dùng thông báo HTTP bên dưới.
+          }
+          if (error is Map) {
+            final message = error['message'] ?? error['loi'];
+            if (error['login_required'] == true) {
+              onLoginRequired?.call();
+              throw LoginRequiredException(
+                message is String
+                    ? message
+                    : 'Phiên đăng nhập hết hạn, hãy đăng nhập lại.',
+              );
+            }
+            if (message is String) throw MachineException(message);
           }
           throw MachineException('HTTP ${response.statusCode}: $text');
         }

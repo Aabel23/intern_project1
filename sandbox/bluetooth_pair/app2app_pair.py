@@ -1,8 +1,10 @@
-"""Laptop đóng vai app nhân viên để thử luồng share máy khi chỉ có một điện thoại.
+"""Laptop đóng vai app thứ hai để thử luồng share máy khi chỉ có một điện thoại.
 
-Điện thoại (chủ máy) bấm Chia sẻ rồi gửi mã qua Bluetooth (hoặc hiện QR), sandbox
-nhận mã, đăng nhập bằng tài khoản thứ hai rồi gọi đúng các API app nhân viên gọi,
-in mọi gói tin Bluetooth lẫn HTTP ra terminal.
+Nhân viên (mặc định): điện thoại là chủ máy, bấm Chia sẻ rồi gửi mã qua Bluetooth
+(hoặc hiện QR); laptop nhận mã, đăng nhập tài khoản thứ hai, gọi /app/nhan-chia-se.
+Chủ máy (--send): điện thoại là nhân viên, mở "Nhận chia sẻ qua Bluetooth";
+laptop đăng nhập tài khoản chủ, tạo mã mời rồi gửi qua Bluetooth tới điện thoại.
+Mọi gói tin Bluetooth lẫn HTTP đều in ra terminal.
 
 Chạy từ thư mục gốc androidv0.1 (server đang chạy):
     python sandbox/bluetooth_pair/app2app_pair.py            # nhận mã qua Bluetooth
@@ -10,26 +12,29 @@ Chạy từ thư mục gốc androidv0.1 (server đang chạy):
     python sandbox/bluetooth_pair/app2app_pair.py --camera   # quét bằng webcam laptop
     python sandbox/bluetooth_pair/app2app_pair.py --image anh.png
     python sandbox/bluetooth_pair/app2app_pair.py --text '{"type":"share","code":"..."}'
+    python sandbox/bluetooth_pair/app2app_pair.py --send --phone AA:BB:CC:DD:EE:FF --machine-id fm_...
 
+Mật khẩu hỏi trên terminal; chạy tự động thì đặt biến môi trường SANDBOX_PASSWORD.
 Cần: pip install opencv-python-headless khi đọc QR, adb khi dùng --adb.
 """
 
 import argparse
 import getpass
 import json
+import os
 import subprocess
 import sys
 import time
 import uuid
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from machine.pairing.bluetooth_pairing import pack_message, receive_message
-from sandbox.bluetooth_pair.win_bluetooth import serve
+from sandbox.bluetooth_pair.win_bluetooth import LoggedConnection, connect_service, serve
 from server.config.config import (
     INVITE_CODE_MAX_LENGTH,
     INVITE_CODE_MIN_LENGTH,
@@ -37,6 +42,7 @@ from server.config.config import (
 )
 from server.config.routing import (
     APP_ACCEPT_SHARE,
+    APP_CREATE_SHARE,
     APP_LOGIN,
     APP_MY_MACHINES,
     APP_VERIFY_LOGIN,
@@ -74,8 +80,12 @@ def post(server, path, body):
         method="POST",
     )
     try:
-        with urlopen(request, timeout=10) as response:
+        with urlopen(request, timeout=30) as response:
             result = json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        # Server trả lỗi nghiệp vụ (400/401/403) kèm JSON, vẫn in như response thường.
+        with error:
+            result = json.loads(error.read().decode("utf-8"))
     except URLError as error:
         sys.exit(f"Không gọi được server {server}: {error}")
     log("SERVER -> APP2", path, result)
@@ -184,7 +194,12 @@ def parse_share(data):
 
 
 def share_from_qr(args):
-    input("\nTrên điện thoại: tab Máy → menu máy → Chia sẻ để hiện QR, rồi bấm Enter… ")
+    if not (args.text or args.image):
+        try:
+            input("\nTrên điện thoại: tab Máy → menu máy → Chia sẻ để hiện QR, rồi bấm Enter… ")
+        except EOFError:
+            # Chạy tự động không có bàn phím: QR đã hiện sẵn trên điện thoại.
+            print()
     raw = read_qr(args)
     if not raw:
         sys.exit("Không thấy QR. Để QR hiện rõ trên màn hình rồi chạy lại.")
@@ -195,35 +210,68 @@ def share_from_qr(args):
         sys.exit("QR không phải JSON; có thể đang quét nhầm QR khác.")
 
 
-def share_from_bluetooth():
+def share_from_bluetooth(timeout=None):
     print("\nTrên điện thoại: tab Máy → menu máy → Chia sẻ → Gửi qua Bluetooth,",
           "chọn laptop này trong danh sách.", flush=True)
     data = serve(SHARE_UUID, "FlexMix Share", receive_share,
-                 peer="CHỦ MÁY", me="APP2", once=True)
+                 peer="CHỦ MÁY", me="APP2", once=True, timeout=timeout)
     if data is None:
         sys.exit("Đã dừng trước khi nhận được mã.")
     return data
 
 
+def share_to_phone(server, token, machine_id, phone):
+    """Giống sendShare trong BluetoothPairing.kt: identify -> ready, gửi share -> nhận ACK."""
+    invite = post(server, APP_CREATE_SHARE, {"machine_id": machine_id, "token": token})
+    if invite.get("valid") is not True:
+        sys.exit("Không tạo được mã mời.")
+    try:
+        sock = connect_service(phone, SHARE_UUID)
+    except OSError as error:
+        sys.exit(f"{error}. Điện thoại cần mở màn hình Nhận chia sẻ qua Bluetooth trước.")
+    print(f"\n=== Đã kết nối điện thoại {phone} ===", flush=True)
+    with LoggedConnection(sock, "NHÂN VIÊN", "CHỦ MÁY") as connection:
+        connection.settimeout(30)
+        with connection.makefile("rb") as reader:
+            connection.sendall(pack_message({"type": "identify"}))
+            if receive_message(reader) != {"type": "ready", "ok": True}:
+                sys.exit("Điện thoại chưa sẵn sàng nhận mã.")
+            connection.sendall(pack_message({"type": "share", "code": invite["code"]}))
+            ack = receive_message(reader)
+    return ack.get("type") == "ack" and ack.get("ok") is True
+
+
 def main():
     # Terminal Windows mặc định cp1252, không in được tiếng Việt.
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Giả lập app nhân viên nhận chia sẻ máy.")
+    sys.stderr.reconfigure(encoding="utf-8")
+    parser = argparse.ArgumentParser(description="Giả lập app thứ hai trong luồng chia sẻ máy.")
     parser.add_argument("--server", default=f"http://127.0.0.1:{SERVER_PORT}")
-    parser.add_argument("--username", help="tài khoản thứ hai, khác tài khoản chủ máy")
+    parser.add_argument("--username", help="tài khoản trên laptop, khác tài khoản trên điện thoại")
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--adb", action="store_true", help="chụp QR trên điện thoại qua adb")
     source.add_argument("--camera", action="store_true", help="quét QR bằng webcam")
     source.add_argument("--image", help="đọc QR từ file ảnh")
     source.add_argument("--text", help="dán thẳng nội dung QR")
+    source.add_argument("--send", action="store_true", help="laptop là chủ máy, gửi mã tới điện thoại")
+    parser.add_argument("--phone", help="địa chỉ Bluetooth điện thoại nhận (với --send)")
+    parser.add_argument("--machine-id", help="máy cần chia sẻ (với --send)")
+    parser.add_argument("--timeout", type=float, help="số giây chờ điện thoại gửi mã rồi dừng")
     args = parser.parse_args()
+    if args.send and not (args.phone and args.machine_id):
+        parser.error("--send cần --phone và --machine-id")
 
-    username = args.username or input("Tài khoản app thứ hai: ").strip()
-    password = getpass.getpass("Mật khẩu: ")
+    username = args.username or input("Tài khoản trên laptop: ").strip()
+    password = os.environ.get("SANDBOX_PASSWORD") or getpass.getpass("Mật khẩu: ")
     token = login(args.server, username, password)
 
+    if args.send:
+        ok = share_to_phone(args.server, token, args.machine_id, args.phone)
+        print("\n=== Điện thoại xác nhận nhận mã:", ok, "===", flush=True)
+        sys.exit(0 if ok else 1)
+
     use_qr = args.adb or args.camera or args.image or args.text
-    code = parse_share(share_from_qr(args) if use_qr else share_from_bluetooth())
+    code = parse_share(share_from_qr(args) if use_qr else share_from_bluetooth(args.timeout))
 
     result = post(args.server, APP_ACCEPT_SHARE, {"code": code, "token": token})
     if result.get("valid") is not True:

@@ -6,6 +6,7 @@ import '../../../feature/machine_register/machine_register_bluetooth.dart';
 import '../../../feature/machine_register/machine_register_qr.dart';
 
 import '../dashboard/dashboard_controller.dart';
+import '../machine_api.dart';
 import '../dashboard/dashboard_widgets.dart';
 
 // Bluetooth nhận thông tin máy; nhập mã chọn máy làm việc trong phiên này.
@@ -30,8 +31,12 @@ class MachinesTab extends StatelessWidget {
   }
 
   void _onMenu(BuildContext context, String id, String value) {
-    if (value != 'share') {
-      notAvailableYet(context);
+    if (value == 'rename') {
+      _rename(context, id);
+      return;
+    }
+    if (value == 'remove') {
+      _remove(context, id);
       return;
     }
     Navigator.of(context).push(
@@ -43,6 +48,54 @@ class MachinesTab extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _rename(BuildContext context, String id) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameDialog(initial: controller.names[id] ?? ''),
+    );
+    if (name == null || name.isEmpty || !context.mounted) return;
+    try {
+      await controller.api.renameMachine(id, name);
+      await controller.loadMyMachines();
+    } on MachineException catch (error) {
+      if (context.mounted) showMessage(context, error.message);
+    }
+  }
+
+  Future<void> _remove(BuildContext context, String id) async {
+    final owner = controller.roles[id] == 'owner';
+    final name = controller.names[id] ?? id;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(owner ? 'Gỡ máy khỏi quán?' : 'Bỏ quản lý máy?'),
+        content: Text(
+          owner
+              ? '$name sẽ bị xóa khỏi tài khoản của bạn và của mọi nhân viên. '
+                    'Muốn dùng lại phải thêm máy bằng tem QR hoặc Bluetooth.'
+              : 'Bạn sẽ không quản lý $name nữa cho tới khi chủ máy chia sẻ lại.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(owner ? 'Gỡ máy' : 'Bỏ quản lý'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await controller.api.removeMachine(id);
+      await controller.forgetMachine(id);
+    } on MachineException catch (error) {
+      if (context.mounted) showMessage(context, error.message);
+    }
   }
 
   @override
@@ -110,13 +163,18 @@ class MachinesTab extends StatelessWidget {
                                         value: 'share',
                                         child: Text('Chia sẻ cho nhân viên'),
                                       ),
-                                    const PopupMenuItem(
-                                      value: 'rename',
-                                      child: Text('Đổi tên'),
-                                    ),
-                                    const PopupMenuItem(
+                                    if (role == 'owner')
+                                      const PopupMenuItem(
+                                        value: 'rename',
+                                        child: Text('Đổi tên'),
+                                      ),
+                                    PopupMenuItem(
                                       value: 'remove',
-                                      child: Text('Gỡ khỏi quán'),
+                                      child: Text(
+                                        role == 'owner'
+                                            ? 'Gỡ khỏi quán'
+                                            : 'Bỏ quản lý máy',
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -217,6 +275,46 @@ class _MachineIdDialogState extends State<_MachineIdDialog> {
       FilledButton(
         onPressed: () => Navigator.pop(context, _input.text.trim()),
         child: const Text('Thêm'),
+      ),
+    ],
+  );
+}
+
+// Hộp thoại đổi tên, điền sẵn tên hiện tại của máy.
+class _RenameDialog extends StatefulWidget {
+  const _RenameDialog({required this.initial});
+  final String initial;
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final _input = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Đổi tên máy'),
+    content: TextField(
+      controller: _input,
+      autofocus: true,
+      decoration: const InputDecoration(labelText: 'Tên máy'),
+      onSubmitted: (_) => Navigator.pop(context, _input.text.trim()),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Hủy'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context, _input.text.trim()),
+        child: const Text('Lưu'),
       ),
     ],
   );

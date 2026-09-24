@@ -4,12 +4,17 @@ import hashlib
 import http.client
 import json
 import os
+import tempfile
 import threading
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from . import login_flow, login_verify
+from server.database.connection import get_connection
+from server.database.machine.init_db import init_db
 from .login_api import LoginHandler, LoginServer, ROUTES
+from .session import create_session, end_session, user_from_request
 
 
 def password_hash(password):
@@ -141,6 +146,24 @@ class LoginFlowTest(unittest.TestCase):
         self.assertIn("/app/gui-ma-otp", ROUTES)
         self.assertIn("/app/xac-minh-otp", ROUTES)
 
+
+
+class SessionTest(unittest.TestCase):
+    def test_logout_invalidates_token(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        with patch("server.database.connection.DB_PATH", Path(folder.name) / "test.db"):
+            init_db()
+            with get_connection() as conn:
+                user_id = conn.execute(
+                    "INSERT INTO users (full_name, username, password, email)"
+                    " VALUES ('a', 'a', 'x', 'a@test.local')"
+                ).lastrowid
+            token = create_session(user_id)
+            self.assertEqual(user_from_request({"token": token}), user_id)
+            self.assertTrue(end_session({"token": token})["valid"])
+            # Token cũ không dùng lại được sau khi đăng xuất.
+            self.assertIsNone(user_from_request({"token": token}))
 
 if __name__ == "__main__":
     unittest.main()

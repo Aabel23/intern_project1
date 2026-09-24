@@ -10,10 +10,8 @@ import 'registration_request.dart';
 class AuthPage extends StatefulWidget {
   const AuthPage({
     super.key,
-    this.serverUrl = const String.fromEnvironment(
-      'SERVER_URL',
-      defaultValue: 'http://192.168.1.158:8000',
-    ),
+    // Build với --dart-define=SERVER_URL=http://<IP máy chạy server>:8000.
+    this.serverUrl = const String.fromEnvironment('SERVER_URL'),
   });
   final String serverUrl;
 
@@ -58,6 +56,13 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _submit() async {
     if (_busy) return;
     if (!_formKey.currentState!.validate()) return;
+    if (widget.serverUrl.trim().isEmpty) {
+      _showMessage(
+        'App chưa có địa chỉ server. Build lại với '
+        '--dart-define=SERVER_URL=http://<IP server>:8000.',
+      );
+      return;
+    }
     FocusScope.of(context).unfocus();
     setState(() => _busy = true);
     try {

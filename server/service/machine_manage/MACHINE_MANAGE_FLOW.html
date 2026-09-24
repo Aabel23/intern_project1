@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đổi tên và gỡ máy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+  /* Bảng màu kem và cam đất theo phong cách Claude. */
+  :root {
+    --bg: #faf9f5; --fg: #141413; --muted: #6b6a63; --card: #ffffff;
+    --line: #e8e6dc; --accent: #c96442; --code-bg: #f0eee6; --warn: #a3542f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 48px 16px 72px; }
+  h1, h2, h3 {
+    font-family: "Source Serif 4", "Tiempos Text", Georgia, serif;
+    font-weight: 500; letter-spacing: -0.01em;
+  }
+  h1 { font-size: 2.2rem; margin: 0 0 10px; }
+  h2 {
+    font-size: 1.45rem; margin: 44px 0 12px; padding-top: 18px;
+    border-top: 1px solid var(--line); color: var(--accent);
+  }
+  h3 { font-size: 1.12rem; margin: 24px 0 8px; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  code {
+    font: 0.9em ui-monospace, "Cascadia Code", Consolas, monospace;
+    background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.45;
+  }
+  pre code { background: none; padding: 0; }
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 4px 18px 10px; margin: 14px 0;
+  }
+  .step h3 { margin-top: 14px; }
+  .num {
+    display: inline-block; min-width: 1.8em; text-align: center; margin-right: 6px;
+    background: var(--accent); color: var(--card); border-radius: 999px;
+    font-size: 0.85em; padding: 0 6px;
+  }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 3px 0; }
+  .note { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+<h1>Đổi tên và gỡ máy</h1>
+<p class="lead">Hai thao tác trong menu ⋮ của mỗi máy ở tab Máy. Cả hai đều là JSON gửi bằng POST tới server,
+có kèm token đăng nhập. Code server: <a href="manage_flow.py">manage_flow.py</a>, SQL: <a href="../../database/machine/machine_write.py">machine_write.py</a>.</p>
+
+<h2>API và gói tin</h2>
+<p>Mọi gói là JSON gửi bằng <code>POST</code>, <code>Content-Type: application/json</code>. Token hết hạn thì server trả <code>login_required: true</code> và app quay về màn hình đăng nhập.</p>
+<div class="table-wrap"><table>
+<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST</code></td><td><code>/app/doi-ten-may</code></td><td>Chủ máy</td><td>machine_id, name, token</td><td>valid, name, message</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/go-may</code></td><td>Chủ máy (xóa máy) hoặc nhân viên (bỏ quyền của mình)</td><td>machine_id, token</td><td>valid, deleted, message</td></tr>
+</table></div>
+<h3>Đổi tên máy</h3>
+<pre><code>{"machine_id": "fm_...", "name": "&lt;tên người dùng nhập&gt;", "token": "..."}
+→ 200 {"valid": true, "name": "...", "message": "Đã đổi tên máy"}
+→ 400 {"valid": false, "message": "Chỉ chủ máy mới đổi tên được"}
+→ 400 {"valid": false, "message": "Tên máy phải có 1-150 ký tự"}</code></pre>
+<h3>Gỡ máy</h3>
+<pre><code>{"machine_id": "fm_...", "token": "..."}
+→ 200 {"valid": true, "deleted": true,  "message": "Đã gỡ máy khỏi quán"}   (chủ)
+→ 200 {"valid": true, "deleted": false, "message": "Đã bỏ quản lý máy"}     (nhân viên)
+→ 400 {"valid": false, "message": "Bạn không quản lý máy này"}</code></pre>
+
+<h2>Đổi tên máy: từ lúc bấm nút</h2>
+<div class="step">
+<h3><span class="num">1</span>Menu ⋮ → Đổi tên (<a href="../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, <code>_rename()</code>)</h3>
+<p>Chỉ chủ máy thấy mục này. Hộp <code>_RenameDialog</code> điền sẵn tên hiện tại; bấm <strong>Lưu</strong> trả tên đã bỏ khoảng trắng hai đầu, tên rỗng hoặc bấm Hủy thì dừng.</p>
+</div>
+<div class="step">
+<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, <code>renameMachine()</code></h3>
+<p>POST <code>/app/doi-ten-may</code> với <code>{machine_id, name, token}</code>.</p>
+</div>
+<div class="step">
+<h3><span class="num">3</span><a href="manage_flow.py">manage_flow.py</a>, <code>rename_machine()</code></h3>
+<ol>
+  <li><code>user_from_request</code>: token → <code>user_id</code>.</li>
+  <li>Kiểm tra <code>machine_id</code> và tên 1-150 ký tự.</li>
+  <li><code>machine_read.is_owner()</code>: phải là chủ máy.</li>
+  <li><code>machine_write.rename_machine()</code>: <code>UPDATE machines SET name=?</code>; trigger tự cập nhật <code>updated_at</code>.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">4</span>App cập nhật</h3>
+<p>Thành công thì <code>controller.loadMyMachines()</code> gọi <code>/app/may-cua-toi</code>, dòng máy hiện tên mới. Lỗi thì hiện SnackBar.</p>
+</div>
+
+<h2>Gỡ máy: từ lúc bấm nút</h2>
+<div class="step">
+<h3><span class="num">1</span>Menu ⋮ → Gỡ khỏi quán / Bỏ quản lý máy (<code>_remove()</code>)</h3>
+<p>Chủ thấy "Gỡ khỏi quán", nhân viên thấy "Bỏ quản lý máy". Hộp xác nhận nói rõ hậu quả; bấm <strong>Gỡ máy</strong> / <strong>Bỏ quản lý</strong> mới đi tiếp.</p>
+</div>
+<div class="step">
+<h3><span class="num">2</span><code>MachineApi.removeMachine()</code></h3>
+<p>POST <code>/app/go-may</code> với <code>{machine_id, token}</code>.</p>
+</div>
+<div class="step">
+<h3><span class="num">3</span><a href="manage_flow.py">manage_flow.py</a>, <code>remove_machine()</code></h3>
+<ol>
+  <li>Token → <code>user_id</code>, kiểm tra <code>machine_id</code>, <code>BEGIN IMMEDIATE</code> khóa ghi.</li>
+  <li><strong>Chủ:</strong> <code>machine_write.delete_machine()</code> xóa dòng <code>machines</code>; <code>ON DELETE CASCADE</code> xóa luôn quyền mọi nhân viên và mã mời. <code>product_key_hash</code> mất nên tem QR đăng ký lại được.</li>
+  <li><strong>Nhân viên:</strong> <code>machine_read.can_manage()</code> rồi <code>machine_write.remove_manager()</code> xóa đúng dòng <code>role='manager'</code> của người đó.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">4</span>App cập nhật (<a href="../../../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, <code>forgetMachine()</code>)</h3>
+<p>Bỏ máy khỏi danh sách; nếu đang chọn thì bỏ chọn, xóa menu/kho đang hiện. Sau đó <code>loadMyMachines()</code>; còn máy khác thì tự chọn máy đầu.</p>
+</div>
+
+<h2>Sơ đồ tóm tắt</h2>
+<pre><code>APP                                  SERVER                               DATABASE
+Đổi tên → renameMachine ──POST /app/doi-ten-may {machine_id, name, token}──▶ is_owner?
+                                                               └─ UPDATE machines SET name
+        ◀── {valid, name} ── loadMyMachines ──POST /app/may-cua-toi──▶
+Gỡ máy  → removeMachine ──POST /app/go-may {machine_id, token}──▶ chủ?   DELETE machines (cascade)
+                                                                 nhân viên? DELETE machine_managers
+        ◀── {valid, deleted} ── forgetMachine → loadMyMachines</code></pre>
+
+<h2>Vài điểm cần biết</h2>
+<ul>
+  <li>Sau khi chủ gỡ máy, máy pha vẫn gửi heartbeat bằng product key nhưng server trả 403 cho tới khi máy được đăng ký lại.</li>
+  <li>Nhân viên không thấy mục Đổi tên; server cũng từ chối nếu nhân viên gọi thẳng API.</li>
+</ul>
+</main>
+</body>
+</html>

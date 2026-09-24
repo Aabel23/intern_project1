@@ -2,12 +2,18 @@
 
 import json
 import sqlite3
+import sys
 import threading
 import time
 from http.server import ThreadingHTTPServer
 
 from server.config.config import SERVER_HOST, SERVER_PORT
-from server.config.routing import APP_SEND_COMMAND, MACHINE_HEARTBEAT, MACHINE_SEND_RESULT
+from server.config.routing import (
+    APP_SEND_COMMAND,
+    MACHINE_HEARTBEAT,
+    MACHINE_POLL_COMMAND,
+    MACHINE_SEND_RESULT,
+)
 from server.database.machine.init_db import init_db
 from server.server import Handler as RelayHandler
 from server.service.user_login.login_api import ROUTES as LOGIN_ROUTES
@@ -15,17 +21,21 @@ from server.service.user_login.login_flow import cleanup as cleanup_login
 from server.service.user_register.user_register.registration_flow import cleanup as cleanup_registration
 from server.service.machine_register.machine_register_api import ROUTES as MACHINE_ROUTES
 from server.service.machine_share.share_api import ROUTES as SHARE_ROUTES
+from server.service.machine_manage.manage_api import ROUTES as MANAGE_ROUTES
 
 
-# LOGIN_ROUTES đã gồm đăng ký người dùng, gửi/xác minh OTP và đăng nhập.
-ROUTES = {**LOGIN_ROUTES, **MACHINE_ROUTES, **SHARE_ROUTES}
-RELAY_ROUTES = {APP_SEND_COMMAND, MACHINE_HEARTBEAT, MACHINE_SEND_RESULT}
+# LOGIN_ROUTES đã gồm đăng ký người dùng, gửi/xác minh OTP, đăng nhập và đăng xuất.
+ROUTES = {**LOGIN_ROUTES, **MACHINE_ROUTES, **SHARE_ROUTES, **MANAGE_ROUTES}
+RELAY_ROUTES = {APP_SEND_COMMAND, MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT}
+# Chỉ giới hạn các API chưa cần token (dò mật khẩu, spam OTP). API máy/chia sẻ
+# đã đòi token hợp lệ nên không tính, cả quán dùng chung một IP vẫn không bị chặn.
+LIMITED_ROUTES = set(LOGIN_ROUTES)
 IP_REQUESTS = {}
 IP_LOCK = threading.Lock()
 
 
 class Handler(RelayHandler):
-    # GET trạng thái máy và polling kế thừa nguyên từ relay hiện có.
+    # GET trạng thái máy kế thừa nguyên từ relay hiện có.
     timeout = 10
 
     def do_POST(self):
@@ -36,7 +46,7 @@ class Handler(RelayHandler):
         if handle is None:
             self.send_json(404, {"valid": False, "message": "Không có endpoint này"})
             return
-        if self.too_many_requests():
+        if self.path in LIMITED_ROUTES and self.too_many_requests():
             self.send_json(429, {"valid": False, "message": "Quá nhiều yêu cầu", "retry_after": 60})
             return
 
@@ -59,12 +69,13 @@ class Handler(RelayHandler):
             return
 
         status = 200 if result["valid"] else 400
-        if "retry_after" in result:
+        # Gửi OTP thành công cũng kèm retry_after (thời gian chờ gửi lại), không phải 429.
+        if not result["valid"] and "retry_after" in result:
             status = 429
         self.send_json(status, result)
 
     def too_many_requests(self):
-        # Giữ giới hạn API tài khoản; heartbeat/poll không đi qua giới hạn này.
+        # Giới hạn 30 request/phút/IP cho các route trong LIMITED_ROUTES.
         now = time.monotonic()
         ip = self.client_address[0]
         with IP_LOCK:
@@ -99,6 +110,8 @@ class Server(ThreadingHTTPServer):
 
 
 def main():
+    # Terminal Windows hoặc log chuyển hướng ra file mặc định cp1252, không in được tiếng Việt.
+    sys.stdout.reconfigure(encoding="utf-8")
     init_db()
     try:
         with Server((SERVER_HOST, SERVER_PORT), Handler) as server:

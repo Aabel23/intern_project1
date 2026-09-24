@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from server.config.config import SERVER_HOST, SERVER_PORT
 from server.config.routing import (
     APP_LOGIN,
+    APP_LOGOUT,
     APP_REGISTER_USER,
     APP_SEND_OTP,
     APP_VERIFY_LOGIN,
@@ -21,6 +22,7 @@ from server.service.user_register.user_register.registration_flow import (
     resend_otp,
 )
 from .login_flow import cleanup as cleanup_login, receive_login, send_verification
+from .session import end_session
 
 
 ROUTES = {
@@ -29,6 +31,7 @@ ROUTES = {
     APP_VERIFY_OTP: confirm_otp,
     APP_LOGIN: receive_login,
     APP_VERIFY_LOGIN: send_verification,
+    APP_LOGOUT: end_session,
 }
 IP_REQUESTS = {}
 IP_LOCK = threading.Lock()
@@ -65,7 +68,8 @@ class LoginHandler(BaseHTTPRequestHandler):
             )
 
         status = 200 if result["valid"] else 400
-        if "retry_after" in result:
+        # Gửi OTP thành công cũng kèm retry_after (thời gian chờ gửi lại), không phải 429.
+        if not result["valid"] and "retry_after" in result:
             status = 429
         self.send_json(status, result)
 

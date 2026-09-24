@@ -1,7 +1,7 @@
 """Ghép đôi và gửi dữ liệu Bluetooth trên máy Linux dùng BlueZ."""
 
 import json
-from machine.config.machine_config import MACHINE_NAME, PRODUCT_KEY
+from machine.config.machine_config import get_machine_name, get_product_key
 
 
 def receive_message(reader):
@@ -51,8 +51,8 @@ def handle_connection(connection):
 
             message = {
                 "type": "pairing",
-                "machine_name": MACHINE_NAME,
-                "product_key": PRODUCT_KEY,
+                "machine_name": get_machine_name(),
+                "product_key": get_product_key(),
             }
             return send_bluetooth(connection, reader, message)
 
@@ -60,7 +60,7 @@ def handle_connection(connection):
 def main():
     # Chỉ cần BlueZ khi chạy trên Pi, test JSON không cần thư viện này.
     from machine.pairing.bluez_server import run_server
-    run_server(MACHINE_NAME, handle_connection)
+    run_server(get_machine_name(), handle_connection)
 
 
 if __name__ == "__main__":

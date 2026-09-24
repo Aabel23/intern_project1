@@ -1,30 +1,34 @@
-# Điều khiển máy
+# App FlexMix (Flutter, Android)
 
-App Android Flutter một màn hình, không có thư viện ngoài. Code nằm trong `lib/main.dart`.
+App quản lý máy pha: đăng ký/đăng nhập tài khoản, thêm máy (Bluetooth hoặc tem QR),
+chia sẻ máy cho nhân viên (QR hoặc Bluetooth), xem menu/kho và bật tắt món qua server.
 
-Chạy từ thư mục gốc dự án:
+## Địa chỉ server
+
+App không nhúng sẵn địa chỉ server; truyền lúc build/chạy:
 
 ```powershell
-python server/server.py
-# Terminal khác, khi đã có module database của machine:
-python machine/main.py
-# Terminal khác, với Android emulator hoặc điện thoại đã kết nối:
-cd app/flutter_app
-flutter run
+flutter run --dart-define=SERVER_URL=http://<IP máy chạy server>:8000
+flutter build apk --release --dart-define=SERVER_URL=http://<IP máy chạy server>:8000
 ```
 
-- Android emulator: dùng `http://10.0.2.2:8000` để truy cập server trên máy tính.
-- Điện thoại qua USB: chạy `adb reverse tcp:8000 tcp:8000`, rồi nhập `http://127.0.0.1:8000` trong app.
-- Server hiện chỉ nghe ở `127.0.0.1`, nên địa chỉ LAN chưa dùng được.
-- Nhập mã máy, kiểm tra online hoặc chọn lệnh, sửa tham số JSON và nhấn Gửi lệnh. App hiển thị nguyên kết quả server để dễ kiểm tra.
-- Chờ tối đa 25 giây; server chờ machine tối đa 20 giây. Không tự gửi lại lệnh khi lỗi vì lệnh cập nhật có thể đã được xử lý.
-- Địa chỉ và mã máy chỉ giữ trong phiên đang mở. HTTP được bật để dùng server phát triển hiện tại.
-- `machine/main.py` cần package `database` chưa có trong thư mục dự án này để xử lý lệnh thực tế.
+Thiếu `SERVER_URL` thì màn hình đăng nhập báo cần build lại. Điện thoại và máy chạy
+server phải cùng mạng; server nghe `0.0.0.0:8000` (xem `server/START.md`).
+`python sandbox/e2e/run_e2e.py` tự dò IP laptop, build, cài và test trên điện thoại.
 
-Kiểm tra và build:
+## Cấu trúc
+
+- `lib/UI/login`: đăng nhập, đăng ký + OTP.
+- `lib/UI/dashboard`: khung chính, các tab và `machine_api.dart` (mọi request tới server).
+  Server báo `login_required` ở bất kỳ API nào thì app quay về màn hình đăng nhập.
+- `lib/feature/machine_register`: thêm máy qua Bluetooth (`BluetoothPairing.kt`) hoặc tem QR.
+- `lib/feature/machine_share`: chia sẻ máy (QR, Bluetooth), danh sách và thu hồi nhân viên.
+  Nội dung QR/gói Bluetooth tạo và đọc tập trung trong `machine_share_qr.dart`.
+- `lib/feature/data_sync`: dữ liệu từng tab (hiện có menu sản phẩm).
+
+## Kiểm tra
 
 ```powershell
 flutter analyze
 flutter test
-flutter build apk --debug
 ```

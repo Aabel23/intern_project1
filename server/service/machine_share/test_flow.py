@@ -10,7 +10,8 @@ from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
 from server.service.user_login.session import create_session
-from .share_flow import accept_invite, create_invite, list_my_machines
+from server.service.user_login.session import user_from_request
+from .share_flow import accept_invite, create_invite, list_my_machines, list_staff, revoke_staff
 
 
 class MachineShareTest(unittest.TestCase):
@@ -67,6 +68,32 @@ class MachineShareTest(unittest.TestCase):
         with patch('server.service.machine_share.share_flow.time.time', return_value=later):
             self.assertFalse(accept_invite({'token': self.staff, 'code': invite['code']})['valid'])
 
+
+    def test_owner_lists_and_revokes_staff(self):
+        invite = create_invite({'token': self.owner, 'machine_id': self.machine_id})
+        accept_invite({'token': self.staff, 'code': invite['code']})
+        result = list_staff({'token': self.owner, 'machine_id': self.machine_id})
+        self.assertEqual([member['username'] for member in result['staff']], ['staff'])
+        staff_id = result['staff'][0]['user_id']
+        # Nhân viên không xem hay thu hồi được quyền, kể cả của chính mình.
+        self.assertFalse(list_staff({'token': self.staff, 'machine_id': self.machine_id})['valid'])
+        self.assertFalse(revoke_staff({
+            'token': self.staff, 'machine_id': self.machine_id, 'user_id': staff_id,
+        })['valid'])
+        self.assertTrue(revoke_staff({
+            'token': self.owner, 'machine_id': self.machine_id, 'user_id': staff_id,
+        })['valid'])
+        self.assertEqual(self.roles(self.staff), {})
+        # Không thu hồi được quyền chủ máy.
+        owner_id = user_from_request({'token': self.owner})
+        revoke_staff({'token': self.owner, 'machine_id': self.machine_id, 'user_id': owner_id})
+        self.assertEqual(self.roles(self.owner), {self.machine_id: 'owner'})
+
+    def test_new_invite_replaces_unused_one(self):
+        first = create_invite({'token': self.owner, 'machine_id': self.machine_id})
+        second = create_invite({'token': self.owner, 'machine_id': self.machine_id})
+        self.assertFalse(accept_invite({'token': self.staff, 'code': first['code']})['valid'])
+        self.assertTrue(accept_invite({'token': self.staff, 'code': second['code']})['valid'])
 
 if __name__ == '__main__':
     unittest.main()

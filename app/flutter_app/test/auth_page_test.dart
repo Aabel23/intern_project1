@@ -190,8 +190,14 @@ void main() {
         received[request.uri.path] = body as Map<String, dynamic>;
         final reply = request.uri.path == '/app/dang-nhap'
             ? {'valid': true, 'login_id': 'phien-1'}
+            : request.uri.path == '/app/may-cua-toi'
+            ? {'valid': true, 'machines': []}
             : accept
-            ? {'valid': true, 'message': 'Đăng nhập thành công'}
+            ? {
+                'valid': true,
+                'token': 'token-1',
+                'message': 'Đăng nhập thành công',
+              }
             : {'valid': false, 'message': 'Sai mật khẩu'};
         request.response.headers.contentType = ContentType.json;
         request.response.write(jsonEncode(reply));
@@ -233,6 +239,12 @@ void main() {
         await submit();
         await tester.pumpAndSettle();
         expect(find.byType(MainDashboard), findsOneWidget);
+        // Dashboard gọi API bằng đúng token vừa đăng nhập.
+        for (var i = 0; i < 100 && received['/app/may-cua-toi'] == null; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          await tester.pump();
+        }
+        expect(received['/app/may-cua-toi']!['token'], 'token-1');
       } finally {
         await server.close(force: true);
         HttpOverrides.global = previous;

@@ -1,11 +1,14 @@
-# Gửi email thử
+# Cấu hình gửi email OTP
 
-1. Tạo Gmail App Password cho tài khoản gửi `vananhbo2@gmail.com`.
-2. Mở `server/config/.env`, điền **App Password gồm 16 ký tự** sau dấu `=`: `SMTP_PASSWORD=abcdefghijklmnop`. Không điền mật khẩu Gmail thường, không thêm dấu nháy.
-3. Chạy từ thư mục gốc dự án:
+Tài khoản gửi mail và mật khẩu không nằm trong mã nguồn mà trong `server/config/.env`
+(đã có trong `.gitignore`, không chia sẻ file này):
 
-```powershell
-.\.venv\Scripts\python.exe -m server.service.email_test
+```
+SERVICE_EMAIL=<gmail dùng để gửi OTP>
+SMTP_PASSWORD=<App Password 16 ký tự>
 ```
 
-Script gửi thư thử tới địa chỉ `client_mail` trong `email_test.py`. File `.env` và thư mục `.venv` được bỏ qua bởi `.gitignore`; không chia sẻ file `.env` cho người khác.
+1. Tạo Gmail App Password cho tài khoản gửi (Google Account → Security → App passwords).
+2. Điền đúng App Password 16 ký tự sau dấu `=`, không dùng mật khẩu Gmail thường, không thêm dấu nháy.
+3. Server đọc hai khóa này lúc gửi mail (`server/config/config.py`: `get_service_email()`,
+   `get_smtp_password()`); thiếu khóa nào thì báo lỗi nêu đúng tên khóa.

@@ -35,9 +35,9 @@ class PairBluetoothTest(unittest.TestCase):
         self.assertFalse(worker.is_alive())
         return results, ready, payload
 
-    @patch("machine.pairing.bluetooth_pairing.PRODUCT_KEY", "test-key")
-    @patch("machine.pairing.bluetooth_pairing.MACHINE_NAME", "FlexMix-Test")
-    def test_complete_pairing(self):
+    @patch("machine.pairing.bluetooth_pairing.get_product_key", return_value="test-key")
+    @patch("machine.pairing.bluetooth_pairing.get_machine_name", return_value="FlexMix-Test")
+    def test_complete_pairing(self, *_):
         results, ready, payload = self.exchange(
             b'{"type":"identify"}\n', b'{"type":"ack","ok":true}\n'
         )

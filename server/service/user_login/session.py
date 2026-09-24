@@ -12,6 +12,13 @@ from server.config.config import (
 )
 from server.database.connection import get_connection
 
+# login_required báo app xóa token đã lưu và quay về màn hình đăng nhập.
+NOT_LOGGED_IN = {
+    "valid": False,
+    "login_required": True,
+    "message": "Phiên đăng nhập hết hạn, hãy đăng nhập lại",
+}
+
 
 def hash_token(token):
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -40,3 +47,12 @@ def user_from_request(data):
             (hash_token(token), time.time()),
         ).fetchone()
     return row["user_id"] if row else None
+
+
+def end_session(data):
+    """Đăng xuất: xóa token trên server để token cũ không dùng lại được."""
+    token = data.get("token") if isinstance(data, dict) else None
+    if isinstance(token, str):
+        with get_connection() as conn:
+            conn.execute("DELETE FROM app_sessions WHERE token_hash=?", (hash_token(token),))
+    return {"valid": True, "message": "Đã đăng xuất"}

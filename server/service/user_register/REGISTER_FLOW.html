@@ -53,6 +53,10 @@
   ul, ol { padding-left: 1.4em; }
   li { margin: 3px 0; }
   .note { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -61,6 +65,25 @@
 <p class="lead">Đăng ký gồm hai bước. App gửi thông tin tài khoản, server kiểm tra rồi gửi mã OTP
 6 số qua email. Người dùng nhập mã, server xác minh đúng thì mới ghi tài khoản vào database.
 Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p>
+
+<h2>API và gói tin</h2>
+<p>Mọi gói là JSON gửi bằng <code>POST</code>, chưa cần token (chưa có tài khoản). Các route này bị giới hạn 30 request/phút/IP; vượt giới hạn hoặc gửi OTP quá sớm thì server trả 429 kèm <code>retry_after</code>.</p>
+<div class="table-wrap"><table>
+<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST</code></td><td><code>/app/dang-ky-nguoi-dung</code></td><td>App</td><td>request_id, full_name, username, email, password</td><td>valid, registration_id</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/gui-ma-otp</code></td><td>App (gửi lại mã)</td><td>registration_id</td><td>valid, retry_after, message</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/xac-minh-otp</code></td><td>App</td><td>registration_id, code</td><td>valid, verified, account_created, message</td></tr>
+</table></div>
+<h3>Đăng ký</h3>
+<pre><code>{"request_id": "&lt;32 ký tự hex&gt;", "full_name": "Nguyễn Văn A",
+ "username": "vana", "email": "a@gmail.com", "password": "..."}
+→ {"valid": true, "registration_id": "..."}</code></pre>
+<h3>Gửi lại mã OTP</h3>
+<pre><code>{"registration_id": "..."}
+→ {"valid": true, "registration_id": "...", "retry_after": 60, "message": "Đã gửi mã xác minh tới email"}</code></pre>
+<h3>Xác minh OTP</h3>
+<pre><code>{"registration_id": "...", "code": "123456"}
+→ {"valid": true, "verified": true, "account_created": true, "message": "Tạo tài khoản thành công"}</code></pre>
 
 <h2>Giai đoạn A: App gửi thông tin đăng ký</h2>
 <div class="step">

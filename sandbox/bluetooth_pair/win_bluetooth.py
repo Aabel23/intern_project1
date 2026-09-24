@@ -155,10 +155,26 @@ def set_discoverable(enabled):
     return bool(bthprops.BluetoothIsDiscoverable(None))
 
 
-def serve(service_uuid, name, handler, peer, me, once=False):
+def connect_service(address, service_uuid):
+    """Kết nối RFCOMM tới service UUID trên thiết bị khác, Windows tự tra channel qua SDP.
+
+    socket.connect của Python chỉ nhận (địa chỉ, channel) nên gọi thẳng Winsock.
+    """
+    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+    guid = GUID((ctypes.c_ubyte * 16)(*uuid.UUID(service_uuid).bytes_le))
+    target = SOCKADDR_BTH(socket.AF_BLUETOOTH, int(address.replace(":", ""), 16), guid, 0)
+    if ctypes.windll.ws2_32.connect(sock.fileno(), ctypes.byref(target), ctypes.sizeof(target)) != 0:
+        code = ctypes.windll.ws2_32.WSAGetLastError()
+        sock.close()
+        raise OSError(f"Không kết nối được {address} (Winsock {code})")
+    return sock
+
+
+def serve(service_uuid, name, handler, peer, me, once=False, timeout=None):
     """Mở RFCOMM + SDP, cho quét thấy rồi gọi handler cho từng kết nối.
 
     once=True: dừng sau lần handler chạy xong không lỗi và trả kết quả đó.
+    timeout: số giây chờ tối đa rồi trả None (dùng cho test tự động).
     """
     if sys.platform != "win32":
         sys.exit("Sandbox này dành cho Windows.")
@@ -174,8 +190,9 @@ def serve(service_uuid, name, handler, peer, me, once=False):
     # accept có timeout để Ctrl+C dừng được trên Windows.
     server.settimeout(1)
     print(f"{me} chờ {peer} kết nối: {address}, RFCOMM channel {channel}", flush=True)
+    deadline = None if timeout is None else time.monotonic() + timeout
     try:
-        while True:
+        while deadline is None or time.monotonic() < deadline:
             try:
                 connection, remote = server.accept()
             except socket.timeout:
@@ -191,6 +208,8 @@ def serve(service_uuid, name, handler, peer, me, once=False):
                     return result
             except (OSError, ValueError) as error:
                 print("=== Thất bại:", error, "===", flush=True)
+        print(f"Hết {timeout} giây chờ {peer}.", flush=True)
+        return None
     except KeyboardInterrupt:
         return None
     finally:

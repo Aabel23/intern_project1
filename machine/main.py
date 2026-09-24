@@ -4,7 +4,6 @@ import time
 import threading
 import urllib.error
 
-from config.machine_config import MACHINE_ID
 from server_connection import heartbeat, instruction_api
 
 # Đọc menu và cập nhật món uống từ tầng database.
@@ -26,10 +25,7 @@ from database.inventory_service import (
 
 
 def handle_command(lenh):
-    # Kiểm tra lệnh có gửi đúng cho máy này không.
-    if lenh.get("machine_id") != MACHINE_ID:
-        return {"loi": "Machine ID khong dung"}
-
+    # Server chỉ giao lệnh trong hộp thư của máy xưng đúng product key.
     ten = lenh.get("ten")
     thamso = lenh.get("thamso", {})
 
@@ -69,7 +65,7 @@ def run():
         # Nhận lệnh từ server.
         try:
             lenh = instruction_api.poll_command()
-        except (urllib.error.URLError, OSError) as error:
+        except (urllib.error.URLError, OSError, ValueError) as error:
             print("Khong ket noi duoc server:", error, flush=True)
             time.sleep(1)
             continue
@@ -81,7 +77,8 @@ def run():
         print("Machine nhan lenh:", lenh, flush=True)
         try:
             ket_qua = handle_command(lenh)
-        except (KeyError, TypeError, ValueError) as error:
+        except Exception as error:
+            # Lỗi tham số hay lỗi database đều trả về app, không làm dừng vòng lặp của máy.
             ket_qua = {"loi": str(error)}
 
         # Gửi kết quả về server để trả cho app.

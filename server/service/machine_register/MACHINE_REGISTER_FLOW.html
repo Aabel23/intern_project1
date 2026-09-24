@@ -53,6 +53,10 @@
   ul, ol { padding-left: 1.4em; }
   li { margin: 3px 0; }
   .note { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -61,6 +65,20 @@
 <p class="lead">Chủ quán lấy tên máy và product key từ máy pha, bằng một trong hai cách: quét tem QR
 dán trên máy, hoặc kết nối Bluetooth. App gửi hai thông tin đó cùng token đăng nhập lên server.
 Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<code>owner</code>).</p>
+
+<h2>API và gói tin</h2>
+<p>Mọi gói là JSON gửi bằng <code>POST</code>, <code>Content-Type: application/json</code>. Token hết hạn thì server trả <code>login_required: true</code> và app quay về màn hình đăng nhập. Gói Bluetooth giữa app và máy là một dòng JSON kết thúc bằng <code>\n</code>, xem mục Bluetooth bên dưới.</p>
+<div class="table-wrap"><table>
+<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST</code></td><td><code>/app/dang-ky-may</code></td><td>App, sau khi quét tem QR hoặc nhận gói Bluetooth</td><td>type, machine_name, product_key, token</td><td>valid, registered, created, machine_id</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/xac-minh-dang-ky-may</code></td><td>App (tùy chọn)</td><td>machine_id, product_key</td><td>valid, verified, machine_id</td></tr>
+</table></div>
+<h3>Đăng ký máy</h3>
+<pre><code>{"type": "pairing", "machine_name": "FlexMix-01", "product_key": "fm_...", "token": "..."}
+→ {"valid": true, "registered": true, "created": true, "machine_id": "fm_...", "message": "Đăng ký máy thành công"}</code></pre>
+<h3>Xác minh đăng ký</h3>
+<pre><code>{"machine_id": "fm_...", "product_key": "fm_..."}
+→ {"valid": true, "verified": true, "machine_id": "fm_...", "message": "Đã xác minh đăng ký máy"}</code></pre>
 
 <h2>Cách 1: Quét tem QR</h2>
 <div class="step">

@@ -53,6 +53,10 @@
   ul, ol { padding-left: 1.4em; }
   li { margin: 3px 0; }
   .note { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -61,6 +65,24 @@
 <p class="lead">Đăng nhập đi qua <strong>hai request</strong>. Lần đầu app gửi username và mật khẩu,
 server kiểm tra ngay và giữ kết quả trong bộ nhớ. Lần hai app hỏi lấy kết quả đó, và nếu đúng
 mật khẩu thì nhận luôn token.</p>
+
+<h2>API và gói tin</h2>
+<p>Mọi gói là JSON gửi bằng <code>POST</code>. Đăng nhập chưa cần token; token trả về ở bước xác minh được app gửi kèm mọi request sau đó. Hai route đăng nhập bị giới hạn 30 request/phút/IP.</p>
+<div class="table-wrap"><table>
+<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST</code></td><td><code>/app/dang-nhap</code></td><td>App</td><td>request_id, username, password</td><td>valid, login_id, verify_route</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/xac-minh-dang-nhap</code></td><td>App</td><td>request_id, login_id</td><td>valid, verified, token (hoặc retry_after khi đang xác minh)</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/dang-xuat</code></td><td>App (menu Đăng xuất)</td><td>token</td><td>valid, message; token bị xóa trên server</td></tr>
+</table></div>
+<h3>Gửi tài khoản</h3>
+<pre><code>{"request_id": "&lt;32 ký tự hex&gt;", "username": "vana", "password": "..."}
+→ {"valid": true, "login_id": "...", "verify_route": "/app/xac-minh-dang-nhap", "message": "Đã nhận yêu cầu đăng nhập"}</code></pre>
+<h3>Hỏi kết quả</h3>
+<pre><code>{"request_id": "...", "login_id": "..."}
+→ {"valid": true, "verified": true, "token": "&lt;43 ký tự&gt;", "message": "Đăng nhập thành công"}</code></pre>
+<h3>Đăng xuất</h3>
+<pre><code>{"token": "..."}
+→ {"valid": true, "message": "Đã đăng xuất"}</code></pre>
 
 <h2>Giai đoạn A: App gửi yêu cầu đăng nhập</h2>
 

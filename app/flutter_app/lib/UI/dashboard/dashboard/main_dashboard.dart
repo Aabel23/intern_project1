@@ -22,9 +22,14 @@ class MainDashboard extends StatefulWidget {
 
 class _MainDashboardState extends State<MainDashboard> {
   late final _controller = DashboardController(
-    MachineApi(widget.serverUrl, token: widget.token),
+    MachineApi(
+      widget.serverUrl,
+      token: widget.token,
+      onLoginRequired: _sessionExpired,
+    ),
   );
   int index = 0;
+  bool _leaving = false;
 
   @override
   void initState() {
@@ -38,7 +43,24 @@ class _MainDashboardState extends State<MainDashboard> {
     super.dispose();
   }
 
+  // Server báo token hết hạn/đã đăng xuất ở bất kỳ API nào: về màn hình đăng nhập.
+  void _sessionExpired() {
+    if (!mounted || _leaving) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Phiên đăng nhập hết hạn, hãy đăng nhập lại.'),
+      ),
+    );
+    _goToLogin();
+  }
+
   void _logout() {
+    _controller.api.logout();
+    _goToLogin();
+  }
+
+  void _goToLogin() {
+    _leaving = true;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => AuthPage(serverUrl: widget.serverUrl),

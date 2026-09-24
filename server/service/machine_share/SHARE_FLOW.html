@@ -53,6 +53,10 @@
   ul, ol { padding-left: 1.4em; }
   li { margin: 3px 0; }
   .note { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -61,6 +65,32 @@
 <p class="lead">Chủ máy tạo một mã mời, app hiện mã đó thành QR. Nhân viên quét QR bằng cùng màn
 "Quét QR" dùng để đăng ký máy. Server ghi nhân viên là người quản lý (<code>manager</code>) của máy.
 Mã mời dùng một lần và hết hạn sau 5 phút.</p>
+
+<h2>API và gói tin</h2>
+<p>Mọi gói là JSON gửi bằng <code>POST</code>, <code>Content-Type: application/json</code>. Token hết hạn thì server trả <code>login_required: true</code> và app quay về màn hình đăng nhập. QR và gói Bluetooth chia sẻ có cùng nội dung <code>{"type":"share","code":"..."}</code>.</p>
+<div class="table-wrap"><table>
+<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST</code></td><td><code>/app/tao-ma-chia-se</code></td><td>Chủ máy</td><td>machine_id, token</td><td>valid, code, machine_id, expires_in</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/nhan-chia-se</code></td><td>Nhân viên, sau khi quét QR / nhận Bluetooth</td><td>code, token</td><td>valid, machine_id, machine_name</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/may-cua-toi</code></td><td>App (tải danh sách máy)</td><td>token</td><td>valid, machines[machine_id, name, role]</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/nhan-vien-may</code></td><td>Chủ máy</td><td>machine_id, token</td><td>valid, staff[user_id, username, full_name]</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/thu-hoi-quyen</code></td><td>Chủ máy</td><td>machine_id, user_id, token</td><td>valid, message</td></tr>
+</table></div>
+<h3>Tạo mã mời</h3>
+<pre><code>{"machine_id": "fm_...", "token": "..."}
+→ {"valid": true, "code": "&lt;32 ký tự&gt;", "machine_id": "fm_...", "expires_in": 300, "message": "Đã tạo mã chia sẻ"}</code></pre>
+<h3>Nhận chia sẻ</h3>
+<pre><code>{"code": "...", "token": "..."}
+→ {"valid": true, "machine_id": "fm_...", "machine_name": "FlexMix-01", "message": "Đã nhận quản lý máy"}</code></pre>
+<h3>Máy của tôi</h3>
+<pre><code>{"token": "..."}
+→ {"valid": true, "machines": [{"machine_id": "fm_...", "name": "FlexMix-01", "role": "owner"}]}</code></pre>
+<h3>Danh sách / thu hồi nhân viên</h3>
+<pre><code>{"machine_id": "fm_...", "token": "..."}
+→ {"valid": true, "staff": [{"user_id": 7, "username": "nv1", "full_name": "..."}]}
+
+{"machine_id": "fm_...", "user_id": 7, "token": "..."}
+→ {"valid": true, "message": "Đã thu hồi quyền nhân viên"}</code></pre>
 
 <h2>Giai đoạn A: Chủ máy tạo mã mời</h2>
 <div class="step">

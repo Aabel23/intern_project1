@@ -14,9 +14,11 @@ entry point dịch vụ trên cùng port. Ctrl+C dừng server.
 Một server phục vụ đồng thời:
 
 - Đăng ký tài khoản, gửi OTP, xác minh OTP.
-- Đăng nhập và xác minh đăng nhập.
+- Đăng nhập, xác minh đăng nhập và đăng xuất (xóa token trên server).
 - Đăng ký máy qua Bluetooth/QR và xác minh đăng ký máy.
-- Heartbeat, xem online, nhận lệnh và trả kết quả của machine.
+- Chia sẻ máy cho nhân viên, xem và thu hồi nhân viên (`service/machine_share/README.md`).
+- Heartbeat, xem online, nhận lệnh và trả kết quả của machine; máy xưng danh bằng
+  product key, app gửi lệnh phải kèm token của chủ/nhân viên (`RELAY_FLOW.html`).
 
 Mỗi request có thread riêng, nên app chờ kết quả không chặn machine hỏi lệnh.
 Phiên OTP/đăng nhập hết hạn được dọn định kỳ. Khởi động lại làm mất các phiên
