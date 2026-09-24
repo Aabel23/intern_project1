@@ -1,0 +1,10 @@
+.venv/
+server/service/.env
+server/config/.env
+__pycache__/
+*.pyc
+# Database thật chứa tài khoản và email người dùng.
+*.db
+*.db-journal
+# Tem QR in ra chứa product key của máy.
+tem_*.png

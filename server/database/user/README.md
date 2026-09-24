@@ -1,0 +1,21 @@
+# Các file quản lý user
+
+| File | Chức năng | Gọi tới |
+| --- | --- | --- |
+| [`test.py`](test.py) | Chạy thử việc thêm một user | `user_add.add_user()` |
+| [`user_add.py`](user_add.py) | Chuẩn bị từng trường và ghi user vào bảng `users` | `user_password.hash_password()`, `connection.get_connection()` |
+| [`user_read.py`](user_read.py) | Đọc thông tin user từ bảng `users` | `connection.get_connection()` |
+| [`user_password.py`](../../security/user_password.py) | Băm mật khẩu bằng PBKDF2 trước khi lưu | Thư viện chuẩn Python |
+| [`connection.py`](../connection.py) | Mở và đóng kết nối SQLite | `config/path.py` để lấy đường dẫn database |
+
+Luồng thêm user: `test.py` → `user_add.add_user()` → `user_add.add_password()` → `user_password.hash_password()` → `connection.get_connection()` → bảng `users` trong `database.db`.
+
+Luồng đọc user: mã gọi → `user_read.py` → `connection.get_connection()` → bảng `users`.
+
+Chạy thử từ thư mục gốc dự án:
+
+```powershell
+python server/database/user/test.py
+```
+
+`test.py` ghi vào database thật. Username hoặc email trùng sẽ không được thêm lần nữa.
