@@ -1,12 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../UI/dashboard/machine_api.dart';
+import 'machine_share_bluetooth.dart';
+import 'machine_share_qr.dart';
 
-// Chủ máy hiện QR mã mời; nhân viên quét bằng nút Quét QR ở tab Máy.
+// Chủ máy hiện QR mã mời hoặc gửi qua Bluetooth; nhân viên quét QR ở tab Máy
+// hoặc mở Nhận chia sẻ qua Bluetooth.
 // Mã do server tạo, dùng một lần và hết hạn sau vài phút.
 class DeviceSharePage extends StatefulWidget {
   const DeviceSharePage({
@@ -61,7 +63,7 @@ class _DeviceSharePageState extends State<DeviceSharePage> {
       final seconds = (result['expires_in'] as num?)?.toInt() ?? 300;
       if (!mounted) return;
       setState(() {
-        qrData = jsonEncode({'type': 'share', 'code': code});
+        qrData = encodeShareQr(code);
         expiresAt = DateTime.now().add(Duration(seconds: seconds));
         status = 'Nhân viên mở tab Máy → Quét QR và quét mã này.';
       });
@@ -110,6 +112,19 @@ class _DeviceSharePageState extends State<DeviceSharePage> {
                 'mỗi mã chỉ dùng cho một người.',
               ),
             const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: qrData == null || expired || busy
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            ShareBluetoothSendPage(payload: qrData!),
+                      ),
+                    ),
+              icon: const Icon(Icons.bluetooth),
+              label: const Text('Gửi qua Bluetooth'),
+            ),
+            const SizedBox(height: 8),
             FilledButton.icon(
               onPressed: busy ? null : createCode,
               icon: const Icon(Icons.refresh),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_app/feature/device/machine_register_bluetooth.dart';
+import 'package:simple_app/feature/machine_register/machine_register_bluetooth.dart';
 
 void main() {
   const channel = MethodChannel('flexmix/bluetooth_pairing');

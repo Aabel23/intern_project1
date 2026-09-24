@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luồng gửi lệnh FlexMix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+  /* Bảng màu kem và cam đất theo phong cách Claude. */
+  :root {
+    --bg: #faf9f5; --fg: #141413; --muted: #6b6a63; --card: #ffffff;
+    --line: #e8e6dc; --accent: #c96442; --code-bg: #f0eee6; --warn: #a3542f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 48px 16px 72px; }
+  h1, h2, h3 {
+    font-family: "Source Serif 4", "Tiempos Text", Georgia, serif;
+    font-weight: 500; letter-spacing: -0.01em;
+  }
+  h1 { font-size: 2.2rem; margin: 0 0 10px; }
+  h2 {
+    font-size: 1.45rem; margin: 44px 0 12px; padding-top: 18px;
+    border-top: 1px solid var(--line); color: var(--accent);
+  }
+  h3 { font-size: 1.12rem; margin: 24px 0 8px; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  code {
+    font: 0.9em ui-monospace, "Cascadia Code", Consolas, monospace;
+    background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.45;
+  }
+  pre code { background: none; padding: 0; }
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 4px 18px 10px; margin: 14px 0;
+  }
+  .step h3 { margin-top: 14px; }
+  .num {
+    display: inline-block; min-width: 1.8em; text-align: center; margin-right: 6px;
+    background: var(--accent); color: var(--card); border-radius: 999px;
+    font-size: 0.85em; padding: 0 6px;
+  }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 3px 0; }
+  .note { color: var(--warn); }
+</style>
+</head>
+<body>
+<main>
+<h1>Luồng gửi lệnh và heartbeat</h1>
+<p class="lead">App không nói chuyện trực tiếp với máy pha. App gửi lệnh lên server, server bỏ lệnh
+vào hộp thư. Máy pha liên tục hỏi server có lệnh mới không, lấy lệnh, chạy, rồi gửi kết quả lên.
+Server chuyển kết quả cho request của app đang chờ. Song song, máy gửi heartbeat mỗi 5 giây để server
+biết máy còn sống.</p>
+
+<h2>Giai đoạn A: Máy khởi động</h2>
+<div class="step">
+<h3><span class="num">1</span><a href="../machine/main.py">machine/main.py</a>, hàm <code>run()</code> (dòng 64)</h3>
+<ol>
+  <li>Mở một luồng riêng chạy <code>heartbeat.run_heartbeat()</code>, để máy vẫn báo sống khi đang xử lý lệnh lâu.</li>
+  <li>Vòng lặp chính: gọi <code>poll_command()</code>. Không có lệnh hoặc mất mạng thì chờ 1 giây rồi hỏi lại.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">2</span><a href="../machine/server_connection/heartbeat.py">heartbeat.py</a>, hàm <code>run_heartbeat()</code></h3>
+<p>Mỗi <code>HEARTBEAT_INTERVAL_SECONDS</code> (5 giây) gọi <code>send_heartbeat()</code>: POST <code>/machine/heartbeat</code> với <code>{machine_id}</code>. Lỗi mạng chỉ in ra rồi thử lại lần sau.</p>
+</div>
+<div class="step">
+<h3><span class="num">3</span><a href="server.py">server/server.py</a>, <code>Handler.do_POST()</code>, nhánh <code>MACHINE_HEARTBEAT</code> (dòng 94)</h3>
+<p>Ghi <code>LAN_HEARTBEAT_CUOI[machine_id] = time.time()</code> trong bộ nhớ, trả <code>{da_nhan: true}</code>.</p>
+</div>
+
+<h2>Giai đoạn B: App kiểm tra máy online</h2>
+<div class="step">
+<h3><span class="num">4</span><a href="../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, hàm <code>refreshStatuses()</code> (dòng 122)</h3>
+<p>Với mỗi máy trong danh sách, gọi <code>MachineApi.status(id)</code> và lưu kết quả vào <code>online[id]</code>. Lỗi thì coi như offline.</p>
+</div>
+<div class="step">
+<h3><span class="num">5</span><a href="server.py">server/server.py</a>, <code>Handler.do_GET()</code>, nhánh <code>MACHINE_STATUS</code> (dòng 49)</h3>
+<p>Đọc <code>machine_id</code> trên URL, lấy lần heartbeat cuối. Online nếu cách hiện tại dưới <code>HEARTBEAT_TIMEOUT_SECONDS</code>. Trả <code>{machine_id, online, last_seen}</code>.</p>
+</div>
+
+<h2>Giai đoạn C: App gửi lệnh</h2>
+<div class="step">
+<h3><span class="num">6</span><a href="../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, các hàm <code>loadMenu()</code>, <code>loadIngredients()</code>, <code>setDrinkAvailable()</code></h3>
+<ul>
+  <li><code>loadMenu()</code> (dòng 138) và <code>loadIngredients()</code> (dòng 159) đi qua <code>_load()</code> (dòng 197) với lệnh <code>xem_menu</code> / <code>xem_nguyen_lieu</code>.</li>
+  <li><code>_load()</code> ghi nhớ <code>_session</code>; nếu người dùng đổi máy trong lúc chờ thì kết quả trả về muộn bị bỏ, không hiện nhầm dữ liệu máy cũ.</li>
+  <li><code>setDrinkAvailable()</code> (dòng 181) gửi <code>doi_trang_thai_mon</code> rồi tải lại menu.</li>
+</ul>
+</div>
+<div class="step">
+<h3><span class="num">7</span><a href="../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, hàm <code>send()</code> (dòng 88)</h3>
+<p>POST <code>/app/gui-lenh</code> với <code>{machine_id, ten, thamso}</code>. Kết quả có trường <code>loi</code> thì ném lỗi cho giao diện hiện ra.</p>
+</div>
+<div class="step">
+<h3><span class="num">8</span><a href="main.py">server/main.py</a>, <code>Handler.do_POST()</code></h3>
+<p><code>/app/gui-lenh</code>, <code>/machine/heartbeat</code>, <code>/machine/tra-ket-qua</code> nằm trong <code>RELAY_ROUTES</code> nên được chuyển thẳng cho <code>server.Handler.do_POST()</code>, không qua giới hạn 30 request/phút. Các GET (trạng thái, hỏi lệnh) cũng kế thừa từ <code>server.Handler</code>.</p>
+</div>
+<div class="step">
+<h3><span class="num">9</span><a href="server.py">server/server.py</a>, <code>Handler.do_POST()</code>, nhánh <code>APP_SEND_COMMAND</code> (dòng 105)</h3>
+<ol>
+  <li>Gán cho lệnh một <code>id</code> tăng dần (<code>DEM_LENH</code>).</li>
+  <li>Tạo hàng chờ kết quả riêng cho lệnh này, lưu vào <code>DANG_CHO[id]</code>.</li>
+  <li>Bỏ lệnh vào hộp thư chung <code>HOP_THU</code>.</li>
+  <li><strong>Giữ request của app lại</strong>, chờ kết quả tối đa <code>COMMAND_TIMEOUT_SECONDS</code>. Hết giờ thì trả <code>{loi: "Machine khong tra loi"}</code>.</li>
+  <li>Xóa <code>DANG_CHO[id]</code>, trả kết quả cho app.</li>
+</ol>
+</div>
+
+<h2>Giai đoạn D: Máy lấy lệnh, chạy, trả kết quả</h2>
+<div class="step">
+<h3><span class="num">10</span><a href="../machine/server_connection/instruction_api.py">instruction_api.py</a>, hàm <code>poll_command()</code></h3>
+<p>GET <code>/machine/hoi-lenh</code>, trả trường <code>lenh</code> (có thể là <code>null</code>).</p>
+</div>
+<div class="step">
+<h3><span class="num">11</span><a href="server.py">server/server.py</a>, <code>Handler.do_GET()</code>, nhánh <code>MACHINE_POLL_COMMAND</code> (dòng 58)</h3>
+<p>Lấy một lệnh khỏi <code>HOP_THU</code> nếu có (không chờ), trả <code>{lenh}</code>.</p>
+</div>
+<div class="step">
+<h3><span class="num">12</span><a href="../machine/main.py">machine/main.py</a>, hàm <code>handle_command(lenh)</code> (dòng 28)</h3>
+<ol>
+  <li>Lệnh không đúng <code>MACHINE_ID</code> của máy này thì trả lỗi "Machine ID khong dung".</li>
+  <li>Chọn hàm theo <code>ten</code>:
+    <ul>
+      <li><code>xem_menu</code>, <code>xem_nguyen_lieu</code>: đọc dữ liệu;</li>
+      <li><code>doi_trang_thai_mon</code>, <code>doi_gia_mon</code>: sửa món;</li>
+      <li><code>dat_luong_nguyen_lieu</code>, <code>them_nguyen_lieu</code>, <code>tru_nguyen_lieu</code>: sửa kho.</li>
+    </ul>
+  </li>
+  <li>Tên lệnh lạ thì trả "Lenh khong hop le". Thiếu tham số thì <code>run()</code> bắt lỗi và trả <code>{loi}</code>.</li>
+</ol>
+<p>Các hàm dữ liệu import từ package <code>database</code> của máy pha, không nằm trong repo này.</p>
+</div>
+<div class="step">
+<h3><span class="num">13</span><a href="../machine/server_connection/instruction_api.py">instruction_api.py</a>, hàm <code>send_result()</code></h3>
+<p>POST <code>/machine/tra-ket-qua</code> với <code>{id, ket_qua}</code>.</p>
+</div>
+<div class="step">
+<h3><span class="num">14</span><a href="server.py">server/server.py</a>, <code>Handler.do_POST()</code>, nhánh <code>MACHINE_SEND_RESULT</code> (dòng 124)</h3>
+<p>Tìm <code>DANG_CHO[id]</code>. Request của app còn đang chờ thì đặt kết quả vào đó, request ở bước 9 được đánh thức và trả kết quả cho app.</p>
+</div>
+
+<h2>Sơ đồ tóm tắt</h2>
+<pre><code>MÁY PHA                         SERVER                              APP
+heartbeat.run_heartbeat ──POST /machine/heartbeat──▶ LAN_HEARTBEAT_CUOI
+                                                     ◀──GET /machine/trang-thai── refreshStatuses
+                                                                                  │
+                             /app/gui-lenh  ◀──POST {machine_id, ten}─────────── MachineApi.send
+                              ├─ HOP_THU.put(lệnh)                               (đang chờ…)
+                              └─ chờ DANG_CHO[id]
+main.run → poll_command ──GET /machine/hoi-lenh──▶ HOP_THU.get
+handle_command(lệnh)
+send_result ──POST /machine/tra-ket-qua──▶ DANG_CHO[id].put
+                              └─ đánh thức request app ──── kết quả ────────▶ _load → giao diện</code></pre>
+
+<h2>Vài điểm cần biết</h2>
+<ul>
+  <li><strong>Hộp thư, heartbeat và các lệnh đang chờ đều nằm trong RAM.</strong> Khởi động lại server là mất, và không chạy được hai server song song.</li>
+  <li><strong>Mỗi lệnh đang chờ giữ một luồng của server</strong> tới khi có kết quả hoặc hết giờ.</li>
+  <li class="note"><strong>Mọi máy dùng chung một hộp thư <code>HOP_THU</code>.</strong> Có từ hai máy trở lên thì máy A có thể lấy mất lệnh của máy B; máy A trả "Machine ID khong dung" và lệnh không tới máy B.</li>
+  <li class="note"><strong><code>/app/gui-lenh</code> chưa kiểm tra token hay quyền</strong>: ai biết <code>machine_id</code> đều gửi lệnh được.</li>
+  <li class="note"><strong>Phía máy không có xác thực</strong>: ai cũng gọi được <code>/machine/heartbeat</code>, <code>/machine/hoi-lenh</code> để giả làm máy.</li>
+  <li class="note"><strong>Máy hỏi lệnh mỗi giây</strong> (polling), nên lệnh có thể trễ tới 1 giây và tạo nhiều request khi có nhiều máy.</li>
+</ul>
+</main>
+</body>
+</html>

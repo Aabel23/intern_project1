@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../feature/device/device_share.dart';
-import '../../../feature/device/machine_register_bluetooth.dart';
-import '../../../feature/device/machine_register_qr.dart';
+import '../../../feature/machine_share/machine_share.dart';
+import '../../../feature/machine_share/machine_share_bluetooth.dart';
+import '../../../feature/machine_register/machine_register_bluetooth.dart';
+import '../../../feature/machine_register/machine_register_qr.dart';
 
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_widgets.dart';
@@ -159,6 +160,17 @@ class MachinesTab extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          TextButton.icon(
+            onPressed: () => _open(
+              context,
+              ShareBluetoothReceivePage(
+                serverUrl: controller.api.serverUrl,
+                token: controller.api.token,
+              ),
+            ),
+            icon: const Icon(Icons.bluetooth_searching),
+            label: const Text('Nhận chia sẻ qua Bluetooth'),
           ),
           TextButton.icon(
             onPressed: controller.checking ? null : () => _addById(context),

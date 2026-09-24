@@ -71,7 +71,7 @@ class _MainDashboardState extends State<MainDashboard> {
           ),
         ),
         (
-          page: machinePage(ProductsTab(controller: _controller)),
+          page: machinePage(ProductsTab(products: _controller.products)),
           destination: const NavigationDestination(
             icon: Icon(Icons.local_cafe_outlined),
             selectedIcon: Icon(Icons.local_cafe),

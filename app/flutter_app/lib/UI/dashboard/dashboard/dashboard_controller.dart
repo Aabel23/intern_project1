@@ -1,31 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../feature/data_sync/products_sync.dart';
 import '../machine_api.dart';
-
-// Một món trong menu, đọc từ kết quả lệnh xem_menu.
-class Drink {
-  const Drink({
-    required this.id,
-    required this.name,
-    required this.price,
-    required this.available,
-    required this.inStock,
-  });
-
-  factory Drink.fromJson(Map<String, dynamic> json) => Drink(
-    id: (json['drinkId'] as num).toInt(),
-    name: json['name']?.toString() ?? '',
-    price: (json['price'] as num?)?.toDouble() ?? 0,
-    available: json['available'] == true,
-    inStock: json['inStock'] != false,
-  );
-
-  final int id;
-  final String name;
-  final double price;
-  final bool available;
-  final bool inStock;
-}
 
 // Một nguyên liệu, đọc từ kết quả lệnh xem_nguyen_lieu.
 class Ingredient {
@@ -65,9 +41,8 @@ class DashboardController extends ChangeNotifier {
   String? machineId;
   bool checking = false;
 
-  List<Drink> drinks = const [];
-  String? menuError;
-  bool loadingMenu = false;
+  // Dữ liệu từng tab tách ra feature/data_sync.
+  late final products = ProductsSync(api, () => machineId);
 
   List<Ingredient> ingredients = const [];
   String? ingredientError;
@@ -108,14 +83,14 @@ class DashboardController extends ChangeNotifier {
   Future<void> selectMachine(String id) async {
     _session++;
     machineId = id;
-    drinks = const [];
+    products.reset();
     ingredients = const [];
-    menuError = ingredientError = null;
-    loadingMenu = loadingIngredients = false;
+    ingredientError = null;
+    loadingIngredients = false;
     notifyListeners();
     await refreshStatuses();
     if (online[id] == true) {
-      await Future.wait([loadMenu(), loadIngredients()]);
+      await Future.wait([products.load(), loadIngredients()]);
     }
   }
 
@@ -134,27 +109,6 @@ class DashboardController extends ChangeNotifier {
     checking = false;
     notifyListeners();
   }
-
-  Future<void> loadMenu() => _load(
-    start: () => loadingMenu = true,
-    end: () => loadingMenu = false,
-    command: 'xem_menu',
-    apply: (result) {
-      final rows = result is Map ? result['drinks'] : null;
-      if (rows is! List) {
-        throw const MachineException('Máy trả menu không đúng định dạng.');
-      }
-      final parsed = [
-        for (final row in rows.whereType<Map<String, dynamic>>())
-          Drink.fromJson(row),
-      ];
-      return () {
-        drinks = parsed;
-        menuError = null;
-      };
-    },
-    fail: (message) => menuError = message,
-  );
 
   Future<void> loadIngredients() => _load(
     start: () => loadingIngredients = true,
@@ -177,20 +131,10 @@ class DashboardController extends ChangeNotifier {
     fail: (message) => ingredientError = message,
   );
 
-  // Ném lỗi ra ngoài để tab hiển thị SnackBar.
-  Future<void> setDrinkAvailable(Drink drink, bool available) async {
-    final id = machineId;
-    if (id == null) throw const MachineException('Chưa chọn máy.');
-    await api.send(id, 'doi_trang_thai_mon', {
-      'drink_id': drink.id,
-      'available': available,
-    });
-    await loadMenu();
-  }
-
   @override
   void dispose() {
     _session++;
+    products.dispose();
     super.dispose();
   }
 

@@ -12,6 +12,21 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 465
 SMTP_TIMEOUT_SECONDS = 10
 
+# Token phiên đăng nhập của app.
+SESSION_TTL_SECONDS = 30 * 24 * 3600
+# 32 byte ngẫu nhiên -> token base64url 43 ký tự.
+TOKEN_BYTES = 32
+# Lọc thô độ dài token nhận từ app trước khi tra DB.
+TOKEN_MIN_LENGTH = 20
+TOKEN_MAX_LENGTH = 100
+
+# Mã mời chia sẻ máy, dùng một lần.
+INVITE_TTL_SECONDS = 5 * 60
+# 24 byte ngẫu nhiên -> mã base64url 32 ký tự.
+INVITE_CODE_BYTES = 24
+INVITE_CODE_MIN_LENGTH = 20
+INVITE_CODE_MAX_LENGTH = 100
+
 
 def get_smtp_password() -> str:
     """Đọc mật khẩu khi cần gửi mail, tránh nạp secret lúc import module."""

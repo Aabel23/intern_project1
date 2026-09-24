@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Nhân viên nhận chia sẻ máy: cho điện thoại hiện khi chủ máy quét. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <application
         android:label="FlexMix"
         android:usesCleartextTraffic="true"

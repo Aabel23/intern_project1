@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simple_app/UI/dashboard/dashboard/main_dashboard.dart';
-import 'package:simple_app/feature/device/machine_register_qr.dart';
+import 'package:simple_app/feature/machine_register/machine_register_qr.dart';
 
 // Server giả trả trạng thái online, menu và kho theo đúng giao thức thật.
 Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luồng đăng ký máy FlexMix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+  /* Bảng màu kem và cam đất theo phong cách Claude. */
+  :root {
+    --bg: #faf9f5; --fg: #141413; --muted: #6b6a63; --card: #ffffff;
+    --line: #e8e6dc; --accent: #c96442; --code-bg: #f0eee6; --warn: #a3542f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 48px 16px 72px; }
+  h1, h2, h3 {
+    font-family: "Source Serif 4", "Tiempos Text", Georgia, serif;
+    font-weight: 500; letter-spacing: -0.01em;
+  }
+  h1 { font-size: 2.2rem; margin: 0 0 10px; }
+  h2 {
+    font-size: 1.45rem; margin: 44px 0 12px; padding-top: 18px;
+    border-top: 1px solid var(--line); color: var(--accent);
+  }
+  h3 { font-size: 1.12rem; margin: 24px 0 8px; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  code {
+    font: 0.9em ui-monospace, "Cascadia Code", Consolas, monospace;
+    background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.45;
+  }
+  pre code { background: none; padding: 0; }
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 4px 18px 10px; margin: 14px 0;
+  }
+  .step h3 { margin-top: 14px; }
+  .num {
+    display: inline-block; min-width: 1.8em; text-align: center; margin-right: 6px;
+    background: var(--accent); color: var(--card); border-radius: 999px;
+    font-size: 0.85em; padding: 0 6px;
+  }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 3px 0; }
+  .note { color: var(--warn); }
+</style>
+</head>
+<body>
+<main>
+<h1>Luồng đăng ký máy</h1>
+<p class="lead">Chủ quán lấy tên máy và product key từ máy pha, bằng một trong hai cách: quét tem QR
+dán trên máy, hoặc kết nối Bluetooth. App gửi hai thông tin đó cùng token đăng nhập lên server.
+Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<code>owner</code>).</p>
+
+<h2>Cách 1: Quét tem QR</h2>
+<div class="step">
+<h3><span class="num">1</span><a href="../../../machine_qr.py">machine_qr.py</a> (chạy trên máy tính, lúc in tem)</h3>
+<ol>
+  <li><code>build_payload(name, key)</code>: kiểm tra độ dài (tên 1–150, key 1–1024 ký tự), tạo JSON <code>{"type":"pairing","machine_name":...,"product_key":...}</code>.</li>
+  <li><code>main()</code>: tạo QR mức sửa lỗi M, lưu thành file PNG để in.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, hàm <code>_open()</code> (dòng 25)</h3>
+<p>Nút "Quét QR" gọi <code>_open(context, MachineQrPage(serverUrl, token))</code>: mở màn quét, chờ màn đó đóng, rồi gọi <code>controller.loadMyMachines()</code> để lấy lại danh sách máy.</p>
+</div>
+<div class="step">
+<h3><span class="num">3</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_qr.dart">machine_register_qr.dart</a>, hàm <code>_MachineQrPageState.detect()</code> (dòng 53)</h3>
+<p>Widget <code>MobileScanner</code> gọi hàm này mỗi khi camera đọc được mã.</p>
+<ol>
+  <li>Đang xử lý một mã khác thì bỏ qua.</li>
+  <li>Lấy mã QR đầu tiên có nội dung.</li>
+  <li><strong>Khóa ngay</strong> (<code>scanning = false</code>, <code>busy = true</code>) trước mọi lệnh <code>await</code>, để camera đọc một mã nhiều lần cũng chỉ gửi một request. Camera đóng lại.</li>
+  <li>Gọi <code>parseMachineQr(raw)</code>.</li>
+  <li>Loại <code>pairing</code> thì gọi <code>MachineApi.registerMachine(data)</code>; loại <code>share</code> thì sang luồng chia sẻ máy.</li>
+  <li>Hiện "Đăng ký máy thành công · ID: ..." hoặc thông báo lỗi. Nút "Quét lại" mở camera lại.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">4</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_qr.dart">machine_register_qr.dart</a>, hàm <code>parseMachineQr(raw)</code> (dòng 9)</h3>
+<ol>
+  <li>QR quá 4096 byte thì từ chối.</li>
+  <li>Giải mã JSON. <code>type</code> phải là <code>pairing</code> hoặc <code>share</code>.</li>
+  <li>Loại <code>pairing</code>: tên và key phải là chuỗi không rỗng, đúng giới hạn độ dài.</li>
+  <li>Chỉ trả đúng 3 trường cần dùng, bỏ qua mọi trường khác, ví dụ địa chỉ server nhúng trong QR.</li>
+</ol>
+</div>
+
+<h2>Cách 2: Bluetooth</h2>
+<div class="step">
+<h3><span class="num">5</span><a href="../../../machine/pairing/bluez_server.py">bluez_server.py</a>, hàm <code>run_server()</code> (chạy trên Raspberry Pi)</h3>
+<ol>
+  <li>Tìm adapter Bluetooth, bật nguồn, đặt tên hiển thị bằng tên máy (<code>FlexMix-...</code>).</li>
+  <li>Đăng ký <code>PairingAgent</code> kiểu <code>NoInputNoOutput</code>: ghép đôi không cần nhập mã, chỉ chấp nhận dịch vụ SPP.</li>
+  <li>Đăng ký profile SPP bắt buộc đã ghép đôi (<code>RequireAuthentication</code>), bật chế độ cho điện thoại tìm thấy trong 120 giây.</li>
+  <li>Mỗi kết nối mới, BlueZ gọi <code>PairingProfile.NewConnection()</code>; hàm này mở một luồng chạy <code>handle_connection()</code>.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">6</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, hàm <code>scan()</code> (dòng 28)</h3>
+<p>Gọi native qua kênh <code>flexmix/bluetooth_pairing</code>, lệnh <code>scan</code>, rồi hiện danh sách máy tìm được.</p>
+</div>
+<div class="step">
+<h3><span class="num">7</span><a href="../../../app/flutter_app/android/app/src/main/kotlin/com/example/simple_app/BluetoothPairing.kt">BluetoothPairing.kt</a>, hàm <code>scan()</code> và <code>startScan()</code></h3>
+<ol>
+  <li>Xin quyền Bluetooth (Android 12 trở lên) hoặc quyền vị trí (Android cũ hơn).</li>
+  <li>Quét 15 giây, chỉ giữ thiết bị có tên bắt đầu bằng <code>FlexMix-</code>.</li>
+  <li>Trả danh sách <code>{name, address}</code> về Dart.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">8</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, hàm <code>connect(device)</code> (dòng 57)</h3>
+<p>Người dùng chọn một máy; hàm gọi lệnh native <code>connect</code> với địa chỉ máy.</p>
+</div>
+<div class="step">
+<h3><span class="num">9</span><a href="../../../app/flutter_app/android/app/src/main/kotlin/com/example/simple_app/BluetoothPairing.kt">BluetoothPairing.kt</a>, hàm <code>connect()</code> (dòng 100)</h3>
+<ol>
+  <li>Chỉ cho kết nối tới máy vừa thấy trong lần quét.</li>
+  <li>Mở kết nối RFCOMM bảo mật; nếu chưa ghép đôi, Android tự hiện hộp thoại xác nhận.</li>
+  <li>Gửi <code>{"type":"identify"}</code>, chờ máy trả <code>{"type":"ready","ok":true}</code>.</li>
+  <li>Đọc gói <code>pairing</code> bằng <code>readMessage()</code> (mỗi gói một dòng, tối đa 4096 byte), kiểm tra tên và key.</li>
+  <li>Gửi <code>{"type":"ack","ok":true}</code>, trả gói về Dart. Toàn bộ tối đa 60 giây.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">10</span><a href="../../../machine/pairing/bluetooth_pairing.py">bluetooth_pairing.py</a>, hàm <code>handle_connection()</code> (phía máy)</h3>
+<ol>
+  <li><code>pair_bluetooth()</code>: chờ gói <code>identify</code>, trả <code>ready</code>.</li>
+  <li><code>send_bluetooth()</code>: gửi <code>{type: pairing, machine_name, product_key}</code> lấy từ <a href="../../../machine/config/machine_config.py">machine_config.py</a>, chờ <code>ack</code>.</li>
+  <li>Hết 30 giây không có dữ liệu thì đóng kết nối.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, tiếp tục trong <code>connect()</code></h3>
+<p>Hiện tên máy và key vừa nhận, rồi gọi <code>MachineApi.registerMachine(answer)</code> giống hệt cách 1.</p>
+</div>
+
+<h2>Phần chung: gửi lên server</h2>
+<div class="step">
+<h3><span class="num">12</span><a href="../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, hàm <code>registerMachine(packet)</code> (dòng 21)</h3>
+<ol>
+  <li>Gửi <code>POST /app/dang-ky-may</code> với gói máy cộng thêm <code>token</code>.</li>
+  <li><code>_request()</code> (dòng 104) kiểm tra URL server, gửi JSON, chờ tối đa 25 giây. Mã HTTP lỗi thì lấy <code>message</code> của server làm thông báo.</li>
+  <li>Phản hồi phải có <code>valid: true</code> và <code>machine_id</code>, không thì báo lỗi.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">13</span><a href="../../main.py">server/main.py</a>, hàm <code>Handler.do_POST()</code></h3>
+<p>Tra <code>ROUTES</code>: <code>/app/dang-ky-may</code> ứng với <code>receive_register</code> của luồng đăng ký máy.</p>
+</div>
+<div class="step">
+<h3><span class="num">14</span><a href="machine_register_flow.py">machine_register_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 11)</h3>
+<ol>
+  <li><code>verify_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
+  <li><code>user_from_request(data)</code> trong <a href="../user_login/session.py">session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>
+  <li>Băm key bằng <code>hash_product_key()</code> (SHA-256).</li>
+  <li><code>BEGIN IMMEDIATE</code> khóa ghi database, để hai lần quét cùng lúc không tạo hai máy.</li>
+  <li>Tìm máy theo mã băm key:
+    <ul>
+      <li>chưa có thì tạo <code>machine_id = "fm_" + uuid</code> và <code>INSERT INTO machines</code>;</li>
+      <li>đã có thì dùng lại <code>machine_id</code> cũ.</li>
+    </ul>
+  </li>
+  <li>Kiểm tra chủ máy trong <code>machine_managers</code>:
+    <ul>
+      <li>chưa có chủ thì ghi người gửi là <code>owner</code>;</li>
+      <li>chủ là người khác thì từ chối: "Máy đã thuộc tài khoản khác. Hãy nhờ chủ máy chia sẻ."</li>
+    </ul>
+  </li>
+  <li>Trả <code>{valid, created, machine_id, message}</code>.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">15</span><a href="machine_register_verify.py">machine_register_verify.py</a>, hàm <code>verify_registration(data)</code> (dòng 24)</h3>
+<p>Route phụ <code>/app/xac-minh-dang-ky-may</code>: cho <code>machine_id</code> và key, trả về có khớp bản ghi đã lưu không. App hiện chưa gọi route này.</p>
+</div>
+
+<h2>Sơ đồ tóm tắt</h2>
+<pre><code>Cách 1 (QR)                              Cách 2 (Bluetooth)
+machine_qr.py → in tem                    bluez_server.run_server (Pi)
+machines_tab._open                        machine_register_bluetooth.scan
+ └─ MachineQrPage.detect                    └─ BluetoothPairing.kt scan / connect
+     └─ parseMachineQr                           ⇄ bluetooth_pairing.handle_connection
+            │                                       (identify → ready → pairing → ack)
+            └──────────────┬──────────────────────┘
+                           ▼
+          MachineApi.registerMachine → POST /app/dang-ky-may {name, key, token}
+           main.Handler.do_POST
+            └─ machine_register_flow.receive_register
+                ├─ verify_machine
+                ├─ session.user_from_request        (token → user_id)
+                ├─ INSERT machines                  (nếu key mới)
+                └─ INSERT machine_managers owner    (nếu chưa có chủ)
+          ← {machine_id}
+machines_tab._open → controller.loadMyMachines</code></pre>
+
+<h2>Vài điểm cần biết</h2>
+<ul>
+  <li><strong>Server chỉ lưu mã băm của product key</strong>, không lưu key gốc.</li>
+  <li><strong>Quét lại cùng tem không tạo máy mới</strong>: cùng key luôn ra cùng <code>machine_id</code>.</li>
+  <li><strong>Người đầu tiên quét tem là chủ máy.</strong> Người khác muốn quản lý phải được chủ chia sẻ.</li>
+  <li class="note"><strong><code>machine_id</code> mới chưa được gửi xuống máy pha.</strong> Máy vẫn heartbeat bằng <code>MACHINE_ID</code> ghi cứng trong <code>machine_config.py</code>, nên trạng thái online của máy vừa đăng ký chưa khớp.</li>
+  <li class="note"><strong>Ai có product key là đăng ký được máy</strong> nếu máy chưa có chủ. Tem QR và file <code>machine_config.py</code> cần được giữ kín.</li>
+</ul>
+</main>
+</body>
+</html>

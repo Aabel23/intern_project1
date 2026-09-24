@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:simple_app/UI/dashboard/machine_api.dart';
-import 'package:simple_app/feature/device/device_share.dart';
+import 'package:simple_app/feature/machine_share/machine_share.dart';
 
 void main() {
   testWidgets('Chủ máy gửi token + mã máy, hiện QR mã mời', (tester) async {

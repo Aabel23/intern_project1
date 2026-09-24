@@ -4,11 +4,16 @@ import hashlib
 import secrets
 import time
 
+from server.config.config import (
+    INVITE_CODE_BYTES,
+    INVITE_CODE_MAX_LENGTH,
+    INVITE_CODE_MIN_LENGTH,
+    INVITE_TTL_SECONDS,
+)
 from server.database.connection import get_connection
 from server.service.user_login.session import user_from_request
 
 
-INVITE_TTL_SECONDS = 5 * 60
 NOT_LOGGED_IN = {"valid": False, "message": "Phiên đăng nhập hết hạn, hãy đăng nhập lại"}
 
 
@@ -24,7 +29,7 @@ def create_invite(data):
     if not isinstance(machine_id, str) or not machine_id or len(machine_id) > 100:
         return {"valid": False, "message": "Thiếu mã máy hợp lệ"}
 
-    code = secrets.token_urlsafe(24)
+    code = secrets.token_urlsafe(INVITE_CODE_BYTES)
     expires_at = time.time() + INVITE_TTL_SECONDS
     with get_connection() as conn:
         owner = conn.execute(
@@ -53,7 +58,7 @@ def accept_invite(data):
     if user_id is None:
         return NOT_LOGGED_IN
     code = data.get("code")
-    if not isinstance(code, str) or not 20 <= len(code) <= 100:
+    if not isinstance(code, str) or not INVITE_CODE_MIN_LENGTH <= len(code) <= INVITE_CODE_MAX_LENGTH:
         return {"valid": False, "message": "Mã chia sẻ không hợp lệ"}
 
     # Khóa ghi để một mã không được hai người dùng cùng lúc.

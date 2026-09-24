@@ -4,10 +4,13 @@ import hashlib
 import secrets
 import time
 
+from server.config.config import (
+    SESSION_TTL_SECONDS,
+    TOKEN_BYTES,
+    TOKEN_MAX_LENGTH,
+    TOKEN_MIN_LENGTH,
+)
 from server.database.connection import get_connection
-
-
-SESSION_TTL_SECONDS = 30 * 24 * 3600
 
 
 def hash_token(token):
@@ -15,7 +18,7 @@ def hash_token(token):
 
 
 def create_session(user_id):
-    token = secrets.token_urlsafe(32)
+    token = secrets.token_urlsafe(TOKEN_BYTES)
     now = time.time()
     with get_connection() as conn:
         conn.execute("DELETE FROM app_sessions WHERE expires_at <= ?", (now,))
@@ -29,7 +32,7 @@ def create_session(user_id):
 def user_from_request(data):
     """Trả user_id theo trường token trong JSON, None nếu thiếu hoặc hết hạn."""
     token = data.get("token") if isinstance(data, dict) else None
-    if not isinstance(token, str) or not 20 <= len(token) <= 100:
+    if not isinstance(token, str) or not TOKEN_MIN_LENGTH <= len(token) <= TOKEN_MAX_LENGTH:
         return None
     with get_connection() as conn:
         row = conn.execute(

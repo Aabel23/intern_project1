@@ -30,3 +30,25 @@ Nhân viên: tab Máy → Quét QR (cùng màn hình quét tem). App gửi mã t
 `/app/nhan-chia-se`, server ghi nhân viên là `manager` của máy.
 Mã dùng một lần, hết hạn sau 5 phút. Sau khi quét, dashboard đọc lại
 `/app/may-cua-toi` nên máy hiện ngay trong danh sách.
+
+## Chia sẻ qua Bluetooth
+
+Dùng khi không tiện quét QR. Nội dung gửi đi giống hệt QR (`encodeShareQr`),
+nên mã hóa sau này trong `machine_share_qr.dart` áp dụng cho cả hai đường.
+
+1. Nhân viên: tab Máy → **Nhận chia sẻ qua Bluetooth**, cho phép hiện điện thoại
+   (120 giây). App mở RFCOMM server với UUID `e53b1694-9a6d-41e7-8b4a-00e228b8164e`.
+2. Chủ máy: Chia sẻ máy → **Gửi qua Bluetooth**, quét rồi chọn điện thoại nhân viên.
+3. Gói tin, mỗi gói một dòng JSON UTF-8 kết thúc bằng `\n` (tối đa 4096 byte),
+   cùng kiểu với pairing máy:
+   - Chủ → nhân viên: `{"type":"identify"}`
+   - Nhân viên → chủ: `{"type":"ready","ok":true}`
+   - Chủ → nhân viên: `{"type":"share","code":"..."}`
+   - Nhân viên → chủ: `{"type":"ack","ok":true}` (`ok:false` nếu không phải gói share),
+     rồi chờ chủ đóng kết nối trước để ACK không bị mất.
+4. App nhân viên kiểm tra gói bằng `parseMachineQr`, gọi `/app/nhan-chia-se`
+   như khi quét QR. Mã vẫn dùng một lần, hết hạn sau 5 phút.
+
+Thử với một điện thoại: laptop Windows đóng vai nhân viên bằng
+`python sandbox/bluetooth_pair/app2app_pair.py` (cần server đang chạy và một
+tài khoản thứ hai).

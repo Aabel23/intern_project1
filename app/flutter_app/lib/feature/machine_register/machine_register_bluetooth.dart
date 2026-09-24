@@ -15,6 +15,8 @@ class MachinePairingPage extends StatefulWidget {
 class _MachinePairingPageState extends State<MachinePairingPage> {
   static const channel = MethodChannel('flexmix/bluetooth_pairing');
   List<Map<String, String>> devices = [];
+  // Bật để pair với máy thử (vd. laptop chạy sandbox) không đặt tên FlexMix-.
+  bool showAll = false;
   Map<String, String>? packet;
   bool busy = false;
   String status = '';
@@ -24,6 +26,10 @@ class _MachinePairingPageState extends State<MachinePairingPage> {
     super.initState();
     scan();
   }
+
+  List<Map<String, String>> get shown => showAll
+      ? devices
+      : devices.where((d) => d['name']!.startsWith('FlexMix-')).toList();
 
   Future<void> scan() async {
     setState(() {
@@ -39,7 +45,7 @@ class _MachinePairingPageState extends State<MachinePairingPage> {
         devices = rows
             .map((row) => Map<String, String>.from(row as Map))
             .toList();
-        status = devices.isEmpty
+        status = shown.isEmpty
             ? 'Không thấy máy. Kiểm tra Bluetooth và chế độ pairing trên máy.'
             : 'Chọn máy để nhận thông tin.';
       });
@@ -118,6 +124,13 @@ class _MachinePairingPageState extends State<MachinePairingPage> {
           if (busy) const LinearProgressIndicator(),
           const SizedBox(height: 12),
           Text(status),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Hiện mọi thiết bị Bluetooth'),
+            subtitle: const Text('Dùng khi thử với máy không tên FlexMix-'),
+            value: showAll,
+            onChanged: busy ? null : (value) => setState(() => showAll = value),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: packet != null
@@ -144,7 +157,7 @@ class _MachinePairingPageState extends State<MachinePairingPage> {
                   )
                 : ListView(
                     children: [
-                      for (final device in devices)
+                      for (final device in shown)
                         ListTile(
                           leading: const Icon(Icons.bluetooth),
                           title: Text(device['name']!),

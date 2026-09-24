@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../dashboard/dashboard_controller.dart';
+import '../../../feature/data_sync/products_sync.dart';
 import '../dashboard/dashboard_widgets.dart';
 
 // Tab Sản phẩm: danh sách món từ máy, công tắc bật/tắt bán.
 class ProductsTab extends StatelessWidget {
-  const ProductsTab({super.key, required this.controller});
-  final DashboardController controller;
+  const ProductsTab({super.key, required this.products});
+  final ProductsSync products;
 
   Future<void> _toggle(BuildContext context, Drink drink, bool value) async {
     try {
-      await controller.setDrinkAvailable(drink, value);
+      await products.setAvailable(drink, value);
     } catch (error) {
       if (context.mounted) showMessage(context, 'Không lưu được: $error');
     }
@@ -18,24 +18,24 @@ class ProductsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
+    listenable: products,
     builder: (context, _) => RefreshIndicator(
-      onRefresh: controller.loadMenu,
+      onRefresh: products.load,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const PageTitle('Sản phẩm'),
-          if (controller.loadingMenu)
+          if (products.loading)
             const Padding(
               padding: EdgeInsets.only(top: 12),
               child: LinearProgressIndicator(),
             ),
           const SizedBox(height: 14),
-          if (controller.menuError != null)
-            ListNotice(controller.menuError!, error: true)
-          else if (controller.drinks.isEmpty && !controller.loadingMenu)
+          if (products.error != null)
+            ListNotice(products.error!, error: true)
+          else if (products.drinks.isEmpty && !products.loading)
             const ListNotice('Máy chưa có món nào.'),
-          ...controller.drinks.map(
+          ...products.drinks.map(
             (p) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Card(

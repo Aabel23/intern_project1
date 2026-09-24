@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:simple_app/feature/device/machine_register_qr.dart';
+import 'package:simple_app/feature/machine_register/machine_register_qr.dart';
+import 'package:simple_app/feature/machine_share/machine_share_qr.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
