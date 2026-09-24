@@ -8,8 +8,7 @@ python -m server.main
 
 Host và port đọc từ `server/config/config.py`, hiện là `0.0.0.0:8000`.
 App dùng `http://<IP máy chạy server>:8000`; `0.0.0.0` là địa chỉ lắng nghe.
-Tắt tiến trình API cũ đang dùng port 8000 trước khi chạy, không chạy thêm các
-entry point dịch vụ trên cùng port. Ctrl+C dừng server.
+Tắt tiến trình cũ đang dùng port 8000 trước khi chạy. Ctrl+C dừng server.
 
 Một server phục vụ đồng thời:
 
@@ -24,7 +23,8 @@ Mỗi request có thread riêng, nên app chờ kết quả không chặn machin
 Phiên OTP/đăng nhập hết hạn được dọn định kỳ. Khởi động lại làm mất các phiên
 và lệnh đang giữ trong RAM; các bản ghi SQLite vẫn còn.
 
-`server/main.py` chỉ nối dịch vụ; các entry point riêng vẫn dùng được.
+`server/main.py` là server HTTP duy nhất; mỗi block trong `service/` chỉ khai báo `ROUTES`
+(`*_api.py`), còn `server/server.py` chứa phần relay app ↔ máy.
 Các module dùng chung một tiến trình và database, không phải cách ly tiến trình.
 Lỗi import hoặc lỗi cả tiến trình vẫn ảnh hưởng server chung.
 

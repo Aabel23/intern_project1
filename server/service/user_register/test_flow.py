@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 from .otp import otp_flow as flow
-from . import main
+from server import main as server_main
 from .user_register import registration_flow
 from server.database import connection
 
@@ -40,7 +40,7 @@ class RegistrationFlowTest(unittest.TestCase):
         self.addCleanup(patch.stopall)
 
     def start(self):
-        result = main.receive_register(self.data)
+        result = registration_flow.receive_register(self.data)
         self.assertTrue(result["valid"], result)
         return result["registration_id"]
 
@@ -51,22 +51,22 @@ class RegistrationFlowTest(unittest.TestCase):
         self.assertNotIn("password", registration_flow.REGISTRATIONS[key]["user_data"])
         self.assertNotEqual(registration_flow.REGISTRATIONS[key]["user_data"]["password_hash"], self.data["password"])
         changed = dict(self.data, username="changed")
-        self.assertFalse(main.receive_register(changed)["valid"])
+        self.assertFalse(registration_flow.receive_register(changed)["valid"])
 
     def test_wrong_attempts_do_not_remove_cooldown(self):
         key = self.start()
         for _ in range(5):
-            result = main.confirm_otp({"registration_id": key, "code": "999999"})
+            result = registration_flow.confirm_otp({"registration_id": key, "code": "999999"})
             self.assertFalse(result["valid"])
         self.assertIn("5", result["message"])
         self.assertEqual(flow.resend_otp({"registration_id": key})["retry_after"], 60)
-        self.assertFalse(main.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
+        self.assertFalse(registration_flow.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
 
     def test_parallel_verify_is_idempotent_and_resend_is_blocked(self):
         key = self.start()
         with patch("builtins.print") as output:
             with ThreadPoolExecutor(2) as pool:
-                results = list(pool.map(lambda _: main.confirm_otp(
+                results = list(pool.map(lambda _: registration_flow.confirm_otp(
                     {"registration_id": key, "code": "012345"}), range(2)))
         self.assertTrue(all(result["valid"] for result in results))
         output.assert_called_once()  # Chỉ một lần chuyển trạng thái.
@@ -77,14 +77,14 @@ class RegistrationFlowTest(unittest.TestCase):
             self.assertEqual(db.execute("SELECT count(*) FROM users").fetchone()[0], 1)
             stored = db.execute("SELECT password FROM users").fetchone()[0]
         self.assertEqual(stored, registration_flow.REGISTRATIONS[key]["user_data"]["password_hash"])
-        self.assertEqual(main.receive_register(self.data)["account_created"], True)
+        self.assertEqual(registration_flow.receive_register(self.data)["account_created"], True)
         self.assertFalse(flow.resend_otp({"registration_id": key})["valid"])
 
     def test_new_session_cannot_replace_old_payload(self):
         first = self.start()
         self.clock.return_value = 1061
         other = dict(self.data, request_id="b" * 32, username="other")
-        second = main.receive_register(other)["registration_id"]
+        second = registration_flow.receive_register(other)["registration_id"]
         self.assertNotEqual(first, second)
         self.assertEqual(registration_flow.REGISTRATIONS[first]["user_data"]["username"], "test")
         self.assertEqual(registration_flow.REGISTRATIONS[second]["user_data"]["username"], "other")
@@ -95,7 +95,7 @@ class RegistrationFlowTest(unittest.TestCase):
         self.send_otp.return_value = "SMTP failed"
         self.assertFalse(flow.resend_otp({"registration_id": key})["valid"])
         self.assertEqual(flow.resend_otp({"registration_id": key})["retry_after"], 60)
-        self.assertTrue(main.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
+        self.assertTrue(registration_flow.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
 
     def test_slow_send_does_not_hold_lock_or_allow_second_send(self):
         started = threading.Event()
@@ -106,10 +106,10 @@ class RegistrationFlowTest(unittest.TestCase):
                 raise TimeoutError("test timeout")
         self.send_otp.side_effect = slow_send
         with ThreadPoolExecutor(1) as pool:
-            task = pool.submit(main.receive_register, self.data)
+            task = pool.submit(registration_flow.receive_register, self.data)
             try:
                 self.assertTrue(started.wait(2))
-                result = main.receive_register(self.data)
+                result = registration_flow.receive_register(self.data)
                 self.assertFalse(result["valid"])
                 self.assertEqual(result["retry_after"], 3)
                 flow.cleanup()
@@ -122,20 +122,20 @@ class RegistrationFlowTest(unittest.TestCase):
         for index in range(5):
             self.clock.return_value = 1000 + index * 61
             data = dict(self.data, request_id=f"{index:032x}")
-            self.assertTrue(main.receive_register(data)["valid"])
+            self.assertTrue(registration_flow.receive_register(data)["valid"])
         self.clock.return_value = 1400
-        self.assertFalse(main.receive_register(dict(self.data, request_id="f" * 32))["valid"])
+        self.assertFalse(registration_flow.receive_register(dict(self.data, request_id="f" * 32))["valid"])
         self.assertEqual(self.send_otp.call_count, 5)
 
     def test_expiry_capacity_and_invalid_input(self):
-        self.assertFalse(main.receive_register({})["valid"])
-        self.assertFalse(main.confirm_otp({"registration_id": [], "code": "123456"})["valid"])
+        self.assertFalse(registration_flow.receive_register({})["valid"])
+        self.assertFalse(registration_flow.confirm_otp({"registration_id": [], "code": "123456"})["valid"])
         key = self.start()
         with patch.object(flow, "MAX_SESSIONS", 1):
-            self.assertFalse(main.receive_register(dict(self.data, request_id="b" * 32))["valid"])
+            self.assertFalse(registration_flow.receive_register(dict(self.data, request_id="b" * 32))["valid"])
         self.clock.return_value = 1901
         flow.cleanup()
-        self.assertFalse(main.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
+        self.assertFalse(registration_flow.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
         self.assertFalse(flow.SESSIONS)
         self.clock.return_value = 4601
         flow.cleanup()
@@ -145,23 +145,21 @@ class RegistrationFlowTest(unittest.TestCase):
         key = self.start()
         with patch.object(registration_flow, "register_user", side_effect=sqlite3.OperationalError("busy")):
             with self.assertRaises(sqlite3.OperationalError):
-                main.confirm_otp({"registration_id": key, "code": "012345"})
+                registration_flow.confirm_otp({"registration_id": key, "code": "012345"})
         self.assertFalse(registration_flow.REGISTRATIONS[key]["account_created"])
-        self.assertTrue(main.confirm_otp({"registration_id": key, "code": "012345"})["account_created"])
+        self.assertTrue(registration_flow.confirm_otp({"registration_id": key, "code": "012345"})["account_created"])
 
     def test_wrong_code_cannot_create_user(self):
         key = self.start()
-        self.assertFalse(main.confirm_otp({"registration_id": key, "code": "999999"})["valid"])
+        self.assertFalse(registration_flow.confirm_otp({"registration_id": key, "code": "999999"})["valid"])
         with connection.get_connection() as db:
             self.assertEqual(db.execute("SELECT count(*) FROM users").fetchone()[0], 0)
         self.assertFalse(registration_flow.REGISTRATIONS[key]["otp_verified"])
 
     def test_http_flow_and_rate_limit(self):
-        from .user_register.user_register_api import RegisterServer, RegisterHandler, IP_REQUESTS
+        IP_REQUESTS = server_main.IP_REQUESTS
         IP_REQUESTS.clear()
-        server = RegisterServer(("127.0.0.1", 0), RegisterHandler)
-        server.routes = main.ROUTES
-        server.cleanup = main.cleanup
+        server = server_main.Server(("127.0.0.1", 0), server_main.Handler)
         worker = threading.Thread(target=server.serve_forever, daemon=True)
         worker.start()
         def post(path, data):
@@ -174,7 +172,7 @@ class RegistrationFlowTest(unittest.TestCase):
                 client.close()
         try:
             from server.config.routing import APP_REGISTER_USER, APP_VERIFY_OTP
-            with patch.object(RegisterHandler, "log_message"):
+            with patch.object(server_main.Handler, "log_message"):
                 status, result = post(APP_REGISTER_USER, self.data)
                 self.assertEqual(status, 200)
                 status, result = post(APP_VERIFY_OTP, {"registration_id": result["registration_id"], "code": "012345"})
@@ -192,15 +190,15 @@ class RegistrationFlowTest(unittest.TestCase):
     def test_real_validation_and_duplicate_database_constraint(self):
         from .user_register.user_verify import verify_user
         self.verify_user.side_effect = verify_user
-        self.assertFalse(main.receive_register(dict(self.data, password="short"))["valid"])
+        self.assertFalse(registration_flow.receive_register(dict(self.data, password="short"))["valid"])
         key = self.start()
-        self.assertTrue(main.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
+        self.assertTrue(registration_flow.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
         duplicate = dict(self.data, request_id="b" * 32)
-        self.assertFalse(main.receive_register(duplicate)["valid"])
+        self.assertFalse(registration_flow.receive_register(duplicate)["valid"])
 
     def test_invalid_registration_does_not_send(self):
         self.verify_user.return_value = "invalid"
-        self.assertFalse(main.receive_register(self.data)["valid"])
+        self.assertFalse(registration_flow.receive_register(self.data)["valid"])
         self.send_otp.assert_not_called()
 
 

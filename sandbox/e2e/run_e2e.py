@@ -34,8 +34,8 @@ from machine.config.create_env import build_env  # noqa: E402
 from sandbox.e2e.phone import Phone  # noqa: E402
 from server.config.config import SERVER_PORT  # noqa: E402
 from server.database.connection import get_connection  # noqa: E402
-from server.security.user_password import hash_password  # noqa: E402
-from server.service.machine_register.machine_register_verify import hash_product_key  # noqa: E402
+from server.database.user.user_add import hash_password  # noqa: E402
+from server.lib.hashing import sha256_hex  # noqa: E402
 
 PACKAGE = "com.example.simple_app"
 PYTHON = sys.executable
@@ -370,7 +370,7 @@ def main():
         run.env_file = run.logs / "machine.env"
         run.env_file.write_text(env, encoding="utf-8")
         key = next(line.split("=", 1)[1] for line in env.splitlines() if line.startswith("PRODUCT_KEY="))
-        run.key_hash = hash_product_key(key)
+        run.key_hash = sha256_hex(key)
         scenario(run, phone, owner, staff, machine_name, socket.gethostname())
     except Exception:
         failed = True

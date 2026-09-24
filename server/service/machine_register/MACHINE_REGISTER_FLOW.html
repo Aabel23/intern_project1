@@ -181,7 +181,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 <ol>
   <li><code>verify_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
   <li><code>user_from_request(data)</code> trong <a href="../user_login/session.py">session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>
-  <li>Băm key bằng <code>hash_product_key()</code> (SHA-256).</li>
+  <li>Băm key bằng <code>sha256_hex()</code> (SHA-256, <code>server/lib/hashing.py</code>).</li>
   <li><code>BEGIN IMMEDIATE</code> khóa ghi database, để hai lần quét cùng lúc không tạo hai máy.</li>
   <li>Tìm máy theo mã băm key:
     <ul>

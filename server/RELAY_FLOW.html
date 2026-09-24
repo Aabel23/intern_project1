@@ -101,7 +101,7 @@ biết máy còn sống.</p>
 <p>Mỗi <code>HEARTBEAT_INTERVAL_SECONDS</code> (5 giây) gọi <code>send_heartbeat()</code>: POST <code>/machine/heartbeat</code> với <code>{product_key}</code>. Máy không cần biết ID của mình. Lỗi mạng chỉ in ra rồi thử lại lần sau.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="server.py">server/server.py</a>, <code>may_heartbeat()</code> (dòng 174)</h3>
+<h3><span class="num">3</span><a href="server.py">server/server.py</a>, <code>may_heartbeat()</code> (dòng 133)</h3>
 <p><code>machine_from_key()</code> băm key rồi tra <code>machines.product_key_hash</code> ra <code>machine_id</code> đã cấp lúc app đăng ký máy. Key sai hoặc chưa đăng ký thì trả 403. Đúng thì ghi <code>LAN_HEARTBEAT_CUOI[machine_id] = time.time()</code> trong bộ nhớ, trả <code>{da_nhan: true}</code>.</p>
 </div>
 
@@ -111,7 +111,7 @@ biết máy còn sống.</p>
 <p>Với mỗi máy trong danh sách, gọi <code>MachineApi.status(id)</code> và lưu kết quả vào <code>online[id]</code>. Lỗi thì coi như offline.</p>
 </div>
 <div class="step">
-<h3><span class="num">5</span><a href="server.py">server/server.py</a>, <code>Handler.do_GET()</code>, nhánh <code>MACHINE_STATUS</code> (dòng 84)</h3>
+<h3><span class="num">5</span><a href="server.py">server/server.py</a>, <code>Handler.do_GET()</code>, nhánh <code>MACHINE_STATUS</code> (dòng 61)</h3>
 <p>Đọc <code>machine_id</code> trên URL, lấy lần heartbeat cuối. Online nếu cách hiện tại dưới <code>HEARTBEAT_TIMEOUT_SECONDS</code>. Trả <code>{machine_id, online, last_seen}</code>.</p>
 </div>
 
@@ -133,7 +133,7 @@ biết máy còn sống.</p>
 <p><code>/app/gui-lenh</code>, <code>/machine/heartbeat</code>, <code>/machine/hoi-lenh</code>, <code>/machine/tra-ket-qua</code> nằm trong <code>RELAY_ROUTES</code> nên được chuyển thẳng cho <code>server.Handler.do_POST()</code>, không qua giới hạn 30 request/phút (giới hạn chỉ áp cho API đăng nhập/đăng ký). GET trạng thái kế thừa từ <code>server.Handler</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">9</span><a href="server.py">server/server.py</a>, <code>app_gui_lenh()</code> (dòng 135)</h3>
+<h3><span class="num">9</span><a href="server.py">server/server.py</a>, <code>app_gui_lenh()</code> (dòng 94)</h3>
 <ol>
   <li>Token không hợp lệ thì trả 401 kèm <code>login_required</code>. Người gọi không phải <code>owner</code>/<code>manager</code> của máy (<code>can_manage()</code>) thì trả 403.</li>
   <li>Máy không heartbeat gần đây thì trả ngay <code>{loi: "Máy đang offline"}</code>, không để app chờ.</li>
@@ -150,7 +150,7 @@ biết máy còn sống.</p>
 <p>POST <code>/machine/hoi-lenh</code> với <code>{product_key}</code>, trả trường <code>lenh</code> (có thể là <code>null</code>).</p>
 </div>
 <div class="step">
-<h3><span class="num">11</span><a href="server.py">server/server.py</a>, <code>may_hoi_lenh()</code> (dòng 184)</h3>
+<h3><span class="num">11</span><a href="server.py">server/server.py</a>, <code>may_hoi_lenh()</code> (dòng 143)</h3>
 <p>Tra máy từ key, lấy một lệnh khỏi <code>HOP_THU[machine_id]</code> nếu có (không chờ), trả <code>{lenh}</code>. Máy chỉ thấy lệnh của chính nó.</p>
 </div>
 <div class="step">
@@ -172,7 +172,7 @@ biết máy còn sống.</p>
 <p>POST <code>/machine/tra-ket-qua</code> với <code>{product_key, id, ket_qua}</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">14</span><a href="server.py">server/server.py</a>, <code>may_tra_ket_qua()</code> (dòng 195)</h3>
+<h3><span class="num">14</span><a href="server.py">server/server.py</a>, <code>may_tra_ket_qua()</code> (dòng 154)</h3>
 <p>Tìm <code>DANG_CHO[id]</code>. Chỉ khi lệnh đó được giao cho đúng máy vừa xưng key, kết quả mới được đặt vào hàng chờ; request ở bước 9 được đánh thức và trả kết quả cho app.</p>
 </div>
 

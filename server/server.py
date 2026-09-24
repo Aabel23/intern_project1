@@ -1,24 +1,20 @@
-"""Server trung gian giua app va machine."""
+"""Relay giữa app và máy: heartbeat, gửi lệnh, lấy lệnh, trả kết quả.
+
+Chạy qua server.main (python -m server.main), không chạy riêng file này.
+"""
 
 import json
 import sqlite3
 import queue
 import threading
 import time
-import sys
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from itertools import count
-from pathlib import Path
 from urllib.parse import parse_qs, urlparse
-
-if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server.config.config import (
     COMMAND_TIMEOUT_SECONDS,
     HEARTBEAT_TIMEOUT_SECONDS,
-    SERVER_HOST,
-    SERVER_PORT,
 )
 from server.config.routing import (
     APP_SEND_COMMAND,
@@ -28,7 +24,8 @@ from server.config.routing import (
     MACHINE_STATUS,
 )
 from server.database.machine.machine_read import can_manage, find_id_by_key_hash
-from server.service.machine_register.machine_register_verify import hash_product_key
+from server.lib.checks import is_machine_id
+from server.lib.hashing import sha256_hex
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
 
 # Mỗi máy một hộp thư lệnh riêng: machine_id -> danh sách lệnh chờ máy lấy.
@@ -41,12 +38,6 @@ LAN_HEARTBEAT_CUOI = {}
 # Kết quả menu của máy có thể lớn hơn các gói tài khoản.
 MAX_BODY = 1_000_000
 
-from server.service.machine_register.machine_register_api import ROUTES as REGISTER_ROUTES
-from server.service.machine_share.share_api import ROUTES as SHARE_ROUTES
-from server.service.machine_manage.manage_api import ROUTES as MANAGE_ROUTES
-
-MACHINE_ROUTES = {**REGISTER_ROUTES, **SHARE_ROUTES, **MANAGE_ROUTES}
-from server.database.machine.init_db import init_db as init_machine_db
 
 
 def machine_from_key(data):
@@ -54,7 +45,7 @@ def machine_from_key(data):
     key = data.get("product_key")
     if not isinstance(key, str) or not key.strip() or len(key) > 1024:
         return None
-    return find_id_by_key_hash(hash_product_key(key))
+    return find_id_by_key_hash(sha256_hex(key))
 
 
 def last_seen_of(machine_id):
@@ -82,24 +73,6 @@ class Handler(BaseHTTPRequestHandler):
         })
 
     def do_POST(self):
-        # Endpoint đăng ký và chia sẻ máy dùng chung flow với server.main.
-        handle = MACHINE_ROUTES.get(self.path)
-        if handle is not None:
-            try:
-                length = int(self.headers.get("Content-Length", 0))
-                if not 1 <= length <= 4096:
-                    raise ValueError("Body không hợp lệ")
-                self.connection.settimeout(10)
-                data = json.loads(self.rfile.read(length))
-                result = handle(data)
-            except (ValueError, UnicodeDecodeError):
-                return self.tra_json({"valid": False, "message": "JSON không hợp lệ"}, 400)
-            except TimeoutError:
-                return self.tra_json({"valid": False, "message": "Hết thời gian nhận dữ liệu"}, 408)
-            except sqlite3.Error:
-                return self.tra_json({"valid": False, "message": "Database tạm thời không sẵn sàng"}, 503)
-            return self.tra_json(result, 200 if result["valid"] else 400)
-
         routes = {
             APP_SEND_COMMAND: self.app_gui_lenh,
             MACHINE_HEARTBEAT: self.may_heartbeat,
@@ -125,7 +98,7 @@ class Handler(BaseHTTPRequestHandler):
             self.tra_json({"loi": NOT_LOGGED_IN["message"], "login_required": True}, 401)
             return
         machine_id = data.get("machine_id")
-        if not isinstance(machine_id, str) or not can_manage(machine_id, user_id):
+        if not is_machine_id(machine_id) or not can_manage(machine_id, user_id):
             self.tra_json({"loi": "Bạn không quản lý máy này"}, 403)
             return
         # Máy không heartbeat thì báo ngay, không để app chờ hết thời gian.
@@ -206,20 +179,16 @@ class Handler(BaseHTTPRequestHandler):
         return data if isinstance(data, dict) else None
 
     def tra_json(self, data, status=200):
+        """Trả JSON cho mọi route (relay và các block trong server.main)."""
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        if isinstance(data, dict) and "retry_after" in data:
+            self.send_header("Retry-After", str(data["retry_after"]))
         self.end_headers()
         try:
             self.wfile.write(body)
         except (BrokenPipeError, ConnectionResetError):
             pass
 
-
-if __name__ == "__main__":
-    init_machine_db()
-    # Nhieu request phai chay song song: app doi trong khi machine hoi server.
-    with ThreadingHTTPServer((SERVER_HOST, SERVER_PORT), Handler) as server:
-        print(f"Server dang nghe tai http://{SERVER_HOST}:{SERVER_PORT}", flush=True)
-        server.serve_forever()

@@ -2,11 +2,8 @@
 
 from server.database.connection import get_connection
 from server.database.machine import machine_read, machine_write
+from server.lib.checks import is_machine_id
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
-
-
-def valid_machine_id(machine_id):
-    return isinstance(machine_id, str) and 0 < len(machine_id) <= 100
 
 
 def rename_machine(data):
@@ -16,7 +13,7 @@ def rename_machine(data):
         return NOT_LOGGED_IN
     machine_id = data.get("machine_id")
     name = data.get("name")
-    if not valid_machine_id(machine_id):
+    if not is_machine_id(machine_id):
         return {"valid": False, "message": "Thiếu mã máy hợp lệ"}
     if not isinstance(name, str) or not name.strip() or len(name.strip()) > 150:
         return {"valid": False, "message": "Tên máy phải có 1-150 ký tự"}
@@ -34,7 +31,7 @@ def remove_machine(data):
     if user_id is None:
         return NOT_LOGGED_IN
     machine_id = data.get("machine_id")
-    if not valid_machine_id(machine_id):
+    if not is_machine_id(machine_id):
         return {"valid": False, "message": "Thiếu mã máy hợp lệ"}
     with get_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")

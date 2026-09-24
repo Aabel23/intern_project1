@@ -12,7 +12,7 @@ DUMMY_PASSWORD = f"pbkdf2_sha256$200000${'00' * 16}${'00' * 32}"
 
 
 def _matches_password(password, stored_password):
-    """So sánh mật khẩu với chuỗi PBKDF2 do user_password.hash_password tạo."""
+    """So sánh mật khẩu với chuỗi PBKDF2 do user_add.hash_password tạo."""
     try:
         algorithm, iterations, salt, expected = stored_password.split("$", 3)
         if algorithm != "pbkdf2_sha256":

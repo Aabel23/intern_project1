@@ -14,8 +14,7 @@ from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
 from server.service.user_login.session import create_session
-from http.server import ThreadingHTTPServer
-from server.service.machine_register.machine_register_api import MachineRegisterHandler
+from server import main as server_main
 
 
 class MachineRegisterTest(unittest.TestCase):
@@ -28,7 +27,7 @@ class MachineRegisterTest(unittest.TestCase):
         self.addCleanup(override.stop)
         init_db()
         self.token = self.make_user('owner')
-        self.server = ThreadingHTTPServer(('127.0.0.1', 0), MachineRegisterHandler)
+        self.server = server_main.Server(('127.0.0.1', 0), server_main.Handler)
         self.worker = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.worker.start()
         self.addCleanup(self.stop_server)

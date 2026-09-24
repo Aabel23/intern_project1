@@ -1,14 +1,13 @@
 """State machine nhận yêu cầu đăng nhập rồi giữ kết quả xác minh ngắn hạn."""
 
-import hashlib
 import hmac
-import json
-import re
 import secrets
 import threading
 import time
 
 from server.config.routing import APP_VERIFY_LOGIN
+from server.lib.checks import is_request_id, remove_expired
+from server.lib.hashing import request_fingerprint
 from .login_verify import verify_login
 
 
@@ -16,14 +15,10 @@ LOGIN_TTL_SECONDS = 60
 MAX_LOGIN_STATES = 1000
 LOGIN_STATES = {}
 FLOW_LOCK = threading.Lock()
-FINGERPRINT_KEY = secrets.token_bytes(32)
 
 
 def cleanup_locked():
-    now = time.monotonic()
-    for login_id, state in list(LOGIN_STATES.items()):
-        if now >= state["expires_at"]:
-            del LOGIN_STATES[login_id]
+    remove_expired(LOGIN_STATES)
 
 
 def cleanup():
@@ -44,10 +39,9 @@ def receive_login(data):
     if not isinstance(data, dict):
         return {"valid": False, "message": "Dữ liệu phải là JSON object"}
     request_id = data.get("request_id")
-    if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+    if not is_request_id(request_id):
         return {"valid": False, "message": "Thiếu mã yêu cầu đăng nhập hợp lệ"}
-    payload = json.dumps(data, sort_keys=True, ensure_ascii=True).encode()
-    fingerprint = hmac.new(FINGERPRINT_KEY, payload, hashlib.sha256).hexdigest()
+    fingerprint = request_fingerprint(data)
 
     with FLOW_LOCK:
         cleanup_locked()
@@ -103,7 +97,7 @@ def send_verification(data):
         return {"valid": False, "message": "Dữ liệu phải là JSON object"}
     request_id = data.get("request_id")
     login_id = data.get("login_id")
-    if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+    if not is_request_id(request_id):
         return {"valid": False, "message": "Thiếu mã yêu cầu đăng nhập hợp lệ"}
     if not isinstance(login_id, str) or not login_id:
         return {"valid": False, "message": "Thiếu ID đăng nhập"}

@@ -140,7 +140,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">7</span><a href="../../security/user_password.py">user_password.py</a>, hàm <code>hash_password()</code></h3>
+<h3><span class="num">7</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>hash_password()</code></h3>
 <p>Tạo salt ngẫu nhiên 16 byte, băm PBKDF2-SHA256 200.000 vòng, trả chuỗi <code>pbkdf2_sha256$200000$salt$mã_băm</code>. Đây là chuỗi mà luồng đăng nhập sẽ tách ra để so sánh.</p>
 </div>
 <div class="step">
@@ -224,7 +224,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
       └─ registration_flow.receive_register
           ├─ prepare_registration
           │   ├─ user_verify.verify_user → user_read.get_by_username / get_by_email
-          │   ├─ user_password.hash_password           (PBKDF2)
+          │   ├─ user_add.hash_password                (PBKDF2)
           │   └─ otp_flow.create_session               (SESSIONS trong RAM)
           └─ otp_flow.start_otp → resend_otp
               ├─ otp_generator.generate_code / hash_code

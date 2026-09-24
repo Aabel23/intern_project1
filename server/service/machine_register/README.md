@@ -2,7 +2,7 @@
 
 Flow nằm trong `machine_register_flow.py`.
 
-- `machine_register_api.py`: HTTP handler riêng và hai route đăng ký máy.
+- `machine_register_api.py`: chỉ khai báo hai route (`ROUTES`), `server/main.py` gộp vào server chung.
 - `machine_register_flow.py`: kiểm tra gói, lưu SQLite, cấp ID hoặc trả ID cũ.
 - `machine_register_verify.py`: kiểm tra trường dữ liệu và đối chiếu ID/key đã đăng ký.
 
@@ -31,18 +31,11 @@ Trả `valid`, `verified`, `machine_id`, `message` khi khớp bản ghi.
 Chưa có danh sách key nhà máy nên không xác minh key có thực sự do nhà máy cấp.
 Chưa gán cửa hàng, chưa cấp credential hoặc gửi ID xuống Raspberry Pi.
 
-Chạy từ thư mục dự án (chọn một server trên port 8000):
-
-```sh
-python -m server.service.machine_register.machine_register_api
-```
-
-`python -m server.server` cũng đã đăng ký hai route này. Module đăng nhập
-không import hoặc cung cấp route đăng ký máy. Khi khởi động, server bổ sung cột/index cho DB cũ;
-không xóa dữ liệu. Không chạy các server này đồng thời trên cùng port.
+Chạy qua server chung từ thư mục dự án: `python -m server.main`.
+Khi khởi động, server bổ sung cột/index cho DB cũ; không xóa dữ liệu.
 
 App tự POST gói sau Bluetooth rồi hiển thị ID server trả về.
-ID chưa tự thêm vào dashboard vì máy chưa nhận ID mới để heartbeat.
+Máy không cần biết ID: khi heartbeat/nhận lệnh, máy xưng danh bằng product key.
 
 ```sh
 python -m unittest server.service.machine_register.test_flow -v

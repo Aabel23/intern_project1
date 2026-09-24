@@ -1,6 +1,5 @@
 """Token phiên app: cấp sau khi đăng nhập, gửi kèm các API cần biết người gọi."""
 
-import hashlib
 import secrets
 import time
 
@@ -11,6 +10,7 @@ from server.config.config import (
     TOKEN_MIN_LENGTH,
 )
 from server.database.connection import get_connection
+from server.lib.hashing import sha256_hex
 
 # login_required báo app xóa token đã lưu và quay về màn hình đăng nhập.
 NOT_LOGGED_IN = {
@@ -20,10 +20,6 @@ NOT_LOGGED_IN = {
 }
 
 
-def hash_token(token):
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
 def create_session(user_id):
     token = secrets.token_urlsafe(TOKEN_BYTES)
     now = time.time()
@@ -31,7 +27,7 @@ def create_session(user_id):
         conn.execute("DELETE FROM app_sessions WHERE expires_at <= ?", (now,))
         conn.execute(
             "INSERT INTO app_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
-            (hash_token(token), user_id, now + SESSION_TTL_SECONDS),
+            (sha256_hex(token), user_id, now + SESSION_TTL_SECONDS),
         )
     return token
 
@@ -44,7 +40,7 @@ def user_from_request(data):
     with get_connection() as conn:
         row = conn.execute(
             "SELECT user_id FROM app_sessions WHERE token_hash=? AND expires_at > ?",
-            (hash_token(token), time.time()),
+            (sha256_hex(token), time.time()),
         ).fetchone()
     return row["user_id"] if row else None
 
@@ -54,5 +50,5 @@ def end_session(data):
     token = data.get("token") if isinstance(data, dict) else None
     if isinstance(token, str):
         with get_connection() as conn:
-            conn.execute("DELETE FROM app_sessions WHERE token_hash=?", (hash_token(token),))
+            conn.execute("DELETE FROM app_sessions WHERE token_hash=?", (sha256_hex(token),))
     return {"valid": True, "message": "Đã đăng xuất"}

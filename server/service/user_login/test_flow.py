@@ -13,7 +13,8 @@ from unittest.mock import patch
 from . import login_flow, login_verify
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
-from .login_api import LoginHandler, LoginServer, ROUTES
+from server import main as server_main
+from .login_api import ROUTES
 from .session import create_session, end_session, user_from_request
 
 
@@ -98,7 +99,7 @@ class LoginFlowTest(unittest.TestCase):
         self.assertFalse(mismatch["valid"])
 
     def test_http_api_receives_raw_json_and_returns_verification(self):
-        server = LoginServer(("127.0.0.1", 0), LoginHandler)
+        server = server_main.Server(("127.0.0.1", 0), server_main.Handler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
@@ -141,10 +142,9 @@ class LoginFlowTest(unittest.TestCase):
             server.server_close()
             thread.join()
 
-    def test_server_also_exposes_registration_routes(self):
-        self.assertIn("/app/dang-ky-nguoi-dung", ROUTES)
-        self.assertIn("/app/gui-ma-otp", ROUTES)
-        self.assertIn("/app/xac-minh-otp", ROUTES)
+    def test_main_server_exposes_login_and_registration_routes(self):
+        for path in (*ROUTES, "/app/dang-ky-nguoi-dung", "/app/gui-ma-otp", "/app/xac-minh-otp"):
+            self.assertIn(path, server_main.ROUTES)
 
 
 

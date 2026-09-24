@@ -5,7 +5,8 @@ from server.database.connection import get_connection
 from server.database.machine.machine_read import find_id_by_key_hash, get_owner_id
 from server.database.machine.machine_write import add_machine, set_owner
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
-from .machine_register_verify import hash_product_key, verify_machine
+from server.lib.hashing import sha256_hex
+from .machine_register_verify import verify_machine
 
 
 def receive_register(data):
@@ -18,7 +19,7 @@ def receive_register(data):
         return NOT_LOGGED_IN
 
     name = data["machine_name"].strip()
-    key_hash = hash_product_key(data["product_key"])
+    key_hash = sha256_hex(data["product_key"])
 
     # Khóa ghi SQLite để hai request cùng key không tạo hai máy.
     with get_connection() as conn:

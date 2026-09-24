@@ -1,27 +1,21 @@
 """Điều phối đăng ký: kiểm tra dữ liệu -> OTP -> ghi tài khoản."""
-import hashlib
-import hmac
-import json
-import re
 import secrets
 import threading
 import time
 
-from server.security.user_password import hash_password
+from server.lib.checks import is_request_id, remove_expired
+from server.lib.hashing import request_fingerprint
+from server.database.user.user_add import hash_password
 from ..otp import otp_flow
 from .user_verify import verify_user
 from .user_register import register_user
 
 REGISTRATIONS = {}
 FLOW_LOCK = threading.Lock()
-FINGERPRINT_KEY = secrets.token_bytes(32)
 
 
 def cleanup_locked():
-    now = time.monotonic()
-    for key, state in list(REGISTRATIONS.items()):
-        if now >= state["expires_at"]:
-            del REGISTRATIONS[key]
+    remove_expired(REGISTRATIONS)
 
 
 def cleanup():
@@ -81,10 +75,9 @@ def receive_register(data):
     if not isinstance(data, dict):
         return {"valid": False, "message": "Dữ liệu phải là JSON object"}
     request_id = data.get("request_id")
-    if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+    if not is_request_id(request_id):
         return {"valid": False, "message": "Thiếu mã yêu cầu đăng ký hợp lệ"}
-    payload = json.dumps(data, sort_keys=True, ensure_ascii=True).encode()
-    fingerprint = hmac.new(FINGERPRINT_KEY, payload, hashlib.sha256).hexdigest()
+    fingerprint = request_fingerprint(data)
 
     # Chuẩn bị phiên trong khóa; gửi email sau khi đã thả khóa.
     with FLOW_LOCK:

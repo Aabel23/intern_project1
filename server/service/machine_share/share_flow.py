@@ -1,6 +1,5 @@
 """Chủ máy tạo mã mời dạng QR, nhân viên quét để được giao quản lý máy."""
 
-import hashlib
 import secrets
 import time
 
@@ -12,11 +11,9 @@ from server.config.config import (
 )
 from server.database.connection import get_connection
 from server.database.machine import machine_invite, machine_read, machine_write
+from server.lib.checks import is_machine_id
+from server.lib.hashing import sha256_hex
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
-
-
-def hash_code(code):
-    return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
 
 def create_invite(data):
@@ -24,7 +21,7 @@ def create_invite(data):
     if user_id is None:
         return NOT_LOGGED_IN
     machine_id = data.get("machine_id")
-    if not isinstance(machine_id, str) or not machine_id or len(machine_id) > 100:
+    if not is_machine_id(machine_id):
         return {"valid": False, "message": "Thiếu mã máy hợp lệ"}
 
     code = secrets.token_urlsafe(INVITE_CODE_BYTES)
@@ -34,7 +31,7 @@ def create_invite(data):
             return {"valid": False, "message": "Chỉ chủ máy mới chia sẻ được máy này"}
         # Tạo mã mới thì mã cũ chưa dùng của máy này hết hiệu lực.
         machine_invite.replace_invite(
-            conn, hash_code(code), machine_id, user_id, expires_at, time.time()
+            conn, sha256_hex(code), machine_id, user_id, expires_at, time.time()
         )
     return {
         "valid": True,
@@ -56,10 +53,10 @@ def accept_invite(data):
     # Khóa ghi để một mã không được hai người dùng cùng lúc.
     with get_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        invite = machine_invite.find_valid_invite(conn, hash_code(code), time.time())
+        invite = machine_invite.find_valid_invite(conn, sha256_hex(code), time.time())
         if invite is None:
             return {"valid": False, "message": "Mã chia sẻ đã dùng hoặc hết hạn. Nhờ chủ máy tạo mã mới."}
-        machine_invite.mark_used(conn, hash_code(code), user_id)
+        machine_invite.mark_used(conn, sha256_hex(code), user_id)
         # Chủ quét mã của chính mình thì giữ nguyên quyền owner.
         machine_write.add_manager(conn, invite["machine_id"], user_id)
     return {
@@ -83,7 +80,7 @@ def list_staff(data):
     if user_id is None:
         return NOT_LOGGED_IN
     machine_id = data.get("machine_id")
-    if not isinstance(machine_id, str) or not machine_id:
+    if not is_machine_id(machine_id):
         return {"valid": False, "message": "Thiếu mã máy hợp lệ"}
     with get_connection() as conn:
         if not machine_read.is_owner(machine_id, user_id, conn):
@@ -99,7 +96,7 @@ def revoke_staff(data):
         return NOT_LOGGED_IN
     machine_id = data.get("machine_id")
     staff_id = data.get("user_id")
-    if not isinstance(machine_id, str) or not machine_id or not isinstance(staff_id, int):
+    if not is_machine_id(machine_id) or not isinstance(staff_id, int):
         return {"valid": False, "message": "Thiếu mã máy hoặc nhân viên"}
     with get_connection() as conn:
         if not machine_read.is_owner(machine_id, user_id, conn):

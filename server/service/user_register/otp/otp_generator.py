@@ -1,6 +1,7 @@
 """Sinh mã OTP; trạng thái phiên được quản lý tại otp_flow.py."""
-import hashlib
 import secrets
+
+from server.lib.hashing import sha256_hex
 
 OTP_DIGITS = 6
 OTP_TTL_SECONDS = 300
@@ -13,4 +14,4 @@ def generate_code():
 
 
 def hash_code(registration_id, code):
-    return hashlib.sha256(f"{registration_id}:{code}".encode()).hexdigest()
+    return sha256_hex(f"{registration_id}:{code}")

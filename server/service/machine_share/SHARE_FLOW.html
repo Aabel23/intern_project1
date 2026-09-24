@@ -121,7 +121,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
   <li>Kiểm tra <code>machine_id</code> đúng dạng.</li>
   <li>Tạo mã <code>secrets.token_urlsafe(24)</code> (32 ký tự ngẫu nhiên).</li>
   <li>Kiểm tra người gọi là <code>owner</code> của máy trong <code>machine_managers</code>. Không phải thì từ chối.</li>
-  <li>Xóa các mã mời đã hết hạn, rồi lưu <code>hash_code(code)</code> (SHA-256), máy, người tạo, hạn 5 phút vào <code>machine_invites</code>.</li>
+  <li>Xóa các mã mời đã hết hạn, rồi lưu <code>sha256_hex(code)</code> (SHA-256), máy, người tạo, hạn 5 phút vào <code>machine_invites</code>.</li>
   <li>Trả <code>{valid, code, machine_id, expires_in: 300}</code>. Mã gốc chỉ xuất hiện đúng một lần ở đây.</li>
 </ol>
 </div>

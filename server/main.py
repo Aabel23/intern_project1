@@ -17,6 +17,7 @@ from server.config.routing import (
 from server.database.machine.init_db import init_db
 from server.server import Handler as RelayHandler
 from server.service.user_login.login_api import ROUTES as LOGIN_ROUTES
+from server.service.user_register.user_register.user_register_api import ROUTES as ACCOUNT_ROUTES
 from server.service.user_login.login_flow import cleanup as cleanup_login
 from server.service.user_register.user_register.registration_flow import cleanup as cleanup_registration
 from server.service.machine_register.machine_register_api import ROUTES as MACHINE_ROUTES
@@ -24,12 +25,12 @@ from server.service.machine_share.share_api import ROUTES as SHARE_ROUTES
 from server.service.machine_manage.manage_api import ROUTES as MANAGE_ROUTES
 
 
-# LOGIN_ROUTES đã gồm đăng ký người dùng, gửi/xác minh OTP, đăng nhập và đăng xuất.
-ROUTES = {**LOGIN_ROUTES, **MACHINE_ROUTES, **SHARE_ROUTES, **MANAGE_ROUTES}
+# Mỗi block chỉ khai báo ROUTES; đây là server HTTP duy nhất.
+ROUTES = {**ACCOUNT_ROUTES, **LOGIN_ROUTES, **MACHINE_ROUTES, **SHARE_ROUTES, **MANAGE_ROUTES}
 RELAY_ROUTES = {APP_SEND_COMMAND, MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT}
 # Chỉ giới hạn các API chưa cần token (dò mật khẩu, spam OTP). API máy/chia sẻ
 # đã đòi token hợp lệ nên không tính, cả quán dùng chung một IP vẫn không bị chặn.
-LIMITED_ROUTES = set(LOGIN_ROUTES)
+LIMITED_ROUTES = set(ACCOUNT_ROUTES) | set(LOGIN_ROUTES)
 IP_REQUESTS = {}
 IP_LOCK = threading.Lock()
 
@@ -44,10 +45,15 @@ class Handler(RelayHandler):
             return
         handle = ROUTES.get(self.path)
         if handle is None:
-            self.send_json(404, {"valid": False, "message": "Không có endpoint này"})
+            self.tra_json({"valid": False, "message": "Không có endpoint này"}, 404)
             return
         if self.path in LIMITED_ROUTES and self.too_many_requests():
-            self.send_json(429, {"valid": False, "message": "Quá nhiều yêu cầu", "retry_after": 60})
+            # Đọc bỏ body trước khi trả lỗi, tránh Windows cắt kết nối (RST) khi client còn đang gửi.
+            try:
+                self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 4096))
+            except (ValueError, TimeoutError):
+                pass
+            self.tra_json({"valid": False, "message": "Quá nhiều yêu cầu", "retry_after": 60}, 429)
             return
 
         # Các flow nhận dict và trả dict; request lỗi không dừng server.
@@ -59,20 +65,20 @@ class Handler(RelayHandler):
             data = json.loads(body)
             result = handle(data)
         except (ValueError, UnicodeDecodeError):
-            self.send_json(400, {"valid": False, "message": "JSON không hợp lệ"})
+            self.tra_json({"valid": False, "message": "JSON không hợp lệ"}, 400)
             return
         except TimeoutError:
-            self.send_json(408, {"valid": False, "message": "Hết thời gian nhận dữ liệu"})
+            self.tra_json({"valid": False, "message": "Hết thời gian nhận dữ liệu"}, 408)
             return
         except sqlite3.Error:
-            self.send_json(503, {"valid": False, "message": "Database tạm thời không sẵn sàng"})
+            self.tra_json({"valid": False, "message": "Database tạm thời không sẵn sàng"}, 503)
             return
 
         status = 200 if result["valid"] else 400
         # Gửi OTP thành công cũng kèm retry_after (thời gian chờ gửi lại), không phải 429.
         if not result["valid"] and "retry_after" in result:
             status = 429
-        self.send_json(status, result)
+        self.tra_json(result, status)
 
     def too_many_requests(self):
         # Giới hạn 30 request/phút/IP cho các route trong LIMITED_ROUTES.
@@ -87,19 +93,6 @@ class Handler(RelayHandler):
             record = IP_REQUESTS.setdefault(ip, [now + 60, 0])
             record[1] += 1
             return record[1] > 30
-
-    def send_json(self, status, data):
-        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        if "retry_after" in data:
-            self.send_header("Retry-After", str(data["retry_after"]))
-        self.end_headers()
-        try:
-            self.wfile.write(body)
-        except (BrokenPipeError, ConnectionResetError):
-            pass
 
 
 class Server(ThreadingHTTPServer):
