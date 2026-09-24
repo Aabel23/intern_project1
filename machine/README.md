@@ -44,6 +44,7 @@ lúc app đăng ký máy, nên máy không cần biết ID của mình.
 | POST `/machine/heartbeat` | `product_key` | báo máy còn sống (mỗi 5 giây) |
 | POST `/machine/hoi-lenh` | `product_key` | lấy lệnh tiếp theo trong hộp thư của máy này, `lenh` null nếu không có |
 | POST `/machine/tra-ket-qua` | `product_key`, `id`, `ket_qua` | trả kết quả cho app đang chờ |
+| POST `/machine/tra-dong-bo` | header `X-Product-Key`, `X-Lenh-Id`, `ETag`; body JSON gzip | trả kết quả lệnh đồng bộ dashboard, body rỗng = không đổi (xem `server/service/dashboard_sync/README.md`) |
 
 Key sai hoặc chưa đăng ký thì server trả 403. Lỗi trong lúc chạy lệnh (tham số sai,
 MySQL mất kết nối) được trả về app dạng `{"loi": ...}`, vòng lặp của máy vẫn chạy tiếp.

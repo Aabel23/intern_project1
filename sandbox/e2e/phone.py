@@ -50,7 +50,9 @@ class Phone:
         nodes = []
         for match in re.finditer(r"<node [^>]*>", xml):
             raw = match.group(0)
-            attr = lambda name: html.unescape(re.search(f'{name}="([^"]*)"', raw).group(1))
+            # Giá trị chứa dấu " (ví dụ tên Bluetooth 43" TV) thì uiautomator bọc bằng dấu nháy đơn.
+            attr = lambda name: html.unescape(
+                next(g for g in re.search(f"""{name}=(?:"([^"]*)"|'([^']*)')""", raw).groups() if g is not None))
             x1, y1, x2, y2 = map(int, re.search(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", attr("bounds")).groups())
             nodes.append(Node(attr("text"), attr("content-desc"), attr("class").split(".")[-1],
                               (x1 + x2) // 2, (y1 + y2) // 2,

@@ -153,11 +153,37 @@ class MachineApi {
     return result;
   }
 
+  // Đọc dữ liệu dashboard qua /app/dong-bo, gửi kèm ETag đang giữ.
+  // Trả null khi dữ liệu trên máy không đổi (server trả 304), app giữ bản cũ.
+  // Máy gửi JSON nén gzip; HttpClient tự giải nén.
+  Future<({String? etag, Object? data})?> sync(
+    String machineId,
+    String command,
+    String? etag,
+  ) async {
+    final response = await _send(
+      'POST',
+      '/app/dong-bo',
+      body: {'machine_id': machineId, 'lenh': command, 'token': ?token},
+      etag: etag,
+    );
+    if (response.status == HttpStatus.notModified) return null;
+    return (etag: response.etag, data: response.data);
+  }
+
   Future<Object?> _request(
     String method,
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
+  }) async => (await _send(method, path, query: query, body: body)).data;
+
+  Future<({int status, String? etag, Object? data})> _send(
+    String method,
+    String path, {
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+    String? etag,
   }) async {
     final base = Uri.tryParse(serverUrl.trim());
     if (base == null ||
@@ -170,6 +196,9 @@ class MachineApi {
     try {
       return await (() async {
         final request = await client.openUrl(method, uri);
+        if (etag != null) {
+          request.headers.set(HttpHeaders.ifNoneMatchHeader, etag);
+        }
         if (body != null) {
           final payload = utf8.encode(jsonEncode(body));
           request.headers.contentType = ContentType.json;
@@ -178,6 +207,10 @@ class MachineApi {
         }
         final response = await request.close();
         final text = await utf8.decoder.bind(response).join();
+        final responseEtag = response.headers.value(HttpHeaders.etagHeader);
+        if (response.statusCode == HttpStatus.notModified) {
+          return (status: response.statusCode, etag: responseEtag, data: null);
+        }
         if (response.statusCode < 200 || response.statusCode >= 300) {
           // API tài khoản trả "message", relay trả "loi"; hiện thẳng cho người dùng.
           Object? error;
@@ -200,7 +233,11 @@ class MachineApi {
           }
           throw MachineException('HTTP ${response.statusCode}: $text');
         }
-        return jsonDecode(text);
+        return (
+          status: response.statusCode,
+          etag: responseEtag,
+          data: jsonDecode(text),
+        );
       })().timeout(const Duration(seconds: 25));
     } on MachineException {
       rethrow;

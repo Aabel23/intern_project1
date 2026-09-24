@@ -12,9 +12,11 @@ class OverviewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     return ListenableBuilder(
-      listenable: controller,
+      listenable: Listenable.merge([controller, controller.inventory]),
       builder: (context, _) {
-        final empty = controller.ingredients.where((i) => !i.inStock).length;
+        final empty = controller.inventory.ingredients
+            .where((i) => !i.inStock)
+            .length;
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
           children: [

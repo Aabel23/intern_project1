@@ -101,7 +101,7 @@ class _MainDashboardState extends State<MainDashboard> {
           ),
         ),
         (
-          page: machinePage(InventoryTab(controller: _controller)),
+          page: machinePage(InventoryTab(inventory: _controller.inventory)),
           destination: const NavigationDestination(
             icon: Icon(Icons.inventory_2_outlined),
             selectedIcon: Icon(Icons.inventory_2),

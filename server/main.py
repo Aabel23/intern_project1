@@ -10,9 +10,11 @@ from http.server import ThreadingHTTPServer
 from server.config.config import SERVER_HOST, SERVER_PORT
 from server.config.routing import (
     APP_SEND_COMMAND,
+    APP_SYNC,
     MACHINE_HEARTBEAT,
     MACHINE_POLL_COMMAND,
     MACHINE_SEND_RESULT,
+    MACHINE_SEND_SYNC,
 )
 from server.database.machine.init_db import init_db
 from server.server import Handler as RelayHandler
@@ -27,7 +29,10 @@ from server.service.machine_manage.manage_api import ROUTES as MANAGE_ROUTES
 
 # Mỗi block chỉ khai báo ROUTES; đây là server HTTP duy nhất.
 ROUTES = {**ACCOUNT_ROUTES, **LOGIN_ROUTES, **MACHINE_ROUTES, **SHARE_ROUTES, **MANAGE_ROUTES}
-RELAY_ROUTES = {APP_SEND_COMMAND, MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT}
+RELAY_ROUTES = {
+    APP_SEND_COMMAND, APP_SYNC,
+    MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT, MACHINE_SEND_SYNC,
+}
 # Chỉ giới hạn các API chưa cần token (dò mật khẩu, spam OTP). API máy/chia sẻ
 # đã đòi token hợp lệ nên không tính, cả quán dùng chung một IP vẫn không bị chặn.
 LIMITED_ROUTES = set(ACCOUNT_ROUTES) | set(LOGIN_ROUTES)

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../dashboard/dashboard_controller.dart';
+import '../../../feature/data_sync/ingredients_sync.dart';
 import '../dashboard/dashboard_widgets.dart';
 
-// Tab Kho: đọc nguyên liệu từ máy. Server chưa có mức tối đa và lệnh nạp đầy,
+// Tab Kho: đồng bộ nguyên liệu từ máy. Lệnh nạp kho là tính năng riêng chưa làm,
 // nên nút "Nạp đầy"/"Nạp tất cả" chỉ giữ giao diện.
 class InventoryTab extends StatelessWidget {
-  const InventoryTab({super.key, required this.controller});
-  final DashboardController controller;
+  const InventoryTab({super.key, required this.inventory});
+  final IngredientsSync inventory;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -19,9 +19,9 @@ class InventoryTab extends StatelessWidget {
       label: const Text('Nạp tất cả'),
     ),
     body: ListenableBuilder(
-      listenable: controller,
+      listenable: inventory,
       builder: (_, _) => RefreshIndicator(
-        onRefresh: controller.loadIngredients,
+        onRefresh: inventory.load,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
@@ -31,18 +31,17 @@ class InventoryTab extends StatelessWidget {
               'Kéo xuống để lấy trạng thái mới nhất từ máy FlexMix.',
               style: TextStyle(color: Colors.black54),
             ),
-            if (controller.loadingIngredients)
+            if (inventory.loading)
               const Padding(
                 padding: EdgeInsets.only(top: 12),
                 child: LinearProgressIndicator(),
               ),
             const SizedBox(height: 16),
-            if (controller.ingredientError != null)
-              ListNotice(controller.ingredientError!, error: true)
-            else if (controller.ingredients.isEmpty &&
-                !controller.loadingIngredients)
+            if (inventory.error != null)
+              ListNotice(inventory.error!, error: true)
+            else if (inventory.ingredients.isEmpty && !inventory.loading)
               const ListNotice('Máy chưa có nguyên liệu nào.'),
-            for (final ingredient in controller.ingredients)
+            for (final ingredient in inventory.ingredients)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
@@ -51,17 +50,29 @@ class InventoryTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          ingredient.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                ingredient.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            if (ingredient.pumpNumber != null)
+                              Chip(label: Text('Bơm ${ingredient.pumpNumber}')),
+                          ],
                         ),
                         const SizedBox(height: 10),
-                        // Chưa có mức tối đa nên thanh chỉ thể hiện còn/hết hàng.
                         LinearProgressIndicator(
-                          value: ingredient.inStock ? 1 : 0,
+                          value: ingredient.maxGram <= 0
+                              ? 0
+                              : (ingredient.amount / ingredient.maxGram).clamp(
+                                  0,
+                                  1,
+                                ),
                           color: ingredient.inStock
                               ? Colors.green
                               : Colors.deepOrange,
@@ -73,8 +84,8 @@ class InventoryTab extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                '${ingredient.amount.toStringAsFixed(0)} g · '
-                                '${ingredient.inStock ? 'Còn hàng' : 'Hết hàng'}',
+                                '${ingredient.amount.toStringAsFixed(0)} / '
+                                '${ingredient.maxGram.toStringAsFixed(0)} g',
                               ),
                             ),
                             TextButton(
@@ -83,6 +94,14 @@ class InventoryTab extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (!ingredient.maxSet)
+                          const Text(
+                            'Mức tối đa đang dùng giá trị mặc định.',
+                            style: TextStyle(
+                              color: Colors.deepOrange,
+                              fontSize: 12,
+                            ),
+                          ),
                       ],
                     ),
                   ),

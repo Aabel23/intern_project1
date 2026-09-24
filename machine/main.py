@@ -1,5 +1,8 @@
 """Nhận lệnh từ server rồi chọn hàm dữ liệu cần chạy."""
 
+import gzip
+import hashlib
+import json
 import time
 import threading
 import urllib.error
@@ -15,6 +18,9 @@ from database.admin_functions.drinks import (
 
 # Đọc nguyên liệu theo cấu trúc gọn cho machine.
 from database.admin_functions.ingredients import get_ingredients
+
+# Dữ liệu kho đầy đủ (max_gram, pump_no...) giống trang admin của máy.
+from admin_gui.serve import ingredients_payload
 
 # Cập nhật kho bằng các hàm sẵn có trong database.
 from database.inventory_service import (
@@ -57,6 +63,22 @@ def handle_command(lenh):
     return {"loi": "Lenh khong hop le"}
 
 
+# Lệnh đồng bộ dashboard: tên lệnh -> hàm đọc database.
+LENH_DONG_BO = {
+    "dong_bo_nguyen_lieu": ingredients_payload,
+}
+
+
+def pack_sync(lenh):
+    # ETag là hash của dữ liệu; trùng ETag app đang giữ thì gửi gói rỗng (không đổi).
+    du_lieu = LENH_DONG_BO[lenh["ten"]]()
+    raw = json.dumps(du_lieu, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    etag = '"' + hashlib.sha256(raw).hexdigest()[:32] + '"'
+    if etag == lenh.get("etag"):
+        return etag, b""
+    return etag, gzip.compress(raw, mtime=0)
+
+
 def run():
     # Heartbeat chạy riêng để vẫn báo máy đang hoạt động khi xử lý lệnh lâu.
     threading.Thread(target=heartbeat.run_heartbeat, daemon=True).start()
@@ -76,14 +98,20 @@ def run():
         # Phân tích lệnh và chạy hàm dữ liệu.
         print("Machine nhan lenh:", lenh, flush=True)
         try:
-            ket_qua = handle_command(lenh)
+            if lenh.get("ten") in LENH_DONG_BO:
+                ket_qua = pack_sync(lenh)
+            else:
+                ket_qua = handle_command(lenh)
         except Exception as error:
             # Lỗi tham số hay lỗi database đều trả về app, không làm dừng vòng lặp của máy.
             ket_qua = {"loi": str(error)}
 
         # Gửi kết quả về server để trả cho app.
         try:
-            instruction_api.send_result(lenh["id"], ket_qua)
+            if isinstance(ket_qua, tuple):
+                instruction_api.send_sync(lenh["id"], *ket_qua)
+            else:
+                instruction_api.send_result(lenh["id"], ket_qua)
         except (urllib.error.URLError, OSError) as error:
             print("Khong gui duoc ket qua:", error, flush=True)
 

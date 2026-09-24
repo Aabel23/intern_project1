@@ -28,9 +28,9 @@ DRINKS = {
         "available": False, "inStock": True},
 }
 INGREDIENTS = {
-    1: {"id": 1, "name": "Sữa tươi", "amount": 1200.0, "in_stock": True},
-    2: {"id": 2, "name": "Đào ngâm", "amount": 0.0, "in_stock": False},
-    3: {"id": 3, "name": "Cà phê hạt", "amount": 800.0, "in_stock": True},
+    1: {"id": 1, "name": "Sữa tươi", "amount": 1200.0, "in_stock": True, "max_gram": 2000.0, "pump_no": 1},
+    2: {"id": 2, "name": "Đào ngâm", "amount": 0.0, "in_stock": False, "max_gram": 1500.0, "pump_no": 2},
+    3: {"id": 3, "name": "Cà phê hạt", "amount": 800.0, "in_stock": True, "max_gram": 1000.0, "pump_no": None},
 }
 LOCK = threading.Lock()
 
@@ -64,6 +64,17 @@ def update_inventory(mode):
     return update
 
 
+def ingredients_payload():
+    # Cùng dạng admin_gui.serve.ingredients_payload() của máy thật (các trường app dùng).
+    with LOCK:
+        return {"ingredients": [
+            {"ingredient_id": row["id"], "name": row["name"], "amount": row["amount"],
+             "max_gram": row["max_gram"], "max_set": True, "pump_no": row["pump_no"],
+             "in_stock": row["in_stock"]}
+            for row in INGREDIENTS.values()
+        ]}
+
+
 def install_fake_database():
     """Thay các module database của máy thật (MySQL) bằng dữ liệu trong RAM."""
     drinks = types.ModuleType("database.admin_functions.drinks")
@@ -76,7 +87,11 @@ def install_fake_database():
     inventory.set_inventory = update_inventory("set")
     inventory.add_inventory = update_inventory("add")
     inventory.subtract_inventory = update_inventory("subtract")
+    serve = types.ModuleType("admin_gui.serve")
+    serve.ingredients_payload = ingredients_payload
     sys.modules.update({
+        "admin_gui": types.ModuleType("admin_gui"),
+        "admin_gui.serve": serve,
         "database": types.ModuleType("database"),
         "database.admin_functions": types.ModuleType("database.admin_functions"),
         "database.admin_functions.drinks": drinks,

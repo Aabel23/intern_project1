@@ -9,19 +9,10 @@ import '../dashboard/dashboard_controller.dart';
 import '../machine_api.dart';
 import '../dashboard/dashboard_widgets.dart';
 
-// Bluetooth nhận thông tin máy; nhập mã chọn máy làm việc trong phiên này.
+// Danh sách máy của tài khoản; thêm máy bằng Bluetooth hoặc tem QR.
 class MachinesTab extends StatelessWidget {
   const MachinesTab({super.key, required this.controller});
   final DashboardController controller;
-
-  Future<void> _addById(BuildContext context) async {
-    final id = await showDialog<String>(
-      context: context,
-      builder: (_) => const _MachineIdDialog(),
-    );
-    if (id == null || id.isEmpty) return;
-    await controller.addMachine(id);
-  }
 
   // Sau khi đăng ký hoặc nhận chia sẻ, đọc lại danh sách máy của tài khoản.
   Future<void> _open(BuildContext context, Widget page) async {
@@ -230,53 +221,9 @@ class MachinesTab extends StatelessWidget {
             icon: const Icon(Icons.bluetooth_searching),
             label: const Text('Nhận chia sẻ qua Bluetooth'),
           ),
-          TextButton.icon(
-            onPressed: controller.checking ? null : () => _addById(context),
-            icon: const Icon(Icons.keyboard_outlined),
-            label: const Text('Nhập mã máy'),
-          ),
         ],
       ),
     ),
-  );
-}
-
-class _MachineIdDialog extends StatefulWidget {
-  const _MachineIdDialog();
-
-  @override
-  State<_MachineIdDialog> createState() => _MachineIdDialogState();
-}
-
-class _MachineIdDialogState extends State<_MachineIdDialog> {
-  final _input = TextEditingController();
-
-  @override
-  void dispose() {
-    _input.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Thêm máy'),
-    content: TextField(
-      controller: _input,
-      autofocus: true,
-      autocorrect: false,
-      decoration: const InputDecoration(labelText: 'Mã máy'),
-      onSubmitted: (_) => Navigator.pop(context, _input.text.trim()),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Hủy'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.pop(context, _input.text.trim()),
-        child: const Text('Thêm'),
-      ),
-    ],
   );
 }
 

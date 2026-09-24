@@ -4,6 +4,7 @@ Chạy vòng lặp thật của machine/main.py với server thật (SQLite tạ
 database máy giả trong RAM, kiểm tra heartbeat + nhận lệnh + trả kết quả.
 """
 
+import gzip
 import importlib.util
 import json
 import os
@@ -14,10 +15,13 @@ import types
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 MACHINE_DIR = Path(__file__).resolve().parent
 MENU = {"drinks": [{"drinkId": 1, "name": "Cà phê", "price": 20000, "available": True}]}
+INGREDIENTS = {"ingredients": [{"ingredient_id": 1, "name": "Sữa", "amount": 500, "max_gram": 1000,
+                                "max_set": True, "pump_no": 1, "in_stock": True}]}
 
 
 def fake_database(calls):
@@ -33,7 +37,11 @@ def fake_database(calls):
     def fail(*_):
         raise RuntimeError("MySQL mất kết nối")
     inventory.set_inventory = inventory.add_inventory = inventory.subtract_inventory = fail
+    serve = types.ModuleType("admin_gui.serve")
+    serve.ingredients_payload = lambda: INGREDIENTS
     return {
+        "admin_gui": types.ModuleType("admin_gui"),
+        "admin_gui.serve": serve,
         "database": types.ModuleType("database"),
         "database.admin_functions": types.ModuleType("database.admin_functions"),
         "database.admin_functions.drinks": drinks,
@@ -93,7 +101,28 @@ class MachineRelayTest(unittest.TestCase):
         with urlopen(request, timeout=30) as response:
             return json.loads(response.read())
 
+    def sync(self, lenh, etag=None):
+        """Gọi /app/dong-bo; trả (status, etag, dữ liệu đã giải nén hoặc lỗi JSON)."""
+        headers = {"Content-Type": "application/json"}
+        if etag:
+            headers["If-None-Match"] = etag
+        request = Request(self.url + "/app/dong-bo", headers=headers, data=json.dumps({
+            "token": self.token, "machine_id": self.machine_id, "lenh": lenh,
+        }).encode())
+        try:
+            with urlopen(request, timeout=30) as response:
+                body = response.read()
+                if response.headers.get("Content-Encoding") == "gzip":
+                    body = gzip.decompress(body)
+                return response.status, response.headers.get("ETag"), json.loads(body)
+        except HTTPError as error:
+            with error:
+                body = error.read()
+            return error.code, error.headers.get("ETag"), json.loads(body) if body else None
+
     def test_machine_serves_app_commands(self):
+        # Máy chưa chạy (chưa heartbeat) thì server báo offline ngay.
+        self.assertEqual(self.sync("dong_bo_nguyen_lieu")[0], 503)
         threading.Thread(target=self.machine.run, daemon=True).start()
         for _ in range(100):
             with urlopen(f"{self.url}/machine/trang-thai?machine_id={self.machine_id}") as response:
@@ -114,6 +143,26 @@ class MachineRelayTest(unittest.TestCase):
                          {"loi": "MySQL mất kết nối"})
         self.assertEqual(send("lenh_la"), {"loi": "Lenh khong hop le"})
         self.assertEqual(send("xem_nguyen_lieu"), {"ingredients": []})
+
+        # Đồng bộ kho: lần đầu nhận dữ liệu nén + ETag, gửi lại ETag đó thì nhận 304.
+        status, etag, data = self.sync("dong_bo_nguyen_lieu")
+        self.assertEqual((status, data), (200, INGREDIENTS))
+        self.assertTrue(etag)
+        self.assertEqual(self.sync("dong_bo_nguyen_lieu", etag), (304, etag, None))
+        # Dữ liệu trên máy đổi thì ETag cũ không còn khớp.
+        INGREDIENTS["ingredients"][0]["amount"] = 400
+        self.addCleanup(INGREDIENTS["ingredients"][0].update, amount=500)
+        status, etag_moi, data = self.sync("dong_bo_nguyen_lieu", etag)
+        self.assertEqual((status, data["ingredients"][0]["amount"]), (200, 400))
+        self.assertNotEqual(etag_moi, etag)
+        # Máy đọc dữ liệu lỗi thì app nhận lỗi, vòng lặp của máy vẫn chạy.
+        INGREDIENTS["loi_thu"] = object()
+        self.addCleanup(INGREDIENTS.pop, "loi_thu")
+        status, _, data = self.sync("dong_bo_nguyen_lieu")
+        self.assertEqual(status, 502)
+        self.assertIn("loi", data)
+        # Lệnh ngoài bảng quyền bị server chặn, không xuống máy.
+        self.assertEqual(self.sync("xem_menu")[0], 403)
 
 
 if __name__ == "__main__":

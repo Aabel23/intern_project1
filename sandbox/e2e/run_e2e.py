@@ -256,7 +256,8 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     wait_for(matcha_on, 30, "App không cập nhật trạng thái món sau khi bật")
     phone.tap("^Kho\nTab")
     phone.wait("Sữa tươi", 30)
-    phone.wait("0 g · Hết hàng", 10)
+    phone.wait("0 / 1500 g", 10)
+    phone.wait("Bơm 1", 10)
     ok(t, "menu + bật món + kho")
 
     t = step("Chia sẻ qua Bluetooth: điện thoại (chủ) → laptop (nhân viên)")
