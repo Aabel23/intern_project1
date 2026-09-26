@@ -6,7 +6,7 @@ terminal. Chạy từ thư mục gốc `androidv0.1`, server đang chạy (`pyth
 | Script | Laptop đóng vai | Ghi chú |
 | --- | --- | --- |
 | `bluetooth_pair/app2machine-pair.py [--env file]` | máy FlexMix chờ app pair Bluetooth | dùng nguyên `machine/pairing`; trên app bật "Hiện mọi thiết bị Bluetooth" |
-| `relay/machine_sim.py [--env file]` | máy FlexMix online qua relay | chạy nguyên `machine/main.py`, database máy giả trong RAM |
+| `relay/machine_sim.py [--env file]` | máy FlexMix online qua relay | chạy nguyên `machine/main.py`, database máy giả là SQLite tạm (tạo mới mỗi lần chạy, in đường dẫn, xóa khi dừng) |
 | `bluetooth_pair/app2app_pair.py` | nhân viên nhận mã qua Bluetooth | thêm `--adb`/`--camera`/`--image`/`--text` để nhận qua QR |
 | `bluetooth_pair/app2app_pair.py --send --phone <BT điện thoại> --machine-id <id>` | chủ máy gửi mã tới điện thoại | điện thoại mở "Nhận chia sẻ qua Bluetooth" trước |
 

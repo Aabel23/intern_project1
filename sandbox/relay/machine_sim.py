@@ -1,5 +1,8 @@
 """Laptop chạy vòng lặp thật của machine/main.py (heartbeat, nhận lệnh, trả kết quả)
-với database máy giả trong RAM, để app thấy máy online và đọc/sửa menu, kho.
+với database máy giả, để app thấy máy online và đọc/sửa menu, kho.
+
+Database giả là một file SQLite tạm, tạo mới mỗi lần chạy và xóa khi dừng; đường
+dẫn in ra lúc khởi động, mở bằng sqlite3 để xem hoặc sửa số liệu khi máy đang chạy.
 
 Chạy từ thư mục gốc androidv0.1 (server đang chạy, máy đã đăng ký bằng key trong env):
     python sandbox/relay/machine_sim.py                  # dùng machine/config/machine.env
@@ -9,7 +12,9 @@ Chạy từ thư mục gốc androidv0.1 (server đang chạy, máy đã đăng 
 import argparse
 import importlib.util
 import os
+import sqlite3
 import sys
+import tempfile
 import threading
 import types
 from decimal import Decimal
@@ -18,71 +23,124 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MACHINE_DIR = ROOT / "machine"
 
-# Cùng dạng dữ liệu mà database máy thật (MySQL) trả cho app.
-DRINKS = {
-    1: {"drinkId": 1, "name": "Cà phê sữa", "price": 25000.0, "category": "Cà phê",
-        "available": True, "inStock": True},
-    2: {"drinkId": 2, "name": "Trà đào", "price": 30000.0, "category": "Trà",
-        "available": True, "inStock": True},
-    3: {"drinkId": 3, "name": "Matcha latte", "price": 35000.0, "category": "Trà",
-        "available": False, "inStock": True},
-}
-INGREDIENTS = {
-    1: {"id": 1, "name": "Sữa tươi", "amount": 1200.0, "in_stock": True, "max_gram": 2000.0, "pump_no": 1},
-    2: {"id": 2, "name": "Đào ngâm", "amount": 0.0, "in_stock": False, "max_gram": 1500.0, "pump_no": 2},
-    3: {"id": 3, "name": "Cà phê hạt", "amount": 800.0, "in_stock": True, "max_gram": 1000.0, "pump_no": None},
-}
+# Hai bảng tối giản theo tên cột của database máy thật (MySQL).
+SCHEMA = """
+CREATE TABLE drink (
+    drink_id INTEGER PRIMARY KEY,
+    drink_name TEXT NOT NULL,
+    price REAL NOT NULL,
+    category TEXT NOT NULL,
+    available INTEGER NOT NULL,
+    in_stock INTEGER NOT NULL
+);
+CREATE TABLE ingredient (
+    ingredient_id INTEGER PRIMARY KEY,
+    ingredient_name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    max_gram REAL,
+    pump_no INTEGER,
+    in_stock INTEGER NOT NULL
+);
+INSERT INTO drink VALUES
+    (1, 'Cà phê sữa', 25000, 'Cà phê', 1, 1),
+    (2, 'Trà đào', 30000, 'Trà', 1, 1),
+    (3, 'Matcha latte', 35000, 'Trà', 0, 1);
+INSERT INTO ingredient VALUES
+    (1, 'Sữa tươi', 1200, 2000, 1, 1),
+    (2, 'Đào ngâm', 0, 1500, 2, 0),
+    (3, 'Cà phê hạt', 800, 1000, NULL, 1);
+"""
+# Máy thật dùng mức này khi max_gram chưa khai báo (NULL).
+DEFAULT_MAX_GRAM = 10000.0
+
+DB = None
 LOCK = threading.Lock()
 
 
-def set_drink_available(drink_id, available):
+def open_database():
+    """Tạo file SQLite tạm với dữ liệu mẫu; trả đường dẫn để in ra và xóa khi dừng."""
+    global DB
+    fd, path = tempfile.mkstemp(prefix="machine_sim_", suffix=".db")
+    os.close(fd)
+    DB = sqlite3.connect(path, check_same_thread=False)
+    DB.row_factory = sqlite3.Row
+    DB.executescript(SCHEMA)
+    return path
+
+
+def query(sql, params=()):
     with LOCK:
-        if drink_id not in DRINKS:
+        return DB.execute(sql, params).fetchall()
+
+
+def get_menu():
+    rows = query("SELECT * FROM drink ORDER BY drink_id")
+    return {"drinks": [
+        {"drinkId": row["drink_id"], "name": row["drink_name"], "price": row["price"],
+         "category": row["category"], "available": bool(row["available"]),
+         "inStock": bool(row["in_stock"])}
+        for row in rows
+    ]}
+
+
+def update_drink(column):
+    def update(drink_id, value):
+        with LOCK, DB:
+            changed = DB.execute(f"UPDATE drink SET {column}=? WHERE drink_id=?",
+                                 (value, drink_id)).rowcount
+        if not changed:
             raise ValueError(f"Không có món id {drink_id}.")
-        DRINKS[drink_id]["available"] = bool(available)
-
-
-def set_drink_price(drink_id, price):
-    with LOCK:
-        if drink_id not in DRINKS:
-            raise ValueError(f"Không có món id {drink_id}.")
-        DRINKS[drink_id]["price"] = round(float(price), 2)
-
-
-def update_inventory(mode):
-    def update(ingredient_id, gram):
-        with LOCK:
-            if ingredient_id not in INGREDIENTS:
-                raise ValueError(f"Không có nguyên liệu id {ingredient_id}.")
-            row = INGREDIENTS[ingredient_id]
-            amount = {"set": 0, "add": row["amount"], "subtract": row["amount"]}[mode]
-            amount += -float(gram) if mode == "subtract" else float(gram)
-            if amount < 0:
-                raise ValueError("Không đủ nguyên liệu.")
-            row["amount"], row["in_stock"] = amount, amount > 0
-            return Decimal(str(amount))
     return update
+
+
+def get_ingredients():
+    # Cùng dạng database.admin_functions.ingredients.get_ingredients() của máy thật.
+    rows = query("SELECT * FROM ingredient ORDER BY ingredient_id")
+    return {"ingredients": [
+        {"id": row["ingredient_id"], "name": row["ingredient_name"],
+         "amount": row["amount"], "in_stock": bool(row["in_stock"])}
+        for row in rows
+    ]}
 
 
 def ingredients_payload():
     # Cùng dạng admin_gui.serve.ingredients_payload() của máy thật (các trường app dùng).
-    with LOCK:
-        return {"ingredients": [
-            {"ingredient_id": row["id"], "name": row["name"], "amount": row["amount"],
-             "max_gram": row["max_gram"], "max_set": True, "pump_no": row["pump_no"],
-             "in_stock": row["in_stock"]}
-            for row in INGREDIENTS.values()
-        ]}
+    rows = query("SELECT * FROM ingredient ORDER BY ingredient_id")
+    return {"ingredients": [
+        {"ingredient_id": row["ingredient_id"], "name": row["ingredient_name"],
+         "amount": row["amount"],
+         "max_gram": row["max_gram"] if row["max_gram"] is not None else DEFAULT_MAX_GRAM,
+         "max_set": row["max_gram"] is not None, "pump_no": row["pump_no"],
+         "in_stock": bool(row["in_stock"])}
+        for row in rows
+    ]}
+
+
+def update_inventory(mode):
+    def update(ingredient_id, gram):
+        with LOCK, DB:
+            row = DB.execute("SELECT amount FROM ingredient WHERE ingredient_id=?",
+                             (ingredient_id,)).fetchone()
+            if row is None:
+                raise ValueError(f"Không có nguyên liệu id {ingredient_id}.")
+            amount = {"set": 0, "add": row["amount"], "subtract": row["amount"]}[mode]
+            amount += -float(gram) if mode == "subtract" else float(gram)
+            if amount < 0:
+                raise ValueError("Không đủ nguyên liệu.")
+            DB.execute("UPDATE ingredient SET amount=?, in_stock=? WHERE ingredient_id=?",
+                       (amount, int(amount > 0), ingredient_id))
+        return Decimal(str(amount))
+    return update
 
 
 def install_fake_database():
-    """Thay các module database của máy thật (MySQL) bằng dữ liệu trong RAM."""
+    """Thay các module database của máy thật (MySQL) bằng hàm đọc SQLite tạm."""
     drinks = types.ModuleType("database.admin_functions.drinks")
-    drinks.get_menu = lambda: {"drinks": [dict(row) for row in DRINKS.values()]}
-    drinks.set_drink_available = set_drink_available
-    drinks.set_drink_price = set_drink_price
+    drinks.get_menu = get_menu
+    drinks.set_drink_available = update_drink("available")
+    drinks.set_drink_price = update_drink("price")
     ingredients = types.ModuleType("database.admin_functions.ingredients")
-    ingredients.get_ingredients = lambda: {"ingredients": [dict(row) for row in INGREDIENTS.values()]}
+    ingredients.get_ingredients = get_ingredients
     inventory = types.ModuleType("database.inventory_service")
     inventory.set_inventory = update_inventory("set")
     inventory.add_inventory = update_inventory("add")
@@ -111,19 +169,24 @@ def main():
 
     # machine/main.py import theo kiểu chạy trong thư mục machine (config, server_connection).
     sys.path.insert(0, str(MACHINE_DIR))
+    db_path = open_database()
     install_fake_database()
     spec = importlib.util.spec_from_file_location("machine_main", MACHINE_DIR / "main.py")
     machine = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(machine)
     from config.machine_config import get_machine_name, get_server_url
     try:
-        print(f"Máy giả {get_machine_name()} nối {get_server_url()}, Ctrl+C để dừng.", flush=True)
-    except ValueError as error:
-        sys.exit(str(error))
-    try:
+        try:
+            print(f"Máy giả {get_machine_name()} nối {get_server_url()}, Ctrl+C để dừng.", flush=True)
+        except ValueError as error:
+            sys.exit(str(error))
+        print(f"Database tạm: {db_path}", flush=True)
         machine.run()
     except KeyboardInterrupt:
         print("Đã dừng máy giả.", flush=True)
+    finally:
+        DB.close()
+        os.remove(db_path)
 
 
 if __name__ == "__main__":
