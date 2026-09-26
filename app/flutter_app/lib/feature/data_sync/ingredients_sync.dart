@@ -98,6 +98,15 @@ class IngredientsSync extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Nạp kho rồi đọc lại danh sách; target là id nguyên liệu hoặc 'all'.
+  // Lỗi (offline, không đủ quyền...) ném ra cho tab hiện thông báo.
+  Future<void> refill(Object target) async {
+    final id = machineId();
+    if (id == null) return;
+    await api.refill(id, target);
+    await load();
+  }
+
   @override
   void dispose() {
     _session++;

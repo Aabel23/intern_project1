@@ -16,11 +16,12 @@ from database.admin_functions.drinks import (
     set_drink_price,
 )
 
-# Đọc nguyên liệu theo cấu trúc gọn cho machine.
-from database.admin_functions.ingredients import get_ingredients
-
-# Dữ liệu kho đầy đủ (max_gram, pump_no...) giống trang admin của máy.
-from admin_gui.serve import ingredients_payload
+# Nguyên liệu: đọc gọn, dữ liệu kho đầy đủ (max_gram, pump_no...) và nạp kho.
+from database.admin_functions.ingredients import (
+    get_ingredients,
+    ingredients_payload,
+    refill,
+)
 
 # Cập nhật kho bằng các hàm sẵn có trong database.
 from database.inventory_service import (
@@ -59,6 +60,10 @@ def handle_command(lenh):
     if ten == "tru_nguyen_lieu":
         amount = subtract_ingredient_amount(thamso["ingredient_id"], thamso["gram"])
         return {"amount": float(amount)}
+
+    # Nạp kho từ app (/machine/refill): target = id nguyên liệu hoặc "all", value = "full" hoặc số gram.
+    if ten == "nap_kho":
+        return refill(thamso.get("target"), thamso.get("value"))
 
     return {"loi": "Lenh khong hop le"}
 

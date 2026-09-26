@@ -3,18 +3,44 @@ import 'package:flutter/material.dart';
 import '../../../feature/data_sync/ingredients_sync.dart';
 import '../dashboard/dashboard_widgets.dart';
 
-// Tab Kho: đồng bộ nguyên liệu từ máy. Lệnh nạp kho là tính năng riêng chưa làm,
-// nên nút "Nạp đầy"/"Nạp tất cả" chỉ giữ giao diện.
+// Tab Kho: đồng bộ nguyên liệu từ máy; "Nạp đầy"/"Nạp tất cả" gửi lệnh /machine/refill.
 class InventoryTab extends StatelessWidget {
   const InventoryTab({super.key, required this.inventory});
   final IngredientsSync inventory;
+
+  Future<void> _refill(BuildContext context, Object target, String what) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nạp kho'),
+        content: Text('Đổ đầy $what tới mức tối đa?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Nạp'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await inventory.refill(target);
+      if (context.mounted) showMessage(context, 'Đã nạp $what.');
+    } catch (error) {
+      if (context.mounted) showMessage(context, 'Không nạp được: $error');
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.transparent,
     floatingActionButton: FloatingActionButton.extended(
       heroTag: 'refill-all',
-      onPressed: () => notAvailableYet(context),
+      onPressed: () => _refill(context, 'all', 'tất cả nguyên liệu'),
       icon: const Icon(Icons.local_shipping_outlined),
       label: const Text('Nạp tất cả'),
     ),
@@ -89,7 +115,11 @@ class InventoryTab extends StatelessWidget {
                               ),
                             ),
                             TextButton(
-                              onPressed: () => notAvailableYet(context),
+                              onPressed: () => _refill(
+                                context,
+                                ingredient.id,
+                                ingredient.name,
+                              ),
                               child: const Text('Nạp đầy'),
                             ),
                           ],

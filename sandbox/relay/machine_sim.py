@@ -104,7 +104,7 @@ def get_ingredients():
 
 
 def ingredients_payload():
-    # Cùng dạng admin_gui.serve.ingredients_payload() của máy thật (các trường app dùng).
+    # Cùng dạng database.admin_functions.ingredients.ingredients_payload() của máy thật (các trường app dùng).
     rows = query("SELECT * FROM ingredient ORDER BY ingredient_id")
     return {"ingredients": [
         {"ingredient_id": row["ingredient_id"], "name": row["ingredient_name"],
@@ -133,6 +133,22 @@ def update_inventory(mode):
     return update
 
 
+def refill(target, value):
+    # Cùng dạng database.admin_functions.ingredients.refill() của máy thật.
+    with LOCK, DB:
+        rows = DB.execute("SELECT ingredient_id, max_gram FROM ingredient" +
+                          ("" if target == "all" else " WHERE ingredient_id=?"),
+                          () if target == "all" else (int(target),)).fetchall()
+        if not rows:
+            raise ValueError(f"Không có nguyên liệu id {target}.")
+        for row in rows:
+            full = row["max_gram"] if row["max_gram"] is not None else DEFAULT_MAX_GRAM
+            amount = full if value == "full" else float(value)
+            DB.execute("UPDATE ingredient SET amount=?, in_stock=? WHERE ingredient_id=?",
+                       (amount, int(amount > 0), row["ingredient_id"]))
+    return {"count": len(rows)}
+
+
 def install_fake_database():
     """Thay các module database của máy thật (MySQL) bằng hàm đọc SQLite tạm."""
     drinks = types.ModuleType("database.admin_functions.drinks")
@@ -141,15 +157,13 @@ def install_fake_database():
     drinks.set_drink_price = update_drink("price")
     ingredients = types.ModuleType("database.admin_functions.ingredients")
     ingredients.get_ingredients = get_ingredients
+    ingredients.ingredients_payload = ingredients_payload
+    ingredients.refill = refill
     inventory = types.ModuleType("database.inventory_service")
     inventory.set_inventory = update_inventory("set")
     inventory.add_inventory = update_inventory("add")
     inventory.subtract_inventory = update_inventory("subtract")
-    serve = types.ModuleType("admin_gui.serve")
-    serve.ingredients_payload = ingredients_payload
     sys.modules.update({
-        "admin_gui": types.ModuleType("admin_gui"),
-        "admin_gui.serve": serve,
         "database": types.ModuleType("database"),
         "database.admin_functions": types.ModuleType("database.admin_functions"),
         "database.admin_functions.drinks": drinks,

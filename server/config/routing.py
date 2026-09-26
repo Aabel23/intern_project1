@@ -5,6 +5,9 @@ MACHINE_POLL_COMMAND = "/machine/hoi-lenh"
 MACHINE_HEARTBEAT = "/machine/heartbeat"
 MACHINE_SEND_RESULT = "/machine/tra-ket-qua"
 MACHINE_SEND_SYNC = "/machine/tra-dong-bo"
+MACHINE_UPDATE_FIRMWARE = "/machine/cap-nhat-firmware"
+MACHINE_REFILL = "/machine/refill"
+
 
 APP_SEND_COMMAND = "/app/gui-lenh"
 APP_REGISTER_USER = "/app/dang-ky-nguoi-dung"
@@ -28,3 +31,4 @@ APP_SYNC_MACHINES = "/app/dong-bo-may"
 APP_SYNC_MACHINES_VERIFY = "/app/xac-minh-dong-bo-may"
 # Dashboard đọc dữ liệu máy: một sublink, phân biệt bằng "lenh" trong body.
 APP_SYNC = "/app/dong-bo"
+

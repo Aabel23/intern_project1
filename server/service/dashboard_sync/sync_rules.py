@@ -7,3 +7,6 @@ người gửi với máy (owner/manager) có được phép không. Lệnh ngo�
 QUYEN_DONG_BO = {
     "dong_bo_nguyen_lieu": {"owner", "manager"},
 }
+
+# Vai trò được nạp kho qua /machine/refill.
+QUYEN_NAP_KHO = {"owner", "manager"}

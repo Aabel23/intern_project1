@@ -98,7 +98,7 @@ If-None-Match: "47e88d389d1422864e67805f467c61cd"
 <div class="step"><h3><span class="num">3</span>Máy đọc dữ liệu và đóng gói</h3>
 <p>Máy lấy lệnh qua <code>/machine/hoi-lenh</code>, tra <code>LENH_DONG_BO</code> trong <code>machine/main.py</code> rồi chạy <code>pack_sync()</code>:</p>
 <ul>
-<li>Gọi <code>admin_gui.serve.ingredients_payload()</code> của <code>version1.0</code> (cùng hàm trang admin của máy dùng).</li>
+<li>Gọi <code>database.admin_functions.ingredients.ingredients_payload()</code> của <code>version1.0</code> (cùng hàm trang admin của máy dùng).</li>
 <li>ETag = 32 ký tự đầu SHA-256 của JSON đã sắp khóa, nên cùng dữ liệu luôn ra cùng ETag.</li>
 <li>Trùng ETag app gửi thì gói rỗng; khác thì <code>gzip</code> toàn bộ JSON.</li>
 </ul>
@@ -141,7 +141,7 @@ ETag: "47e88d389d1422864e67805f467c61cd"
 <h2>Các lệnh đồng bộ</h2>
 <div class="table-wrap"><table>
 <tr><th>lenh</th><th>Quyền</th><th>Máy gọi</th><th>Dữ liệu</th></tr>
-<tr><td><code>dong_bo_nguyen_lieu</code></td><td>owner, manager</td><td><code>admin_gui.serve.ingredients_payload()</code></td><td><code>ingredients</code>: <code>ingredient_id</code>, <code>name</code>, <code>amount</code>, <code>max_gram</code>, <code>max_set</code>, <code>pump_no</code>, <code>in_stock</code>...</td></tr>
+<tr><td><code>dong_bo_nguyen_lieu</code></td><td>owner, manager</td><td><code>database.admin_functions.ingredients.ingredients_payload()</code></td><td><code>ingredients</code>: <code>ingredient_id</code>, <code>name</code>, <code>amount</code>, <code>max_gram</code>, <code>max_set</code>, <code>pump_no</code>, <code>in_stock</code>...</td></tr>
 </table></div>
 <p class="note"><code>max_set = false</code>: máy chưa khai báo mức tối đa, <code>max_gram</code> đang là giá trị mặc định. Tab Kho hiện dòng "Mức tối đa đang dùng giá trị mặc định."</p>
 

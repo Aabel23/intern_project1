@@ -40,10 +40,25 @@ Bảng quyền ở `sync_rules.py` (`QUYEN_DONG_BO`), hàm đọc ở `machine/m
 
 | `lenh` | Quyền | Máy gọi | Dữ liệu |
 | --- | --- | --- | --- |
-| `dong_bo_nguyen_lieu` | owner, manager | `admin_gui.serve.ingredients_payload()` (`version1.0`) | `ingredients`: `ingredient_id`, `name`, `amount`, `max_gram`, `max_set`, `pump_no`, `in_stock`... |
+| `dong_bo_nguyen_lieu` | owner, manager | `database.admin_functions.ingredients.ingredients_payload()` (`version1.0`) | `ingredients`: `ingredient_id`, `name`, `amount`, `max_gram`, `max_set`, `pump_no`, `in_stock`... |
 
 `max_set = false` nghĩa là máy chưa khai báo mức tối đa, `max_gram` đang là giá trị
 mặc định; app hiện dòng cảnh báo.
+
+## Nạp kho: `/machine/refill`
+
+App gửi `POST /machine/refill` với `{token, machine_id, target, value}`:
+
+| Trường | Giá trị |
+| --- | --- |
+| `target` | id nguyên liệu (số > 0) hoặc `"all"` |
+| `value` | `"full"` = đổ đầy tới `max_gram`; hoặc số gram = đặt lượng tồn (chỉ khi `target` là một id) |
+
+Server kiểm quyền (`QUYEN_NAP_KHO` trong `sync_rules.py`) và dạng gói (sai → 400), rồi
+chuyển xuống máy thành lệnh `nap_kho`. Máy gọi
+`database.admin_functions.ingredients.refill()` (`version1.0`) — cùng hàm nạp với trang
+admin của máy — rồi dựng lại menu màn bán hàng. Trả `200` + kết quả, hoặc `502 {"loi"}`
+khi máy báo lỗi, `503` khi máy offline.
 
 ## ETag và nén
 

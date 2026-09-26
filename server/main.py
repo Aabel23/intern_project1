@@ -13,6 +13,7 @@ from server.config.routing import (
     APP_SYNC,
     MACHINE_HEARTBEAT,
     MACHINE_POLL_COMMAND,
+    MACHINE_REFILL,
     MACHINE_SEND_RESULT,
     MACHINE_SEND_SYNC,
 )
@@ -30,7 +31,7 @@ from server.service.machine_manage.manage_api import ROUTES as MANAGE_ROUTES
 # Mỗi block chỉ khai báo ROUTES; đây là server HTTP duy nhất.
 ROUTES = {**ACCOUNT_ROUTES, **LOGIN_ROUTES, **MACHINE_ROUTES, **SHARE_ROUTES, **MANAGE_ROUTES}
 RELAY_ROUTES = {
-    APP_SEND_COMMAND, APP_SYNC,
+    APP_SEND_COMMAND, APP_SYNC, MACHINE_REFILL,
     MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT, MACHINE_SEND_SYNC,
 }
 # Chỉ giới hạn các API chưa cần token (dò mật khẩu, spam OTP). API máy/chia sẻ

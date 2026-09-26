@@ -32,16 +32,18 @@ def fake_database(calls):
     drinks.set_drink_price = lambda drink_id, price: calls.append(("price", drink_id, price))
     ingredients = types.ModuleType("database.admin_functions.ingredients")
     ingredients.get_ingredients = lambda: {"ingredients": []}
+    ingredients.ingredients_payload = lambda: INGREDIENTS
+
+    def refill(target, value):
+        calls.append(("refill", target, value))
+        return {"ingredient_id": target, "amount": 1000, "in_stock": True}
+    ingredients.refill = refill
     inventory = types.ModuleType("database.inventory_service")
 
     def fail(*_):
         raise RuntimeError("MySQL mất kết nối")
     inventory.set_inventory = inventory.add_inventory = inventory.subtract_inventory = fail
-    serve = types.ModuleType("admin_gui.serve")
-    serve.ingredients_payload = lambda: INGREDIENTS
     return {
-        "admin_gui": types.ModuleType("admin_gui"),
-        "admin_gui.serve": serve,
         "database": types.ModuleType("database"),
         "database.admin_functions": types.ModuleType("database.admin_functions"),
         "database.admin_functions.drinks": drinks,
@@ -163,6 +165,29 @@ class MachineRelayTest(unittest.TestCase):
         self.assertIn("loi", data)
         # Lệnh ngoài bảng quyền bị server chặn, không xuống máy.
         self.assertEqual(self.sync("xem_menu")[0], 403)
+
+        # Nạp kho qua /machine/refill: {machine_id, target, value}.
+        self.calls.clear()
+        self.assertEqual(self.refill(1, "full"),
+                         (200, {"ingredient_id": 1, "amount": 1000, "in_stock": True}))
+        self.assertEqual(self.refill("all", "full")[0], 200)
+        self.assertEqual(self.refill(2, 750)[0], 200)
+        self.assertEqual(self.calls, [("refill", 1, "full"), ("refill", "all", "full"), ("refill", 2, 750)])
+        # Gói sai bị server chặn, không xuống máy.
+        for target, value in (("all", 500), (0, "full"), (1, -5), (1, "nhieu"), (True, "full")):
+            self.assertEqual(self.refill(target, value)[0], 400)
+        self.assertEqual(len(self.calls), 3)
+
+    def refill(self, target, value):
+        request = Request(self.url + "/machine/refill", headers={"Content-Type": "application/json"},
+                          data=json.dumps({"token": self.token, "machine_id": self.machine_id,
+                                           "target": target, "value": value}).encode())
+        try:
+            with urlopen(request, timeout=30) as response:
+                return response.status, json.loads(response.read())
+        except HTTPError as error:
+            with error:
+                return error.code, json.loads(error.read())
 
 
 if __name__ == "__main__":

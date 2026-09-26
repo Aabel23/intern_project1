@@ -21,6 +21,7 @@ from server.config.routing import (
     APP_SYNC,
     MACHINE_HEARTBEAT,
     MACHINE_POLL_COMMAND,
+    MACHINE_REFILL,
     MACHINE_SEND_RESULT,
     MACHINE_SEND_SYNC,
     MACHINE_STATUS,
@@ -28,7 +29,7 @@ from server.config.routing import (
 from server.database.machine.machine_read import can_manage, find_id_by_key_hash, is_owner
 from server.lib.checks import is_machine_id
 from server.lib.hashing import sha256_hex
-from server.service.dashboard_sync.sync_rules import QUYEN_DONG_BO
+from server.service.dashboard_sync.sync_rules import QUYEN_DONG_BO, QUYEN_NAP_KHO
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
 
 # Mỗi máy một hộp thư lệnh riêng: machine_id -> danh sách lệnh chờ máy lấy.
@@ -112,6 +113,7 @@ class Handler(BaseHTTPRequestHandler):
         routes = {
             APP_SEND_COMMAND: self.app_gui_lenh,
             APP_SYNC: self.app_dong_bo,
+            MACHINE_REFILL: self.app_nap_kho,
             MACHINE_HEARTBEAT: self.may_heartbeat,
             MACHINE_POLL_COMMAND: self.may_hoi_lenh,
             MACHINE_SEND_RESULT: self.may_tra_ket_qua,
@@ -196,6 +198,40 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(goi)
         except (BrokenPipeError, ConnectionResetError):
             pass
+
+    def app_nap_kho(self, data):
+        # App nạp kho: {token, machine_id, target, value}.
+        # target = id nguyên liệu hoặc "all"; value = "full" hoặc số gram (chỉ với một nguyên liệu).
+        user_id = user_from_request(data)
+        if user_id is None:
+            self.tra_json({"loi": NOT_LOGGED_IN["message"], "login_required": True}, 401)
+            return
+        machine_id = data.get("machine_id")
+        if not is_machine_id(machine_id) or not can_manage(machine_id, user_id):
+            self.tra_json({"loi": "Bạn không quản lý máy này"}, 403)
+            return
+        vai_tro = "owner" if is_owner(machine_id, user_id) else "manager"
+        if vai_tro not in QUYEN_NAP_KHO:
+            self.tra_json({"loi": "Không đủ quyền nạp kho"}, 403)
+            return
+        target, value = data.get("target"), data.get("value")
+        target_hop_le = target == "all" or (
+            isinstance(target, int) and not isinstance(target, bool) and target > 0)
+        value_hop_le = value == "full" or (
+            target != "all" and isinstance(value, (int, float))
+            and not isinstance(value, bool) and 0 <= value <= 99999999.99)
+        if not target_hop_le or not value_hop_le:
+            self.tra_json({"loi": "Gói nạp kho không hợp lệ"}, 400)
+            return
+        if not is_online(machine_id):
+            self.tra_json({"loi": "Máy đang offline"}, 503)
+            return
+
+        lenh = {"id": next(DEM_LENH), "ten": "nap_kho", "thamso": {"target": target, "value": value}}
+        ket_qua = gui_va_cho(machine_id, lenh)
+        if not isinstance(ket_qua, dict):
+            ket_qua = {"loi": "Máy trả kết quả không đúng loại lệnh"}
+        self.tra_json(ket_qua, 502 if "loi" in ket_qua else 200)
 
     def may_heartbeat(self, data):
         # Ghi thời điểm máy báo đang hoạt động.

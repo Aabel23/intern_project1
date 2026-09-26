@@ -153,6 +153,29 @@ class MachineApi {
     return result;
   }
 
+  // Nạp kho qua /machine/refill. target: id nguyên liệu hoặc 'all';
+  // value: 'full' (đổ đầy tới mức tối đa) hoặc số gram (chỉ với một nguyên liệu).
+  Future<Map<String, dynamic>> refill(
+    String machineId,
+    Object target, [
+    Object value = 'full',
+  ]) async {
+    final result = await _request(
+      'POST',
+      '/machine/refill',
+      body: {
+        'machine_id': machineId,
+        'target': target,
+        'value': value,
+        'token': ?token,
+      },
+    );
+    if (result is! Map<String, dynamic>) {
+      throw const MachineException('Máy trả kết quả nạp kho không hợp lệ.');
+    }
+    return result;
+  }
+
   // Đọc dữ liệu dashboard qua /app/dong-bo, gửi kèm ETag đang giữ.
   // Trả null khi dữ liệu trên máy không đổi (server trả 304), app giữ bản cũ.
   // Máy gửi JSON nén gzip; HttpClient tự giải nén.
