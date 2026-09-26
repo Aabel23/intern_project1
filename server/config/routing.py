@@ -26,9 +26,5 @@ APP_MACHINE_STAFF = "/app/nhan-vien-may"
 APP_REVOKE_STAFF = "/app/thu-hoi-quyen"
 APP_RENAME_MACHINE = "/app/doi-ten-may"
 APP_REMOVE_MACHINE = "/app/go-may"
-
-APP_SYNC_MACHINES = "/app/dong-bo-may"
-APP_SYNC_MACHINES_VERIFY = "/app/xac-minh-dong-bo-may"
-# Dashboard đọc dữ liệu máy: một sublink, phân biệt bằng "lenh" trong body.
 APP_SYNC = "/app/dong-bo"
 
