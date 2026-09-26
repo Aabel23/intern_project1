@@ -160,6 +160,7 @@ def install_fake_database():
     ingredients.ingredients_payload = ingredients_payload
     ingredients.refill = refill
     inventory = types.ModuleType("database.inventory_service")
+    inventory.publish_store_menu = lambda: ""
     inventory.set_inventory = update_inventory("set")
     inventory.add_inventory = update_inventory("add")
     inventory.subtract_inventory = update_inventory("subtract")

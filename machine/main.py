@@ -23,12 +23,22 @@ from database.admin_functions.ingredients import (
     refill,
 )
 
-# Cập nhật kho bằng các hàm sẵn có trong database.
+# Cập nhật kho bằng các hàm sẵn có trong database; publish_store_menu dựng lại
+# menu-data.js để màn bán hàng thấy ngay thay đổi.
 from database.inventory_service import (
+    publish_store_menu,
     set_inventory as set_ingredient_amount,
     add_inventory as add_ingredient_amount,
     subtract_inventory as subtract_ingredient_amount,
 )
+
+
+def published(result):
+    # Màn bán hàng đọc menu-data.js, không đọc MySQL: ghi xong phải dựng lại ngay,
+    # nếu không món vừa tắt vẫn bán được tới lượt sync_menu kế tiếp.
+    # Lỗi dựng menu không làm hỏng lệnh (database đã ghi), chỉ báo kèm "warning".
+    warning = publish_store_menu()
+    return {**result, "warning": warning} if warning else result
 
 
 def handle_command(lenh):
@@ -45,10 +55,10 @@ def handle_command(lenh):
     # Cập nhật món uống.
     if ten == "doi_trang_thai_mon":
         set_drink_available(thamso["drink_id"], thamso["available"])
-        return {"ok": True}
+        return published({"ok": True})
     if ten == "doi_gia_mon":
         set_drink_price(thamso["drink_id"], thamso["price"])
-        return {"ok": True}
+        return published({"ok": True})
 
     # Cập nhật kho nguyên liệu.
     if ten == "dat_luong_nguyen_lieu":
@@ -63,7 +73,7 @@ def handle_command(lenh):
 
     # Nạp kho từ app (/machine/refill): target = id nguyên liệu hoặc "all", value = "full" hoặc số gram.
     if ten == "nap_kho":
-        return refill(thamso.get("target"), thamso.get("value"))
+        return published(refill(thamso.get("target"), thamso.get("value")))
 
     return {"loi": "Lenh khong hop le"}
 

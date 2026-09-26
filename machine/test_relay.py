@@ -39,6 +39,7 @@ def fake_database(calls):
         return {"ingredient_id": target, "amount": 1000, "in_stock": True}
     ingredients.refill = refill
     inventory = types.ModuleType("database.inventory_service")
+    inventory.publish_store_menu = lambda: calls.append(("publish",)) or ""
 
     def fail(*_):
         raise RuntimeError("MySQL mất kết nối")
@@ -139,7 +140,8 @@ class MachineRelayTest(unittest.TestCase):
         })
         self.assertEqual(send("xem_menu"), MENU)
         self.assertEqual(send("doi_trang_thai_mon", {"drink_id": 1, "available": False}), {"ok": True})
-        self.assertEqual(self.calls, [("available", 1, False)])
+        # Ghi xong thì dựng lại menu màn bán hàng ngay.
+        self.assertEqual(self.calls, [("available", 1, False), ("publish",)])
         # Lỗi database trả về app, vòng lặp của máy vẫn chạy tiếp.
         self.assertEqual(send("them_nguyen_lieu", {"ingredient_id": 1, "gram": 5}),
                          {"loi": "MySQL mất kết nối"})
@@ -172,11 +174,13 @@ class MachineRelayTest(unittest.TestCase):
                          (200, {"ingredient_id": 1, "amount": 1000, "in_stock": True}))
         self.assertEqual(self.refill("all", "full")[0], 200)
         self.assertEqual(self.refill(2, 750)[0], 200)
-        self.assertEqual(self.calls, [("refill", 1, "full"), ("refill", "all", "full"), ("refill", 2, 750)])
+        self.assertEqual([c for c in self.calls if c[0] == "refill"],
+                         [("refill", 1, "full"), ("refill", "all", "full"), ("refill", 2, 750)])
+        self.assertEqual(self.calls.count(("publish",)), 3)
         # Gói sai bị server chặn, không xuống máy.
         for target, value in (("all", 500), (0, "full"), (1, -5), (1, "nhieu"), (True, "full")):
             self.assertEqual(self.refill(target, value)[0], 400)
-        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(len(self.calls), 6)
 
     def refill(self, target, value):
         request = Request(self.url + "/machine/refill", headers={"Content-Type": "application/json"},
