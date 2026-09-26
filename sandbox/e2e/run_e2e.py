@@ -260,6 +260,19 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     phone.wait("Bơm 1", 10)
     ok(t, "menu + bật món + kho")
 
+    t = step("Nạp kho qua /machine/refill: nạp đầy một bình, rồi nạp tất cả")
+    row = phone.wait("0 / 1500 g", 10)
+    buttons = [node for node in phone.nodes() if node.label == "Nạp đầy"]
+    phone.tap(min(buttons, key=lambda node: abs(node.y - row.y)))
+    phone.tap("^Nạp$", cls="Button")
+    phone.wait("1500 / 1500 g", 30)
+    assert "nap_kho" in run.log_text("machine_sim"), "Máy giả không nhận lệnh nạp kho"
+    phone.tap("Nạp tất cả")
+    phone.tap("^Nạp$", cls="Button")
+    phone.wait("2000 / 2000 g", 30)
+    phone.wait("1000 / 1000 g", 10)
+    ok(t, "một bình + tất cả")
+
     t = step("Chia sẻ qua Bluetooth: điện thoại (chủ) → laptop (nhân viên)")
     receiver = run.spawn("share_receive", "sandbox/bluetooth_pair/app2app_pair.py",
                          "--username", staff["username"], "--timeout", "150",
