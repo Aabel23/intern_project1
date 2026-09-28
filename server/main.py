@@ -26,6 +26,7 @@ from server.service.user_register.user_register.registration_flow import cleanup
 from server.service.machine_register.machine_register_api import ROUTES as MACHINE_ROUTES
 from server.service.machine_share.share_api import ROUTES as SHARE_ROUTES
 from server.service.machine_manage.manage_api import ROUTES as MANAGE_ROUTES
+from server.service.dashboard_sync.menu_sync import menu_sync_api
 
 
 # Mỗi block chỉ khai báo ROUTES; đây là server HTTP duy nhất.
@@ -46,6 +47,9 @@ class Handler(RelayHandler):
     timeout = 10
 
     def do_POST(self):
+        # Module tự lo trọn request của mình; trả False nếu đường dẫn không thuộc nó.
+        if menu_sync_api.handle(self):
+            return
         if self.path in RELAY_ROUTES:
             super().do_POST()
             return

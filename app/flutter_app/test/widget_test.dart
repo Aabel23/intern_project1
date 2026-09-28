@@ -34,6 +34,25 @@ const _ingredients = {
 };
 const _etag = '"kho-1"';
 
+// Gói menu giả, cùng dạng menu_sync_packet.py của máy: base64(zlib(JSON)).
+final _menuPacket = base64Encode(
+  ZLibCodec().encode(
+    utf8.encode(
+      jsonEncode({
+        'type': 'menu_sync',
+        'v': 1,
+        'menu_version': 42,
+        'generated_at': '2026-09-28T17:30:00',
+        'fields': ['drink_id', 'drink_name', 'price', 'available', 'in_stock'],
+        'drinks': [
+          [1, 'Cà phê sữa', 25000.0, 1, 1],
+          [2, 'Trà đào', 30000.0, 1, 0],
+        ],
+      }),
+    ),
+  ),
+);
+
 // /app/dong-bo giả: trùng ETag thì 304, khác thì JSON nén gzip kèm ETag.
 Future<void> _replySync(HttpRequest request) async {
   request.response.headers.set(HttpHeaders.etagHeader, _etag);
@@ -78,30 +97,9 @@ Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {
                 {'machine_id': 'MAY-TEST', 'name': 'MAY-TEST', 'role': 'owner'},
               ],
             }
-          : switch (body['ten']) {
-              'xem_menu' => {
-                'drinks': [
-                  {
-                    'drinkId': 1,
-                    'name': 'Cà phê sữa',
-                    'price': 25000.0,
-                    'category': 'Cà phê',
-                    'available': true,
-                    'inStock': true,
-                  },
-                  {
-                    'drinkId': 2,
-                    'name': 'Trà đào',
-                    'price': 30000.0,
-                    'category': 'Trà',
-                    'available': true,
-                    'inStock': false,
-                    'unavailableReason': 'Hết đào',
-                  },
-                ],
-              },
-              _ => {'ok': true},
-            };
+          : request.uri.path == '/app/nhan-menu'
+          ? {'status': 'ok', 'menu_version': 42, 'packet': _menuPacket}
+          : {'ok': true};
     }
     request.response.headers.contentType = ContentType.json;
     request.response.write(jsonEncode(reply));
@@ -157,14 +155,15 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('Cần xử lý'), findsOneWidget);
 
-          final commands = received.where((r) => r['ten'] != null);
-          expect(commands.map((r) => r['ten']).toSet(), {'xem_menu'});
+          final menus = received.where((r) => r['menu_version'] != null);
+          expect(menus, isNotEmpty);
+          expect(received.where((r) => r['ten'] != null), isEmpty);
           final syncs = received.where((r) => r['lenh'] != null).toList();
           expect(syncs.map((r) => r['lenh']).toSet(), {'dong_bo_nguyen_lieu'});
           expect(syncs.every((r) => r['token'] == 'token-1'), isTrue);
           // Relay chỉ nhận lệnh kèm token của người quản lý máy.
-          expect(commands.every((r) => r['token'] == 'token-1'), isTrue);
-          expect(commands.first['machine_id'], 'MAY-TEST');
+          expect(menus.every((r) => r['token'] == 'token-1'), isTrue);
+          expect(menus.first['machine_id'], 'MAY-TEST');
           expect(tester.takeException(), isNull);
         } finally {
           await server.close(force: true);

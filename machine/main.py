@@ -7,14 +7,8 @@ import time
 import threading
 import urllib.error
 
+from menu_sync.menu_sync_api import COMMANDS as MENU_COMMANDS
 from server_connection import heartbeat, instruction_api
-
-# Đọc menu và cập nhật món uống từ tầng database.
-from database.admin_functions.drinks import (
-    get_menu,
-    set_drink_available,
-    set_drink_price,
-)
 
 # Nguyên liệu: đọc gọn, dữ liệu kho đầy đủ (max_gram, pump_no...) và nạp kho.
 from database.admin_functions.ingredients import (
@@ -47,18 +41,12 @@ def handle_command(lenh):
     thamso = lenh.get("thamso", {})
 
     # Đọc dữ liệu.
-    if ten == "xem_menu":
-        return get_menu()
     if ten == "xem_nguyen_lieu":
         return get_ingredients()
 
-    # Cập nhật món uống.
-    if ten == "doi_trang_thai_mon":
-        set_drink_available(thamso["drink_id"], thamso["available"])
-        return published({"ok": True})
-    if ten == "doi_gia_mon":
-        set_drink_price(thamso["drink_id"], thamso["price"])
-        return published({"ok": True})
+    # Tab Menu: nhận gói menu và gửi thay đổi món (xem menu_sync/).
+    if ten in MENU_COMMANDS:
+        return MENU_COMMANDS[ten](thamso)
 
     # Cập nhật kho nguyên liệu.
     if ten == "dat_luong_nguyen_lieu":

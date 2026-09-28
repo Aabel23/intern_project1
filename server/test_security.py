@@ -90,7 +90,7 @@ class SecurityScenarioTest(unittest.TestCase):
         _, owner = self.user("chu")
         _, stranger = self.user("la")
         machine_id = self.machine(owner)
-        for path, extra in (("/app/gui-lenh", {"ten": "xem_menu"}), ("/app/dong-bo", {"lenh": "dong_bo_nguyen_lieu"}),
+        for path, extra in (("/app/gui-lenh", {"ten": "xem_nguyen_lieu"}), ("/app/nhan-menu", {}), ("/app/dong-bo", {"lenh": "dong_bo_nguyen_lieu"}),
                             ("/machine/refill", {"target": "all", "value": "full"}),
                             ("/app/nhan-vien-may", {}), ("/app/tao-ma-chia-se", {}),
                             ("/app/doi-ten-may", {"name": "x"}), ("/app/go-may", {})):
@@ -158,7 +158,7 @@ class SecurityScenarioTest(unittest.TestCase):
         self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
             app = pool.submit(self.post, "/app/gui-lenh", {"token": owner, "machine_id": machine_id,
-                                                           "ten": "xem_menu", "thamso": {}})
+                                                           "ten": "xem_nguyen_lieu", "thamso": {}})
             time.sleep(0.3)
             for lenh_id in range(1, 50):
                 self.post("/machine/tra-ket-qua", {"product_key": "fm_may_khac", "id": lenh_id,
@@ -180,7 +180,7 @@ class SecurityScenarioTest(unittest.TestCase):
         self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
             pool.submit(self.post, "/app/gui-lenh", {"token": owner, "machine_id": machine_id,
-                                                     "ten": "doi_gia_mon", "thamso": {"drink_id": 1, "price": 1}})
+                                                     "ten": "dat_luong_nguyen_lieu", "thamso": {"ingredient_id": 1, "gram": 1}})
             time.sleep(0.3)
             lenh = json.loads(self.post("/machine/hoi-lenh", {"product_key": "fm_tem_may_that"})[1])["lenh"]
             if lenh:

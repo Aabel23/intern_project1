@@ -23,15 +23,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MACHINE_DIR = ROOT / "machine"
 
-# Hai bảng tối giản theo tên cột của database máy thật (MySQL).
+# Hai bảng tối giản: drink theo cột của machine/database/database.db (tab Menu đọc
+# thẳng SQLite qua menu_sync/menu_sync_database.py), ingredient theo database máy thật (MySQL).
 SCHEMA = """
 CREATE TABLE drink (
     drink_id INTEGER PRIMARY KEY,
     drink_name TEXT NOT NULL,
+    image TEXT,
     price REAL NOT NULL,
-    category TEXT NOT NULL,
     available INTEGER NOT NULL,
-    in_stock INTEGER NOT NULL
+    in_stock INTEGER NOT NULL,
+    deleted_at TEXT,
+    glass_id INTEGER,
+    drink_type_id INTEGER,
+    garnish TEXT,
+    featured INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE ingredient (
     ingredient_id INTEGER PRIMARY KEY,
@@ -41,10 +47,10 @@ CREATE TABLE ingredient (
     pump_no INTEGER,
     in_stock INTEGER NOT NULL
 );
-INSERT INTO drink VALUES
-    (1, 'Cà phê sữa', 25000, 'Cà phê', 1, 1),
-    (2, 'Trà đào', 30000, 'Trà', 1, 1),
-    (3, 'Matcha latte', 35000, 'Trà', 0, 1);
+INSERT INTO drink (drink_id, drink_name, price, available, in_stock) VALUES
+    (1, 'Cà phê sữa', 25000, 1, 1),
+    (2, 'Trà đào', 30000, 1, 1),
+    (3, 'Matcha latte', 35000, 0, 1);
 INSERT INTO ingredient VALUES
     (1, 'Sữa tươi', 1200, 2000, 1, 1),
     (2, 'Đào ngâm', 0, 1500, 2, 0),
@@ -71,26 +77,6 @@ def open_database():
 def query(sql, params=()):
     with LOCK:
         return DB.execute(sql, params).fetchall()
-
-
-def get_menu():
-    rows = query("SELECT * FROM drink ORDER BY drink_id")
-    return {"drinks": [
-        {"drinkId": row["drink_id"], "name": row["drink_name"], "price": row["price"],
-         "category": row["category"], "available": bool(row["available"]),
-         "inStock": bool(row["in_stock"])}
-        for row in rows
-    ]}
-
-
-def update_drink(column):
-    def update(drink_id, value):
-        with LOCK, DB:
-            changed = DB.execute(f"UPDATE drink SET {column}=? WHERE drink_id=?",
-                                 (value, drink_id)).rowcount
-        if not changed:
-            raise ValueError(f"Không có món id {drink_id}.")
-    return update
 
 
 def get_ingredients():
@@ -151,10 +137,6 @@ def refill(target, value):
 
 def install_fake_database():
     """Thay các module database của máy thật (MySQL) bằng hàm đọc SQLite tạm."""
-    drinks = types.ModuleType("database.admin_functions.drinks")
-    drinks.get_menu = get_menu
-    drinks.set_drink_available = update_drink("available")
-    drinks.set_drink_price = update_drink("price")
     ingredients = types.ModuleType("database.admin_functions.ingredients")
     ingredients.get_ingredients = get_ingredients
     ingredients.ingredients_payload = ingredients_payload
@@ -167,7 +149,6 @@ def install_fake_database():
     sys.modules.update({
         "database": types.ModuleType("database"),
         "database.admin_functions": types.ModuleType("database.admin_functions"),
-        "database.admin_functions.drinks": drinks,
         "database.admin_functions.ingredients": ingredients,
         "database.inventory_service": inventory,
     })
@@ -189,6 +170,8 @@ def main():
     spec = importlib.util.spec_from_file_location("machine_main", MACHINE_DIR / "main.py")
     machine = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(machine)
+    from menu_sync import menu_sync_database
+    menu_sync_database.DB_PATH = Path(db_path)
     from config.env import get_machine_name, get_server_url
     try:
         try:

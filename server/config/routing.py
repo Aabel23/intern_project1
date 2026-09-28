@@ -26,5 +26,8 @@ APP_MACHINE_STAFF = "/app/nhan-vien-may"
 APP_REVOKE_STAFF = "/app/thu-hoi-quyen"
 APP_RENAME_MACHINE = "/app/doi-ten-may"
 APP_REMOVE_MACHINE = "/app/go-may"
+
 APP_SYNC = "/app/dong-bo"
+APP_RECEIVE_MENU = "/app/nhan-menu"
+APP_SEND_MENU = "/app/gui-menu"
 

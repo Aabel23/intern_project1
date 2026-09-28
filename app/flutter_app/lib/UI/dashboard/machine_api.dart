@@ -153,6 +153,45 @@ class MachineApi {
     return result;
   }
 
+  // Tab Menu: xin gói menu. menuVersion là bản đang giữ (0 = chưa có);
+  // máy trả {status: up_to_date} hoặc {status: ok, menu_version, packet}.
+  Future<Map<String, dynamic>> receiveMenu(String machineId, int menuVersion) =>
+      _menu('/app/nhan-menu', {
+        'machine_id': machineId,
+        'menu_version': menuVersion,
+      });
+
+  // Tab Menu: gửi thay đổi món dựa trên bản menuVersion. Máy trả menu mới
+  // (status ok), hoặc status conflict kèm menu mới nhất nếu bản app đã cũ.
+  Future<Map<String, dynamic>> sendMenu(
+    String machineId,
+    int menuVersion,
+    List<Map<String, dynamic>> changes,
+  ) => _menu('/app/gui-menu', {
+    'machine_id': machineId,
+    'menu_version': menuVersion,
+    'thay_doi': changes,
+  });
+
+  Future<Map<String, dynamic>> _menu(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final result = await _request(
+      'POST',
+      path,
+      body: {...body, 'token': ?token},
+    );
+    if (result is! Map<String, dynamic> || result['status'] is! String) {
+      throw MachineException(
+        result is Map && result['loi'] != null
+            ? result['loi'].toString()
+            : 'Máy trả menu không đúng định dạng.',
+      );
+    }
+    return result;
+  }
+
   // Nạp kho qua /machine/refill. target: id nguyên liệu hoặc 'all';
   // value: 'full' (đổ đầy tới mức tối đa) hoặc số gram (chỉ với một nguyên liệu).
   Future<Map<String, dynamic>> refill(

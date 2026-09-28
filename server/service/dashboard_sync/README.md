@@ -1,6 +1,6 @@
 # Đồng bộ dashboard
 
-App đọc dữ liệu của máy (kho, sau này là menu...) để vẽ các tab dashboard. Server
+App đọc dữ liệu của máy (kho, menu) để vẽ các tab dashboard. Menu đi đường riêng, xem mục **Tab Menu** bên dưới. Server
 không lưu dữ liệu này: nó kiểm tra quyền rồi chuyển lệnh xuống máy qua hộp thư relay
 trong RAM, máy đọc MySQL của nó và trả về. Mọi tab dùng chung một sublink, phân
 biệt bằng `lenh` trong body. Lệnh ghi (nạp kho, bật/tắt món) không đi qua đây.
@@ -89,3 +89,35 @@ python -m unittest machine.test_relay -v          # 200, 304, dữ liệu đổi
 cd app/flutter_app && flutter test                # gửi lại ETag, giữ danh sách khi 304
 python sandbox/e2e/run_e2e.py --skip-build        # điện thoại thật + máy giả
 ```
+
+## Tab Menu: `menu_sync/`
+
+Tab Menu vừa nhận vừa gửi gói tin. Máy là nguồn menu (bảng `drink` trong
+`machine/database/database.db`); server chỉ kiểm tra token, quyền (`QUYEN_MENU` trong
+`sync_rules.py`) và dạng gói rồi chuyển qua hộp thư relay, không giải nén, không lưu.
+
+```
+App ─ POST /app/nhan-menu {token, machine_id, menu_version}
+ └→ Server → máy lệnh nhan_menu
+      ├ menu_version trùng: {"status": "up_to_date", "menu_version"}
+      └ khác:               {"status": "ok", "menu_version", "packet"}
+
+App ─ POST /app/gui-menu {token, machine_id, menu_version, thay_doi: [{drink_id, available?, price?}]}
+ └→ Server kiểm dạng gói → máy lệnh gui_menu
+      ├ menu_version là bản máy đang có: ghi trong một transaction → {"status": "ok", ... gói mới}
+      └ máy đã có bản khác:              không ghi → {"status": "conflict", ... gói mới nhất}
+```
+
+`packet` = base64(zlib(JSON)), JSON là
+`{type: "menu_sync", v: 1, menu_version, generated_at, fields: [...], drinks: [[...], ...]}`;
+mỗi món là một mảng theo thứ tự `fields`. `menu_version` là CRC32 của `drinks`, app
+chưa có menu gửi `0`. Mã máy: `machine/menu_sync/menu_sync_packet.py`; mã server: `menu_sync/`
+(`menu_sync_api.py` đọc/ghi HTTP, `menu_sync_verify.py` kiểm tra + chuyển lệnh xuống máy,
+`menu_sync_flow.py` xỏ hai phần lại; chạy riêng: `python -m server.service.dashboard_sync.menu_sync.menu_sync_flow`); mã app: `lib/feature/data_sync/products_sync.dart`.
+
+| Status | Khi nào |
+| --- | --- |
+| 400 | `menu_version` không phải số 0..2³²−1; `thay_doi` rỗng, quá 200 dòng, cột ngoài `available`/`price`, sai kiểu hoặc giá âm |
+| 401 / 403 | như `/app/dong-bo` |
+| 503 | máy offline |
+| 502 | máy báo lỗi (ví dụ `drink_id` không có trên máy; cả gói không được ghi) hoặc hết thời gian chờ |
