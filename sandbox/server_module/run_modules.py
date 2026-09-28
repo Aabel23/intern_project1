@@ -5,7 +5,7 @@ Chạy từ thư mục gốc androidv0.1 (dùng chung server/database/database.d
     python sandbox/server_module/run_modules.py machinelist login --port 8001
 
 Module code không tự chạy riêng; danh sách module nào ghép với module nào nằm ở đây.
-Menu/kho cần "relay" để máy có chỗ heartbeat và hỏi lệnh; module nào đòi token cần
+Menu, kho cần "relay" để máy có chỗ heartbeat và hỏi lệnh; module nào đòi token cần
 "login" để lấy token ngay trên server này.
 """
 
@@ -22,6 +22,7 @@ from server.database.machine.init_db import init_db  # noqa: E402
 from server.lib.module_server import ModuleServer, make_handler  # noqa: E402
 
 # Các module
+from server.service.dashboard_sync.ingredient_sync import ingredient_sync_api  # noqa: E402
 from server.service.dashboard_sync.machinelist_sync import machinelist_api  # noqa: E402
 from server.service.dashboard_sync.menu_sync import menu_sync_api  # noqa: E402
 from server.service.machine_register import machine_register_api  # noqa: E402
@@ -38,6 +39,7 @@ MODULES = {
     "machinelist": machinelist_api,
     "relay": relay_api,
     "menu_sync": menu_sync_api,
+    "ingredient_sync": ingredient_sync_api,
 }
 
 

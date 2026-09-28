@@ -1,123 +1,69 @@
 # Đồng bộ dashboard
 
-App đọc dữ liệu của máy (kho, menu) để vẽ các tab dashboard. Menu đi đường riêng, xem mục **Tab Menu** bên dưới. Server
-không lưu dữ liệu này: nó kiểm tra quyền rồi chuyển lệnh xuống máy qua hộp thư relay
-trong RAM, máy đọc MySQL của nó và trả về. Mọi tab dùng chung một sublink, phân
-biệt bằng `lenh` trong body. Lệnh ghi (nạp kho, bật/tắt món) không đi qua đây.
+Mỗi tab dashboard của app là một folder, **chia theo tab, không chia theo nguồn dữ liệu**:
 
-## Luồng
+| Folder | Tab | Route | Dữ liệu ở đâu |
+| --- | --- | --- | --- |
+| `menu_sync/` | Menu | `/app/nhan-menu`, `/app/gui-menu` | của máy, hỏi xuống qua hộp thư |
+| `ingredient_sync/` | Kho | `/app/nhan-kho`, `/app/nap-kho` | của máy, hỏi xuống qua hộp thư |
+| `machinelist_sync/` | Máy | `/app/may-cua-toi`, `/app/doi-ten-may`, `/app/go-may`, GET `/machine/trang-thai` | của server (bảng `machines`, giờ heartbeat) |
+
+`sync_rules.py`: bảng vai trò được làm từng việc (`QUYEN_MENU`, `QUYEN_KHO`,
+`QUYEN_NAP_KHO`) và `check_access(data, roles)` dùng chung cho Menu và Kho:
+token → người dùng → có quản lý máy → vai trò đủ quyền.
+
+## Tab dữ liệu máy (Menu, Kho)
+
+Server không lưu dữ liệu máy. Module kiểm quyền và dạng gói, rồi gọi
+`machine_relay.relay_queue.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
+tới khi máy long-poll lấy, máy trả kết quả, server chuyển nguyên cho app.
 
 ```
-App  ─ POST /app/dong-bo {token, machine_id, lenh}   header If-None-Match: <ETag đang giữ>
- └→ Server: token → quyền với máy → QUYEN_DONG_BO[lenh] → máy online?
-     └→ hộp thư máy → Máy (/machine/hoi-lenh): chạy hàm theo lenh, tính ETag
-          ├ ETag trùng: gói rỗng
-          └ khác:      JSON nén gzip
-        Máy ─ POST /machine/tra-dong-bo (body = gói, thông tin trong header)
- ←─ Server chuyển nguyên gói, không giải nén: 304 nếu rỗng, 200 + gzip nếu có dữ liệu
-App: 304 giữ danh sách cũ; 200 cập nhật và lưu ETag mới
+App ─ POST /app/nhan-kho {token, machine_id, version}
+ └→ ingredient_sync: check_access → is_version → send("nhan_kho", {version})
+      Máy ─ /machine/hoi-lenh → {id, instruction: "nhan_kho", data: {version}}
+      Máy: version trùng → {"status": "up_to_date", "version"}
+           khác         → {"status": "ok", "version", "ingredients": [...]}
+      Máy ─ /machine/tra-ket-qua {id, ket_qua}
+ ←─ 200 + kết quả máy
 ```
 
-## Route
+`version` là CRC32 của dữ liệu do máy tính; app chưa có dữ liệu gửi `0`. Menu làm y như
+vậy với `menu_version`, kết quả thêm gói `packet` = base64(zlib(JSON)), xem
+`machine/menu_sync/menu_sync_packet.py`.
+
+### Route
 
 | Route | Gửi | Kết quả |
 | --- | --- | --- |
-| POST `/app/dong-bo` | body `token`, `machine_id`, `lenh`; header `If-None-Match` (tùy chọn) | `200` JSON gzip + `ETag`, hoặc `304` + `ETag` |
-| POST `/machine/tra-dong-bo` | header `X-Product-Key`, `X-Lenh-Id`, `ETag`; body là JSON đã gzip, rỗng = không đổi | `{"da_nhan": true}` |
+| `/app/nhan-menu` | `token`, `machine_id`, `menu_version` | `{status: up_to_date \| ok, menu_version, packet?}` |
+| `/app/gui-menu` | `token`, `machine_id`, `menu_version`, `thay_doi: [{drink_id, available?, price?}]` | `{status: ok \| conflict, menu_version, packet}`; `conflict` = app đang giữ bản cũ, máy không ghi |
+| `/app/nhan-kho` | `token`, `machine_id`, `version` | `{status: up_to_date \| ok, version, ingredients?}` |
+| `/app/nap-kho` | `token`, `machine_id`, `target` (id hoặc `"all"`), `value` (`"full"` hoặc số gram, số gram chỉ khi `target` là id) | kết quả `refill()` của máy, kèm `warning` nếu dựng lại menu màn bán hàng lỗi |
 
-Lỗi của `/app/dong-bo` trả JSON `{"loi": ...}`:
+`ingredients`: `ingredient_id`, `name`, `amount`, `max_gram`, `max_set`, `pump_no`,
+`in_stock`. `max_set = false` nghĩa là máy chưa khai báo mức tối đa, `max_gram` đang là
+giá trị mặc định; app hiện dòng cảnh báo.
+
+### Lỗi
+
+Thân lỗi `{"loi": ...}`:
 
 | Status | Khi nào |
 | --- | --- |
+| 400 | gói sai dạng (version âm, `thay_doi` rỗng hoặc có cột lạ, `target`/`value` sai) |
 | 401 | token sai/hết hạn (kèm `login_required: true`) |
-| 403 | không quản lý máy, lệnh không có trong bảng, hoặc vai trò không đủ quyền |
+| 403 | không quản lý máy này, hoặc vai trò không đủ quyền |
 | 503 | máy offline (không heartbeat trong 15 giây) |
-| 502 | máy báo lỗi (MySQL...) hoặc không trả kết quả trong 20 giây |
+| 502 | máy báo lỗi (MySQL, món không có trên máy...) hoặc không trả kết quả trong 20 giây |
 
-## Lệnh
+## Mã nguồn
 
-Bảng quyền ở `sync_rules.py` (`QUYEN_DONG_BO`), hàm đọc ở `machine/main.py` (`LENH_DONG_BO`).
-
-| `lenh` | Quyền | Máy gọi | Dữ liệu |
+| | Server | Máy | App |
 | --- | --- | --- | --- |
-| `dong_bo_nguyen_lieu` | owner, manager | `database.admin_functions.ingredients.ingredients_payload()` (`version1.0`) | `ingredients`: `ingredient_id`, `name`, `amount`, `max_gram`, `max_set`, `pump_no`, `in_stock`... |
+| Menu | `menu_sync/` | `machine/menu_sync/` (SQLite `machine/database/database.db`) | `lib/feature/data_sync/products_sync.dart` |
+| Kho | `ingredient_sync/` | `machine/ingredient_sync/` (MySQL của `version1.0`) | `lib/feature/data_sync/ingredients_sync.dart` |
+| Máy | `machinelist_sync/` | — | `lib/UI/dashboard/dashboard/dashboard_controller.dart` |
 
-`max_set = false` nghĩa là máy chưa khai báo mức tối đa, `max_gram` đang là giá trị
-mặc định; app hiện dòng cảnh báo.
-
-## Nạp kho: `/machine/refill`
-
-App gửi `POST /machine/refill` với `{token, machine_id, target, value}`:
-
-| Trường | Giá trị |
-| --- | --- |
-| `target` | id nguyên liệu (số > 0) hoặc `"all"` |
-| `value` | `"full"` = đổ đầy tới `max_gram`; hoặc số gram = đặt lượng tồn (chỉ khi `target` là một id) |
-
-Server kiểm quyền (`QUYEN_NAP_KHO` trong `sync_rules.py`) và dạng gói (sai → 400), rồi
-chuyển xuống máy thành lệnh `nap_kho`. Máy gọi
-`database.admin_functions.ingredients.refill()` (`version1.0`) — cùng hàm nạp với trang
-admin của máy — rồi dựng lại menu màn bán hàng. Trả `200` + kết quả, hoặc `502 {"loi"}`
-khi máy báo lỗi, `503` khi máy offline.
-
-## ETag và nén
-
-- ETag = 32 ký tự đầu SHA-256 của JSON đã sắp khóa (`sort_keys`), nên cùng dữ liệu luôn
-  ra cùng ETag. Máy so với ETag app gửi; trùng thì không gửi lại dữ liệu.
-- Nén bằng `Content-Encoding: gzip`; `HttpClient` của Dart tự giải nén.
-- App bỏ ETag khi đổi máy (`IngredientsSync.reset()`).
-
-## Thêm một lệnh đồng bộ mới
-
-1. `sync_rules.py`: thêm `"dong_bo_x": {"owner", "manager"}`.
-2. `machine/main.py`: thêm `"dong_bo_x": ham_doc` vào `LENH_DONG_BO` (hàm trả dict JSON được).
-3. App: tạo `lib/feature/data_sync/x_sync.dart` theo khuôn `ingredients_sync.dart`,
-   gọi `api.sync(machineId, 'dong_bo_x', etag)` (trả `null` khi 304).
-
-## File liên quan
-
-| Phần | File |
-| --- | --- |
-| Server | `service/machine_relay/relay_api.py` (`app_dong_bo`, `may_tra_dong_bo`), `relay_queue.py` (`gui_va_cho`), `sync_rules.py` |
-| Máy | `machine/main.py` (`pack_sync`), `machine/server_connection/instruction_api.py` (`send_sync`) |
-| App | `lib/UI/dashboard/machine_api.dart` (`sync`), `lib/feature/data_sync/ingredients_sync.dart`, `lib/UI/dashboard/minitab/inventory_tab.dart` |
-
-## Test
-
-```sh
-python -m unittest machine.test_relay -v          # 200, 304, dữ liệu đổi, 502, 503, 403
-cd app/flutter_app && flutter test                # gửi lại ETag, giữ danh sách khi 304
-python sandbox/e2e/run_e2e.py --skip-build        # điện thoại thật + máy giả
-```
-
-## Tab Menu: `menu_sync/`
-
-Tab Menu vừa nhận vừa gửi gói tin. Máy là nguồn menu (bảng `drink` trong
-`machine/database/database.db`); server chỉ kiểm tra token, quyền (`QUYEN_MENU` trong
-`sync_rules.py`) và dạng gói rồi chuyển qua hộp thư relay, không giải nén, không lưu.
-
-```
-App ─ POST /app/nhan-menu {token, machine_id, menu_version}
- └→ Server → máy lệnh nhan_menu
-      ├ menu_version trùng: {"status": "up_to_date", "menu_version"}
-      └ khác:               {"status": "ok", "menu_version", "packet"}
-
-App ─ POST /app/gui-menu {token, machine_id, menu_version, thay_doi: [{drink_id, available?, price?}]}
- └→ Server kiểm dạng gói → máy lệnh gui_menu
-      ├ menu_version là bản máy đang có: ghi trong một transaction → {"status": "ok", ... gói mới}
-      └ máy đã có bản khác:              không ghi → {"status": "conflict", ... gói mới nhất}
-```
-
-`packet` = base64(zlib(JSON)), JSON là
-`{type: "menu_sync", v: 1, menu_version, generated_at, fields: [...], drinks: [[...], ...]}`;
-mỗi món là một mảng theo thứ tự `fields`. `menu_version` là CRC32 của `drinks`, app
-chưa có menu gửi `0`. Mã máy: `machine/menu_sync/menu_sync_packet.py`; mã server: `menu_sync/`
-(`menu_sync_api.py` đọc/ghi HTTP, `menu_sync_verify.py` kiểm tra + chuyển lệnh xuống máy,
-`menu_sync_flow.py` xỏ hai phần lại; chạy riêng: `python sandbox/server_module/run_modules.py menu_sync relay login`); mã app: `lib/feature/data_sync/products_sync.dart`.
-
-| Status | Khi nào |
-| --- | --- |
-| 400 | `menu_version` không phải số 0..2³²−1; `thay_doi` rỗng, quá 200 dòng, cột ngoài `available`/`price`, sai kiểu hoặc giá âm |
-| 401 / 403 | như `/app/dong-bo` |
-| 503 | máy offline |
-| 502 | máy báo lỗi (ví dụ `drink_id` không có trên máy; cả gói không được ghi) hoặc hết thời gian chờ |
+Mỗi module theo mẫu api / verify / flow trong `androidv0.1/MODULE_PATTERN.md`. Thử riêng:
+`python sandbox/server_module/run_modules.py menu_sync ingredient_sync relay login`.

@@ -1,6 +1,6 @@
-"""Lệnh tab Menu máy nhận qua relay: tên lệnh → hàm xử lý.
+"""Lệnh tab Menu máy nhận qua relay: instruction → hàm xử lý.
 
-machine/main.py gộp bảng COMMANDS này; mỗi hàm nhận thamso của lệnh, trả dict
+machine/main.py gộp bảng COMMANDS này; mỗi hàm nhận data của lệnh, trả dict
 kết quả gửi lên server (xem menu_sync_flow.py).
 """
 

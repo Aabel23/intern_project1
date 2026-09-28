@@ -26,7 +26,7 @@ class StartpointTest(unittest.TestCase):
         self.addCleanup(override.stop)
         init_db()
         # Long-poll ngắn để máy hỏi lệnh khi hộp thư rỗng không làm chậm test.
-        wait = patch('server.service.machine_relay.relay_api.POLL_WAIT_SECONDS', 0.3)
+        wait = patch('server.service.machine_relay.relay_queue.POLL_WAIT_SECONDS', 0.3)
         wait.start()
         self.addCleanup(wait.stop)
         rate_limit.IP_REQUESTS.clear()
@@ -98,8 +98,8 @@ class StartpointTest(unittest.TestCase):
         token, machine_id = self.make_owner_machine()
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
         with ThreadPoolExecutor(max_workers=1) as pool:
-            app = pool.submit(self.request, '/app/gui-lenh', {
-                'token': token, 'machine_id': machine_id, 'ten': 'xem_nguyen_lieu', 'thamso': {},
+            app = pool.submit(self.request, '/app/nhan-kho', {
+                'token': token, 'machine_id': machine_id, 'version': 0,
             })
             # App đang chờ kết quả trong khi máy vẫn hỏi lệnh được.
             command = None
@@ -109,7 +109,7 @@ class StartpointTest(unittest.TestCase):
                 if command is not None:
                     break
                 threading.Event().wait(0.02)
-            self.assertEqual(command['ten'], 'xem_nguyen_lieu')
+            self.assertEqual((command['instruction'], command['data']), ('nhan_kho', {'version': 0}))
             self.assertNotIn('token', command)
             self.request('/machine/tra-ket-qua', {
                 'product_key': 'relay-key', 'id': command['id'], 'ket_qua': {'ok': True},
@@ -121,18 +121,18 @@ class StartpointTest(unittest.TestCase):
         import time
         token, machine_id = self.make_owner_machine()
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
-        with patch('server.service.machine_relay.relay_api.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
+        with patch('server.service.machine_relay.relay_queue.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
             started = time.monotonic()
             poll = pool.submit(self.request, '/machine/hoi-lenh', {'product_key': 'relay-key'})
             threading.Event().wait(0.3)
             with ThreadPoolExecutor(max_workers=1) as app_pool:
-                app = app_pool.submit(self.request, '/app/gui-lenh', {
-                    'token': token, 'machine_id': machine_id, 'ten': 'xem_nguyen_lieu', 'thamso': {},
+                app = app_pool.submit(self.request, '/app/nhan-kho', {
+                    'token': token, 'machine_id': machine_id, 'version': 0,
                 })
                 _, data = poll.result(timeout=5)
                 # Máy nhận lệnh ngay khi app gửi, không chờ hết thời gian long-poll.
                 self.assertLess(time.monotonic() - started, 2)
-                self.assertEqual(data['lenh']['ten'], 'xem_nguyen_lieu')
+                self.assertEqual(data['lenh']['instruction'], 'nhan_kho')
                 self.request('/machine/tra-ket-qua', {
                     'product_key': 'relay-key', 'id': data['lenh']['id'], 'ket_qua': {'ok': 1},
                 })
@@ -142,25 +142,25 @@ class StartpointTest(unittest.TestCase):
         from server.service.machine_relay import relay_queue as relay
         token, machine_id = self.make_owner_machine()
         other, other_machine = self.make_owner_machine('other', 'other-key')
-        status, data = self.request('/app/gui-lenh', {'machine_id': machine_id, 'ten': 'xem_nguyen_lieu'})
+        status, data = self.request('/app/nhan-kho', {'machine_id': machine_id, 'version': 0})
         self.assertEqual(status, 401)
         self.assertTrue(data['login_required'])
-        status, _ = self.request('/app/gui-lenh', {
-            'token': other, 'machine_id': machine_id, 'ten': 'xem_nguyen_lieu',
+        status, _ = self.request('/app/nhan-kho', {
+            'token': other, 'machine_id': machine_id, 'version': 0,
         })
         self.assertEqual(status, 403)
         self.assertEqual(self.request('/machine/heartbeat', {'product_key': 'sai-key'})[0], 403)
         self.assertEqual(self.request('/machine/hoi-lenh', {})[0], 403)
         # Máy chưa heartbeat thì báo offline ngay, không để app chờ.
-        status, data = self.request('/app/gui-lenh', {
-            'token': token, 'machine_id': machine_id, 'ten': 'xem_nguyen_lieu',
+        status, data = self.request('/app/nhan-kho', {
+            'token': token, 'machine_id': machine_id, 'version': 0,
         })
-        self.assertEqual(data, {'loi': 'Máy đang offline'})
+        self.assertEqual((status, data), (503, {'loi': 'Máy đang offline'}))
         # Máy khác không lấy được hay trả kết quả cho lệnh không thuộc về nó.
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
         with ThreadPoolExecutor(max_workers=1) as pool:
-            app = pool.submit(self.request, '/app/gui-lenh', {
-                'token': token, 'machine_id': machine_id, 'ten': 'xem_nguyen_lieu',
+            app = pool.submit(self.request, '/app/nhan-kho', {
+                'token': token, 'machine_id': machine_id, 'version': 0,
             })
             for _ in range(100):
                 with relay.KHOA:

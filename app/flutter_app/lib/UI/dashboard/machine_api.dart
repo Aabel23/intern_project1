@@ -132,31 +132,10 @@ class MachineApi {
     return result;
   }
 
-  Future<Object?> send(
-    String machineId,
-    String command, [
-    Map<String, dynamic> params = const {},
-  ]) async {
-    final result = await _request(
-      'POST',
-      '/app/gui-lenh',
-      body: {
-        'machine_id': machineId,
-        'ten': command,
-        'thamso': params,
-        'token': ?token,
-      },
-    );
-    if (result is Map && result['loi'] != null) {
-      throw MachineException(result['loi'].toString());
-    }
-    return result;
-  }
-
   // Tab Menu: xin gói menu. menuVersion là bản đang giữ (0 = chưa có);
   // máy trả {status: up_to_date} hoặc {status: ok, menu_version, packet}.
   Future<Map<String, dynamic>> receiveMenu(String machineId, int menuVersion) =>
-      _menu('/app/nhan-menu', {
+      _machineData('/app/nhan-menu', {
         'machine_id': machineId,
         'menu_version': menuVersion,
       });
@@ -167,32 +146,23 @@ class MachineApi {
     String machineId,
     int menuVersion,
     List<Map<String, dynamic>> changes,
-  ) => _menu('/app/gui-menu', {
+  ) => _machineData('/app/gui-menu', {
     'machine_id': machineId,
     'menu_version': menuVersion,
     'thay_doi': changes,
   });
 
-  Future<Map<String, dynamic>> _menu(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
-    final result = await _request(
-      'POST',
-      path,
-      body: {...body, 'token': ?token},
-    );
-    if (result is! Map<String, dynamic> || result['status'] is! String) {
-      throw MachineException(
-        result is Map && result['loi'] != null
-            ? result['loi'].toString()
-            : 'Máy trả menu không đúng định dạng.',
-      );
-    }
-    return result;
-  }
+  // Tab Kho: xin danh sách kho. version là bản đang giữ (0 = chưa có);
+  // máy trả {status: up_to_date} hoặc {status: ok, version, ingredients}.
+  Future<Map<String, dynamic>> receiveIngredients(
+    String machineId,
+    int version,
+  ) => _machineData('/app/nhan-kho', {
+    'machine_id': machineId,
+    'version': version,
+  });
 
-  // Nạp kho qua /machine/refill. target: id nguyên liệu hoặc 'all';
+  // Tab Kho: nạp kho. target: id nguyên liệu hoặc 'all';
   // value: 'full' (đổ đầy tới mức tối đa) hoặc số gram (chỉ với một nguyên liệu).
   Future<Map<String, dynamic>> refill(
     String machineId,
@@ -201,7 +171,7 @@ class MachineApi {
   ]) async {
     final result = await _request(
       'POST',
-      '/machine/refill',
+      '/app/nap-kho',
       body: {
         'machine_id': machineId,
         'target': target,
@@ -215,22 +185,20 @@ class MachineApi {
     return result;
   }
 
-  // Đọc dữ liệu dashboard qua /app/dong-bo, gửi kèm ETag đang giữ.
-  // Trả null khi dữ liệu trên máy không đổi (server trả 304), app giữ bản cũ.
-  // Máy gửi JSON nén gzip; HttpClient tự giải nén.
-  Future<({String? etag, Object? data})?> sync(
-    String machineId,
-    String command,
-    String? etag,
+  // Dữ liệu của máy (menu, kho): kết quả luôn có "status".
+  Future<Map<String, dynamic>> _machineData(
+    String path,
+    Map<String, dynamic> body,
   ) async {
-    final response = await _send(
+    final result = await _request(
       'POST',
-      '/app/dong-bo',
-      body: {'machine_id': machineId, 'lenh': command, 'token': ?token},
-      etag: etag,
+      path,
+      body: {...body, 'token': ?token},
     );
-    if (response.status == HttpStatus.notModified) return null;
-    return (etag: response.etag, data: response.data);
+    if (result is! Map<String, dynamic> || result['status'] is! String) {
+      throw const MachineException('Máy trả dữ liệu không đúng định dạng.');
+    }
+    return result;
   }
 
   Future<Object?> _request(
@@ -238,14 +206,6 @@ class MachineApi {
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
-  }) async => (await _send(method, path, query: query, body: body)).data;
-
-  Future<({int status, String? etag, Object? data})> _send(
-    String method,
-    String path, {
-    Map<String, String>? query,
-    Map<String, dynamic>? body,
-    String? etag,
   }) async {
     final base = Uri.tryParse(serverUrl.trim());
     if (base == null ||
@@ -258,9 +218,6 @@ class MachineApi {
     try {
       return await (() async {
         final request = await client.openUrl(method, uri);
-        if (etag != null) {
-          request.headers.set(HttpHeaders.ifNoneMatchHeader, etag);
-        }
         if (body != null) {
           final payload = utf8.encode(jsonEncode(body));
           request.headers.contentType = ContentType.json;
@@ -269,10 +226,6 @@ class MachineApi {
         }
         final response = await request.close();
         final text = await utf8.decoder.bind(response).join();
-        final responseEtag = response.headers.value(HttpHeaders.etagHeader);
-        if (response.statusCode == HttpStatus.notModified) {
-          return (status: response.statusCode, etag: responseEtag, data: null);
-        }
         if (response.statusCode < 200 || response.statusCode >= 300) {
           // API tài khoản trả "message", relay trả "loi"; hiện thẳng cho người dùng.
           Object? error;
@@ -295,11 +248,7 @@ class MachineApi {
           }
           throw MachineException('HTTP ${response.statusCode}: $text');
         }
-        return (
-          status: response.statusCode,
-          etag: responseEtag,
-          data: jsonDecode(text),
-        );
+        return jsonDecode(text);
       })().timeout(const Duration(seconds: 25));
     } on MachineException {
       rethrow;

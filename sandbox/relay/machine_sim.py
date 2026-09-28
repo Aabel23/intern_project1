@@ -17,7 +17,6 @@ import sys
 import tempfile
 import threading
 import types
-from decimal import Decimal
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -79,16 +78,6 @@ def query(sql, params=()):
         return DB.execute(sql, params).fetchall()
 
 
-def get_ingredients():
-    # Cùng dạng database.admin_functions.ingredients.get_ingredients() của máy thật.
-    rows = query("SELECT * FROM ingredient ORDER BY ingredient_id")
-    return {"ingredients": [
-        {"id": row["ingredient_id"], "name": row["ingredient_name"],
-         "amount": row["amount"], "in_stock": bool(row["in_stock"])}
-        for row in rows
-    ]}
-
-
 def ingredients_payload():
     # Cùng dạng database.admin_functions.ingredients.ingredients_payload() của máy thật (các trường app dùng).
     rows = query("SELECT * FROM ingredient ORDER BY ingredient_id")
@@ -100,23 +89,6 @@ def ingredients_payload():
          "in_stock": bool(row["in_stock"])}
         for row in rows
     ]}
-
-
-def update_inventory(mode):
-    def update(ingredient_id, gram):
-        with LOCK, DB:
-            row = DB.execute("SELECT amount FROM ingredient WHERE ingredient_id=?",
-                             (ingredient_id,)).fetchone()
-            if row is None:
-                raise ValueError(f"Không có nguyên liệu id {ingredient_id}.")
-            amount = {"set": 0, "add": row["amount"], "subtract": row["amount"]}[mode]
-            amount += -float(gram) if mode == "subtract" else float(gram)
-            if amount < 0:
-                raise ValueError("Không đủ nguyên liệu.")
-            DB.execute("UPDATE ingredient SET amount=?, in_stock=? WHERE ingredient_id=?",
-                       (amount, int(amount > 0), ingredient_id))
-        return Decimal(str(amount))
-    return update
 
 
 def refill(target, value):
@@ -138,14 +110,10 @@ def refill(target, value):
 def install_fake_database():
     """Thay các module database của máy thật (MySQL) bằng hàm đọc SQLite tạm."""
     ingredients = types.ModuleType("database.admin_functions.ingredients")
-    ingredients.get_ingredients = get_ingredients
     ingredients.ingredients_payload = ingredients_payload
     ingredients.refill = refill
     inventory = types.ModuleType("database.inventory_service")
     inventory.publish_store_menu = lambda: ""
-    inventory.set_inventory = update_inventory("set")
-    inventory.add_inventory = update_inventory("add")
-    inventory.subtract_inventory = update_inventory("subtract")
     sys.modules.update({
         "database": types.ModuleType("database"),
         "database.admin_functions": types.ModuleType("database.admin_functions"),

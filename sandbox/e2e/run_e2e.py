@@ -279,7 +279,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     phone.wait("Bơm 1", 10)
     ok(t, "menu + bật món + kho")
 
-    t = step("E4 Nạp kho qua /machine/refill: nạp đầy một bình, rồi nạp tất cả")
+    t = step("E4 Nạp kho qua /app/nap-kho: nạp đầy một bình, rồi nạp tất cả")
     row = phone.wait("0 / 1500 g", 10)
     buttons = [node for node in phone.nodes() if node.label == "Nạp đầy"]
     phone.tap(min(buttons, key=lambda node: abs(node.y - row.y)))

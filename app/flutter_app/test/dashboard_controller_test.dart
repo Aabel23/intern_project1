@@ -18,10 +18,9 @@ Future<HttpServer> _fakeServer(List<Map<String, String>> machines) async {
         reply = {'valid': true, 'machines': machines};
       case '/machine/trang-thai':
         reply = {'online': false};
-      case '/app/dong-bo':
-        status = 503;
-        reply = {'loi': 'Máy đang offline'};
       default:
+        // Menu, kho: server thật trả 503 khi máy offline.
+        status = 503;
         reply = {'loi': 'Máy đang offline'};
     }
     request.response

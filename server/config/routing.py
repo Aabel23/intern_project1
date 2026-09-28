@@ -4,11 +4,8 @@ MACHINE_STATUS = "/machine/trang-thai"
 MACHINE_POLL_COMMAND = "/machine/hoi-lenh"
 MACHINE_HEARTBEAT = "/machine/heartbeat"
 MACHINE_SEND_RESULT = "/machine/tra-ket-qua"
-MACHINE_SEND_SYNC = "/machine/tra-dong-bo"
-MACHINE_REFILL = "/machine/refill"
 
 
-APP_SEND_COMMAND = "/app/gui-lenh"
 APP_REGISTER_USER = "/app/dang-ky-nguoi-dung"
 APP_SEND_OTP = "/app/gui-ma-otp"
 APP_VERIFY_OTP = "/app/xac-minh-otp"
@@ -25,7 +22,8 @@ APP_REVOKE_STAFF = "/app/thu-hoi-quyen"
 APP_RENAME_MACHINE = "/app/doi-ten-may"
 APP_REMOVE_MACHINE = "/app/go-may"
 
-APP_SYNC = "/app/dong-bo"
 APP_RECEIVE_MENU = "/app/nhan-menu"
 APP_SEND_MENU = "/app/gui-menu"
+APP_RECEIVE_INGREDIENTS = "/app/nhan-kho"
+APP_REFILL = "/app/nap-kho"
 

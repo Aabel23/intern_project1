@@ -14,6 +14,7 @@ from server.database.machine.init_db import init_db
 from server.lib.module_server import ModuleServer, make_handler
 
 # Các module: mỗi module tự nghe đường dẫn của mình
+from server.service.dashboard_sync.ingredient_sync import ingredient_sync_api
 from server.service.dashboard_sync.machinelist_sync import machinelist_api
 from server.service.dashboard_sync.menu_sync import menu_sync_api
 from server.service.machine_register import machine_register_api
@@ -30,6 +31,7 @@ MODULES = (
     machinelist_api,
     relay_api,
     menu_sync_api,
+    ingredient_sync_api,
 )
 
 Handler = make_handler(MODULES)

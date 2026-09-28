@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../UI/dashboard/machine_api.dart';
 
-// Một nguyên liệu, đọc từ kết quả lệnh dong_bo_nguyen_lieu.
+// Một nguyên liệu, đọc từ danh sách kho máy trả qua /app/nhan-kho.
 class Ingredient {
   const Ingredient({
     required this.id,
@@ -45,9 +45,8 @@ class IngredientsSync extends ChangeNotifier {
   List<Ingredient> ingredients = const [];
   String? error;
   bool loading = false;
-
-  // ETag của bản đang hiển thị; máy trả 304 nếu dữ liệu chưa đổi.
-  String? _etag;
+  // Bản kho đang giữ (CRC32 do máy tính); 0 = chưa có, máy sẽ gửi nguyên danh sách.
+  int version = 0;
 
   // Tăng khi đổi máy hoặc đóng dashboard để bỏ các kết quả trả về muộn.
   int _session = 0;
@@ -56,7 +55,7 @@ class IngredientsSync extends ChangeNotifier {
   void reset() {
     _session++;
     ingredients = const [];
-    _etag = null;
+    version = 0;
     error = null;
     loading = false;
     notifyListeners();
@@ -68,34 +67,31 @@ class IngredientsSync extends ChangeNotifier {
     if (id == null || _disposed) return;
     loading = true;
     notifyListeners();
-    ({String? etag, Object? data})? result;
-    List<Ingredient>? parsed;
     String? failure;
     try {
-      result = await api.sync(id, 'dong_bo_nguyen_lieu', _etag);
-      // null: dữ liệu không đổi, giữ nguyên danh sách đang hiển thị.
-      if (result != null) {
-        final data = result.data;
-        final rows = data is Map ? data['ingredients'] : null;
-        if (rows is! List) {
-          throw const MachineException('Máy trả kho không đúng định dạng.');
-        }
-        parsed = [
-          for (final row in rows.whereType<Map<String, dynamic>>())
-            Ingredient.fromJson(row),
-        ];
-      }
+      final reply = await api.receiveIngredients(id, version);
+      if (session != _session) return;
+      // up_to_date: máy không gửi lại danh sách, giữ bản đang hiển thị.
+      if (reply['status'] == 'ok') _apply(reply);
     } catch (caught) {
       failure = caught.toString();
     }
     if (session != _session) return;
-    if (parsed != null) {
-      ingredients = parsed;
-      _etag = result?.etag;
-    }
     error = failure;
     loading = false;
     notifyListeners();
+  }
+
+  void _apply(Map<String, dynamic> reply) {
+    final rows = reply['ingredients'];
+    if (rows is! List) {
+      throw const MachineException('Máy trả kho không đúng định dạng.');
+    }
+    ingredients = [
+      for (final row in rows.whereType<Map<String, dynamic>>())
+        Ingredient.fromJson(row),
+    ];
+    version = (reply['version'] as num).toInt();
   }
 
   // Nạp kho rồi đọc lại danh sách; target là id nguyên liệu hoặc 'all'.

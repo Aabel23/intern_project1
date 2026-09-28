@@ -9,8 +9,10 @@ import 'package:simple_app/feature/data_sync/ingredients_sync.dart';
 import 'package:simple_app/UI/login/auth_page.dart';
 import 'package:simple_app/feature/machine_register/machine_register_qr.dart';
 
-// Kho máy giả, cùng dạng ingredients_payload() của máy thật.
-const _ingredients = {
+// Kho máy giả, cùng dạng máy trả qua /app/nhan-kho.
+const _kho = {
+  'status': 'ok',
+  'version': 7,
   'ingredients': [
     {
       'ingredient_id': 1,
@@ -32,7 +34,6 @@ const _ingredients = {
     },
   ],
 };
-const _etag = '"kho-1"';
 
 // Gói menu giả, cùng dạng menu_sync_packet.py của máy: base64(zlib(JSON)).
 final _menuPacket = base64Encode(
@@ -53,34 +54,17 @@ final _menuPacket = base64Encode(
   ),
 );
 
-// /app/dong-bo giả: trùng ETag thì 304, khác thì JSON nén gzip kèm ETag.
-Future<void> _replySync(HttpRequest request) async {
-  request.response.headers.set(HttpHeaders.etagHeader, _etag);
-  if (request.headers.value(HttpHeaders.ifNoneMatchHeader) == _etag) {
-    request.response.statusCode = HttpStatus.notModified;
-  } else {
-    request.response.headers
-      ..contentType = ContentType.json
-      ..set(HttpHeaders.contentEncodingHeader, 'gzip');
-    request.response.add(gzip.encode(utf8.encode(jsonEncode(_ingredients))));
-  }
-  await request.response.close();
-}
+// /app/nhan-kho giả: app gửi đúng version đang có thì up_to_date, khác thì cả danh sách.
+Object _replyKho(Map<String, dynamic> body) =>
+    body['version'] == _kho['version']
+    ? {'status': 'up_to_date', 'version': _kho['version']}
+    : _kho;
 
 // Server giả trả trạng thái online, menu và kho theo đúng giao thức thật.
 Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   server.listen((request) async {
     Object? reply;
-    if (request.uri.path == '/app/dong-bo') {
-      final body = jsonDecode(await utf8.decoder.bind(request).join());
-      received.add({
-        ...body as Map<String, dynamic>,
-        'etag': request.headers.value(HttpHeaders.ifNoneMatchHeader),
-      });
-      await _replySync(request);
-      return;
-    }
     if (request.uri.path == '/machine/trang-thai') {
       reply = {
         'machine_id': request.uri.queryParameters['machine_id'],
@@ -99,6 +83,8 @@ Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {
             }
           : request.uri.path == '/app/nhan-menu'
           ? {'status': 'ok', 'menu_version': 42, 'packet': _menuPacket}
+          : request.uri.path == '/app/nhan-kho'
+          ? _replyKho(body)
           : {'ok': true};
     }
     request.response.headers.contentType = ContentType.json;
@@ -158,9 +144,9 @@ void main() {
           final menus = received.where((r) => r['menu_version'] != null);
           expect(menus, isNotEmpty);
           expect(received.where((r) => r['ten'] != null), isEmpty);
-          final syncs = received.where((r) => r['lenh'] != null).toList();
-          expect(syncs.map((r) => r['lenh']).toSet(), {'dong_bo_nguyen_lieu'});
-          expect(syncs.every((r) => r['token'] == 'token-1'), isTrue);
+          final khos = received.where((r) => r['version'] != null).toList();
+          expect(khos, isNotEmpty);
+          expect(khos.every((r) => r['token'] == 'token-1'), isTrue);
           // Relay chỉ nhận lệnh kèm token của người quản lý máy.
           expect(menus.every((r) => r['token'] == 'token-1'), isTrue);
           expect(menus.first['machine_id'], 'MAY-TEST');
@@ -173,38 +159,41 @@ void main() {
     },
   );
 
-  test('Đồng bộ kho gửi lại ETag, máy trả 304 thì giữ danh sách cũ', () async {
-    final previous = HttpOverrides.current;
-    HttpOverrides.global = null;
-    final received = <Map<String, dynamic>>[];
-    final server = await _fakeServer(received);
-    final inventory = IngredientsSync(
-      MachineApi('http://127.0.0.1:${server.port}', token: 'token-1'),
-      () => 'MAY-TEST',
-    );
-    try {
-      await inventory.load();
-      expect(inventory.error, isNull);
-      expect(inventory.ingredients.map((i) => i.name), ['Sữa', 'Đào']);
-      expect(inventory.ingredients.first.pumpNumber, 1);
-      expect(inventory.ingredients.last.maxSet, isFalse);
+  test(
+    'Đồng bộ kho gửi lại version, máy trả up_to_date thì giữ danh sách cũ',
+    () async {
+      final previous = HttpOverrides.current;
+      HttpOverrides.global = null;
+      final received = <Map<String, dynamic>>[];
+      final server = await _fakeServer(received);
+      final inventory = IngredientsSync(
+        MachineApi('http://127.0.0.1:${server.port}', token: 'token-1'),
+        () => 'MAY-TEST',
+      );
+      try {
+        await inventory.load();
+        expect(inventory.error, isNull);
+        expect(inventory.ingredients.map((i) => i.name), ['Sữa', 'Đào']);
+        expect(inventory.ingredients.first.pumpNumber, 1);
+        expect(inventory.ingredients.last.maxSet, isFalse);
 
-      await inventory.load();
-      expect(inventory.error, isNull);
-      expect(inventory.ingredients.length, 2);
-      expect(received.map((r) => r['etag']), [null, _etag]);
+        await inventory.load();
+        expect(inventory.error, isNull);
+        expect(inventory.ingredients.length, 2);
+        expect(received.map((r) => r['version']), [0, 7]);
 
-      // Đổi máy thì bỏ ETag cũ, tải lại toàn bộ.
-      inventory.reset();
-      await inventory.load();
-      expect(received.last['etag'], isNull);
-      expect(inventory.ingredients.length, 2);
-    } finally {
-      inventory.dispose();
-      await server.close(force: true);
-      HttpOverrides.global = previous;
-    }
-  });
+        // Đổi máy thì bỏ version cũ, tải lại toàn bộ.
+        inventory.reset();
+        await inventory.load();
+        expect(received.last['version'], 0);
+        expect(inventory.ingredients.length, 2);
+      } finally {
+        inventory.dispose();
+        await server.close(force: true);
+        HttpOverrides.global = previous;
+      }
+    },
+  );
 
   testWidgets('Token hết hạn thì quay về màn hình đăng nhập', (tester) async {
     await tester.runAsync(() async {

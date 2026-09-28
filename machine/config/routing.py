@@ -3,6 +3,5 @@
 # Đường dẫn API mà machine sử dụng.
 GET_COMMAND_PATH = "/machine/hoi-lenh"
 POST_RESULT_PATH = "/machine/tra-ket-qua"
-POST_SYNC_PATH = "/machine/tra-dong-bo"
 HEARTBEAT_PATH = "/machine/heartbeat"
 HEARTBEAT_INTERVAL_SECONDS = 5

@@ -6,7 +6,6 @@ chưa sửa được đánh dấu @unittest.expectedFailure (kèm mã SEC-xx): l
 Khi ai đó sửa lỗ hổng, test báo "unexpected success" -> bỏ decorator và cập nhật ghi chú.
 """
 
-import gzip
 import secrets
 import json
 import tempfile
@@ -34,7 +33,7 @@ class SecurityScenarioTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         for target, value in (("server.database.connection.DB_PATH", Path(directory.name) / "t.db"),
-                              ("server.service.machine_relay.relay_api.POLL_WAIT_SECONDS", 0.3)):
+                              ("server.service.machine_relay.relay_queue.POLL_WAIT_SECONDS", 0.3)):
             p = patch(target, value)
             p.start()
             self.addCleanup(p.stop)
@@ -91,8 +90,8 @@ class SecurityScenarioTest(unittest.TestCase):
         _, owner = self.user("chu")
         _, stranger = self.user("la")
         machine_id = self.machine(owner)
-        for path, extra in (("/app/gui-lenh", {"ten": "xem_nguyen_lieu"}), ("/app/nhan-menu", {}), ("/app/dong-bo", {"lenh": "dong_bo_nguyen_lieu"}),
-                            ("/machine/refill", {"target": "all", "value": "full"}),
+        for path, extra in (("/app/nhan-kho", {"version": 0}), ("/app/nhan-menu", {}),
+                            ("/app/nap-kho", {"target": "all", "value": "full"}),
                             ("/app/nhan-vien-may", {}), ("/app/tao-ma-chia-se", {}),
                             ("/app/doi-ten-may", {"name": "x"}), ("/app/go-may", {})):
             status, body = self.post(path, {"token": stranger, "machine_id": machine_id, **extra})
@@ -158,8 +157,8 @@ class SecurityScenarioTest(unittest.TestCase):
         self.machine(other_owner, key="fm_may_khac")
         self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
-            app = pool.submit(self.post, "/app/gui-lenh", {"token": owner, "machine_id": machine_id,
-                                                           "ten": "xem_nguyen_lieu", "thamso": {}})
+            app = pool.submit(self.post, "/app/nhan-kho", {"token": owner, "machine_id": machine_id,
+                                                           "version": 0})
             time.sleep(0.3)
             for lenh_id in range(1, 50):
                 self.post("/machine/tra-ket-qua", {"product_key": "fm_may_khac", "id": lenh_id,
@@ -180,8 +179,8 @@ class SecurityScenarioTest(unittest.TestCase):
         # Kẻ tấn công chỉ có key trên tem: heartbeat + hỏi lệnh như máy thật.
         self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
-            pool.submit(self.post, "/app/gui-lenh", {"token": owner, "machine_id": machine_id,
-                                                     "ten": "dat_luong_nguyen_lieu", "thamso": {"ingredient_id": 1, "gram": 1}})
+            pool.submit(self.post, "/app/nap-kho", {"token": owner, "machine_id": machine_id,
+                                                    "target": 1, "value": 1})
             time.sleep(0.3)
             lenh = json.loads(self.post("/machine/hoi-lenh", {"product_key": "fm_tem_may_that"})[1])["lenh"]
             if lenh:
@@ -220,24 +219,9 @@ class SecurityScenarioTest(unittest.TestCase):
         free = verify_user({**base, "email": "chua_co@t.local"})
         self.assertEqual(taken, free)
 
-    @unittest.expectedFailure
-    def test_SEC06_machine_cannot_send_gzip_bomb_to_app(self):
-        """SEC-06: máy (hoặc kẻ giữ product key) gửi gói gzip nhỏ nở ra rất lớn, server chuyển nguyên cho app."""
-        _, owner = self.user("chu")
-        machine_id = self.machine(owner)
-        self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
-        bomb = gzip.compress(b"[" + b"0," * 25_000_000 + b"0]")  # ~50 MB khi giải nén
-        self.assertLess(len(bomb), 1_000_000)
-        with ThreadPoolExecutor(1) as pool:
-            app = pool.submit(self.post, "/app/dong-bo", {"token": owner, "machine_id": machine_id,
-                                                          "lenh": "dong_bo_nguyen_lieu"})
-            time.sleep(0.3)
-            lenh = json.loads(self.post("/machine/hoi-lenh", {"product_key": "fm_tem_may_that"})[1])["lenh"]
-            self.post("/machine/tra-dong-bo", raw=bomb, headers={
-                "X-Product-Key": "fm_tem_may_that", "X-Lenh-Id": str(lenh["id"]), "ETag": '"x"',
-                "Content-Type": "application/octet-stream"})
-            status, _ = app.result(15)
-        self.assertNotEqual(status, 200, "Server chuyển gói nén bom cho app")
+    def test_SEC06_gzip_route_is_gone(self):
+        """SEC-06 (đã hết): đường gói gzip máy→app (/machine/tra-dong-bo) đã bỏ, kết quả chỉ còn JSON qua tra-ket-qua."""
+        self.assertEqual(self.post("/machine/tra-dong-bo", {"product_key": "x"})[0], 404)
 
     def test_nested_json_gets_an_error_response(self):
         """JSON lồng sâu (RecursionError khi parse) vẫn nhận 400, server không rớt kết nối."""
