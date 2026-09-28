@@ -9,7 +9,7 @@ ingredient_sync_api.py. Server không lưu dữ liệu kho, chỉ chuyển qua l
 
 # Module khác: quyền của tab dashboard, hộp thư lệnh của máy
 from server.service.dashboard_sync.sync_rules import QUYEN_KHO, QUYEN_NAP_KHO, check_access
-from server.service.machine_relay.relay_queue import send
+from server.service.machine_link.link_queue import send
 
 # Trong module ingredient_sync
 from .ingredient_sync_verify import is_refill, is_version

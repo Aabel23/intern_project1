@@ -33,7 +33,7 @@ class SecurityScenarioTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         for target, value in (("server.database.connection.DB_PATH", Path(directory.name) / "t.db"),
-                              ("server.service.machine_relay.relay_queue.POLL_WAIT_SECONDS", 0.3)):
+                              ("server.service.machine_link.link_queue.POLL_WAIT_SECONDS", 0.3)):
             p = patch(target, value)
             p.start()
             self.addCleanup(p.stop)

@@ -17,7 +17,7 @@ from server.database.connection import get_connection
 from server.database.machine import machine_read, machine_write
 
 # Module khác: giờ heartbeat của máy
-from server.service.machine_relay.relay_queue import is_online, last_seen_of
+from server.service.machine_link.link_queue import is_online, last_seen_of
 
 # Trong module machinelist_sync
 from .machinelist_verify import check_login, check_request, clean_name, invalid, role_of

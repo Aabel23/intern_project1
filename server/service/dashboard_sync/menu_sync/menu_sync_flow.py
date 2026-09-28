@@ -10,7 +10,7 @@ giải nén, không lưu. Cấu trúc gói: machine/menu_sync/menu_sync_packet.p
 
 # Module khác: quyền của tab dashboard, hộp thư lệnh của máy
 from server.service.dashboard_sync.sync_rules import QUYEN_MENU, check_access
-from server.service.machine_relay.relay_queue import send
+from server.service.machine_link.link_queue import send
 
 # Trong module menu_sync
 from .menu_sync_verify import is_changes, is_menu_version

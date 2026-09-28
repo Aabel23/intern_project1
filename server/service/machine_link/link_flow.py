@@ -7,9 +7,9 @@
 Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP status).
 """
 
-# Trong module machine_relay
-from .relay_queue import deliver, mark_seen, take
-from .relay_verify import MACHINE_UNKNOWN, machine_from_key
+# Trong module machine_link
+from .link_queue import deliver, mark_seen, take
+from .link_verify import MACHINE_UNKNOWN, machine_from_key
 
 
 def heartbeat(data):

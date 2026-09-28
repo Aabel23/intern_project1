@@ -1,11 +1,11 @@
 """Chạy riêng vài module server trên một cổng, để thử một module mà không bật cả server.
 
 Chạy từ thư mục gốc androidv0.1 (dùng chung server/database/database.db với server đầy đủ):
-    python sandbox/server_module/run_modules.py menu_sync relay login
+    python sandbox/server_module/run_modules.py menu_sync link login
     python sandbox/server_module/run_modules.py machinelist login --port 8001
 
 Module code không tự chạy riêng; danh sách module nào ghép với module nào nằm ở đây.
-Menu, kho cần "relay" để máy có chỗ heartbeat và hỏi lệnh; module nào đòi token cần
+Menu, kho cần "link" để máy có chỗ heartbeat và hỏi lệnh; module nào đòi token cần
 "login" để lấy token ngay trên server này.
 """
 
@@ -26,7 +26,7 @@ from server.service.dashboard_sync.ingredient_sync import ingredient_sync_api  #
 from server.service.dashboard_sync.machinelist_sync import machinelist_api  # noqa: E402
 from server.service.dashboard_sync.menu_sync import menu_sync_api  # noqa: E402
 from server.service.machine_register import machine_register_api  # noqa: E402
-from server.service.machine_relay import relay_api  # noqa: E402
+from server.service.machine_link import link_api  # noqa: E402
 from server.service.machine_share import share_api  # noqa: E402
 from server.service.user_login import login_api  # noqa: E402
 from server.service.user_register.user_register import user_register_api  # noqa: E402
@@ -37,7 +37,7 @@ MODULES = {
     "machine_register": machine_register_api,
     "share": share_api,
     "machinelist": machinelist_api,
-    "relay": relay_api,
+    "link": link_api,
     "menu_sync": menu_sync_api,
     "ingredient_sync": ingredient_sync_api,
 }

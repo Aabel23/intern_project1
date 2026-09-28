@@ -18,7 +18,7 @@ from server.service.dashboard_sync.ingredient_sync import ingredient_sync_api
 from server.service.dashboard_sync.machinelist_sync import machinelist_api
 from server.service.dashboard_sync.menu_sync import menu_sync_api
 from server.service.machine_register import machine_register_api
-from server.service.machine_relay import relay_api
+from server.service.machine_link import link_api
 from server.service.machine_share import share_api
 from server.service.user_login import login_api
 from server.service.user_register.user_register import user_register_api
@@ -29,7 +29,7 @@ MODULES = (
     machine_register_api,
     share_api,
     machinelist_api,
-    relay_api,
+    link_api,
     menu_sync_api,
     ingredient_sync_api,
 )

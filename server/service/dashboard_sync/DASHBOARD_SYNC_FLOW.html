@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Đồng bộ dashboard</title>
+<title>Đồng bộ dashboard FlexMix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
@@ -62,109 +62,48 @@
 <body>
 <main>
 <h1>Đồng bộ dashboard</h1>
-<p class="lead">App đọc dữ liệu của máy (hiện có: kho nguyên liệu) để vẽ các tab dashboard. Server không lưu dữ liệu này:
-nó kiểm tra quyền rồi chuyển lệnh xuống máy qua hộp thư relay trong RAM, máy đọc MySQL của nó và trả về.
-Mọi tab dùng chung một sublink, phân biệt bằng <code>lenh</code> trong body. Lệnh ghi (nạp kho, bật/tắt món) không đi qua đây.
-Code server: <a href="../machine_relay/relay_api.py">machine_relay/relay_api.py</a>, bảng quyền: <a href="sync_rules.py">sync_rules.py</a>.</p>
+<p class="lead">Mỗi tab dashboard của app là một module trong <code>dashboard_sync/</code>. Menu và Kho là dữ liệu của máy, đi qua <a href="../machine_link/LINK_FLOW.html">cổng máy</a>; tab Máy là dữ liệu của server. Chi tiết route và lỗi: <a href="README.md">README.md</a>.</p>
 
-<h2>Luồng tổng quát</h2>
-<pre><code>App  ─ POST /app/dong-bo {token, machine_id, lenh}   header If-None-Match: &lt;ETag đang giữ&gt;
- └→ Server: token → quyền với máy → QUYEN_DONG_BO[lenh] → máy online?
-     └→ hộp thư máy → Máy (/machine/hoi-lenh): chạy hàm theo lenh, tính ETag
-          ├ ETag trùng: gói rỗng
-          └ khác:      JSON nén gzip
-        Máy ─ POST /machine/tra-dong-bo (body = gói, thông tin trong header)
- ←─ Server chuyển nguyên gói, không giải nén: 304 nếu rỗng, 200 + gzip nếu có dữ liệu
-App: 304 giữ danh sách cũ; 200 cập nhật và lưu ETag mới</code></pre>
+<h2>Các tab</h2>
+<div class="table-wrap"><table>
+<tr><th>Tab</th><th>Module server</th><th>Route</th><th>Lệnh xuống máy</th></tr>
+<tr><td>Menu</td><td><a href="menu_sync/menu_sync_flow.py">menu_sync</a></td><td><code>/app/nhan-menu</code>, <code>/app/gui-menu</code></td><td><code>nhan_menu</code>, <code>gui_menu</code></td></tr>
+<tr><td>Kho</td><td><a href="ingredient_sync/ingredient_sync_flow.py">ingredient_sync</a></td><td><code>/app/nhan-kho</code>, <code>/app/nap-kho</code></td><td><code>nhan_kho</code>, <code>nap_kho</code></td></tr>
+<tr><td>Máy</td><td><a href="machinelist_sync/machinelist_flow.py">machinelist_sync</a></td><td><code>/app/may-cua-toi</code>, <code>/app/doi-ten-may</code>, <code>/app/go-may</code>, <code>GET /machine/trang-thai</code></td><td>không</td></tr>
+</table></div>
 
-<div class="step"><h3><span class="num">1</span>App gửi yêu cầu</h3>
-<p>Tab Kho mở hoặc kéo để làm mới thì <code>IngredientsSync.load()</code> gọi <code>api.sync(machineId, 'dong_bo_nguyen_lieu', etag)</code>.
-Lần đầu (hoặc vừa đổi máy) chưa có ETag nên không gửi header <code>If-None-Match</code>.</p>
-<pre><code>POST /app/dong-bo
-If-None-Match: "47e88d389d1422864e67805f467c61cd"
+<h2>Đọc dữ liệu máy theo version</h2>
+<div class="step">
+<h3><span class="num">1</span>App (<code>products_sync.dart</code>, <code>ingredients_sync.dart</code>)</h3>
+<p>Gửi version đang giữ (<code>menu_version</code> / <code>version</code>), lần đầu hoặc sau khi đổi máy là <code>0</code>.</p>
+</div>
+<div class="step">
+<h3><span class="num">2</span>Server: <code>*_api.py</code> → <code>*_flow.py</code></h3>
+<p><code>sync_rules.check_access()</code> (token → người dùng → quản lý máy → vai trò), <code>*_verify.py</code> kiểm version là số 0..2³²−1, rồi <code>link_queue.send()</code>. Kết quả máy đi nguyên về app, server không đọc và không lưu.</p>
+</div>
+<div class="step">
+<h3><span class="num">3</span>Máy: <code>machine/&lt;tab&gt;/..._flow.py</code></h3>
+<p>Đọc database, tính CRC32 của dữ liệu. Trùng version app gửi → <code>{"status": "up_to_date", version}</code>, không gửi lại dữ liệu. Khác → <code>{"status": "ok", version, dữ liệu}</code>; menu gói dữ liệu thành <code>packet</code> base64(zlib(JSON)).</p>
+</div>
+<div class="step">
+<h3><span class="num">4</span>App</h3>
+<p><code>up_to_date</code>: giữ danh sách đang hiện. <code>ok</code>: thay danh sách, lưu version mới.</p>
+</div>
 
-{"token": "...", "machine_id": "fm_...", "lenh": "dong_bo_nguyen_lieu"}</code></pre></div>
-
-<div class="step"><h3><span class="num">2</span>Server kiểm tra trước khi gửi xuống máy</h3>
-<ol>
-<li>Token hợp lệ, không thì <code>401</code> kèm <code>login_required</code>.</li>
-<li>Người gửi là <code>owner</code> hoặc <code>manager</code> của máy, không thì <code>403</code>.</li>
-<li><code>lenh</code> có trong <code>QUYEN_DONG_BO</code> và vai trò được phép, không thì <code>403</code>. Lệnh ngoài bảng không bao giờ xuống máy.</li>
-<li>Máy heartbeat trong 15 giây gần nhất, không thì <code>503</code> ngay, app không phải chờ.</li>
-</ol>
-<p>Hợp lệ thì server bỏ lệnh vào hộp thư của máy và giữ request của app mở, chờ tối đa 20 giây:</p>
-<pre><code>{"id": 6, "ten": "dong_bo_nguyen_lieu", "thamso": {}, "etag": "\"47e88d...\""}</code></pre></div>
-
-<div class="step"><h3><span class="num">3</span>Máy đọc dữ liệu và đóng gói</h3>
-<p>Máy lấy lệnh qua <code>/machine/hoi-lenh</code> (long-poll: server giữ request tới 8 giây và trả ngay khi có lệnh), tra <code>LENH_DONG_BO</code> trong <code>machine/main.py</code> rồi chạy <code>pack_sync()</code>:</p>
+<h2>Ghi dữ liệu máy</h2>
 <ul>
-<li>Gọi <code>database.admin_functions.ingredients.ingredients_payload()</code> của <code>version1.0</code> (cùng hàm trang admin của máy dùng).</li>
-<li>ETag = 32 ký tự đầu SHA-256 của JSON đã sắp khóa, nên cùng dữ liệu luôn ra cùng ETag.</li>
-<li>Trùng ETag app gửi thì gói rỗng; khác thì <code>gzip</code> toàn bộ JSON.</li>
+  <li><strong>Menu</strong> (<code>/app/gui-menu</code>): app gửi kèm <code>menu_version</code> đang sửa. Máy đã có bản khác thì không ghi, trả <code>conflict</code> + menu mới nhất; khớp thì kiểm hết các dòng rồi ghi trong một transaction.</li>
+  <li><strong>Kho</strong> (<code>/app/nap-kho</code>): <code>target</code> = id hoặc <code>"all"</code>, <code>value</code> = <code>"full"</code> hoặc số gram. Máy nạp bằng hàm <code>refill()</code> của trang admin máy rồi dựng lại <code>menu-data.js</code> cho màn bán hàng.</li>
 </ul>
-<pre><code>POST /machine/tra-dong-bo
-X-Product-Key: fm_...
-X-Lenh-Id: 6
-ETag: "47e88d389d1422864e67805f467c61cd"
 
-&lt;JSON đã gzip, hoặc rỗng&gt;</code></pre>
-<p>Máy đọc lỗi (MySQL mất kết nối...) thì gửi <code>{"loi": ...}</code> qua <code>/machine/tra-ket-qua</code> như lệnh thường; vòng lặp của máy vẫn chạy.</p></div>
-
-<div class="step"><h3><span class="num">4</span>Server trả cho app</h3>
-<p>Server chỉ nhận gói nếu lệnh <code>X-Lenh-Id</code> đúng là của máy có product key đó, rồi chuyển nguyên byte, không giải nén:</p>
-<ul>
-<li>Gói rỗng: <code>304 Not Modified</code> + <code>ETag</code>.</li>
-<li>Có dữ liệu: <code>200</code> + <code>Content-Encoding: gzip</code> + <code>ETag</code>.</li>
-<li>Máy báo lỗi hoặc hết 20 giây: <code>502</code> kèm <code>{"loi": ...}</code>.</li>
-</ul></div>
-
-<div class="step"><h3><span class="num">5</span>App cập nhật</h3>
-<p><code>HttpClient</code> của Dart tự giải nén gzip. <code>304</code> thì <code>sync()</code> trả <code>null</code>, app giữ danh sách đang hiện.
-<code>200</code> thì app thay danh sách và lưu ETag mới. Đổi máy thì <code>reset()</code> xóa danh sách và ETag.</p></div>
-
-<h2>API và gói tin</h2>
-<div class="table-wrap"><table>
-<tr><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
-<tr><td><code>POST /app/dong-bo</code></td><td>App (owner, manager)</td><td>body <code>token</code>, <code>machine_id</code>, <code>lenh</code>; header <code>If-None-Match</code> (tùy chọn)</td><td><code>200</code> JSON gzip + <code>ETag</code>, hoặc <code>304</code> + <code>ETag</code></td></tr>
-<tr><td><code>POST /machine/tra-dong-bo</code></td><td>Máy</td><td>header <code>X-Product-Key</code>, <code>X-Lenh-Id</code>, <code>ETag</code>; body JSON gzip, rỗng = không đổi</td><td><code>{"da_nhan": true}</code></td></tr>
-</table></div>
-
-<h3>Mã lỗi của /app/dong-bo</h3>
-<div class="table-wrap"><table>
-<tr><th>Status</th><th>Khi nào</th></tr>
-<tr><td><code>401</code></td><td>Token sai hoặc hết hạn (kèm <code>login_required: true</code>)</td></tr>
-<tr><td><code>403</code></td><td>Không quản lý máy, lệnh không có trong bảng, hoặc vai trò không đủ quyền</td></tr>
-<tr><td><code>503</code></td><td>Máy offline (không heartbeat trong 15 giây)</td></tr>
-<tr><td><code>502</code></td><td>Máy báo lỗi hoặc không trả kết quả trong 20 giây</td></tr>
-</table></div>
-
-<h2>Các lệnh đồng bộ</h2>
-<div class="table-wrap"><table>
-<tr><th>lenh</th><th>Quyền</th><th>Máy gọi</th><th>Dữ liệu</th></tr>
-<tr><td><code>dong_bo_nguyen_lieu</code></td><td>owner, manager</td><td><code>database.admin_functions.ingredients.ingredients_payload()</code></td><td><code>ingredients</code>: <code>ingredient_id</code>, <code>name</code>, <code>amount</code>, <code>max_gram</code>, <code>max_set</code>, <code>pump_no</code>, <code>in_stock</code>...</td></tr>
-</table></div>
-<p class="note"><code>max_set = false</code>: máy chưa khai báo mức tối đa, <code>max_gram</code> đang là giá trị mặc định. Tab Kho hiện dòng "Mức tối đa đang dùng giá trị mặc định."</p>
-
-<h2>Thêm một lệnh đồng bộ mới</h2>
+<h2>Thêm một tab mới</h2>
 <ol>
-<li><a href="sync_rules.py">sync_rules.py</a>: thêm <code>"dong_bo_x": {"owner", "manager"}</code>.</li>
-<li><code>machine/main.py</code>: thêm <code>"dong_bo_x": ham_doc</code> vào <code>LENH_DONG_BO</code> (hàm trả dict JSON được).</li>
-<li>App: tạo <code>lib/feature/data_sync/x_sync.dart</code> theo khuôn <code>ingredients_sync.dart</code>, gọi <code>api.sync(machineId, 'dong_bo_x', etag)</code>.</li>
+  <li>Server: folder <code>dashboard_sync/&lt;tab&gt;_sync/</code> theo mẫu api / verify / flow (<code>androidv0.1/MODULE_PATTERN.md</code>), quyền trong <code>sync_rules.py</code>, route trong <code>config/routing.py</code>, thêm vào <code>MODULES</code> của <code>server/main.py</code>.</li>
+  <li>Máy: folder <code>machine/&lt;tab&gt;_sync/</code> với bảng <code>COMMANDS</code>, gộp vào <code>COMMANDS</code> của <code>machine/main.py</code>.</li>
 </ol>
-
-<h2>File liên quan</h2>
-<div class="table-wrap"><table>
-<tr><th>Phần</th><th>File</th></tr>
-<tr><td>Server</td><td><code>server/service/machine_relay/</code> (<code>app_dong_bo</code>, <code>may_tra_dong_bo</code>, <code>gui_va_cho</code>), <code>sync_rules.py</code></td></tr>
-<tr><td>Máy</td><td><code>machine/main.py</code> (<code>pack_sync</code>), <code>machine/server_connection/instruction_api.py</code> (<code>send_sync</code>)</td></tr>
-<tr><td>App</td><td><code>machine_api.dart</code> (<code>sync</code>), <code>feature/data_sync/ingredients_sync.dart</code>, <code>minitab/inventory_tab.dart</code></td></tr>
-</table></div>
 
 <h2>Test</h2>
-<p>Chạy từ thư mục <code>androidv0.1</code>; kết quả ghi vào <code>log/FLOWS.md</code>, tiêu chí ở <code>log/TIEU_CHI_TEST.md</code>.</p>
-<pre><code>.\test.ps1 -Flow S8        # relay thật: 200, 304, dữ liệu đổi, 502, 503, 403, nạp kho
-.\test.ps1 -Flow F2        # widget: gửi lại ETag, giữ danh sách khi 304
-.\test.ps1 -Flow E4        # điện thoại thật + máy giả, tới bước nạp kho (E0..E4)</code></pre>
+<p><code>python -m unittest machine.test_relay</code> chạy server thật + vòng lặp máy thật với database giả, đi hết Menu và Kho.</p>
 </main>
 </body>
 </html>

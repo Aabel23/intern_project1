@@ -4,15 +4,15 @@
     POST /machine/hoi-lenh     {product_key}                  long-poll lấy lệnh {id, instruction, data}
     POST /machine/tra-ket-qua  {product_key, id, ket_qua}     gửi kết quả lệnh
 
-Module khác gửi lệnh xuống máy bằng relay_queue.send(), không qua file này.
+Module khác gửi lệnh xuống máy bằng link_queue.send(), không qua file này.
 """
 
 # Server chung: đường dẫn, xử lý HTTP
 from server.config.routing import MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT
 from server.lib.http_json import handle_routes
 
-# Trong module machine_relay
-from .relay_flow import heartbeat, poll, send_result
+# Trong module machine_link
+from .link_flow import heartbeat, poll, send_result
 
 ROUTES = {
     MACHINE_HEARTBEAT: heartbeat,

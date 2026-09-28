@@ -26,7 +26,7 @@ class StartpointTest(unittest.TestCase):
         self.addCleanup(override.stop)
         init_db()
         # Long-poll ngắn để máy hỏi lệnh khi hộp thư rỗng không làm chậm test.
-        wait = patch('server.service.machine_relay.relay_queue.POLL_WAIT_SECONDS', 0.3)
+        wait = patch('server.service.machine_link.link_queue.POLL_WAIT_SECONDS', 0.3)
         wait.start()
         self.addCleanup(wait.stop)
         rate_limit.IP_REQUESTS.clear()
@@ -94,7 +94,7 @@ class StartpointTest(unittest.TestCase):
         return token, machine['machine_id']
 
     def test_waiting_app_does_not_block_machine(self):
-        from server.service.machine_relay import relay_queue as relay
+        from server.service.machine_link import link_queue as relay
         token, machine_id = self.make_owner_machine()
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
         with ThreadPoolExecutor(max_workers=1) as pool:
@@ -121,7 +121,7 @@ class StartpointTest(unittest.TestCase):
         import time
         token, machine_id = self.make_owner_machine()
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
-        with patch('server.service.machine_relay.relay_queue.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
+        with patch('server.service.machine_link.link_queue.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
             started = time.monotonic()
             poll = pool.submit(self.request, '/machine/hoi-lenh', {'product_key': 'relay-key'})
             threading.Event().wait(0.3)
@@ -139,7 +139,7 @@ class StartpointTest(unittest.TestCase):
                 self.assertEqual(app.result(timeout=3), (200, {'ok': 1}))
 
     def test_relay_checks_login_owner_and_product_key(self):
-        from server.service.machine_relay import relay_queue as relay
+        from server.service.machine_link import link_queue as relay
         token, machine_id = self.make_owner_machine()
         other, other_machine = self.make_owner_machine('other', 'other-key')
         status, data = self.request('/app/nhan-kho', {'machine_id': machine_id, 'version': 0})

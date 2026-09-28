@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cổng máy FlexMix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+  /* Bảng màu kem và cam đất theo phong cách Claude. */
+  :root {
+    --bg: #faf9f5; --fg: #141413; --muted: #6b6a63; --card: #ffffff;
+    --line: #e8e6dc; --accent: #c96442; --code-bg: #f0eee6; --warn: #a3542f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 48px 16px 72px; }
+  h1, h2, h3 {
+    font-family: "Source Serif 4", "Tiempos Text", Georgia, serif;
+    font-weight: 500; letter-spacing: -0.01em;
+  }
+  h1 { font-size: 2.2rem; margin: 0 0 10px; }
+  h2 {
+    font-size: 1.45rem; margin: 44px 0 12px; padding-top: 18px;
+    border-top: 1px solid var(--line); color: var(--accent);
+  }
+  h3 { font-size: 1.12rem; margin: 24px 0 8px; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  code {
+    font: 0.9em ui-monospace, "Cascadia Code", Consolas, monospace;
+    background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.45;
+  }
+  pre code { background: none; padding: 0; }
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 4px 18px 10px; margin: 14px 0;
+  }
+  .step h3 { margin-top: 14px; }
+  .num {
+    display: inline-block; min-width: 1.8em; text-align: center; margin-right: 6px;
+    background: var(--accent); color: var(--card); border-radius: 999px;
+    font-size: 0.85em; padding: 0 6px;
+  }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 3px 0; }
+  .note { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+<h1>Cổng máy: hộp thư lệnh và heartbeat</h1>
+<p class="lead">Máy nằm sau router của quán nên server không gọi xuống máy được. Máy tự lên server: báo còn sống, hỏi lệnh, trả kết quả. Module nào cần máy làm gì chỉ gọi một hàm <code>send()</code>. Code: <a href="link_queue.py">link_queue.py</a> (hộp thư, giờ heartbeat), <a href="link_api.py">link_api.py</a> → <a href="link_flow.py">link_flow.py</a> → <a href="link_verify.py">link_verify.py</a> (route máy gọi).</p>
+
+<h2>Route (chỉ máy gọi)</h2>
+<div class="table-wrap"><table>
+<tr><th>Route</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST /machine/heartbeat</code></td><td>product_key</td><td><code>{da_nhan: true}</code>; mỗi 5 giây</td></tr>
+<tr><td><code>POST /machine/hoi-lenh</code></td><td>product_key</td><td><code>{lenh: {id, instruction, data} | null}</code>; server giữ tối đa 8 giây, có lệnh là trả ngay</td></tr>
+<tr><td><code>POST /machine/tra-ket-qua</code></td><td>product_key, id, ket_qua</td><td><code>{da_nhan: true}</code></td></tr>
+</table></div>
+<p>Key sai hoặc chưa đăng ký: <code>403 {"loi": "Máy chưa đăng ký hoặc sai product key"}</code>. App xem máy Online/Offline qua <code>GET /machine/trang-thai</code> của tab Máy (<a href="../dashboard_sync/machinelist_sync/machinelist_api.py">machinelist_sync</a>), đọc cùng giờ heartbeat này.</p>
+
+<h2>Một lệnh đi từ app tới máy</h2>
+<div class="step">
+<h3><span class="num">1</span>Module của tab (vd <a href="../dashboard_sync/ingredient_sync/ingredient_sync_flow.py">ingredient_sync_flow.py</a>)</h3>
+<p>Kiểm token và quyền (<code>sync_rules.check_access</code>), kiểm dạng gói, rồi gọi <code>send(machine_id, "nhan_kho", {"version": 0})</code>. Token của app không đi xuống máy.</p>
+</div>
+<div class="step">
+<h3><span class="num">2</span><a href="link_queue.py">link_queue.py</a>, <code>send()</code></h3>
+<ol>
+  <li>Máy không heartbeat trong 15 giây → trả ngay <code>503 {"loi": "Máy đang offline"}</code>.</li>
+  <li>Đánh số lệnh, bỏ <code>{id, instruction, data}</code> vào <code>HOP_THU[machine_id]</code>, đánh thức máy đang long-poll, ghi <code>DANG_CHO[id]</code> rồi chờ tối đa 20 giây.</li>
+  <li>Hết giờ: máy chưa lấy thì hủy lệnh (<code>502</code> "lệnh đã được hủy"); đã lấy mà chưa trả thì <code>502</code> "hãy tải lại để kiểm tra".</li>
+  <li>Có kết quả: máy báo <code>{"loi"}</code> thì <code>502</code>, không thì <code>200</code> + nguyên kết quả.</li>
+</ol>
+</div>
+<div class="step">
+<h3><span class="num">3</span>Máy: <code>machine/main.py</code></h3>
+<p>Long-poll <code>/machine/hoi-lenh</code> nhận lệnh, tra <code>instruction</code> trong bảng <code>COMMANDS</code> gộp từ các module máy (<code>menu_sync/</code>, <code>ingredient_sync/</code>), chạy hàm, gửi kết quả lên <code>/machine/tra-ket-qua</code>. Lỗi trong hàm thành <code>{"loi": ...}</code>, vòng lặp vẫn chạy.</p>
+</div>
+<div class="step">
+<h3><span class="num">4</span><a href="link_flow.py">link_flow.py</a>, <code>send_result()</code> → <code>deliver()</code></h3>
+<p>Chỉ chuyển kết quả cho <code>send()</code> đang chờ nếu lệnh <code>id</code> đó được giao cho đúng máy này; máy khác gửi bừa id thì bị bỏ qua.</p>
+</div>
+
+<h2>Sơ đồ tóm tắt</h2>
+<pre><code>App ─POST /app/nhan-kho─▶ ingredient_sync: quyền, dạng gói
+                             └ send(): máy online? → HOP_THU[máy] ← {id, instruction, data}
+Máy ─POST /machine/hoi-lenh─▶ take(): lấy lệnh (long-poll 8 giây)
+Máy chạy COMMANDS[instruction](data)
+Máy ─POST /machine/tra-ket-qua {id, ket_qua}─▶ deliver() → send() trả (kết quả, status)
+App ◀── 200 kết quả | 502 máy lỗi/không trả lời | 503 offline</code></pre>
+
+<h2>Vài điểm cần biết</h2>
+<ul>
+  <li>Mỗi máy chỉ <strong>một</strong> long-poll cho mọi loại lệnh; module mới không thêm kết nối, chỉ thêm một <code>instruction</code>.</li>
+  <li>Hộp thư và giờ heartbeat nằm trong RAM: khởi động lại server là mất lệnh đang chờ, app đang chờ nhận lỗi và gửi lại.</li>
+  <li>Chưa giới hạn số lệnh chờ của mỗi máy; lệnh tự hủy sau 20 giây nếu máy không lấy.</li>
+  <li>Thử cả luồng không cần Raspberry Pi: <code>sandbox/relay/machine_sim.py</code> chạy nguyên <code>machine/main.py</code> với database giả.</li>
+</ul>
+</main>
+</body>
+</html>

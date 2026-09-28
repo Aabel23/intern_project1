@@ -15,8 +15,8 @@ giao quản lý máy. Mọi request gửi kèm `token` nhận được khi đăn
 
 Mã dài 32 ký tự ngẫu nhiên, lưu SHA-256 trong `machine_invites`, dùng một lần,
 hết hạn sau 5 phút. Tạo mã mới thì mã cũ chưa dùng của máy đó hết hiệu lực.
-Chủ nhận mã của chính mình vẫn giữ quyền `owner`. Relay `/app/gui-lenh` chỉ nhận
-lệnh từ `owner` hoặc `manager` của máy.
+Chủ nhận mã của chính mình vẫn giữ quyền `owner`. Tab Menu và Kho chỉ nhận yêu cầu
+từ `owner` hoặc `manager` của máy (`dashboard_sync/sync_rules.py`).
 
 Nội dung QR và gói Bluetooth giống nhau: `{"type":"share","code":"..."}`
 (giao thức Bluetooth: `app/flutter_app/lib/feature/machine_share/QR.md`).

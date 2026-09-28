@@ -15,7 +15,7 @@ token → người dùng → có quản lý máy → vai trò đủ quyền.
 ## Tab dữ liệu máy (Menu, Kho)
 
 Server không lưu dữ liệu máy. Module kiểm quyền và dạng gói, rồi gọi
-`machine_relay.relay_queue.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
+`machine_link.link_queue.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
 tới khi máy long-poll lấy, máy trả kết quả, server chuyển nguyên cho app.
 
 ```
@@ -66,4 +66,4 @@ Thân lỗi `{"loi": ...}`:
 | Máy | `machinelist_sync/` | — | `lib/UI/dashboard/dashboard/dashboard_controller.dart` |
 
 Mỗi module theo mẫu api / verify / flow trong `androidv0.1/MODULE_PATTERN.md`. Thử riêng:
-`python sandbox/server_module/run_modules.py menu_sync ingredient_sync relay login`.
+`python sandbox/server_module/run_modules.py menu_sync ingredient_sync link login`.

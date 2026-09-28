@@ -18,7 +18,8 @@ Những thứ **bắt buộc dùng chung**, module gọi tới chứ không gi�
 
 | Dùng chung | Ở đâu | Vì sao không để trong module |
 |---|---|---|
-| Hộp thư lệnh xuống máy | `service/machine_relay/relay_queue.py` (`gui_va_cho`, `is_online`) | Máy chỉ long-poll **một** chỗ cho mọi loại lệnh; mỗi module một hộp thư = mỗi máy N kết nối treo |
+| Gửi lệnh xuống máy | `service/machine_link/link_queue.py`: `send(machine_id, instruction, data)` → `(thân, status)` | Máy chỉ long-poll **một** chỗ cho mọi loại lệnh; mỗi module một hộp thư = mỗi máy N kết nối treo, lệnh các tab tới lệch thứ tự |
+| Quyền của tab dữ liệu máy | `service/dashboard_sync/sync_rules.py`: `check_access(data, roles)` | Cùng một luật token → người dùng → quản lý máy → vai trò cho Menu, Kho |
 | Phiên đăng nhập | `service/user_login/session.py` (`user_from_request`, `NOT_LOGGED_IN`) | Một token dùng cho mọi API |
 | Đọc/ghi database | `server/database/...` (`machine_read`, `machine_write`, `get_connection`) | Một database cho cả server |
 | Đọc/ghi JSON | `server/lib/http_json.py` (`read_json`, `send_json`) | Giống hệt nhau ở mọi module |
@@ -70,8 +71,8 @@ def handle(request):
   nhận `conn` của flow thay vì tự mở kết nối.
 - Lỗi trả về là **thân JSON gửi app**; flow tự gắn status. Dạng hay dùng:
   `check_request(data) -> (user_id, machine_id, None)` hoặc `(None, None, lỗi)`.
-- Ngoại lệ đã có: `menu_sync_verify.send_to_machine` (bỏ lệnh vào hộp thư) nằm ở
-  verify của menu. Module mới để hàm kiểu này ở flow.
+- Gửi lệnh xuống máy không phải kiểm tra: flow gọi thẳng `link_queue.send()` và trả
+  nguyên `(thân, status)` nó đưa về.
 
 ### `*_flow.py`: nối các bước
 
@@ -81,7 +82,7 @@ def handle(request):
 - Không đọc/ghi HTTP, không kiểm tra lặt vặt tại chỗ: gọi verify.
 - Không có khối `if __name__ == "__main__"`. Module không tự chạy riêng: cần thử riêng
   thì dùng `sandbox/server_module/run_modules.py`, ghép module với những module nó cần
-  (`login` để có token, `relay` để máy nhận lệnh):
+  (`login` để có token, `link` để máy nhận lệnh):
 
 ```sh
 python sandbox/server_module/run_modules.py machinelist login --port 8001
@@ -96,7 +97,7 @@ Giữ đúng dạng app đang đọc cho từng route, **không đổi khi refac
 | Nhóm | Thân | Status |
 |---|---|---|
 | Tài khoản, máy, chia sẻ, quản lý máy | `{"valid": bool, "message": ..., ...}`; hết phiên thì `NOT_LOGGED_IN` (có `login_required`) | 200 khi `valid`, 400 khi không, 429 khi kèm `retry_after`, 503 lỗi database |
-| Relay, menu, kho | `{"loi": ...}` khi lỗi; menu thêm `{"status": "ok" \| "up_to_date" \| "conflict", ...}` | 400 gói sai, 401 hết phiên, 403 không đủ quyền, 502 máy báo lỗi, 503 máy offline |
+| Menu, kho, cổng máy | `{"loi": ...}` khi lỗi; menu thêm `{"status": "ok" \| "up_to_date" \| "conflict", ...}` | 400 gói sai, 401 hết phiên, 403 không đủ quyền, 502 máy báo lỗi, 503 máy offline |
 
 Muốn thống nhất hai dạng là một thay đổi riêng, phải sửa app đi kèm.
 
@@ -107,7 +108,7 @@ Mỗi tab dashboard một folder, **không** chia theo nguồn dữ liệu:
 | Folder | Tab | Dữ liệu ở đâu |
 |---|---|---|
 | `menu_sync/` | Menu | của máy: hỏi xuống qua hộp thư, máy offline thì không đọc được |
-| `ingredient_sync/` | Kho | của máy (chưa tách, đang ở `machine_relay`) |
+| `ingredient_sync/` | Kho | của máy: hỏi xuống qua hộp thư |
 | `machinelist_sync/` | Máy | của server (bảng `machines`), không cần máy online |
 
 ### Đăng ký module
@@ -161,6 +162,12 @@ Thứ tự nhóm: thư viện chuẩn → server chung (`server.config`, `server
 `server.database`) → module khác (`server.service...`) → trong module (import tương đối).
 Phần sau dấu hai chấm nói nhóm đó dùng để làm gì.
 
+**Code phẳng, mỗi file một mắt xích.** Tránh `if/else` lồng nhau và phân tầng phức
+tạp: kiểm sai thì trả sớm (`if error: return error`), tách hàm nhỏ đặt tên rõ
+(`is_price`, `check_change`) thay vì vòng lặp nhiều nhánh, dùng bảng tra
+(`ROUTES`, `COMMANDS`, `EDITABLE = {cột: hàm_kiểm}`) thay cho chuỗi `if tên == ...`.
+Một file chỉ làm một việc trong chuỗi api → verify → flow → database/hộp thư.
+
 **Chú thích và thông báo bằng tiếng Việt.** Thông báo lỗi trả app viết cho người dùng
 đọc ("Chỉ chủ máy mới đổi tên được"), không viết cho lập trình viên.
 
@@ -186,9 +193,11 @@ lại code làm gì.
 | Module | Theo mẫu |
 |---|---|
 | `dashboard_sync/menu_sync` (server + máy) | ✅ |
-| `dashboard_sync/machinelist_sync` (tab Máy: danh sách, đổi tên, gỡ máy) | ✅ |
-| `machine_relay` | có `handle`/`handle_get`, chưa tách verify/flow; còn giữ `/app/gui-lenh`, `/app/dong-bo`, `/machine/refill` |
+| `dashboard_sync/ingredient_sync` (server + máy) | ✅ |
+| `dashboard_sync/machinelist_sync` (tab Máy: danh sách, đổi tên, gỡ máy, trạng thái) | ✅ |
+| `machine_link` (cổng máy: hộp thư, heartbeat, hỏi lệnh, trả kết quả) | ✅ |
 | `machine_register`, `machine_share` (mời, nhân viên), `user_login`, `user_register` | chưa, còn dùng `lib/valid_api.py` |
 
-Việc chung còn lại: gom kiểm "token → người dùng → quyền với máy → vai trò" (đang chép ở
-share, register, menu, relay, manage) thành một hàm trong `server/lib/`.
+Việc chung còn lại: kiểm "token → người dùng → quyền với máy → vai trò" đã gom cho Menu và
+Kho (`sync_rules.check_access`), còn chép riêng ở `machinelist_verify` (dạng `{"valid"}`),
+`machine_share`, `machine_register`.

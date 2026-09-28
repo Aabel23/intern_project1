@@ -4,7 +4,7 @@ import '../../../feature/data_sync/ingredients_sync.dart';
 import '../../app_theme.dart';
 import '../dashboard/dashboard_widgets.dart';
 
-// Tab Kho: đồng bộ nguyên liệu từ máy; "Nạp đầy"/"Nạp tất cả" gửi lệnh /machine/refill.
+// Tab Kho: đồng bộ nguyên liệu từ máy; "Nạp đầy"/"Nạp tất cả" gửi /app/nap-kho.
 class InventoryTab extends StatelessWidget {
   const InventoryTab({super.key, required this.inventory});
   final IngredientsSync inventory;
