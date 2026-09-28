@@ -52,3 +52,15 @@ trong `tests/e2e/logs/<thời điểm>/`.
 Kịch bản: đăng nhập chủ → pair máy qua Bluetooth → máy online, đọc menu, bật món, xem kho →
 chia sẻ qua Bluetooth → xem và thu hồi nhân viên → chia sẻ qua QR → đăng xuất (xóa phiên
 trên server) → nhân viên nhận chia sẻ qua Bluetooth → phiên hết hạn thì về màn hình đăng nhập.
+
+## Chạy qua đêm và bàn giao
+
+```powershell
+python tests/night_loop.py --until 2026-09-29T05:00:00+07:00
+```
+
+Runner ghi từng vòng trong `tests/runs/`, tự dừng theo giờ và nhường điện thoại khi
+`tests/runs/claude.takeover` xuất hiện. Lịch Windows `FlexMix-Claude-Test-20260929-0250`
+gọi `tests/claude_handoff.ps1` lúc 02:50; hướng dẫn ở `CLAUDE_HANDOFF.md`.
+Claude thoát sớm thì script tiếp tục runner đến 05:00. Máy phải còn hoạt động và
+điện thoại vẫn kết nối USB. Log Claude: `tests/runs/claude-handoff.log`.

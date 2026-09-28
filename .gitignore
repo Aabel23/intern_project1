@@ -13,6 +13,7 @@ machine/config/machine.env
 
 # Log, ảnh chụp của test tự động trên điện thoại.
 tests/e2e/logs/
+tests/runs/
 
 # Historical local test artifacts
 sandbox/e2e/logs/

@@ -48,6 +48,23 @@ class MachineShareTest(unittest.TestCase):
             rows = conn.execute("SELECT machine_id, role FROM machine_managers WHERE user_id=?", (user_id,))
             return {row['machine_id']: row['role'] for row in rows}
 
+    def test_invite_has_only_one_winner_under_concurrent_accepts(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+
+        other = self.make_user('concurrent_staff')
+        code = create_invite({'token': self.owner, 'machine_id': self.machine_id})['code']
+        barrier = Barrier(2)
+
+        def accept(token):
+            barrier.wait(timeout=5)
+            return accept_invite({'token': token, 'code': code})
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(accept, (self.staff, other)))
+        self.assertEqual(sum(result['valid'] is True for result in results), 1)
+        self.assertEqual(sum(self.machine_id in self.roles(token) for token in (self.staff, other)), 1)
+
     def test_owner_shares_once(self):
         invite = create_invite({'token': self.owner, 'machine_id': self.machine_id})
         self.assertTrue(invite['valid'])

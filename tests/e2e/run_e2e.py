@@ -345,8 +345,8 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
 
     t = step("E9 Đăng xuất xóa phiên trên server")
     phone.back()
-    # Nút tài khoản trên AppBar là "Show menu" nằm cao nhất màn hình.
-    phone.tap(min((node for node in phone.nodes() if node.desc == "Show menu"), key=lambda node: node.y))
+    # Chọn theo tooltip riêng, tránh nhầm với menu của từng máy.
+    phone.tap("^Tài khoản$")
     phone.tap("^Đăng xuất$")
     phone.wait("^Đăng nhập$", 30, cls="Button")
     wait_for(lambda: not db_one("SELECT 1 FROM app_sessions WHERE user_id=?", owner["id"]), 10,
