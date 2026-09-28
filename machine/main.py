@@ -100,6 +100,7 @@ def run():
 
     while True:
         # Nhận lệnh từ server.
+        bat_dau = time.monotonic()
         try:
             lenh = instruction_api.poll_command()
         except (urllib.error.URLError, OSError, ValueError) as error:
@@ -107,7 +108,9 @@ def run():
             time.sleep(1)
             continue
         if lenh is None:
-            time.sleep(1)
+            # Server long-poll đã giữ request thì hỏi lại ngay; server cũ trả ngay thì chờ 1 giây.
+            if time.monotonic() - bat_dau < 1:
+                time.sleep(1)
             continue
 
         # Phân tích lệnh và chạy hàm dữ liệu.

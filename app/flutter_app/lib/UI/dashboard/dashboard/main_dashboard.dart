@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_theme.dart';
 import '../../login/auth_page.dart';
 import '../machine_api.dart';
 import '../minitab/inventory_tab.dart';
@@ -119,27 +120,40 @@ class _MainDashboardState extends State<MainDashboard> {
       ];
       return Scaffold(
         appBar: AppBar(
+          toolbarHeight: 72,
+          titleSpacing: 20,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'FlexMix',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-              ),
               Text(
                 _controller.machineId == null
                     ? 'Chưa chọn máy'
                     : 'Máy: ${_controller.machineId}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.normal,
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+              const Text(
+                'FlexMix',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
                 ),
               ),
             ],
           ),
           actions: [
             PopupMenuButton<String>(
-              icon: const CircleAvatar(child: Icon(Icons.person_outline)),
+              tooltip: 'Tài khoản',
+              icon: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Icon(Icons.person_outline, color: AppColors.ink),
+              ),
               onSelected: (value) {
                 if (value == 'logout') _logout();
               },
@@ -147,17 +161,24 @@ class _MainDashboardState extends State<MainDashboard> {
                 PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
               ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
           ],
         ),
         body: IndexedStack(
           index: index,
           children: sections.map((section) => section.page).toList(),
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: index,
-          onDestinationSelected: (value) => setState(() => index = value),
-          destinations: sections.map((section) => section.destination).toList(),
+        bottomNavigationBar: DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.border)),
+          ),
+          child: NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: (value) => setState(() => index = value),
+            destinations: sections
+                .map((section) => section.destination)
+                .toList(),
+          ),
         ),
       );
     },

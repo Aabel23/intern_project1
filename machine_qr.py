@@ -34,7 +34,7 @@ def main() -> None:
     parser.add_argument('-o', '--output', help='Mặc định: <ten_may>.png')
     args = parser.parse_args()
     if args.from_env:
-        from machine.config.machine_config import get_machine_name, get_product_key
+        from machine.config.env import get_machine_name, get_product_key
         args.machine_name, args.product_key = get_machine_name(), get_product_key()
     elif not args.machine_name or not args.product_key:
         parser.error('cần <ten_may> <product_key> hoặc --from-env')

@@ -5,6 +5,7 @@ import '../../../feature/machine_share/machine_share_bluetooth.dart';
 import '../../../feature/machine_register/machine_register_bluetooth.dart';
 import '../../../feature/machine_register/machine_register_qr.dart';
 
+import '../../app_theme.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../machine_api.dart';
 import '../dashboard/dashboard_widgets.dart';
@@ -93,17 +94,22 @@ class MachinesTab extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) => Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const PageTitle('Máy FlexMix'),
-          const SizedBox(height: 4),
-          const Text('Chọn máy để các tab nghiệp vụ hiển thị dữ liệu.'),
+          const PageSubtitle('Chọn máy để các tab nghiệp vụ hiển thị dữ liệu.'),
           if (controller.machinesError != null)
-            Text(
-              controller.machinesError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                controller.machinesError!,
+                style: const TextStyle(
+                  color: AppColors.orangeText,
+                  fontSize: 13,
+                ),
+              ),
             ),
           if (controller.checking)
             const Padding(
@@ -113,25 +119,62 @@ class MachinesTab extends StatelessWidget {
           const SizedBox(height: 12),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: controller.refreshStatuses,
+              // Đọc lại danh sách máy (máy mới được giao, máy bị thu hồi) và trạng thái.
+              onRefresh: controller.loadMyMachines,
               child: controller.machines.isEmpty
                   ? ListView(
                       children: const [ListNotice('Quán chưa có máy nào.')],
                     )
                   : ListView.separated(
                       itemCount: controller.machines.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (_, index) {
                         final id = controller.machines[index];
                         final online = controller.online[id] == true;
                         final selected = id == controller.machineId;
                         final role = controller.roles[id];
                         return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: selected
+                                ? const BorderSide(
+                                    color: AppColors.green,
+                                    width: 2,
+                                  )
+                                : const BorderSide(color: AppColors.border),
+                          ),
                           child: ListTile(
-                            leading: Icon(
-                              online ? Icons.cloud_done : Icons.cloud_off,
+                            contentPadding: const EdgeInsets.fromLTRB(
+                              14,
+                              6,
+                              4,
+                              6,
                             ),
-                            title: Text(controller.names[id] ?? id),
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: online
+                                    ? AppColors.greenTint
+                                    : AppColors.segment,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                online ? Icons.cloud_done : Icons.cloud_off,
+                                size: 20,
+                                color: online
+                                    ? AppColors.green
+                                    : AppColors.subtle,
+                              ),
+                            ),
+                            title: Text(
+                              controller.names[id] ?? id,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.ink,
+                              ),
+                            ),
                             subtitle: Text(
                               [
                                 online ? 'Online' : 'Offline',
@@ -139,12 +182,20 @@ class MachinesTab extends StatelessWidget {
                                 if (role == 'manager') 'Được giao',
                                 id,
                               ].join(' · '),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.muted,
+                              ),
                             ),
                             selected: selected,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (selected) const Icon(Icons.check_circle),
+                                if (selected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: AppColors.green,
+                                  ),
                                 PopupMenuButton<String>(
                                   onSelected: (value) =>
                                       _onMenu(context, id, value),

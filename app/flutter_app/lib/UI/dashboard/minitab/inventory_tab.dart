@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../feature/data_sync/ingredients_sync.dart';
+import '../../app_theme.dart';
 import '../dashboard/dashboard_widgets.dart';
 
 // Tab Kho: đồng bộ nguyên liệu từ máy; "Nạp đầy"/"Nạp tất cả" gửi lệnh /machine/refill.
@@ -49,13 +50,11 @@ class InventoryTab extends StatelessWidget {
       builder: (_, _) => RefreshIndicator(
         onRefresh: inventory.load,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
           children: [
             const PageTitle('Kho nguyên liệu'),
-            const SizedBox(height: 4),
-            const Text(
+            const PageSubtitle(
               'Kéo xuống để lấy trạng thái mới nhất từ máy FlexMix.',
-              style: TextStyle(color: Colors.black54),
             ),
             if (inventory.loading)
               const Padding(
@@ -72,23 +71,38 @@ class InventoryTab extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
+                            InitialsTile(
+                              initialsOf(ingredient.name),
+                              background: ingredient.inStock
+                                  ? AppColors.greenTint
+                                  : AppColors.orangeTint,
+                              foreground: ingredient.inStock
+                                  ? AppColors.green
+                                  : AppColors.orangeText,
+                            ),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 ingredient.name,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.ink,
                                 ),
                               ),
                             ),
                             if (ingredient.pumpNumber != null)
-                              Chip(label: Text('Bơm ${ingredient.pumpNumber}')),
+                              StatusPill(
+                                'Bơm ${ingredient.pumpNumber}',
+                                background: AppColors.segment,
+                                foreground: AppColors.ink,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -100,9 +114,9 @@ class InventoryTab extends StatelessWidget {
                                   1,
                                 ),
                           color: ingredient.inStock
-                              ? Colors.green
-                              : Colors.deepOrange,
-                          minHeight: 9,
+                              ? AppColors.green
+                              : AppColors.orange,
+                          minHeight: 8,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         const SizedBox(height: 8),
@@ -112,9 +126,26 @@ class InventoryTab extends StatelessWidget {
                               child: Text(
                                 '${ingredient.amount.toStringAsFixed(0)} / '
                                 '${ingredient.maxGram.toStringAsFixed(0)} g',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.muted,
+                                ),
                               ),
                             ),
-                            TextButton(
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(44, 36),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               onPressed: () => _refill(
                                 context,
                                 ingredient.id,
@@ -128,7 +159,7 @@ class InventoryTab extends StatelessWidget {
                           const Text(
                             'Mức tối đa đang dùng giá trị mặc định.',
                             style: TextStyle(
-                              color: Colors.deepOrange,
+                              color: AppColors.orangeText,
                               fontSize: 12,
                             ),
                           ),

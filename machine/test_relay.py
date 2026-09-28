@@ -145,7 +145,13 @@ class MachineRelayTest(unittest.TestCase):
         # Lỗi database trả về app, vòng lặp của máy vẫn chạy tiếp.
         self.assertEqual(send("them_nguyen_lieu", {"ingredient_id": 1, "gram": 5}),
                          {"loi": "MySQL mất kết nối"})
-        self.assertEqual(send("lenh_la"), {"loi": "Lenh khong hop le"})
+        # Lệnh ngoài bảng QUYEN_LENH hoặc tham số sai kiểu bị server chặn, không xuống máy.
+        for ten, thamso in (("lenh_la", {}), (None, {}), ("xem_menu", [1])):
+            with self.assertRaises(HTTPError) as caught:
+                self.post("/app/gui-lenh", {"token": self.token, "machine_id": self.machine_id,
+                                            "ten": ten, "thamso": thamso})
+            caught.exception.close()
+            self.assertIn(caught.exception.code, (400, 403))
         self.assertEqual(send("xem_nguyen_lieu"), {"ingredients": []})
 
         # Đồng bộ kho: lần đầu nhận dữ liệu nén + ETag, gửi lại ETag đó thì nhận 304.

@@ -191,6 +191,9 @@ class RegistrationFlowTest(unittest.TestCase):
         from .user_register.user_verify import verify_user
         self.verify_user.side_effect = verify_user
         self.assertFalse(registration_flow.receive_register(dict(self.data, password="short"))["valid"])
+        # Quá giới hạn đăng nhập thì không cho tạo (tài khoản sẽ không đăng nhập được).
+        for field, value in (("username", "u" * 151), ("password", "p" * 1025), ("full_name", "n" * 151)):
+            self.assertFalse(verify_user(dict(self.data, **{field: value})) is None, field)
         key = self.start()
         self.assertTrue(registration_flow.confirm_otp({"registration_id": key, "code": "012345"})["valid"])
         duplicate = dict(self.data, request_id="b" * 32)

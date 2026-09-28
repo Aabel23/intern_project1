@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../app_theme.dart';
+
 String money(num value) {
   final raw = value.round().toString();
   final out = StringBuffer();
@@ -30,8 +32,26 @@ class PageTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: Theme.of(context).textTheme.headlineSmall
-        ?.copyWith(fontWeight: FontWeight.w800),
+    style: const TextStyle(
+      fontSize: 21,
+      fontWeight: FontWeight.w700,
+      color: AppColors.ink,
+    ),
+  );
+}
+
+// Dòng phụ xám dưới tiêu đề tab.
+class PageSubtitle extends StatelessWidget {
+  const PageSubtitle(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 2),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 13, color: AppColors.muted),
+    ),
   );
 }
 
@@ -39,22 +59,39 @@ class NoMachineSelectedPage extends StatelessWidget {
   const NoMachineSelectedPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: EdgeInsets.all(32),
+      padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.precision_manufacturing_outlined, size: 64),
-          SizedBox(height: 16),
-          Text(
-            'Chưa chọn máy',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.greenTint,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.precision_manufacturing_outlined,
+              size: 36,
+              color: AppColors.green,
+            ),
           ),
-          SizedBox(height: 8),
-          Text(
+          const SizedBox(height: 16),
+          const Text(
+            'Chưa chọn máy',
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
             'Mở tab Máy để chọn thiết bị cần làm việc.',
             textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
         ],
       ),
@@ -75,7 +112,8 @@ class ListNotice extends StatelessWidget {
       message,
       textAlign: TextAlign.center,
       style: TextStyle(
-        color: error ? Theme.of(context).colorScheme.error : Colors.black54,
+        color: error ? AppColors.orangeText : AppColors.muted,
+        fontSize: 13,
       ),
     ),
   );

@@ -2,16 +2,25 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../app_theme.dart';
+
 import '../dashboard/dashboard/main_dashboard.dart';
 import 'login_request.dart';
 import 'otp_page.dart';
 import 'registration_request.dart';
 
+// Địa chỉ server mặc định — đổi IP ở đây khi đổi Wi-Fi.
+// Khi chuyển lên máy chủ riêng: 'http://100.127.250.88:8000' (Tailscale).
+// --dart-define=SERVER_URL=... (test.ps1 dùng) vẫn được ưu tiên hơn giá trị này.
+const String kDefaultServerUrl = 'http://192.168.1.158:8000';
+
 class AuthPage extends StatefulWidget {
   const AuthPage({
     super.key,
-    // Build với --dart-define=SERVER_URL=http://<IP máy chạy server>:8000.
-    this.serverUrl = const String.fromEnvironment('SERVER_URL'),
+    this.serverUrl = const String.fromEnvironment(
+      'SERVER_URL',
+      defaultValue: kDefaultServerUrl,
+    ),
   });
   final String serverUrl;
 
@@ -31,8 +40,8 @@ class _AuthPageState extends State<AuthPage> {
   bool _register = false;
   bool _hidePassword = true;
   bool _hideConfirmation = true;
-  static const _green = Color(0xFF16796B);
-  static const _ink = Color(0xFF183B36);
+  static const _green = AppColors.green;
+  static const _ink = AppColors.ink;
 
   @override
   void dispose() {
@@ -157,15 +166,15 @@ class _AuthPageState extends State<AuthPage> {
       prefixIcon: Icon(icon, size: 21),
       suffixIcon: suffix,
       filled: true,
-      fillColor: const Color(0xFFF5F8F7),
+      fillColor: AppColors.background,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFDAE5E1)),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFDAE5E1)),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
     );
   }
@@ -183,7 +192,7 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F6F3),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
@@ -227,7 +236,7 @@ class _AuthPageState extends State<AuthPage> {
                           width: 88,
                           height: 88,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDDECE4),
+                            color: AppColors.greenTint,
                             borderRadius: BorderRadius.circular(28),
                           ),
                           child: Icon(
@@ -243,12 +252,7 @@ class _AuthPageState extends State<AuthPage> {
                       Text(
                         _register ? 'Khởi đầu cùng nhau' : 'Chào mừng trở lại!',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          color: _ink,
-                          letterSpacing: -0.8,
-                        ),
+                        style: displayNumber(30),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -257,7 +261,7 @@ class _AuthPageState extends State<AuthPage> {
                             : 'Đăng nhập để kết nối và quản lý máy\ncà phê của bạn mỗi ngày.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: Color(0xFF657B74),
+                          color: AppColors.muted,
                           height: 1.6,
                         ),
                       ),
@@ -267,7 +271,7 @@ class _AuthPageState extends State<AuthPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: const Color(0xFFE3EBE6)),
+                          border: Border.all(color: AppColors.border),
                         ),
                         child: Form(
                           key: _formKey,
@@ -444,7 +448,7 @@ class _AuthPageState extends State<AuthPage> {
                             _register
                                 ? 'Đã có tài khoản?'
                                 : 'Bạn chưa có tài khoản?',
-                            style: const TextStyle(color: Color(0xFF657B74)),
+                            style: const TextStyle(color: AppColors.muted),
                           ),
                           TextButton(
                             onPressed: _busy ? null : _switchMode,
@@ -462,10 +466,7 @@ class _AuthPageState extends State<AuthPage> {
                       const Text(
                         'Một kết nối nhỏ. Một ngày thật trọn vẹn.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF657B74),
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     ],
                   ),

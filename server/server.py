@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlparse
 from server.config.config import (
     COMMAND_TIMEOUT_SECONDS,
     HEARTBEAT_TIMEOUT_SECONDS,
+    POLL_WAIT_SECONDS,
 )
 from server.config.routing import (
     APP_SEND_COMMAND,
@@ -29,7 +30,7 @@ from server.config.routing import (
 from server.database.machine.machine_read import can_manage, find_id_by_key_hash, is_owner
 from server.lib.checks import is_machine_id
 from server.lib.hashing import sha256_hex
-from server.service.dashboard_sync.sync_rules import QUYEN_DONG_BO, QUYEN_NAP_KHO
+from server.service.dashboard_sync.sync_rules import QUYEN_DONG_BO, QUYEN_LENH, QUYEN_NAP_KHO
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
 
 # Mỗi máy một hộp thư lệnh riêng: machine_id -> danh sách lệnh chờ máy lấy.
@@ -37,6 +38,8 @@ HOP_THU = {}
 # Lệnh app đang chờ kết quả: id lệnh -> (machine_id, hàng chờ kết quả).
 DANG_CHO = {}
 KHOA = threading.Lock()
+# Báo cho máy đang long-poll khi hộp thư có lệnh mới.
+CO_LENH = threading.Condition(KHOA)
 DEM_LENH = count(1)
 LAN_HEARTBEAT_CUOI = {}
 # Kết quả menu của máy có thể lớn hơn các gói tài khoản.
@@ -68,6 +71,7 @@ def gui_va_cho(machine_id, lenh):
     with KHOA:
         DANG_CHO[lenh["id"]] = (machine_id, hop_ket_qua)
         HOP_THU.setdefault(machine_id, []).append(lenh)
+        CO_LENH.notify_all()
     print("Server nhan lenh tu app:", machine_id, lenh, flush=True)
 
     try:
@@ -140,13 +144,21 @@ class Handler(BaseHTTPRequestHandler):
         if not is_machine_id(machine_id) or not can_manage(machine_id, user_id):
             self.tra_json({"loi": "Bạn không quản lý máy này"}, 403)
             return
+        vai_tro = "owner" if is_owner(machine_id, user_id) else "manager"
+        ten, thamso = data.get("ten"), data.get("thamso", {})
+        if not isinstance(ten, str) or vai_tro not in QUYEN_LENH.get(ten, ()):
+            self.tra_json({"loi": "Lệnh không hợp lệ hoặc không đủ quyền"}, 403)
+            return
+        if not isinstance(thamso, dict):
+            self.tra_json({"loi": "Tham số lệnh không hợp lệ"}, 400)
+            return
         # Máy không heartbeat thì báo ngay, không để app chờ hết thời gian.
         if not is_online(machine_id):
             self.tra_json({"loi": "Máy đang offline"})
             return
 
         # Chỉ chuyển tên lệnh và tham số cho máy, không chuyển token của app.
-        lenh = {"id": next(DEM_LENH), "ten": data.get("ten"), "thamso": data.get("thamso", {})}
+        lenh = {"id": next(DEM_LENH), "ten": ten, "thamso": thamso}
         ket_qua = gui_va_cho(machine_id, lenh)
         # Lệnh thường không nhận gói đồng bộ; máy gửi nhầm thì báo lỗi thay vì trả byte thô.
         if isinstance(ket_qua, tuple):
@@ -249,7 +261,10 @@ class Handler(BaseHTTPRequestHandler):
         if machine_id is None:
             self.tra_json({"loi": "Máy chưa đăng ký hoặc sai product key"}, 403)
             return
-        with KHOA:
+        # Long-poll: giữ request tới khi có lệnh (tối đa POLL_WAIT_SECONDS), máy nhận
+        # lệnh ngay thay vì chờ tới lượt hỏi kế tiếp.
+        with CO_LENH:
+            CO_LENH.wait_for(lambda: HOP_THU.get(machine_id), timeout=POLL_WAIT_SECONDS)
             hop_thu = HOP_THU.get(machine_id)
             lenh = hop_thu.pop(0) if hop_thu else None
         self.tra_json({"lenh": lenh})

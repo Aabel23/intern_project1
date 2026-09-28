@@ -87,8 +87,8 @@ mật khẩu thì nhận luôn token.</p>
 <h2>Giai đoạn A: App gửi yêu cầu đăng nhập</h2>
 
 <div class="step">
-<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code> (dòng 58)</h3>
-<p>Chạy khi người dùng bấm nút đăng nhập (dòng 394) hoặc nhấn Enter ở ô mật khẩu (dòng 372).</p>
+<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code> (dòng 56)</h3>
+<p>Chạy khi người dùng bấm nút đăng nhập (dòng 399) hoặc nhấn Enter ở ô mật khẩu (dòng 348).</p>
 <ol>
   <li>Đang xử lý (<code>_busy</code>) thì bỏ qua, để bấm nhiều lần không gửi nhiều request.</li>
   <li>Gọi <code>_formKey.currentState!.validate()</code> để kiểm tra các ô đã nhập hợp lệ chưa.</li>
@@ -123,15 +123,15 @@ mật khẩu thì nhận luôn token.</p>
 <div class="step">
 <h3><span class="num">4</span><a href="../../main.py">server/main.py</a></h3>
 <ul>
-  <li>Hàm <code>main()</code> (dòng 101): gọi <code>init_db()</code> để tạo bảng nếu chưa có, rồi <code>serve_forever()</code> lắng nghe cổng 8000.</li>
-  <li>Hàm <code>Handler.do_POST()</code> (dòng 31) nhận mọi request POST:
+  <li>Hàm <code>main()</code> (dòng 111): gọi <code>init_db()</code> để tạo bảng nếu chưa có, rồi <code>serve_forever()</code> lắng nghe cổng 8000.</li>
+  <li>Hàm <code>Handler.do_POST()</code> (dòng 48) nhận mọi request POST:
     <ol>
       <li>Đường dẫn thuộc nhóm relay (gửi lệnh, heartbeat) thì chuyển sang code relay.</li>
       <li>Tra bảng <code>ROUTES</code> và thấy <code>/app/dang-nhap</code> ứng với hàm <code>receive_login</code>.</li>
-      <li>Gọi <code>too_many_requests()</code> (dòng 66): một địa chỉ IP quá 30 request trong một phút thì trả mã 429.</li>
+      <li>Gọi <code>too_many_requests()</code> (dòng 89): một địa chỉ IP quá 30 request trong một phút thì trả mã 429.</li>
       <li>Đọc body, chỉ nhận từ 1 đến 4096 byte, giải mã JSON rồi gọi <code>receive_login(data)</code>.</li>
       <li>Có lỗi JSON thì trả 400, lỗi database thì trả 503.</li>
-      <li>Gọi <code>send_json()</code> (dòng 80) trả kết quả: 200 nếu <code>valid</code> là true, 400 nếu false, 429 nếu kết quả có <code>retry_after</code>.</li>
+      <li>Gọi <code>tra_json()</code> (kế thừa từ <code>Handler</code> trong <code>server/server.py</code>) trả kết quả: 200 nếu <code>valid</code> là true, 400 nếu false, 429 nếu kết quả có <code>retry_after</code>.</li>
     </ol>
   </li>
 </ul>
@@ -231,7 +231,7 @@ mật khẩu thì nhận luôn token.</p>
 <h3><span class="num">13</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, tiếp tục trong <code>_submit()</code></h3>
 <ol>
   <li>Màn hình đã đóng (<code>!mounted</code>) thì dừng.</li>
-  <li><code>valid != true</code> thì gọi <code>_showMessage()</code> (dòng 144) hiện thông báo lỗi dưới dạng SnackBar.</li>
+  <li><code>valid != true</code> thì gọi <code>_showMessage()</code> (dòng 149) hiện thông báo lỗi dưới dạng SnackBar.</li>
   <li>Đúng mật khẩu thì dùng <code>Navigator.pushReplacement</code> chuyển sang <code>MainDashboard(serverUrl, token: result['token'])</code>. Màn đăng nhập bị thay hẳn nên bấm Back không quay lại được.</li>
   <li>Cuối cùng mở khóa nút: <code>_busy = false</code>.</li>
 </ol>
@@ -265,6 +265,7 @@ mật khẩu thì nhận luôn token.</p>
   <li><strong>Kết quả nằm trong RAM 60 giây.</strong> Server khởi động lại trong khoảng đó thì app phải đăng nhập lại.</li>
   <li><strong>Token chỉ trả ở bước 2, không trả ở bước 1.</strong> Muốn lấy token phải có đủ cả <code>login_id</code> lẫn <code>request_id</code>.</li>
   <li class="note"><strong>Hiện tại app chưa xử lý <code>retry_after</code>.</strong> Nếu request 2 đến lúc server chưa kiểm tra mật khẩu xong, app sẽ hiện luôn thông báo "Đang xác minh đăng nhập" thay vì chờ và hỏi lại. Chuyện này khó xảy ra, vì ở request 1 server kiểm tra mật khẩu xong rồi mới trả lời.</li>
+  <li class="note"><strong>Giới hạn chung dễ bị lấp đầy.</strong> Bảng IP (1000 địa chỉ) và bảng phiên đăng nhập chờ (1000 phiên) đầy thì người thật bị 429 / "Server đang bận" (SEC-03, SEC-04 trong <code>androidv0.1/log/SECURITY_NOTES.md</code>). Mật khẩu và token đi qua HTTP không mã hóa (SEC-01).</li>
 </ul>
 </main>
 </body>

@@ -96,7 +96,7 @@ If-None-Match: "47e88d389d1422864e67805f467c61cd"
 <pre><code>{"id": 6, "ten": "dong_bo_nguyen_lieu", "thamso": {}, "etag": "\"47e88d...\""}</code></pre></div>
 
 <div class="step"><h3><span class="num">3</span>Máy đọc dữ liệu và đóng gói</h3>
-<p>Máy lấy lệnh qua <code>/machine/hoi-lenh</code>, tra <code>LENH_DONG_BO</code> trong <code>machine/main.py</code> rồi chạy <code>pack_sync()</code>:</p>
+<p>Máy lấy lệnh qua <code>/machine/hoi-lenh</code> (long-poll: server giữ request tới 8 giây và trả ngay khi có lệnh), tra <code>LENH_DONG_BO</code> trong <code>machine/main.py</code> rồi chạy <code>pack_sync()</code>:</p>
 <ul>
 <li>Gọi <code>database.admin_functions.ingredients.ingredients_payload()</code> của <code>version1.0</code> (cùng hàm trang admin của máy dùng).</li>
 <li>ETag = 32 ký tự đầu SHA-256 của JSON đã sắp khóa, nên cùng dữ liệu luôn ra cùng ETag.</li>
@@ -161,9 +161,10 @@ ETag: "47e88d389d1422864e67805f467c61cd"
 </table></div>
 
 <h2>Test</h2>
-<pre><code>python -m unittest machine.test_relay -v          # 200, 304, dữ liệu đổi, 502, 503, 403
-cd app/flutter_app &amp;&amp; flutter test                # gửi lại ETag, giữ danh sách khi 304
-python sandbox/e2e/run_e2e.py --skip-build        # điện thoại thật + máy giả</code></pre>
+<p>Chạy từ thư mục <code>androidv0.1</code>; kết quả ghi vào <code>log/FLOWS.md</code>, tiêu chí ở <code>log/TIEU_CHI_TEST.md</code>.</p>
+<pre><code>.\test.ps1 -Flow S8        # relay thật: 200, 304, dữ liệu đổi, 502, 503, 403, nạp kho
+.\test.ps1 -Flow F2        # widget: gửi lại ETag, giữ danh sách khi 304
+.\test.ps1 -Flow E4        # điện thoại thật + máy giả, tới bước nạp kho (E0..E4)</code></pre>
 </main>
 </body>
 </html>

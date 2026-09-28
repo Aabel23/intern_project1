@@ -24,6 +24,10 @@ class StartpointTest(unittest.TestCase):
         override.start()
         self.addCleanup(override.stop)
         init_db()
+        # Long-poll ngắn để máy hỏi lệnh khi hộp thư rỗng không làm chậm test.
+        wait = patch('server.server.POLL_WAIT_SECONDS', 0.3)
+        wait.start()
+        self.addCleanup(wait.stop)
         main.IP_REQUESTS.clear()
         self.server = main.Server(('127.0.0.1', 0), main.Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -115,6 +119,27 @@ class StartpointTest(unittest.TestCase):
             })
             self.assertEqual(app.result(timeout=3), (200, {'ok': True}))
         self.assertEqual(relay.HOP_THU.get(machine_id), [])
+
+    def test_long_poll_returns_as_soon_as_command_arrives(self):
+        import time
+        token, machine_id = self.make_owner_machine()
+        self.request('/machine/heartbeat', {'product_key': 'relay-key'})
+        with patch('server.server.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
+            started = time.monotonic()
+            poll = pool.submit(self.request, '/machine/hoi-lenh', {'product_key': 'relay-key'})
+            threading.Event().wait(0.3)
+            with ThreadPoolExecutor(max_workers=1) as app_pool:
+                app = app_pool.submit(self.request, '/app/gui-lenh', {
+                    'token': token, 'machine_id': machine_id, 'ten': 'xem_menu', 'thamso': {},
+                })
+                _, data = poll.result(timeout=5)
+                # Máy nhận lệnh ngay khi app gửi, không chờ hết thời gian long-poll.
+                self.assertLess(time.monotonic() - started, 2)
+                self.assertEqual(data['lenh']['ten'], 'xem_menu')
+                self.request('/machine/tra-ket-qua', {
+                    'product_key': 'relay-key', 'id': data['lenh']['id'], 'ket_qua': {'ok': 1},
+                })
+                self.assertEqual(app.result(timeout=3), (200, {'ok': 1}))
 
     def test_relay_checks_login_owner_and_product_key(self):
         from server import server as relay

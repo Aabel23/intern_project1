@@ -75,7 +75,19 @@ class Run:
         self.processes.clear()
 
 
+class StopRun(Exception):
+    """Đã chạy xong luồng --until, dừng kịch bản (không phải lỗi)."""
+
+
+# Số của luồng cuối cần chạy (--until E4 -> 4); None là chạy hết.
+UNTIL = None
+
+
 def step(name):
+    # Tên bước bắt đầu bằng ID luồng (E0..E12) để check_all ghi vào log/FLOWS.md.
+    number = int(name.split()[0][1:])
+    if UNTIL is not None and number > UNTIL:
+        raise StopRun
     print(f"\n▶ {name}", flush=True)
     return time.monotonic()
 
@@ -171,7 +183,14 @@ def build_and_install(run, phone, server_url):
         subprocess.run([flutter, "build", "apk", "--release", f"--dart-define=SERVER_URL={server_url}"],
                        cwd=app, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
     apk = app / "build" / "app" / "outputs" / "flutter-apk" / "app-release.apk"
-    phone.adb("install", "-r", str(apk), timeout=300)
+    try:
+        phone.adb("install", "-r", str(apk), timeout=300)
+    except RuntimeError as error:
+        # Bản đang cài ký bằng key khác (build ở máy khác): gỡ rồi cài lại.
+        if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" not in str(error):
+            raise
+        phone.adb("uninstall", PACKAGE, timeout=60)
+        phone.adb("install", str(apk), timeout=300)
 
 
 # ---------- thao tác trên app ----------
@@ -208,11 +227,11 @@ def pick_bluetooth_device(phone, hostname, timeout=40):
 # ---------- kịch bản ----------
 
 def scenario(run, phone, owner, staff, machine_name, hostname):
-    t = step("Đăng nhập tài khoản chủ trên điện thoại")
+    t = step("E1 Đăng nhập tài khoản chủ trên điện thoại")
     login(phone, owner)
     ok(t, owner["username"])
 
-    t = step("Pair máy qua Bluetooth (laptop giả máy, key mới)")
+    t = step("E2 Pair máy qua Bluetooth (laptop giả máy, key mới)")
     pairing = run.spawn("pair_machine", "sandbox/bluetooth_pair/app2machine-pair.py",
                         "--env", str(run.env_file), "--once")
     wait_for(lambda: "chờ APP kết nối" in run.log_text("pair_machine"), 20, "Máy giả không mở Bluetooth")
@@ -233,7 +252,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     machine_row(phone, machine_name, ".*Chủ máy")
     ok(t, machine_id)
 
-    t = step("Máy online qua relay, đọc menu, bật/tắt món, xem kho")
+    t = step("E3 Máy online qua relay, đọc menu, bật/tắt món, xem kho")
     run.spawn("machine_sim", "sandbox/relay/machine_sim.py", "--env", str(run.env_file))
     wait_for(lambda: machine_online(machine_id), 30,
              "Máy giả không heartbeat được, xem machine_sim.log")
@@ -260,7 +279,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     phone.wait("Bơm 1", 10)
     ok(t, "menu + bật món + kho")
 
-    t = step("Nạp kho qua /machine/refill: nạp đầy một bình, rồi nạp tất cả")
+    t = step("E4 Nạp kho qua /machine/refill: nạp đầy một bình, rồi nạp tất cả")
     row = phone.wait("0 / 1500 g", 10)
     buttons = [node for node in phone.nodes() if node.label == "Nạp đầy"]
     phone.tap(min(buttons, key=lambda node: abs(node.y - row.y)))
@@ -273,7 +292,20 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     phone.wait("1000 / 1000 g", 10)
     ok(t, "một bình + tất cả")
 
-    t = step("Chia sẻ qua Bluetooth: điện thoại (chủ) → laptop (nhân viên)")
+    t = step("E5 Chủ đổi tên máy trên app")
+    open_machines_tab(phone)
+    open_machine_menu(phone, machine_name)
+    phone.tap("^Đổi tên$")
+    phone.wait("^Đổi tên máy$", 10)
+    machine_name = machine_name + "-R"
+    phone.replace_text(0, machine_name)
+    phone.tap("^Lưu$", cls="Button")
+    machine_row(phone, machine_name, ".*Chủ máy", 30)
+    assert db_one("SELECT 1 FROM machines WHERE machine_id=? AND name=?", machine_id, machine_name), \
+        "Server chưa lưu tên máy mới"
+    ok(t, machine_name)
+
+    t = step("E6 Chia sẻ qua Bluetooth: điện thoại (chủ) → laptop (nhân viên)")
     receiver = run.spawn("share_receive", "sandbox/bluetooth_pair/app2app_pair.py",
                          "--username", staff["username"], "--timeout", "150",
                          env={"SANDBOX_PASSWORD": staff["password"]})
@@ -290,7 +322,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
                   machine_id, staff["id"]), "Nhân viên chưa được giao máy"
     ok(t)
 
-    t = step("Chủ xem danh sách nhân viên và thu hồi quyền")
+    t = step("E7 Chủ xem danh sách nhân viên và thu hồi quyền")
     phone.back()
     phone.wait(staff['full_name'], 30)
     phone.tap("^Thu hồi quyền$")
@@ -300,7 +332,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
                       machine_id, staff["id"]), "Server chưa xóa quyền nhân viên"
     ok(t)
 
-    t = step("Chia sẻ qua QR: laptop chụp màn hình điện thoại đọc mã")
+    t = step("E8 Chia sẻ qua QR: laptop chụp màn hình điện thoại đọc mã")
     phone.tap("^Tạo mã mới$", cls="Button")
     phone.wait("^Hết hạn sau", 30)
     qr = run.spawn("share_qr", "sandbox/bluetooth_pair/app2app_pair.py", "--adb",
@@ -312,7 +344,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
         conn.execute("DELETE FROM machine_managers WHERE machine_id=? AND user_id=?", (machine_id, staff["id"]))
     ok(t)
 
-    t = step("Đăng xuất xóa phiên trên server")
+    t = step("E9 Đăng xuất xóa phiên trên server")
     phone.back()
     # Nút tài khoản trên AppBar là "Show menu" nằm cao nhất màn hình.
     phone.tap(min((node for node in phone.nodes() if node.desc == "Show menu"), key=lambda node: node.y))
@@ -322,7 +354,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
              "Server vẫn giữ phiên của chủ sau khi đăng xuất")
     ok(t)
 
-    t = step("Nhân viên nhận chia sẻ qua Bluetooth: laptop (chủ) → điện thoại")
+    t = step("E10 Nhân viên nhận chia sẻ qua Bluetooth: laptop (chủ) → điện thoại")
     login(phone, staff)
     open_machines_tab(phone)
     phone.tap("^Nhận chia sẻ qua Bluetooth$")
@@ -338,13 +370,24 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     machine_row(phone, machine_name, ".*Được giao", 30)
     ok(t)
 
-    t = step("Phiên hết hạn giữa chừng thì app quay về màn hình đăng nhập")
+    t = step("E11 Phiên hết hạn giữa chừng thì app quay về màn hình đăng nhập")
     phone.tap("^Sản phẩm\nTab")
     phone.wait("Cà phê sữa", 40)
     with get_connection() as conn:
         conn.execute("DELETE FROM app_sessions WHERE user_id=?", (staff["id"],))
     phone.swipe_down()
     phone.wait("^Đăng nhập$", 30, cls="Button")
+    ok(t)
+
+    t = step("E12 Chủ thu hồi quyền thì máy biến mất khỏi app nhân viên sau khi tải lại")
+    login(phone, staff)
+    open_machines_tab(phone)
+    machine_row(phone, machine_name, ".*Được giao", 30)
+    with get_connection() as conn:
+        conn.execute("DELETE FROM machine_managers WHERE machine_id=? AND user_id=?", (machine_id, staff["id"]))
+    phone.swipe_down()
+    phone.wait("^Quán chưa có máy nào", 30)
+    assert phone.find(f"^{machine_name}\n") is None, "Máy bị thu hồi vẫn còn trong danh sách"
     ok(t)
 
 
@@ -354,17 +397,30 @@ def main():
     parser = argparse.ArgumentParser(description="Test tự động app + máy + server trên điện thoại thật.")
     parser.add_argument("--skip-build", action="store_true", help="không build/cài lại app")
     parser.add_argument("--serial", help="số serial điện thoại khi cắm nhiều máy (adb devices)")
+    parser.add_argument("--wifi", action="store_true",
+                        help="app gọi server qua Wi-Fi (IP laptop) thay vì qua cáp USB (adb reverse);"
+                             " APK build ở chế độ nào thì --skip-build phải dùng cùng chế độ")
+    parser.add_argument("--until", help="dừng sau luồng này, vd. E4 (các luồng e2e nối tiếp nhau)")
     args = parser.parse_args()
+    global UNTIL
+    UNTIL = int(args.until.upper().lstrip("E")) if args.until else None
 
     run = Run()
     phone = Phone(args.serial)
     started = time.monotonic()
     failed = False
     try:
-        t = step("Kiểm tra điện thoại, mạng và server")
-        phone_ip = phone.wifi_ip()
-        assert phone_ip, "Điện thoại chưa bật Wi-Fi (cần cùng mạng với laptop)."
-        server_url = f"http://{laptop_ip_for(phone_ip)}:{SERVER_PORT}"
+        t = step("E0 Kiểm tra điện thoại, mạng và server")
+        if args.wifi:
+            phone_ip = phone.wifi_ip()
+            assert phone_ip, "Điện thoại chưa bật Wi-Fi (cần cùng mạng với laptop)."
+            server_url = f"http://{laptop_ip_for(phone_ip)}:{SERVER_PORT}"
+        else:
+            # Qua cáp USB: cổng 8000 của điện thoại chuyển về laptop, không phụ thuộc
+            # Wi-Fi (router cách ly thiết bị, khác access point...).
+            phone_ip = "USB"
+            phone.adb("reverse", f"tcp:{SERVER_PORT}", f"tcp:{SERVER_PORT}")
+            server_url = f"http://127.0.0.1:{SERVER_PORT}"
         if server_running():
             print("  (dùng server đang chạy sẵn ở cổng", SERVER_PORT, ")")
         else:
@@ -374,9 +430,14 @@ def main():
         ok(t, f"điện thoại {phone_ip}, server {server_url}")
 
         if not args.skip_build:
-            t = step("Build app với SERVER_URL và cài lên điện thoại")
+            t = step("E0 Build app với SERVER_URL và cài lên điện thoại")
             build_and_install(run, phone, server_url)
             ok(t)
+
+        # Cài mới thì mất quyền runtime; cấp sẵn để hộp thoại xin quyền không chặn kịch bản.
+        for permission in ("BLUETOOTH_SCAN", "BLUETOOTH_CONNECT", "BLUETOOTH_ADVERTISE",
+                           "ACCESS_FINE_LOCATION", "CAMERA"):
+            phone.shell("pm", "grant", PACKAGE, f"android.permission.{permission}", check=False)
 
         owner, staff = create_user(run, "owner"), create_user(run, "staff")
         machine_name = f"FlexMix-E2E-{secrets.token_hex(2)}"
@@ -386,6 +447,8 @@ def main():
         key = next(line.split("=", 1)[1] for line in env.splitlines() if line.startswith("PRODUCT_KEY="))
         run.key_hash = sha256_hex(key)
         scenario(run, phone, owner, staff, machine_name, socket.gethostname())
+    except StopRun:
+        print(f"\n(dừng sau E{UNTIL} theo --until)", flush=True)
     except Exception:
         failed = True
         print("\n✗ LỖI:\n" + traceback.format_exc(), flush=True)

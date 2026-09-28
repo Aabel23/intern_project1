@@ -1,4 +1,4 @@
-"""Cấu hình machine.
+"""Biến môi trường của machine.
 
 Giá trị riêng của từng máy (tên, product key, địa chỉ server) nằm trong
 machine.env cạnh file này và không commit. Tạo file cho máy mới bằng:
@@ -11,13 +11,6 @@ machine.env cạnh file này và không commit. Tạo file cho máy mới bằng
 
 import os
 from pathlib import Path
-
-# Đường dẫn API mà machine sử dụng.
-GET_COMMAND_PATH = "/machine/hoi-lenh"
-POST_RESULT_PATH = "/machine/tra-ket-qua"
-POST_SYNC_PATH = "/machine/tra-dong-bo"
-HEARTBEAT_PATH = "/machine/heartbeat"
-HEARTBEAT_INTERVAL_SECONDS = 5
 
 ENV_PATH = Path(os.environ.get("FLEXMIX_MACHINE_ENV") or Path(__file__).with_name("machine.env"))
 

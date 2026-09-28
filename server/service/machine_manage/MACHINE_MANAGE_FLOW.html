@@ -126,6 +126,7 @@ có kèm token đăng nhập. Code server: <a href="manage_flow.py">manage_flow.
 <div class="step">
 <h3><span class="num">4</span>App cập nhật (<a href="../../../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, <code>forgetMachine()</code>)</h3>
 <p>Bỏ máy khỏi danh sách; nếu đang chọn thì bỏ chọn, xóa menu/kho đang hiện. Sau đó <code>loadMyMachines()</code>; còn máy khác thì tự chọn máy đầu.</p>
+<p>Máy bị gỡ hoặc bị thu hồi từ <em>điện thoại khác</em> (chủ gỡ máy, nhân viên đang mở app) cũng biến mất: <code>loadMyMachines()</code> lấy danh sách server làm chuẩn, chạy khi mở dashboard, khi đóng các màn thêm máy và khi kéo xuống để tải lại ở tab Máy.</p>
 </div>
 
 <h2>Sơ đồ tóm tắt</h2>

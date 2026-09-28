@@ -24,6 +24,15 @@ def verify_user(data):
 
     if len(data["password"]) < 8:
         return "Mật khẩu cần ít nhất 8 ký tự"
+    # Cùng giới hạn với login_verify, nếu không sẽ tạo được tài khoản không đăng nhập được.
+    if len(data["password"]) > 1024:
+        return "Mật khẩu tối đa 1024 ký tự"
+    if len(data["username"].strip()) > 150:
+        return "Tên đăng nhập tối đa 150 ký tự"
+    if len(data["full_name"].strip()) > 150:
+        return "Họ tên tối đa 150 ký tự"
+    if len(data["email"].strip()) > 254:
+        return "Email không hợp lệ"
 
     if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", data["email"].strip()):
         return "Email không hợp lệ"

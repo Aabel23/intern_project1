@@ -34,12 +34,30 @@ class DashboardController extends ChangeNotifier {
     try {
       final rows = await api.myMachines();
       machinesError = null;
+      // Danh sách server là bản đúng: máy bị thu hồi/gỡ ở nơi khác cũng biến mất.
+      final ids = <String>[];
       for (final row in rows) {
         final id = row['machine_id'];
-        if (id is! String || id.isEmpty) continue;
-        if (!machines.contains(id)) machines.add(id);
+        if (id is! String || id.isEmpty || ids.contains(id)) continue;
+        ids.add(id);
         if (row['name'] is String) names[id] = row['name'] as String;
         if (row['role'] is String) roles[id] = row['role'] as String;
+      }
+      for (final id in List.of(machines)) {
+        if (!ids.contains(id)) {
+          names.remove(id);
+          roles.remove(id);
+          online.remove(id);
+        }
+      }
+      machines
+        ..clear()
+        ..addAll(ids);
+      if (machineId != null && !ids.contains(machineId)) {
+        _session++;
+        machineId = null;
+        products.reset();
+        inventory.reset();
       }
     } on MachineException catch (error) {
       machinesError = error.message;
@@ -73,23 +91,23 @@ class DashboardController extends ChangeNotifier {
     products.reset();
     inventory.reset();
     notifyListeners();
-    await refreshStatuses();
-    if (online[id] == true) {
-      await Future.wait([products.load(), inventory.load()]);
-    }
+    // Tải luôn cả khi máy offline: server trả "Máy đang offline" ngay và các tab
+    // hiện lỗi đó thay vì báo "Máy chưa có món nào".
+    await Future.wait([refreshStatuses(), products.load(), inventory.load()]);
   }
 
   Future<void> refreshStatuses() async {
     final session = _session;
     checking = true;
     notifyListeners();
-    for (final id in List.of(machines)) {
-      try {
-        online[id] = (await api.status(id))['online'] == true;
-      } catch (_) {
-        online[id] = false;
-      }
-    }
+    // Hỏi mọi máy cùng lúc thay vì lần lượt từng máy.
+    await Future.wait([
+      for (final id in List.of(machines))
+        api
+            .status(id)
+            .then((result) => online[id] = result['online'] == true)
+            .catchError((Object _) => online[id] = false),
+    ]);
     if (session != _session) return;
     checking = false;
     notifyListeners();

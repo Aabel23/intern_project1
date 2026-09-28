@@ -1,7 +1,7 @@
 """Ghép đôi và gửi dữ liệu Bluetooth trên máy Linux dùng BlueZ."""
 
 import json
-from machine.config.machine_config import get_machine_name, get_product_key
+from machine.config.env import get_machine_name, get_product_key
 
 
 def receive_message(reader):

@@ -87,7 +87,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 
 <h2>Giai đoạn A: App gửi thông tin đăng ký</h2>
 <div class="step">
-<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code> (dòng 58)</h3>
+<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code> (dòng 56)</h3>
 <p>Cùng hàm với đăng nhập, nhưng đi vào nhánh <code>_register == true</code>.</p>
 <ol>
   <li>Kiểm tra form, khóa nút bằng <code>_busy</code>.</li>
@@ -108,7 +108,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <p>Như luồng đăng nhập: giới hạn 30 request/phút mỗi IP, đọc tối đa 4096 byte JSON, tra <code>ROUTES</code> thấy <code>/app/dang-ky-nguoi-dung</code> ứng với <code>receive_register</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">4</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 79)</h3>
+<h3><span class="num">4</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 73)</h3>
 <ol>
   <li>Kiểm tra <code>request_id</code> đúng 32 ký tự hex.</li>
   <li>Tạo <code>fingerprint</code> (HMAC của toàn bộ gói) để phát hiện gửi lại cùng mã nhưng dữ liệu khác.</li>
@@ -122,7 +122,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">5</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>prepare_registration()</code> (dòng 41)</h3>
+<h3><span class="num">5</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>prepare_registration()</code> (dòng 35)</h3>
 <ol>
   <li>Quá 1000 phiên đang chờ thì báo server bận.</li>
   <li>Gọi <code>verify_user(data)</code> kiểm tra dữ liệu.</li>
@@ -135,7 +135,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <h3><span class="num">6</span><a href="user_register/user_verify.py">user_verify.py</a>, hàm <code>verify_user(data)</code></h3>
 <ol>
   <li>Cả 4 trường phải là chuỗi và không rỗng.</li>
-  <li>Mật khẩu ít nhất 8 ký tự; email đúng dạng <code>a@b.c</code>.</li>
+  <li>Mật khẩu 8–1024 ký tự; họ tên và username tối đa 150 ký tự; email đúng dạng <code>a@b.c</code>, tối đa 254 ký tự. Giới hạn trùng với luồng đăng nhập, để không tạo được tài khoản không đăng nhập được.</li>
   <li>Gọi <code>check_duplicate()</code>: dùng <code>get_by_username()</code> và <code>get_by_email()</code> trong <a href="../../database/user/user_read.py">user_read.py</a> để báo trùng username hoặc email.</li>
 </ol>
 </div>
@@ -186,7 +186,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <p>Hàm <code>_resend()</code> (dòng 43) gọi <code>/app/gui-ma-otp</code> khi hết 60 giây chờ, và lấy <code>retry_after</code> server trả về để đếm ngược tiếp.</p>
 </div>
 <div class="step">
-<h3><span class="num">12</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>confirm_otp(data)</code> (dòng 128)</h3>
+<h3><span class="num">12</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>confirm_otp(data)</code> (dòng 121)</h3>
 <p>Gọi <code>otp_flow.confirm_otp()</code>. Đúng mã thì giữ <code>FLOW_LOCK</code> và gọi <code>finish_registration()</code>.</p>
 </div>
 <div class="step">
@@ -200,7 +200,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">14</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>finish_registration()</code> (dòng 107)</h3>
+<h3><span class="num">14</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>finish_registration()</code> (dòng 100)</h3>
 <ol>
   <li>Bật cờ <code>otp_verified</code>. Chỉ khi cả <code>data_valid</code> và <code>otp_verified</code> đều bật mới đi tiếp.</li>
   <li>Tài khoản đã tạo rồi (app gửi lại) thì trả thành công luôn, không tạo lần hai.</li>
@@ -209,7 +209,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">15</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>add_user_with_hash()</code> (dòng 62)</h3>
+<h3><span class="num">15</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>add_user_with_hash()</code> (dòng 74)</h3>
 <ol>
   <li>Chuẩn hóa từng trường; role mặc định <code>staff</code>.</li>
   <li><code>INSERT INTO users</code> với mật khẩu đã băm. Nếu username hoặc email vừa bị người khác đăng ký trước (lỗi <code>IntegrityError</code>) thì báo trùng.</li>
@@ -243,7 +243,8 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
   <li><strong>Mật khẩu được băm ngay từ bước đầu</strong>, nên ngay cả trong RAM lúc chờ OTP cũng không có mật khẩu gốc.</li>
   <li><strong>Gửi lại an toàn</strong> nhờ <code>request_id</code> và <code>fingerprint</code>: bấm đăng ký lại không gửi thêm email, không tạo hai tài khoản.</li>
   <li><strong>Chống spam email:</strong> 60 giây mỗi lần, 5 lần mỗi giờ cho một email; nhập sai 5 lần phải xin mã mới.</li>
-  <li class="note"><strong>Kiểm tra trùng username/email ở bước đầu có thể đã cũ</strong> sau 15 phút chờ OTP. Database vẫn chặn trùng nhờ ràng buộc <code>UNIQUE</code>, nên trường hợp đó chỉ báo lỗi ở bước cuối.</li>
+  <li class="note"><strong>Kiểm tra trùng username/email ở bước đầu có thể đã cũ</strong> sau 15 phút chờ OTP. Database chặn trùng nhờ ràng buộc <code>UNIQUE</code>, nên trường hợp đó chỉ báo lỗi ở bước cuối. Riêng username: kiểm tra ban đầu không phân biệt hoa/thường nhưng <code>UNIQUE</code> thì có, nên hai đăng ký song song "An"/"an" có thể cùng lọt (SEC-14 trong <code>androidv0.1/log/SECURITY_NOTES.md</code>).</li>
+  <li class="note"><strong>Báo trùng email làm lộ email đã có tài khoản</strong> (SEC-05); đăng nhập thì đã chống dò.</li>
 </ul>
 </main>
 </body>

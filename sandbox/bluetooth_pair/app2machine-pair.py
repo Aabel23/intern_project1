@@ -29,10 +29,10 @@ def main():
     parser.add_argument("--once", action="store_true", help="dừng sau một lần pair thành công")
     args = parser.parse_args()
     if args.env:
-        # Phải đặt trước khi import machine_config vì đường dẫn đọc lúc import.
+        # Phải đặt trước khi import config.env vì đường dẫn đọc lúc import.
         os.environ["FLEXMIX_MACHINE_ENV"] = str(Path(args.env).resolve())
 
-    from machine.config.machine_config import get_machine_name, get_product_key
+    from machine.config.env import get_machine_name, get_product_key
     from machine.pairing.bluetooth_pairing import handle_connection
     from sandbox.bluetooth_pair.win_bluetooth import serve
 

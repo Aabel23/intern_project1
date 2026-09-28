@@ -106,6 +106,16 @@ class Phone:
         self.shell("input", "text", text.replace(" ", "%s"))
         self.hide_keyboard()
 
+    def replace_text(self, index, text):
+        """Xóa nội dung ô nhập thứ index rồi gõ text mới."""
+        fields = [node for node in self.nodes() if node.cls == "EditText"]
+        self.tap(fields[index])
+        # Về cuối ô rồi xóa lùi từng ký tự (input không có lệnh chọn hết).
+        self.shell("input", "keyevent", "KEYCODE_MOVE_END")
+        self.shell("input", "keyevent", *["KEYCODE_DEL"] * (len(fields[index].text) + 5))
+        self.shell("input", "text", text.replace(" ", "%s"))
+        self.hide_keyboard()
+
     def back(self):
         self.shell("input", "keyevent", "4")
         time.sleep(0.8)

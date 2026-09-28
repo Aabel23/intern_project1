@@ -6,6 +6,8 @@ SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8000
 HEARTBEAT_TIMEOUT_SECONDS = 15
 COMMAND_TIMEOUT_SECONDS = 20
+# Máy hỏi lệnh được giữ tối đa chừng này giây (long-poll); nhỏ hơn timeout 10s của máy.
+POLL_WAIT_SECONDS = 8
 
 # Tài khoản gửi mail và mật khẩu nằm trong config/.env, không ghi vào mã nguồn.
 SMTP_HOST = "smtp.gmail.com"

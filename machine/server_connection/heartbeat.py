@@ -5,12 +5,8 @@ import time
 import urllib.error
 import urllib.request
 
-from config.machine_config import (
-    HEARTBEAT_INTERVAL_SECONDS,
-    HEARTBEAT_PATH,
-    get_product_key,
-    get_server_url,
-)
+from config.env import get_product_key, get_server_url
+from config.routing import HEARTBEAT_INTERVAL_SECONDS, HEARTBEAT_PATH
 
 
 def send_heartbeat():

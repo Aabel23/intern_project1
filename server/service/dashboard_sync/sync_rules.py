@@ -8,5 +8,17 @@ QUYEN_DONG_BO = {
     "dong_bo_nguyen_lieu": {"owner", "manager"},
 }
 
+# Lệnh app gửi qua /app/gui-lenh và vai trò được gửi; lệnh ngoài bảng bị chặn
+# ở server, không chuyển xuống máy.
+QUYEN_LENH = {
+    "xem_menu": {"owner", "manager"},
+    "xem_nguyen_lieu": {"owner", "manager"},
+    "doi_trang_thai_mon": {"owner", "manager"},
+    "doi_gia_mon": {"owner", "manager"},
+    "dat_luong_nguyen_lieu": {"owner", "manager"},
+    "them_nguyen_lieu": {"owner", "manager"},
+    "tru_nguyen_lieu": {"owner", "manager"},
+}
+
 # Vai trò được nạp kho qua /machine/refill.
 QUYEN_NAP_KHO = {"owner", "manager"}

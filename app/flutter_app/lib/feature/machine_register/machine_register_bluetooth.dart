@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../../UI/dashboard/machine_api.dart';
 
+String maskKey(String? key) {
+  if (key == null || key.isEmpty) return '';
+  return key.length <= 4 ? '••••' : '••••${key.substring(key.length - 4)}';
+}
+
 class MachinePairingPage extends StatefulWidget {
   const MachinePairingPage({super.key, required this.serverUrl, this.token});
   final String serverUrl;
@@ -147,8 +152,9 @@ class _MachinePairingPageState extends State<MachinePairingPage> {
                               'Tên máy: ${packet!['machine_name']}',
                             ),
                             const SizedBox(height: 8),
-                            SelectableText(
-                              'Product key: ${packet!['product_key']}',
+                            // Product key là mật khẩu của máy với server: chỉ hiện 4 ký tự cuối.
+                            Text(
+                              'Product key: ${maskKey(packet!['product_key'])}',
                             ),
                           ],
                         ),

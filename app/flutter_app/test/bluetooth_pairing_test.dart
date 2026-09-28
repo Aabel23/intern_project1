@@ -47,7 +47,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(selected, 'AA:BB:CC:DD:EE:02');
     expect(find.text('Tên máy: FlexMix-02'), findsOneWidget);
-    expect(find.text('Product key: test-product-key'), findsOneWidget);
+    expect(find.text('Product key: ••••-key'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     expect(cancelled, isTrue);

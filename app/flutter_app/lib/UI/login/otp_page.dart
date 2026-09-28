@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../app_theme.dart';
+
 import 'package:flutter/services.dart';
 
 import 'registration_request.dart';
@@ -118,8 +121,8 @@ class _OtpPageState extends State<OtpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F6F3),
-      appBar: AppBar(backgroundColor: const Color(0xFFF2F6F3)),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(backgroundColor: AppColors.background),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -135,7 +138,7 @@ class _OtpPageState extends State<OtpPage> {
                     const Icon(
                       Icons.mark_email_read_outlined,
                       size: 72,
-                      color: Color(0xFF16796B),
+                      color: AppColors.green,
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -144,14 +147,14 @@ class _OtpPageState extends State<OtpPage> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF183B36),
+                        color: AppColors.ink,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Nhập mã OTP cho ${widget.email}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF657B74)),
+                      style: const TextStyle(color: AppColors.muted),
                     ),
                     const SizedBox(height: 32),
                     TextFormField(

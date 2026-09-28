@@ -189,7 +189,7 @@ def main():
     spec = importlib.util.spec_from_file_location("machine_main", MACHINE_DIR / "main.py")
     machine = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(machine)
-    from config.machine_config import get_machine_name, get_server_url
+    from config.env import get_machine_name, get_server_url
     try:
         try:
             print(f"Máy giả {get_machine_name()} nối {get_server_url()}, Ctrl+C để dừng.", flush=True)

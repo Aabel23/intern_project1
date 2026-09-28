@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../feature/data_sync/products_sync.dart';
+import '../../app_theme.dart';
 import '../dashboard/dashboard_widgets.dart';
 
 // Tab Sản phẩm: danh sách món từ máy, công tắc bật/tắt bán.
@@ -22,7 +23,7 @@ class ProductsTab extends StatelessWidget {
     builder: (context, _) => RefreshIndicator(
       onRefresh: products.load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
           const PageTitle('Sản phẩm'),
           if (products.loading)
@@ -41,19 +42,47 @@ class ProductsTab extends StatelessWidget {
               child: Card(
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 14,
+                    vertical: 6,
                   ),
-                  leading: CircleAvatar(
-                    child: Text(p.name.isEmpty ? '?' : p.name[0]),
+                  leading: InitialsTile(
+                    initialsOf(p.name),
+                    background: p.inStock
+                        ? AppColors.greenTint
+                        : AppColors.orangeTint,
+                    foreground: p.inStock
+                        ? AppColors.green
+                        : AppColors.orangeText,
                   ),
                   title: Text(
                     p.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
                   ),
-                  subtitle: Text(
-                    '${money(p.price)} · '
-                    '${p.inStock ? 'Còn nguyên liệu' : 'Thiếu nguyên liệu'}',
+                  subtitle: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: money(p.price),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.green,
+                          ),
+                        ),
+                        TextSpan(
+                          text:
+                              ' · '
+                              '${p.inStock ? 'Còn nguyên liệu' : 'Thiếu nguyên liệu'}',
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
                   ),
                   trailing: Switch(
                     value: p.available,

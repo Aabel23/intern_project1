@@ -3,13 +3,8 @@
 import json
 import urllib.request
 
-from config.machine_config import (
-    GET_COMMAND_PATH,
-    POST_RESULT_PATH,
-    POST_SYNC_PATH,
-    get_product_key,
-    get_server_url,
-)
+from config.env import get_product_key, get_server_url
+from config.routing import GET_COMMAND_PATH, POST_RESULT_PATH, POST_SYNC_PATH
 
 
 def post_json(path, data):
