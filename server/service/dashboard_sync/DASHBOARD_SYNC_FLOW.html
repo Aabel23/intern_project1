@@ -67,9 +67,9 @@
 <h2>Các tab</h2>
 <div class="table-wrap"><table>
 <tr><th>Tab</th><th>Module server</th><th>Route</th><th>Lệnh xuống máy</th></tr>
-<tr><td>Menu</td><td><a href="menu_sync/menu_sync_flow.py">menu_sync</a></td><td><code>/app/nhan-menu</code>, <code>/app/gui-menu</code></td><td><code>nhan_menu</code>, <code>gui_menu</code></td></tr>
-<tr><td>Kho</td><td><a href="ingredient_sync/ingredient_sync_flow.py">ingredient_sync</a></td><td><code>/app/nhan-kho</code>, <code>/app/nap-kho</code></td><td><code>nhan_kho</code>, <code>nap_kho</code></td></tr>
-<tr><td>Máy</td><td><a href="machinelist_sync/machinelist_flow.py">machinelist_sync</a></td><td><code>/app/may-cua-toi</code>, <code>/app/doi-ten-may</code>, <code>/app/go-may</code>, <code>GET /machine/trang-thai</code></td><td>không</td></tr>
+<tr><td>Menu</td><td><a href="menu_sync/machine_menu_sync.py">menu_sync</a></td><td><code>/app/nhan-menu</code>, <code>/app/gui-menu</code></td><td><code>nhan_menu</code>, <code>gui_menu</code></td></tr>
+<tr><td>Kho</td><td><a href="ingredient_sync/machine_ingredient_sync.py">ingredient_sync</a></td><td><code>/app/nhan-kho</code>, <code>/app/nap-kho</code></td><td><code>nhan_kho</code>, <code>nap_kho</code></td></tr>
+<tr><td>Máy</td><td><a href="machinelist_sync/machine_list_manage.py">machinelist_sync</a></td><td><code>/app/may-cua-toi</code>, <code>/app/doi-ten-may</code>, <code>/app/go-may</code>, <code>GET /machine/trang-thai</code></td><td>không</td></tr>
 </table></div>
 
 <h2>Đọc dữ liệu máy theo version</h2>
@@ -78,11 +78,11 @@
 <p>Gửi version đang giữ (<code>menu_version</code> / <code>version</code>), lần đầu hoặc sau khi đổi máy là <code>0</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">2</span>Server: <code>*_api.py</code> → <code>*_flow.py</code></h3>
-<p><code>sync_rules.check_access()</code> (token → người dùng → quản lý máy → vai trò), <code>*_verify.py</code> kiểm version là số 0..2³²−1, rồi <code>link_queue.send()</code>. Kết quả máy đi nguyên về app, server không đọc và không lưu.</p>
+<h3><span class="num">2</span>Server: <code>*_request.py</code> → <code>*_sync.py</code></h3>
+<p><code>machine_access.check_access()</code> (token → người dùng → quản lý máy → vai trò), <code>*_validate.py</code> kiểm version là số 0..2³²−1, rồi <code>machine_transport.send()</code>. Kết quả máy đi nguyên về app, server không đọc và không lưu.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span>Máy: <code>machine/&lt;tab&gt;/..._flow.py</code></h3>
+<h3><span class="num">3</span>Máy: <code>machine/&lt;tab&gt;/machine_..._sync.py</code></h3>
 <p>Đọc database, tính CRC32 của dữ liệu. Trùng version app gửi → <code>{"status": "up_to_date", version}</code>, không gửi lại dữ liệu. Khác → <code>{"status": "ok", version, dữ liệu}</code>; menu gói dữ liệu thành <code>packet</code> base64(zlib(JSON)).</p>
 </div>
 <div class="step">
@@ -98,12 +98,12 @@
 
 <h2>Thêm một tab mới</h2>
 <ol>
-  <li>Server: folder <code>dashboard_sync/&lt;tab&gt;_sync/</code> theo mẫu api / verify / flow (<code>androidv0.1/MODULE_PATTERN.md</code>), quyền trong <code>sync_rules.py</code>, route trong <code>config/routing.py</code>, thêm vào <code>MODULES</code> của <code>server/main.py</code>.</li>
+  <li>Server: folder <code>dashboard_sync/&lt;tab&gt;_sync/</code> tự tổ chức file theo trách nhiệm (<code>androidv0.1/MODULE_PATTERN.md</code>), quyền nằm trong module, route ở config/routing.py, thêm vào <code>MODULES</code> của <code>server/main.py</code>.</li>
   <li>Máy: folder <code>machine/&lt;tab&gt;_sync/</code> với bảng <code>COMMANDS</code>, gộp vào <code>COMMANDS</code> của <code>machine/main.py</code>.</li>
 </ol>
 
 <h2>Test</h2>
-<p><code>python -m unittest machine.test_relay</code> chạy server thật + vòng lặp máy thật với database giả, đi hết Menu và Kho.</p>
+<p><code>python -m unittest tests.python.test_machine_relay</code> chạy server thật + vòng lặp máy thật với database giả, đi hết Menu và Kho.</p>
 </main>
 </body>
 </html>

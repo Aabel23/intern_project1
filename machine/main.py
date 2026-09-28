@@ -9,11 +9,11 @@ import time
 import urllib.error
 
 # Kết nối server
-from server_connection import heartbeat, instruction_api
+from server_connection import machine_server_heartbeat as heartbeat, machine_server_request
 
 # Các module: instruction → hàm xử lý
-from ingredient_sync.ingredient_sync_api import COMMANDS as INGREDIENT_COMMANDS
-from menu_sync.menu_sync_api import COMMANDS as MENU_COMMANDS
+from ingredient_sync.machine_ingredient_request import COMMANDS as INGREDIENT_COMMANDS
+from menu_sync.machine_menu_request import COMMANDS as MENU_COMMANDS
 
 COMMANDS = {**MENU_COMMANDS, **INGREDIENT_COMMANDS}
 
@@ -33,7 +33,7 @@ def poll():
     """Lệnh kế tiếp, hoặc None khi hết giờ long-poll hay mất kết nối."""
     started = time.monotonic()
     try:
-        lenh = instruction_api.poll_command()
+        lenh = machine_server_request.poll_command()
     except (urllib.error.URLError, OSError, ValueError) as error:
         print("Khong ket noi duoc server:", error, flush=True)
         time.sleep(1)
@@ -46,7 +46,7 @@ def poll():
 
 def reply(lenh, ket_qua):
     try:
-        instruction_api.send_result(lenh["id"], ket_qua)
+        machine_server_request.send_result(lenh["id"], ket_qua)
     except (urllib.error.URLError, OSError) as error:
         print("Khong gui duoc ket qua:", error, flush=True)
 

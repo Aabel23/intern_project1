@@ -131,14 +131,14 @@ mật khẩu thì nhận luôn token.</p>
       <li>Gọi <code>too_many_requests()</code> (dòng 89): một địa chỉ IP quá 30 request trong một phút thì trả mã 429.</li>
       <li>Đọc body, chỉ nhận từ 1 đến 4096 byte, giải mã JSON rồi gọi <code>receive_login(data)</code>.</li>
       <li>Có lỗi JSON thì trả 400, lỗi database thì trả 503.</li>
-      <li><code>handle()</code> trong <code>login_api.py</code> gọi <code>server/lib/http_json.handle_routes</code> (kèm <code>with_valid_status</code>) trả kết quả: 200 nếu <code>valid</code> là true, 400 nếu false, 429 nếu kết quả có <code>retry_after</code>.</li>
+      <li><code>handle()</code> trong <code>user_login_request.py</code> gọi <code>server/lib/http_json.handle_routes</code> (kèm <code>with_valid_status</code>) trả kết quả: 200 nếu <code>valid</code> là true, 400 nếu false, 429 nếu kết quả có <code>retry_after</code>.</li>
     </ol>
   </li>
 </ul>
 </div>
 
 <div class="step">
-<h3><span class="num">5</span><a href="login_flow.py">login_flow.py</a>, hàm <code>receive_login(data)</code></h3>
+<h3><span class="num">5</span><a href="user_login_process.py">user_login_process.py</a>, hàm <code>receive_login(data)</code></h3>
 <p>Hàm này quản lý các lần đăng nhập đang diễn ra, lưu trong biến <code>LOGIN_STATES</code> trên bộ nhớ:</p>
 <ol>
   <li>Kiểm tra <code>request_id</code> đúng dạng 32 ký tự hex.</li>
@@ -163,7 +163,7 @@ mật khẩu thì nhận luôn token.</p>
 </div>
 
 <div class="step">
-<h3><span class="num">6</span><a href="login_verify.py">login_verify.py</a>, hàm <code>verify_login(data)</code></h3>
+<h3><span class="num">6</span><a href="user_login_process.py">user_login_process.py</a>, hàm <code>verify_login(data)</code></h3>
 <ol>
   <li>Kiểm tra username và mật khẩu có giá trị, username tối đa 150 ký tự, mật khẩu tối đa 1024.</li>
   <li>Gọi <code>get_credentials(username)</code> để lấy mật khẩu đã băm trong database.</li>
@@ -180,7 +180,7 @@ mật khẩu thì nhận luôn token.</p>
 </div>
 
 <div class="step">
-<h3><span class="num">8</span><a href="login_verify.py">login_verify.py</a>, hàm <code>_matches_password(password, stored)</code></h3>
+<h3><span class="num">8</span><a href="../../lib/passwords.py">passwords.py</a>, hàm <code>matches_password(password, stored)</code></h3>
 <ol>
   <li>Tách chuỗi đã lưu theo dạng <code>pbkdf2_sha256$số_vòng$salt$mã_băm</code>.</li>
   <li>Băm lại mật khẩu vừa nhập bằng <code>hashlib.pbkdf2_hmac</code> với cùng salt và số vòng.</li>
@@ -189,7 +189,7 @@ mật khẩu thì nhận luôn token.</p>
 </div>
 
 <div class="step">
-<h3><span class="num">9</span><a href="../../lib/session.py">server/lib/session.py</a>, hàm <code>create_session(user_id)</code> (gọi từ <code>login_flow.login_result</code>)</h3>
+<h3><span class="num">9</span><a href="../../lib/session.py">server/lib/session.py</a>, hàm <code>create_session(user_id)</code> (gọi từ <code>user_login_process.login_result</code>)</h3>
 <ol>
   <li>Xóa các phiên đã hết hạn trong <code>app_sessions</code>.</li>
   <li>Tạo <code>token = secrets.token_urlsafe(32)</code>.</li>
@@ -211,7 +211,7 @@ mật khẩu thì nhận luôn token.</p>
 </div>
 
 <div class="step">
-<h3><span class="num">12</span><a href="login_flow.py">login_flow.py</a>, hàm <code>send_verification(data)</code></h3>
+<h3><span class="num">12</span><a href="user_login_process.py">user_login_process.py</a>, hàm <code>send_verification(data)</code></h3>
 <ol>
   <li>Kiểm tra <code>request_id</code> và <code>login_id</code> có đúng dạng.</li>
   <li>Xóa các lần đăng nhập quá hạn, rồi tìm theo <code>login_id</code>:
@@ -246,16 +246,16 @@ mật khẩu thì nhận luôn token.</p>
 <pre><code>auth_page._submit
  └─ login_request.requestLogin
      ├─ postRegistrationJson → POST /app/dang-nhap
-     │    main.Handler.do_POST → too_many_requests
-     │     └─ login_flow.receive_login   (lưu trạng thái vào LOGIN_STATES)
-     │         └─ login_verify.verify_login
+     │    module_server.Handler.do_POST → too_many_requests
+     │     └─ user_login_process.receive_login   (lưu trạng thái vào LOGIN_STATES)
+     │         └─ user_login_process.verify_login
      │             ├─ user_read.get_credentials   (SELECT users)
      │             ├─ _matches_password           (PBKDF2)
      │             └─ session.create_session      (INSERT app_sessions → token)
      │    ← {login_id}
      └─ postRegistrationJson → POST /app/xac-minh-dang-nhap
-          main.Handler.do_POST
-           └─ login_flow.send_verification  (lấy result trong LOGIN_STATES)
+          module_server.Handler.do_POST
+           └─ user_login_process.send_verification  (lấy result trong LOGIN_STATES)
           ← {valid, token}
  └─ Navigator → MainDashboard(token) → loadMyMachines</code></pre>
 

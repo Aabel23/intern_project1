@@ -6,7 +6,7 @@ Tạo bảng trong `server/database/database.db` từ thư mục gốc dự án:
 python -m server.database.machine.init_db
 ```
 
-Lệnh chạy lại được, không xóa dữ liệu hay sửa bảng `users`.
+Lệnh chạy lại được, không xóa dữ liệu; cũng tạo bảng tài khoản/phiên nếu chưa có.
 
 | Cột | Ý nghĩa |
 | --- | --- |
@@ -48,7 +48,7 @@ Một máy có thể có nhiều người quản lý, một người quản lý 
 | `created_at` | Thời điểm gán quyền (UTC) |
 
 Khóa chính `(machine_id, user_id)` nên không gán trùng một người cho một máy.
-Chưa có API ghi bảng này; đăng ký máy qua QR/Bluetooth chưa tự gán người quét.
+Đăng ký máy gán người quét đầu tiên làm chủ; chia sẻ thêm quyền nhân viên.
 
 ```sql
 -- Máy do user 1 quản lý
@@ -59,13 +59,15 @@ WHERE mm.user_id = 1;
 
 ## File quản lý dữ liệu máy
 
-Các service không viết SQL bảng máy trực tiếp mà gọi qua ba file:
+Schema dùng chung ở đây gồm máy và quyền quản lý. Module chia sẻ tự giữ bảng mã mời.
 
 | File | Nội dung |
 | --- | --- |
-| `machine_read.py` | tra máy theo product key, khớp ID/key, chủ máy, quyền quản lý, máy của một tài khoản, danh sách nhân viên |
-| `machine_write.py` | thêm máy, gán chủ, thêm/xóa quyền nhân viên |
-| `machine_invite.py` | lưu mã mời mới (xóa mã cũ), tìm mã còn hiệu lực, đánh dấu đã dùng |
+| `machine_read.py` | Tra danh tính máy và quyền quản lý dùng chung |
+| `machine_write.py` | Xóa quyền nhân viên, dùng cho thu hồi và tự rời máy |
+| `service/machine_register/machine_register_store.py` | Tạo máy và gán chủ |
+| `service/machine_share/machine_share_store.py`, `machine_share_schema.sql` | Mã mời, danh sách/thêm nhân viên, khởi tạo bảng riêng |
+| `service/dashboard_sync/machinelist_sync/machine_list_store.py` | Danh sách máy, đổi tên và xóa máy |
 
-Hàm ghi luôn nhận `conn` để nơi gọi giữ giao dịch (`BEGIN IMMEDIATE`); hàm đọc nhận
-`conn` tùy chọn, bỏ trống thì tự mở kết nối.
+Transaction do flow sở hữu; các bước đọc quyền và ghi liên quan dùng cùng `conn`.
+`init_db` chỉ khởi tạo schema chung; bảng mã mời được tạo qua hook setup của module chia sẻ.

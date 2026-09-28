@@ -115,7 +115,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 
 <h2>Cách 2: Bluetooth</h2>
 <div class="step">
-<h3><span class="num">5</span><a href="../../../machine/pairing/bluez_server.py">bluez_server.py</a>, hàm <code>run_server()</code> (chạy trên Raspberry Pi)</h3>
+<h3><span class="num">5</span><a href="../../../machine/pairing/machine_bluetooth_serve.py">machine_bluetooth_serve.py</a>, hàm <code>run_server()</code> (chạy trên Raspberry Pi)</h3>
 <ol>
   <li>Tìm adapter Bluetooth, bật nguồn, đặt tên hiển thị bằng tên máy (<code>FlexMix-...</code>).</li>
   <li>Đăng ký <code>PairingAgent</code> kiểu <code>NoInputNoOutput</code>: ghép đôi không cần nhập mã, chỉ chấp nhận dịch vụ SPP.</li>
@@ -150,7 +150,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">10</span><a href="../../../machine/pairing/bluetooth_pairing.py">bluetooth_pairing.py</a>, hàm <code>handle_connection()</code> (phía máy)</h3>
+<h3><span class="num">10</span><a href="../../../machine/pairing/machine_bluetooth_pair.py">machine_bluetooth_pair.py</a>, hàm <code>handle_connection()</code> (phía máy)</h3>
 <ol>
   <li><code>pair_bluetooth()</code>: chờ gói <code>identify</code>, trả <code>ready</code>.</li>
   <li><code>send_bluetooth()</code>: gửi <code>{type: pairing, machine_name, product_key}</code> đọc từ <code>machine/config/machine.env</code> qua <a href="../../../machine/config/machine_config.py">machine_config.py</a>, chờ <code>ack</code>.</li>
@@ -176,7 +176,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 <p>Tra <code>ROUTES</code>: <code>/app/dang-ky-may</code> ứng với <code>receive_register</code> của luồng đăng ký máy.</p>
 </div>
 <div class="step">
-<h3><span class="num">14</span><a href="machine_register_flow.py">machine_register_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 12)</h3>
+<h3><span class="num">14</span><a href="machine_register_process.py">machine_register_process.py</a>, hàm <code>receive_register(data)</code> (dòng 12)</h3>
 <ol>
   <li><code>check_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
   <li><code>check_login(data)</code> trong <a href="../../lib/session.py">server/lib/session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>
@@ -200,7 +200,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 
 <h2>Sơ đồ tóm tắt</h2>
 <pre><code>Cách 1 (QR)                              Cách 2 (Bluetooth)
-machine_qr.py → in tem                    bluez_server.run_server (Pi)
+machine_qr.py → in tem                    machine_bluetooth_serve.run_server (Pi)
 machines_tab._open                        machine_register_bluetooth.scan
  └─ MachineQrPage.detect                    └─ BluetoothPairing.kt scan / connect
      └─ parseMachineQr                           ⇄ bluetooth_pairing.handle_connection
@@ -208,8 +208,8 @@ machines_tab._open                        machine_register_bluetooth.scan
             └──────────────┬──────────────────────┘
                            ▼
           MachineApi.registerMachine → POST /app/dang-ky-may {name, key, token}
-           main.Handler.do_POST
-            └─ machine_register_flow.receive_register
+           module_server.Handler.do_POST
+            └─ machine_register_process.receive_register
                 ├─ check_machine
                 ├─ session.user_from_request        (token → user_id)
                 ├─ INSERT machines                  (nếu key mới)

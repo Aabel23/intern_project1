@@ -8,14 +8,14 @@ Mỗi tab dashboard của app là một folder, **chia theo tab, không chia the
 | `ingredient_sync/` | Kho | `/app/nhan-kho`, `/app/nap-kho` | của máy, hỏi xuống qua hộp thư |
 | `machinelist_sync/` | Máy | `/app/may-cua-toi`, `/app/doi-ten-may`, `/app/go-may`, GET `/machine/trang-thai` | của server (bảng `machines`, giờ heartbeat) |
 
-`sync_rules.py`: bảng vai trò được làm từng việc (`QUYEN_MENU`, `QUYEN_KHO`,
-`QUYEN_NAP_KHO`) và `check_access(data, roles)` dùng chung cho Menu và Kho:
+Vai trò được phép nằm trong flow của mỗi module (`QUYEN_MENU`, `QUYEN_KHO`,
+`QUYEN_NAP_KHO`). `server/lib/machine_access.py` cung cấp `check_access(data, roles)`:
 token → người dùng → có quản lý máy → vai trò đủ quyền.
 
 ## Tab dữ liệu máy (Menu, Kho)
 
 Server không lưu dữ liệu máy. Module kiểm quyền và dạng gói, rồi gọi
-`machine_link.link_queue.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
+`server.lib.machine_transport.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
 tới khi máy long-poll lấy, máy trả kết quả, server chuyển nguyên cho app.
 
 ```
@@ -30,7 +30,7 @@ App ─ POST /app/nhan-kho {token, machine_id, version}
 
 `version` là CRC32 của dữ liệu do máy tính; app chưa có dữ liệu gửi `0`. Menu làm y như
 vậy với `menu_version`, kết quả thêm gói `packet` = base64(zlib(JSON)), xem
-`machine/menu_sync/menu_sync_packet.py`.
+`machine/menu_sync/machine_menu_pack.py`.
 
 ### Route
 
@@ -65,5 +65,5 @@ Thân lỗi `{"loi": ...}`:
 | Kho | `ingredient_sync/` | `machine/ingredient_sync/` (MySQL của `version1.0`) | `lib/feature/data_sync/ingredients_sync.dart` |
 | Máy | `machinelist_sync/` | — | `lib/UI/dashboard/dashboard/dashboard_controller.dart` |
 
-Mỗi module theo mẫu api / verify / flow trong `androidv0.1/MODULE_PATTERN.md`. Thử riêng:
-`python sandbox/server_module/run_modules.py menu_sync ingredient_sync link login`.
+Module tự chọn cách chia file, xem `androidv0.1/MODULE_PATTERN.md`. Chạy server:
+`python -m server.main`.

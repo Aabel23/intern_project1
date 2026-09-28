@@ -62,7 +62,7 @@
 <body>
 <main>
 <h1>Cổng máy: hộp thư lệnh và heartbeat</h1>
-<p class="lead">Máy nằm sau router của quán nên server không gọi xuống máy được. Máy tự lên server: báo còn sống, hỏi lệnh, trả kết quả. Module nào cần máy làm gì chỉ gọi một hàm <code>send()</code>. Code: <a href="link_queue.py">link_queue.py</a> (hộp thư, giờ heartbeat), <a href="link_api.py">link_api.py</a> → <a href="link_flow.py">link_flow.py</a> → <a href="link_verify.py">link_verify.py</a> (route máy gọi).</p>
+<p class="lead">Máy nằm sau router của quán nên server không gọi xuống máy được. Máy tự lên server: báo còn sống, hỏi lệnh, trả kết quả. Module nào cần máy làm gì chỉ gọi một hàm <code>send()</code>. Code: <a href="../../lib/machine_transport.py">machine_transport.py</a> (hộp thư, giờ heartbeat), <a href="machine_link_request.py">machine_link_request.py</a> → <a href="machine_link_process.py">machine_link_process.py</a> (route máy gọi).</p>
 
 <h2>Route (chỉ máy gọi)</h2>
 <div class="table-wrap"><table>
@@ -71,15 +71,15 @@
 <tr><td><code>POST /machine/hoi-lenh</code></td><td>product_key</td><td><code>{lenh: {id, instruction, data} | null}</code>; server giữ tối đa 8 giây, có lệnh là trả ngay</td></tr>
 <tr><td><code>POST /machine/tra-ket-qua</code></td><td>product_key, id, ket_qua</td><td><code>{da_nhan: true}</code></td></tr>
 </table></div>
-<p>Key sai hoặc chưa đăng ký: <code>403 {"loi": "Máy chưa đăng ký hoặc sai product key"}</code>. App xem máy Online/Offline qua <code>GET /machine/trang-thai</code> của tab Máy (<a href="../dashboard_sync/machinelist_sync/machinelist_api.py">machinelist_sync</a>), đọc cùng giờ heartbeat này.</p>
+<p>Key sai hoặc chưa đăng ký: <code>403 {"loi": "Máy chưa đăng ký hoặc sai product key"}</code>. App xem máy Online/Offline qua <code>GET /machine/trang-thai</code> của tab Máy (<a href="../dashboard_sync/machinelist_sync/machine_list_request.py">machinelist_sync</a>), đọc cùng giờ heartbeat này.</p>
 
 <h2>Một lệnh đi từ app tới máy</h2>
 <div class="step">
-<h3><span class="num">1</span>Module của tab (vd <a href="../dashboard_sync/ingredient_sync/ingredient_sync_flow.py">ingredient_sync_flow.py</a>)</h3>
-<p>Kiểm token và quyền (<code>sync_rules.check_access</code>), kiểm dạng gói, rồi gọi <code>send(machine_id, "nhan_kho", {"version": 0})</code>. Token của app không đi xuống máy.</p>
+<h3><span class="num">1</span>Module của tab (vd <a href="../dashboard_sync/ingredient_sync/machine_ingredient_sync.py">machine_ingredient_sync.py</a>)</h3>
+<p>Kiểm token và quyền (<code>machine_access.check_access</code>), kiểm dạng gói, rồi gọi <code>send(machine_id, "nhan_kho", {"version": 0})</code>. Token của app không đi xuống máy.</p>
 </div>
 <div class="step">
-<h3><span class="num">2</span><a href="link_queue.py">link_queue.py</a>, <code>send()</code></h3>
+<h3><span class="num">2</span><a href="../../lib/machine_transport.py">machine_transport.py</a>, <code>send()</code></h3>
 <ol>
   <li>Máy không heartbeat trong 15 giây → trả ngay <code>503 {"loi": "Máy đang offline"}</code>.</li>
   <li>Đánh số lệnh, bỏ <code>{id, instruction, data}</code> vào <code>HOP_THU[machine_id]</code>, đánh thức máy đang long-poll, ghi <code>DANG_CHO[id]</code> rồi chờ tối đa 20 giây.</li>
@@ -92,7 +92,7 @@
 <p>Long-poll <code>/machine/hoi-lenh</code> nhận lệnh, tra <code>instruction</code> trong bảng <code>COMMANDS</code> gộp từ các module máy (<code>menu_sync/</code>, <code>ingredient_sync/</code>), chạy hàm, gửi kết quả lên <code>/machine/tra-ket-qua</code>. Lỗi trong hàm thành <code>{"loi": ...}</code>, vòng lặp vẫn chạy.</p>
 </div>
 <div class="step">
-<h3><span class="num">4</span><a href="link_flow.py">link_flow.py</a>, <code>send_result()</code> → <code>deliver()</code></h3>
+<h3><span class="num">4</span><a href="machine_link_process.py">machine_link_process.py</a>, <code>send_result()</code> → <code>deliver()</code></h3>
 <p>Chỉ chuyển kết quả cho <code>send()</code> đang chờ nếu lệnh <code>id</code> đó được giao cho đúng máy này; máy khác gửi bừa id thì bị bỏ qua.</p>
 </div>
 
@@ -109,7 +109,7 @@ App ◀── 200 kết quả | 502 máy lỗi/không trả lời | 503 offline<
   <li>Mỗi máy chỉ <strong>một</strong> long-poll cho mọi loại lệnh; module mới không thêm kết nối, chỉ thêm một <code>instruction</code>.</li>
   <li>Hộp thư và giờ heartbeat nằm trong RAM: khởi động lại server là mất lệnh đang chờ, app đang chờ nhận lỗi và gửi lại.</li>
   <li>Chưa giới hạn số lệnh chờ của mỗi máy; lệnh tự hủy sau 20 giây nếu máy không lấy.</li>
-  <li>Thử cả luồng không cần Raspberry Pi: <code>sandbox/relay/machine_sim.py</code> chạy nguyên <code>machine/main.py</code> với database giả.</li>
+  <li>Thử cả luồng không cần Raspberry Pi: <code>tests/relay/machine_sim.py</code> chạy nguyên <code>machine/main.py</code> với database giả.</li>
 </ul>
 </main>
 </body>

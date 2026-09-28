@@ -50,5 +50,5 @@ nên mã hóa sau này trong `machine_share_qr.dart` áp dụng cho cả hai đ�
    như khi quét QR. Mã vẫn dùng một lần, hết hạn sau 5 phút.
 
 Thử với một điện thoại: laptop Windows đóng vai nhân viên bằng
-`python sandbox/bluetooth_pair/app2app_pair.py` (cần server đang chạy và một
+`python tests/bluetooth_pair/app2app_pair.py` (cần server đang chạy và một
 tài khoản thứ hai).

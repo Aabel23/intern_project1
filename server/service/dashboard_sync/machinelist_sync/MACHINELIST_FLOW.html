@@ -63,7 +63,7 @@
 <main>
 <h1>Tab Máy: danh sách, đổi tên và gỡ máy</h1>
 <p class="lead">Hai thao tác trong menu ⋮ của mỗi máy ở tab Máy. Cả hai đều là JSON gửi bằng POST tới server,
-có kèm token đăng nhập. Code server: <a href="machinelist_api.py">machinelist_api.py</a> (nhận POST) → <a href="machinelist_flow.py">machinelist_flow.py</a> (luồng) → <a href="machinelist_verify.py">machinelist_verify.py</a> (kiểm tra), SQL: <a href="../../../database/machine/machine_write.py">machine_write.py</a>.</p>
+có kèm token đăng nhập. Code server: <a href="machine_list_request.py">machine_list_request.py</a> (nhận POST) → <a href="machine_list_manage.py">machine_list_manage.py</a> (kiểm tra và xử lý), SQL: <a href="machine_list_store.py">machine_list_store.py</a>.</p>
 
 <h2>API và gói tin</h2>
 <p>Mọi gói là JSON gửi bằng <code>POST</code>, <code>Content-Type: application/json</code>. Token hết hạn thì server trả <code>login_required: true</code> và app quay về màn hình đăng nhập.</p>
@@ -94,11 +94,11 @@ có kèm token đăng nhập. Code server: <a href="machinelist_api.py">machinel
 <p>POST <code>/app/doi-ten-may</code> với <code>{machine_id, name, token}</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="machinelist_flow.py">machinelist_flow.py</a>, <code>rename_machine()</code></h3>
+<h3><span class="num">3</span><a href="machine_list_manage.py">machine_list_manage.py</a>, <code>rename_machine()</code></h3>
 <ol>
-  <li><code>machinelist_api.handle()</code> đọc body (tối đa 4096 byte) rồi gọi flow.</li>
-  <li><code>machinelist_verify.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>clean_name()</code>: tên 1-150 ký tự.</li>
-  <li><code>machinelist_verify.role_of()</code>: phải là chủ máy.</li>
+  <li><code>machine_list_request.handle()</code> đọc body (tối đa 4096 byte) rồi gọi flow.</li>
+  <li><code>machine_list_manage.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>clean_name()</code>: tên 1-150 ký tự.</li>
+  <li><code>machine_list_manage.role_of()</code>: phải là chủ máy.</li>
   <li><code>machine_write.rename_machine()</code>: <code>UPDATE machines SET name=?</code>; trigger tự cập nhật <code>updated_at</code>.</li>
 </ol>
 </div>
@@ -117,9 +117,9 @@ có kèm token đăng nhập. Code server: <a href="machinelist_api.py">machinel
 <p>POST <code>/app/go-may</code> với <code>{machine_id, token}</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="machinelist_flow.py">machinelist_flow.py</a>, <code>remove_machine()</code></h3>
+<h3><span class="num">3</span><a href="machine_list_manage.py">machine_list_manage.py</a>, <code>remove_machine()</code></h3>
 <ol>
-  <li><code>machinelist_verify.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>BEGIN IMMEDIATE</code> khóa ghi rồi <code>role_of()</code> đọc vai trò.</li>
+  <li><code>machine_list_manage.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>BEGIN IMMEDIATE</code> khóa ghi rồi <code>role_of()</code> đọc vai trò.</li>
   <li><strong>Chủ:</strong> <code>machine_write.delete_machine()</code> xóa dòng <code>machines</code>; <code>ON DELETE CASCADE</code> xóa luôn quyền mọi nhân viên và mã mời. <code>product_key_hash</code> mất nên tem QR đăng ký lại được.</li>
   <li><strong>Nhân viên:</strong> <code>machine_write.remove_manager()</code> xóa đúng dòng <code>role='manager'</code> của người đó.</li>
 </ol>

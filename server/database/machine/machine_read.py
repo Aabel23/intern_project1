@@ -63,27 +63,3 @@ def can_manage(machine_id, user_id, conn=None):
             (machine_id, user_id),
         ).fetchone()
     return row is not None
-
-
-def list_by_user(user_id):
-    """Các máy tài khoản đang là owner hoặc manager."""
-    with use_connection() as conn:
-        rows = conn.execute(
-            "SELECT m.machine_id, m.name, mm.role FROM machine_managers mm"
-            " JOIN machines m ON m.machine_id = mm.machine_id"
-            " WHERE mm.user_id=? ORDER BY mm.created_at, m.name",
-            (user_id,),
-        ).fetchall()
-    return [dict(row) for row in rows]
-
-
-def list_staff(machine_id, conn=None):
-    """Nhân viên (manager) của máy, không gồm chủ."""
-    with use_connection(conn) as conn:
-        rows = conn.execute(
-            "SELECT u.id AS user_id, u.username, u.full_name FROM machine_managers mm"
-            " JOIN users u ON u.id = mm.user_id"
-            " WHERE mm.machine_id=? AND mm.role='manager' ORDER BY mm.created_at, u.username",
-            (machine_id,),
-        ).fetchall()
-    return [dict(row) for row in rows]

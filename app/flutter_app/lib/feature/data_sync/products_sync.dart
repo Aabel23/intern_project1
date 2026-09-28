@@ -31,7 +31,7 @@ class Drink {
 }
 
 // Gói menu: base64(zlib(JSON)) với "fields" là tên cột và mỗi món là một mảng
-// theo đúng thứ tự đó (xem machine/menu_sync/menu_sync_packet.py).
+// theo đúng thứ tự đó (xem machine/menu_sync/machine_menu_pack.py).
 ({int version, List<Drink> drinks}) decodeMenuPacket(String packet) {
   final json = jsonDecode(
     utf8.decode(ZLibCodec().decode(base64Decode(packet))),

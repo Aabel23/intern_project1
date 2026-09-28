@@ -31,7 +31,7 @@ chiếm máy trước chủ thật, nên không commit, không gửi qua chat.
 # Relay: heartbeat + nhận lệnh từ app (cần package database của máy pha trên PYTHONPATH)
 cd machine && python main.py
 # Bluetooth pairing trên Pi (xem pairing/README.md)
-python3 -m machine.pairing.bluetooth_pairing
+python3 -m machine.pairing.machine_bluetooth_pair
 ```
 
 ## Giao thức relay
@@ -55,8 +55,8 @@ MySQL mất kết nối) được trả về app dạng `{"loi": ...}`, vòng l�
 ## Kiểm tra
 
 ```sh
-python -m unittest machine.pairing.test_bluetooth_pairing machine.test_relay -v
+python -m unittest tests.python.test_machine_bluetooth tests.python.test_machine_relay -v
 ```
 
-`test_relay` chạy vòng lặp thật của `main.py` với server thật (SQLite tạm) và database máy giả.
-Muốn thử với app trên điện thoại mà không có Pi: xem `sandbox/README.md`.
+`test_machine_relay` chạy vòng lặp thật của `main.py` với server thật (SQLite tạm) và database máy giả.
+Muốn thử với app trên điện thoại mà không có Pi: xem `tests/README.md`.

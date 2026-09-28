@@ -1,59 +1,54 @@
-"""Điểm khởi động chung: python -m server.main (từ thư mục gốc dự án).
+"""Khởi động toàn bộ module: python -m server.main."""
 
-main chỉ gọi các module lên: mỗi module tự nghe đường dẫn của mình, tự đọc body,
-tự kiểm tra và tự trả lời (xem server/lib/module_server.py). Thêm tính năng mới
-là thêm một dòng vào MODULES.
-"""
-
-# Thư viện chuẩn
+import argparse
 import sys
 
-# Server chung: cấu hình, database, khung server
 from server.config.config import SERVER_HOST, SERVER_PORT
 from server.database.machine.init_db import init_db
-from server.lib.module_server import ModuleServer, make_handler
+from server.lib.module_server import ModuleServer
+from server.service.dashboard_sync.ingredient_sync import machine_ingredient_request
+from server.service.dashboard_sync.machinelist_sync import machine_list_request
+from server.service.dashboard_sync.menu_sync import machine_menu_request
+from server.service.machine_link import machine_link_request
+from server.service.machine_register import machine_register_request
+from server.service.machine_share import machine_share_request
+from server.service.user_login import user_login_request
+from server.service.user_register import user_register_request
 
-# Các module: mỗi module tự nghe đường dẫn của mình
-from server.service.dashboard_sync.ingredient_sync import ingredient_sync_api
-from server.service.dashboard_sync.machinelist_sync import machinelist_api
-from server.service.dashboard_sync.menu_sync import menu_sync_api
-from server.service.machine_register import machine_register_api
-from server.service.machine_link import link_api
-from server.service.machine_share import share_api
-from server.service.user_login import login_api
-from server.service.user_register import user_register_api
 
 MODULES = (
-    user_register_api,
-    login_api,
-    machine_register_api,
-    share_api,
-    machinelist_api,
-    link_api,
-    menu_sync_api,
-    ingredient_sync_api,
+    user_register_request,
+    user_login_request,
+    machine_register_request,
+    machine_share_request,
+    machine_list_request,
+    machine_link_request,
+    machine_menu_request,
+    machine_ingredient_request,
 )
 
-Handler = make_handler(MODULES)
 
-
-class Server(ModuleServer):
-    modules = MODULES
+def create_server(address):
+    """Khởi tạo dữ liệu chung và chạy toàn bộ module đã đăng ký ở trên."""
+    init_db()
+    return ModuleServer(address, MODULES)
 
 
 def main():
-    # Terminal Windows hoặc log chuyển hướng ra file mặc định cp1252, không in được tiếng Việt.
     sys.stdout.reconfigure(encoding="utf-8")
-    init_db()
+    parser = argparse.ArgumentParser(description="Chạy các module FlexMix trên một cổng.")
+    parser.add_argument("--host", default=SERVER_HOST)
+    parser.add_argument("--port", type=int, default=SERVER_PORT)
+    args = parser.parse_args()
     try:
-        with Server((SERVER_HOST, SERVER_PORT), Handler) as server:
-            print(f"FlexMix server: http://{SERVER_HOST}:{SERVER_PORT}", flush=True)
-            for module in MODULES:
-                print(f"  - {module.__name__.rsplit('.', 1)[-1]}", flush=True)
+        with create_server((args.host, args.port)) as server:
+            print(f"FlexMix server: http://{args.host}:{server.server_port}", flush=True)
+            for module in server.modules:
+                print(f"  - {module.__name__}", flush=True)
             print("Nhấn Ctrl+C để dừng.", flush=True)
             server.serve_forever()
     except KeyboardInterrupt:
-        print("\nĐã dừng server.", flush=True)
+        print("Đã dừng server.", flush=True)
 
 
 if __name__ == "__main__":

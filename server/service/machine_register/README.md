@@ -1,10 +1,10 @@
 # Đăng ký máy
 
-Flow nằm trong `machine_register_flow.py`.
+Flow nằm trong `machine_register_process.py`.
 
-- `machine_register_api.py`: chỉ khai báo hai route (`ROUTES`), `server/main.py` gộp vào server chung.
-- `machine_register_flow.py`: kiểm tra gói, lưu SQLite, cấp ID hoặc trả ID cũ.
-- `machine_register_verify.py`: kiểm tra trường dữ liệu và đối chiếu ID/key đã đăng ký.
+- `machine_register_request.py`: khai báo route (`ROUTES`), server nạp theo `server/main.py`.
+- `machine_register_process.py`: kiểm tra gói, lưu SQLite, cấp ID hoặc trả ID cũ.
+- `machine_register_store.py`: SQL tạo máy và gán chủ; kiểm tra gói nằm ngay trong flow.
 
 POST `/app/dang-ky-may`:
 
@@ -31,5 +31,5 @@ App tự POST gói sau Bluetooth rồi hiển thị ID server trả về.
 Máy không cần biết ID: khi heartbeat/nhận lệnh, máy xưng danh bằng product key.
 
 ```sh
-python -m unittest server.service.machine_register.test_flow -v
+python -m unittest tests.python.test_machine_register -v
 ```

@@ -14,7 +14,7 @@ flutter build apk --release --dart-define=SERVER_URL=http://<IP máy chạy serv
 
 Thiếu `SERVER_URL` thì màn hình đăng nhập báo cần build lại. Điện thoại và máy chạy
 server phải cùng mạng; server nghe `0.0.0.0:8000` (xem `server/START.md`).
-`python sandbox/e2e/run_e2e.py` tự dò IP laptop, build, cài và test trên điện thoại.
+`python tests/e2e/run_e2e.py` tự dò IP laptop, build, cài và test trên điện thoại.
 
 ## Cấu trúc
 

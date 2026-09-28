@@ -1,217 +1,148 @@
-# Mẫu module: cấu trúc và phong cách
+# Thiết kế module và quy ước đặt tên
 
-Quy ước cho mọi tính năng mới và cho các module cũ khi được chuyển sang. Mẫu gốc:
-`server/service/dashboard_sync/menu_sync/` (server) và `machine/menu_sync/` (máy);
-`server/service/dashboard_sync/machinelist_sync/` (tab Máy) là module cũ đầu tiên đã chuyển.
+Thiết kế này được chốt theo yêu cầu người dùng. Các lần sửa sau giữ cấu trúc và
+quy ước này, trừ khi người dùng yêu cầu thay đổi thiết kế.
 
-## 1. Ý tưởng
+Nguyên tắc: mỗi module sở hữu ánh xạ route, gói tin, kiểm tra đầu vào, nghiệp vụ,
+cấu hình riêng và truy vấn riêng; các đường dẫn HTTP được cấu hình tập trung. Module không import code của tính năng khác.
+Thay nội bộ một module chỉ cần giữ hợp đồng đầu vào/đầu ra và dữ liệu dùng chung.
 
-**`main.py` chỉ gọi các module lên.** Mỗi module tự nghe đường dẫn của mình, tự đọc
-body, tự kiểm tra, tự trả lời. Thêm tính năng = thêm một folder module + một dòng
-trong `MODULES` của `server/main.py`.
+## Routing và khởi động
 
-Server chỉ có **một cổng**, nên vẫn cần một chỗ nhận request rồi hỏi lần lượt từng
-module "đường dẫn này của anh không?". Việc đó nằm ở `server/lib/module_server.py`,
-không có logic nghiệp vụ nào.
-
-Những thứ **bắt buộc dùng chung**, module gọi tới chứ không giữ bản riêng:
-
-| Dùng chung | Ở đâu | Vì sao không để trong module |
-|---|---|---|
-| Gửi lệnh xuống máy | `service/machine_link/link_queue.py`: `send(machine_id, instruction, data)` → `(thân, status)` | Máy chỉ long-poll **một** chỗ cho mọi loại lệnh; mỗi module một hộp thư = mỗi máy N kết nối treo, lệnh các tab tới lệch thứ tự |
-| Quyền của tab dữ liệu máy | `service/dashboard_sync/sync_rules.py`: `check_access(data, roles)` | Cùng một luật token → người dùng → quản lý máy → vai trò cho Menu, Kho |
-| Phiên đăng nhập | `server/lib/session.py` (`check_login`, `user_from_request`, `create_session`) | Một token dùng cho mọi API; nằm trong lib để không module nào phải import module đăng nhập |
-| Đọc/ghi database | `server/database/...` (`machine_read`, `machine_write`, `get_connection`) | Một database cho cả server |
-| Đọc/ghi JSON, gắn status | `server/lib/http_json.py` (`handle_routes`, `with_valid_status`, `invalid`) | Giống hệt nhau ở mọi module |
-| Giới hạn theo IP | `server/lib/rate_limit.py` | Đếm theo IP trên toàn server |
-
-## 2. Module phía server
-
-```
-server/service/<nhóm>/<module>/
-    <module>_api.py       HTTP: ROUTES, MAX_BODY, handle(request)
-    <module>_verify.py    kiểm tra: chỉ đọc, không ghi database, không gọi mạng
-    <module>_flow.py      luồng: xỏ verify với database / hộp thư, trả (kết quả, status)
-    test_flow.py          gọi thẳng hàm flow, database SQLite tạm
-    <MODULE>_FLOW.html    (tùy) tài liệu luồng từ lúc bấm nút trên app
-```
-
-### `*_api.py`: chỉ HTTP
-
-- Docstring đầu file liệt kê **mọi route** với body app gửi lên, để mở file ra là biết
-  module nghe ở đâu.
-- `ROUTES = {đường_dẫn: hàm_flow}`; đường dẫn lấy từ `server/config/routing.py`.
-- `MAX_BODY`: module tự chọn (4096 cho gói tài khoản, 64 000 cho menu...).
-- `handle(request) -> bool`: `False` nếu đường dẫn không thuộc module; nếu thuộc thì
-  đọc JSON, gọi flow, gửi JSON, trả `True`. Không tự viết: gọi
-  `lib/http_json.handle_routes`, truyền hàm tạo thân lỗi theo dạng app của module
-  (lỗi JSON → 400, `sqlite3.Error` → 503).
-- Tùy chọn: `handle_get(request)` cho GET, `tick()` cho việc định kỳ (dọn phiên hết
-  hạn), `module_server` gọi mỗi ~0,5 giây.
-- Không có logic nghiệp vụ.
-
-```python
-ROUTES = {
-    APP_RENAME_MACHINE: rename_machine,
-    APP_REMOVE_MACHINE: remove_machine,
-}
-MAX_BODY = 4096
-
-
-def handle(request):
-    """True nếu request thuộc module này và đã trả lời (server chính chỉ gọi hàm này)."""
-    return handle_routes(request, ROUTES, MAX_BODY, invalid)   # menu: lambda m: {"loi": m}
-```
-
-### `*_verify.py`: chỉ kiểm tra
-
-- Đăng nhập, quyền với máy, dạng dữ liệu (kiểu, độ dài, khoảng giá trị).
-- **Chỉ đọc.** Được đọc database để kiểm quyền; không ghi, không gọi mạng. Khi kiểm
-  tra phải cùng transaction với lệnh ghi (vd đọc vai trò rồi xóa máy), hàm verify
-  nhận `conn` của flow thay vì tự mở kết nối.
-- Lỗi trả về là **thân JSON gửi app**; flow tự gắn status. Dạng hay dùng:
-  `check_request(data) -> (user_id, machine_id, None)` hoặc `(None, None, lỗi)`.
-- Gửi lệnh xuống máy không phải kiểm tra: flow gọi thẳng `link_queue.send()` và trả
-  nguyên `(thân, status)` nó đưa về.
-
-### `*_flow.py`: nối các bước
-
-- Docstring đầu file vẽ luồng từng route trong 1-2 dòng:
-  `rename_machine: đăng nhập → mã máy → tên → phải là chủ → đổi tên`.
-- Mỗi hàm route nhận body đã parse. Module dạng `{"loi"}` (Menu, Kho, cổng máy) trả
-  **`(kết quả, HTTP status)`**; module dạng `{"valid"}` (tài khoản, máy, chia sẻ, tab Máy)
-  chỉ trả **thân**, api bọc `ROUTES` bằng `with_valid_status()` để status suy ra từ `valid`
-  (200 / 400 / 429 khi kèm `retry_after`).
-- Không đọc/ghi HTTP, không kiểm tra lặt vặt tại chỗ: gọi verify.
-- Không có khối `if __name__ == "__main__"`. Module không tự chạy riêng: cần thử riêng
-  thì dùng `sandbox/server_module/run_modules.py`, ghép module với những module nó cần
-  (`login` để có token, `link` để máy nhận lệnh):
+`server/config/routing.py` giữ các đường dẫn HTTP, chia nhóm theo tính năng bằng comment.
+Module import các hằng route và tự ánh xạ sang hàm xử lý trong `ROUTES`.
+`server/main.py` import trực tiếp các module và đăng ký trong tuple `MODULES`;
+mặc định luôn chạy toàn bộ. Không có registry import động hay tùy chọn chọn module.
 
 ```sh
-python sandbox/server_module/run_modules.py machinelist login --port 8001
+python -m server.main
+python -m server.main --port 8001
 ```
 
-  Module mới thêm một dòng vào bảng `MODULES` của script đó.
+Thêm tính năng: thêm hằng vào routing, viết module rồi import/đăng ký ở main.
 
-### Định dạng trả về
+## Giao diện với server
 
-Giữ đúng dạng app đang đọc cho từng route, **không đổi khi refactor**:
+| Thành phần | Hợp đồng |
+| --- | --- |
+| `ROUTES` | Các route POST của module; server kiểm tra trùng route trước khi khởi động |
+| `handle(request) -> bool` | Xử lý POST; trả False nếu route không thuộc module |
+| `GET_ROUTES`, `handle_get(request)` | Tùy chọn, tương tự cho GET |
+| `setup()` | Tùy chọn; khởi tạo/nâng cấp dữ liệu riêng, chạy lại an toàn |
+| `tick()` | Tùy chọn; dọn trạng thái định kỳ |
 
-| Nhóm | Thân | Status |
-|---|---|---|
-| Tài khoản, máy, chia sẻ, quản lý máy | `{"valid": bool, "message": ..., ...}`; hết phiên thì `NOT_LOGGED_IN` (có `login_required`) | 200 khi `valid`, 400 khi không, 429 khi kèm `retry_after`, 503 lỗi database |
-| Menu, kho, cổng máy | `{"loi": ...}` khi lỗi; menu thêm `{"status": "ok" \| "up_to_date" \| "conflict", ...}` | 400 gói sai, 401 hết phiên, 403 không đủ quyền, 502 máy báo lỗi, 503 máy offline |
+`server/lib/http_json.py` cung cấp đọc/ghi JSON, giới hạn body và xử lý lỗi SQLite.
+Module tự chọn giới hạn body, kiểm tra gói tin và quyết định kết quả.
+Route lấy từ `server/config/routing.py`. Flow đăng nhập cũng dùng cùng hằng khi trả route xác minh cho app.
 
-Muốn thống nhất hai dạng là một thay đổi riêng, phải sửa app đi kèm.
+## Bên trong module
 
-### Nhóm `dashboard_sync/`: chia theo tab của app
+Không bắt buộc đủ bộ `request / process / validate / store`, không bắt buộc số file.
+Giữ các hàm liên quan gần nhau. Tách file khi một phần đủ lớn hoặc có trách nhiệm
+riêng thực sự. Một helper kiểm tra nhỏ có thể nằm ngay trong flow.
 
-Mỗi tab dashboard một folder, **không** chia theo nguồn dữ liệu:
+## Đặt tên file tính năng
 
-| Folder | Tab | Dữ liệu ở đâu |
-|---|---|---|
-| `menu_sync/` | Menu | của máy: hỏi xuống qua hộp thư, máy offline thì không đọc được |
-| `ingredient_sync/` | Kho | của máy: hỏi xuống qua hộp thư |
-| `machinelist_sync/` | Máy | của server (bảng `machines`), không cần máy online |
+Dạng chung: `<đối_tượng>_<thành_phần>_<hành_động>.py`, snake_case tiếng Anh.
+Đối tượng là thứ được xử lý (`user`, `machine`); thành phần là tính năng hoặc
+dữ liệu (`login`, `register`, `share`, `menu`, `ingredient`, `otp`); phần cuối
+nói việc chính file thực hiện. Server và máy dùng cùng tên cho cùng trách nhiệm,
+vị trí thư mục cho biết nơi chạy.
 
-### Đăng ký module
+| Phần cuối | Trách nhiệm | Ví dụ |
+| --- | --- | --- |
+| `request` | Nhận/gửi yêu cầu hoặc khai bảng lệnh | `machine_menu_request.py` |
+| `process` | Điều phối nghiệp vụ | `machine_share_process.py` |
+| `manage` | Quản lý đối tượng: liệt kê, đổi tên, gỡ | `machine_list_manage.py` |
+| `sync` | Đồng bộ dữ liệu | `machine_menu_sync.py` |
+| `validate` | Kiểm dữ liệu | `user_register_validate.py` |
+| `store` | Đọc/ghi dữ liệu | `machine_share_store.py` |
+| `pack` | Đóng gói/encode dữ liệu | `machine_menu_pack.py` |
+| `generate`, `send` | Sinh/gửi mã | `user_otp_generate.py`, `user_otp_send.py` |
+| `pair`, `serve` | Ghép đôi, nhận kết nối Bluetooth | `machine_bluetooth_pair.py`, `machine_bluetooth_serve.py` |
+| `heartbeat` | Báo máy còn hoạt động | `machine_server_heartbeat.py` |
 
-1. Thêm hằng đường dẫn vào `server/config/routing.py`.
-2. Thêm `<module>_api` vào `MODULES` trong `server/main.py`.
-3. Nếu có bảng quyền theo vai trò: khai trong `sync_rules.py` (dashboard) hoặc trong verify.
-4. Thêm vào `MODULES` của `sandbox/server_module/run_modules.py` để chạy thử riêng.
+Schema riêng dùng `<đối_tượng>_<thành_phần>_schema.sql`, ví dụ
+`machine_share_schema.sql`. Test dùng `test_<đối_tượng>_<thành_phần>.py` để
+công cụ unittest nhận diện, ví dụ `test_machine_share.py`.
 
-## 3. Module phía máy
+```text
+server/service/machine_share/
+    machine_share_request.py
+    machine_share_process.py
+    machine_share_store.py
+    machine_share_schema.sql
 
-Máy không nghe HTTP: nó long-poll server lấy lệnh (`machine/main.py`), rồi tra bảng lệnh
-của từng module.
-
-```
-machine/<module>/
-    <module>_api.py        COMMANDS = {tên_lệnh: hàm_flow}; main.py tra bảng này
-    <module>_verify.py     kiểm dạng lệnh server gửi xuống (raise ValueError khi sai)
-    <module>_flow.py       verify → database → đóng gói kết quả
-    <module>_database.py   file duy nhất đụng database của máy
-    <module>_packet.py     (tùy) đóng gói/nén dữ liệu gửi lên
-```
-
-- Verify của máy **không kiểm quyền người dùng**: server đã kiểm, và máy không có bảng
-  người dùng. Server cũng không chuyển token xuống máy.
-- Lỗi (ValueError, lỗi database) để nổi lên: vòng lặp `main.py` bắt và trả `{"loi": ...}`
-  cho app, máy vẫn chạy tiếp.
-- Ghi nhiều dòng: kiểm hết rồi mới ghi, trong một transaction.
-
-## 4. Phong cách code
-
-**Import luôn ở đầu file**, không import trong hàm hay trong `if __name__ == "__main__"`,
-chia nhóm theo nguồn, mỗi nhóm một dòng chú thích:
-
-```python
-# Thư viện chuẩn
-import sqlite3
-
-# Server chung: đường dẫn, xử lý HTTP
-from server.config.routing import APP_MY_MACHINES, APP_REMOVE_MACHINE, APP_RENAME_MACHINE
-from server.lib.http_json import handle_routes
-
-# Module khác: phiên đăng nhập
-from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
-
-# Trong module machinelist_sync
-from .machinelist_flow import list_my_machines, remove_machine, rename_machine
+machine/menu_sync/
+    machine_menu_request.py
+    machine_menu_sync.py
+    machine_menu_validate.py
+    machine_menu_store.py
+    machine_menu_pack.py
 ```
 
-Thứ tự nhóm: thư viện chuẩn → server chung (`server.config`, `server.lib`,
-`server.database`) → module khác (`server.service...`) → trong module (import tương đối).
-Phần sau dấu hai chấm nói nhóm đó dùng để làm gì.
+Tên nền tảng `main.py`, `config.py`, `routing.py`, `__init__.py` và helper chung
+giữ ngắn theo vai trò. Không đổi tên hàm, route hay trường gói tin chỉ để khớp tên file.
 
-**Code phẳng, mỗi file một mắt xích.** Tránh `if/else` lồng nhau và phân tầng phức
-tạp: kiểm sai thì trả sớm (`if error: return error`), tách hàm nhỏ đặt tên rõ
-(`is_price`, `check_change`) thay vì vòng lặp nhiều nhánh, dùng bảng tra
-(`ROUTES`, `COMMANDS`, `EDITABLE = {cột: hàm_kiểm}`) thay cho chuỗi `if tên == ...`.
-Một file chỉ làm một việc trong chuỗi api → verify → flow → database/hộp thư.
+Hiện tại:
 
-**Chú thích và thông báo bằng tiếng Việt.** Thông báo lỗi trả app viết cho người dùng
-đọc ("Chỉ chủ máy mới đổi tên được"), không viết cho lập trình viên.
+| Module | Nội dung tự sở hữu |
+| --- | --- |
+| `user_login` | Ánh xạ route, xác minh thông tin, trạng thái đăng nhập hai bước trong `user_login_process.py` |
+| `user_register` | Dữ liệu đăng ký, OTP, gửi mail và cấu hình SMTP trong `otp/user_otp_send.py` |
+| `machine_register` | Kiểm tra gói, transaction đăng ký và SQL tạo máy/gán chủ trong `machine_register_store.py` |
+| `machine_share` | Quy tắc mời, hạn mã, SQL mã mời/nhân viên, `machine_share_schema.sql`, hook `setup` |
+| `dashboard_sync/machinelist_sync` | Kiểm tra, danh sách/đổi tên/gỡ máy, SQL riêng trong `machine_list_store.py` |
+| `dashboard_sync/menu_sync` | Quyền Menu, kiểm gói Menu, tạo lệnh Menu và trả kết quả |
+| `dashboard_sync/ingredient_sync` | Quyền Kho/nạp Kho, kiểm gói Kho, tạo lệnh Kho và trả kết quả |
+| `machine_link` | Xác minh máy và HTTP heartbeat/hỏi lệnh/trả kết quả |
 
-**Docstring đầu mỗi file** nói file làm gì và *không* làm gì (vd "chỉ đọc, không ghi
-database, không đọc/ghi HTTP"). Chú thích trong code giải thích **vì sao**, không nhắc
-lại code làm gì.
+Tên thư mục hiện tại được giữ để tránh trộn đổi tên với thay đổi ranh giới trách nhiệm.
 
-**Tên**: file `<module>_api.py`, `_verify.py`, `_flow.py`; hàm route đặt theo hành động
-(`rename_machine`, `nhan_menu`); hàm kiểm tra `check_...` (trả lỗi) hoặc `is_...` (trả bool).
+## Những tài nguyên thực sự dùng chung
 
-## 5. Chuyển một module cũ sang mẫu
+| Tài nguyên | Giao diện | Vì sao dùng chung |
+| --- | --- | --- |
+| Phiên tài khoản | `server/lib/session.py` | Một token dùng cho mọi tính năng; tắt login không làm mất phiên đang có |
+| Mật khẩu | `server/lib/passwords.py` | Đăng ký và đăng nhập phải dùng cùng định dạng băm |
+| Tài khoản, máy, quyền quản lý | `server/database/` | Cùng một danh tính và quyền trên toàn hệ thống |
+| Kết nối SQLite | `server/database/connection.py` | Transaction, commit/rollback và foreign key thống nhất |
+| Tra quyền từ token/máy | `server/lib/machine_access.py` | Cơ chế chung; danh sách vai trò được phép do từng module giữ |
+| Hộp thư lệnh và heartbeat | `server/lib/machine_transport.py` | Máy long-poll một chỗ; các tính năng gửi qua cùng kết nối máy |
+| HTTP JSON, rate limit | `server/lib/` | Cơ chế vận chuyển và giới hạn request dùng chung |
 
-1. Tạo `<module>_verify.py`: gom các kiểm tra đang nằm rải trong flow (chỉ đọc).
-2. Sửa flow: gọi verify, không đọc/ghi HTTP, trả thân hoặc `(thân, status)` theo dạng của module
-   (xem mục flow), status **đúng như cũ**.
-3. Sửa api: `handle()` gọi `handle_routes` như mẫu ở mục 2.
-4. Thêm module vào `MODULES` của `sandbox/server_module/run_modules.py`.
-5. `test_flow.py` gọi thẳng hàm flow.
-6. Chạy toàn bộ test (server + `machine.test_relay`), thử chạy riêng bằng `run_modules.py`, cập nhật
-   file `*_FLOW.html` nếu có.
+Các file dùng chung không import `server.service`. Không đưa quy tắc riêng của
+một tính năng vào `lib` chỉ để giảm số dòng ở module.
+SQL dùng riêng nằm trong module; thao tác danh tính/quyền dùng chung vẫn ở database.
+Bảng `machine_invites` do hook setup của module chia sẻ khởi tạo. Các bảng tài khoản,
+phiên, máy và quyền được khởi tạo chung trước hook `setup` của module.
 
-### Tình trạng
+Độc lập ở đây là giữ nghiệp vụ trong module và giảm import nội bộ giữa các tính năng.
+Thay giao thức app/máy, đổi schema chung hay sửa cơ chế xác thực vẫn cần kiểm tra
+các bên sử dụng hợp đồng đó. Toàn bộ module được chạy cùng server.
+Trạng thái OTP, đăng nhập đang chờ và hộp thư thuộc một tiến trình; chưa hỗ trợ
+chia tải chúng sang nhiều worker hoặc thay code nóng khi server đang chạy.
 
-| Module | Theo mẫu |
-|---|---|
-| `dashboard_sync/menu_sync` (server + máy) | ✅ |
-| `dashboard_sync/ingredient_sync` (server + máy) | ✅ |
-| `dashboard_sync/machinelist_sync` (tab Máy: danh sách, đổi tên, gỡ máy, trạng thái) | ✅ |
-| `machine_link` (cổng máy: hộp thư, heartbeat, hỏi lệnh, trả kết quả) | ✅ |
-| `machine_register` (đăng ký máy) | ✅ |
-| `machine_share` (mời nhân viên, xem và thu hồi quyền) | ✅ |
-| `user_login` (đăng nhập hai bước, đăng xuất) | ✅ |
-| `user_register` (đăng ký + `otp/`) | ✅ |
+## Kiểm tra
 
-### Phụ thuộc giữa các module
+```sh
+python -m unittest tests.python.test_server_modules
+.\tests\test.ps1 -Flow S9
+.\tests\test.ps1 -Flow py
+```
 
-Ngoài `server/lib`, `server/config`, `server/database`, code module chỉ import:
+`tests.python.test_server_modules` kiểm route trùng và xác nhận khởi động lại server vẫn giữ dữ liệu.
+Test HTTP liên tính năng nằm ở `tests/python/test_server.py`; test nghiệp vụ từng module dùng SQLite tạm.
 
-| Module | Dùng của module khác | Vì sao |
-|---|---|---|
-| `menu_sync`, `ingredient_sync` | `dashboard_sync/sync_rules.check_access`, `machine_link/link_queue.send` | quyền tab dữ liệu máy; gửi lệnh xuống máy |
-| `machinelist_sync` | `machine_link/link_queue.is_online`, `last_seen_of` | trạng thái Online/Offline |
+Các gói HTTP hiện có được giữ: nhóm tài khoản/máy trả `{valid, message, ...}`;
+Menu/Kho/cổng máy dùng `{loi: ...}` khi lỗi và `(body, status)` trong flow.
+Chuẩn hóa hai dạng này là thay đổi hợp đồng cần làm cùng app.
 
-Test được import flow của module khác để dựng dữ liệu (vd đăng ký máy, mời nhân viên).
+## Phía máy
+
+`machine/main.py` tra bảng `COMMANDS` của từng module theo `instruction`.
+Module tự kiểm gói, thực hiện tác vụ và trả kết quả; tách validate/store/pack
+chỉ khi giúp đọc và bảo trì. Máy không nhận token app; server kiểm quyền trước
+khi gửi lệnh. Các thao tác ghi nhiều dòng giữ cùng một transaction.
+
+Toàn bộ code kiểm thử nằm trong `tests/`, chia theo Python, Flutter và E2E. Module nghiệp vụ không chứa test.
