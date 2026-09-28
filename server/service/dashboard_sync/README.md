@@ -61,9 +61,9 @@ Thân lỗi `{"loi": ...}`:
 
 | | Server | Máy | App |
 | --- | --- | --- | --- |
-| Menu | `menu_sync/` | `machine/menu_sync/` (SQLite `machine/database/database.db`) | `lib/feature/data_sync/products_sync.dart` |
-| Kho | `ingredient_sync/` | `machine/ingredient_sync/` (MySQL của `version1.0`) | `lib/feature/data_sync/ingredients_sync.dart` |
-| Máy | `machinelist_sync/` | — | `lib/UI/dashboard/dashboard/dashboard_controller.dart` |
+| Menu | `menu_sync/` | `machine/menu_sync/` (SQLite `machine/database/database.db`) | `lib/feature/machine_menu/machine_menu_sync.dart` |
+| Kho | `ingredient_sync/` | `machine/ingredient_sync/` (MySQL của `version1.0`) | `lib/feature/machine_ingredient/machine_ingredient_sync.dart` |
+| Máy | `machinelist_sync/` | — | `lib/feature/dashboard/dashboard_controller.dart` |
 
 Module tự chọn cách chia file, xem `androidv0.1/MODULE_PATTERN.md`. Chạy server:
 `python -m server.main`.

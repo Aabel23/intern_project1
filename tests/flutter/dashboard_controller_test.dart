@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_app/UI/dashboard/dashboard/dashboard_controller.dart';
-import 'package:simple_app/UI/dashboard/machine_api.dart';
+import 'package:simple_app/feature/dashboard/dashboard_controller.dart';
+import 'package:simple_app/core/server_client.dart';
 
 // Server giả: /app/may-cua-toi trả danh sách máy đang giữ trong [machines];
 // máy offline nên lệnh xem menu/đồng bộ kho trả lỗi offline như server thật.
@@ -41,7 +41,7 @@ void main() {
     final server = await _fakeServer(machines);
     addTearDown(() => server.close(force: true));
     final controller = DashboardController(
-      MachineApi('http://127.0.0.1:${server.port}', token: 'x' * 43),
+      ServerClient('http://127.0.0.1:${server.port}', token: 'x' * 43),
     );
     addTearDown(controller.dispose);
 

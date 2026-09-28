@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'UI/app_theme.dart';
-import 'UI/login/auth_page.dart';
+import 'package:simple_app/shared/ui/app_theme.dart';
+import 'package:simple_app/app/app_navigation.dart';
 
 void main() {
   runApp(const MainApp());
@@ -16,7 +16,7 @@ class MainApp extends StatelessWidget {
       title: 'FlexMix',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const AuthPage(),
+      home: buildAuthPage(),
     );
   }
 }

@@ -88,11 +88,11 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, hàm <code>_open()</code> (dòng 18)</h3>
+<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/feature/dashboard/ui/machines_tab.dart">machines_tab.dart</a>, hàm <code>_open()</code></h3>
 <p>Nút "Quét QR" gọi <code>_open(context, MachineQrPage(serverUrl, token))</code>: mở màn quét, chờ màn đó đóng, rồi gọi <code>controller.loadMyMachines()</code> để lấy lại danh sách máy.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="../../../app/flutter_app/lib/feature/machine_register/machine_register_qr.dart">machine_register_qr.dart</a>, hàm <code>_MachineQrPageState.detect()</code> (dòng 22)</h3>
+<h3><span class="num">3</span><a href="../../../app/flutter_app/lib/feature/dashboard/ui/machine_qr_page.dart">machine_qr_page.dart</a>, hàm <code>_MachineQrPageState.detect()</code></h3>
 <p>Widget <code>MobileScanner</code> gọi hàm này mỗi khi camera đọc được mã.</p>
 <ol>
   <li>Đang xử lý một mã khác thì bỏ qua.</li>
@@ -104,7 +104,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">4</span><a href="../../../app/flutter_app/lib/feature/machine_share/machine_share_qr.dart">machine_share_qr.dart</a>, hàm <code>parseMachineQr(raw)</code> (dòng 11)</h3>
+<h3><span class="num">4</span><a href="../../../app/flutter_app/lib/core/machine_packet.dart">machine_packet.dart</a>, hàm <code>parseMachineQr(raw)</code></h3>
 <ol>
   <li>QR quá 4096 byte thì từ chối.</li>
   <li>Giải mã JSON. <code>type</code> phải là <code>pairing</code> hoặc <code>share</code>.</li>
@@ -124,7 +124,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">6</span><a href="../../../app/flutter_app/lib/feature/machine_register/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, hàm <code>scan()</code> (dòng 39)</h3>
+<h3><span class="num">6</span><a href="../../../app/flutter_app/lib/feature/machine_register/ui/machine_register_bluetooth_page.dart">machine_register_bluetooth_page.dart</a>, hàm <code>scan()</code></h3>
 <p>Gọi native qua kênh <code>flexmix/bluetooth_pairing</code>, lệnh <code>scan</code>, rồi hiện danh sách. Mặc định chỉ hiện thiết bị tên bắt đầu bằng <code>FlexMix-</code>; bật công tắc "Hiện mọi thiết bị Bluetooth" để thấy cả máy thử không đặt tên như vậy (vd. laptop chạy sandbox).</p>
 </div>
 <div class="step">
@@ -136,11 +136,11 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">8</span><a href="../../../app/flutter_app/lib/feature/machine_register/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, hàm <code>connect(device)</code> (dòng 68)</h3>
+<h3><span class="num">8</span><a href="../../../app/flutter_app/lib/feature/machine_register/ui/machine_register_bluetooth_page.dart">machine_register_bluetooth_page.dart</a>, hàm <code>connect(device)</code></h3>
 <p>Người dùng chọn một máy; hàm gọi lệnh native <code>connect</code> với địa chỉ máy.</p>
 </div>
 <div class="step">
-<h3><span class="num">9</span><a href="../../../app/flutter_app/android/app/src/main/kotlin/com/example/simple_app/BluetoothPairing.kt">BluetoothPairing.kt</a>, hàm <code>connect()</code> (dòng 130)</h3>
+<h3><span class="num">9</span><a href="../../../app/flutter_app/android/app/src/main/kotlin/com/example/simple_app/BluetoothPairing.kt">BluetoothPairing.kt</a>, hàm <code>connect()</code></h3>
 <ol>
   <li>Chỉ cho kết nối tới máy vừa thấy trong lần quét.</li>
   <li>Mở kết nối RFCOMM bảo mật; nếu chưa ghép đôi, Android tự hiện hộp thoại xác nhận.</li>
@@ -158,16 +158,16 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/machine_register/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, tiếp tục trong <code>connect()</code></h3>
+<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/machine_register/ui/machine_register_bluetooth_page.dart">machine_register_bluetooth_page.dart</a>, tiếp tục trong <code>connect()</code></h3>
 <p>Hiện tên máy và 4 ký tự cuối của key (<code>maskKey()</code>, key là mật khẩu của máy với server nên không hiện đủ), rồi gọi <code>MachineApi.registerMachine(answer)</code> giống hệt cách 1.</p>
 </div>
 
 <h2>Phần chung: gửi lên server</h2>
 <div class="step">
-<h3><span class="num">12</span><a href="../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, hàm <code>registerMachine(packet)</code> (dòng 29)</h3>
+<h3><span class="num">12</span><a href="../../../app/flutter_app/lib/feature/machine_register/machine_register_request.dart">machine_register_request.dart</a>, hàm <code>registerMachine(packet)</code></h3>
 <ol>
   <li>Gửi <code>POST /app/dang-ky-may</code> với gói máy cộng thêm <code>token</code>.</li>
-  <li><code>_send()</code> (dòng 204) kiểm tra URL server, gửi JSON, chờ tối đa 25 giây. Mã HTTP lỗi thì lấy <code>message</code> của server làm thông báo.</li>
+  <li><code>_send()</code> kiểm tra URL server, gửi JSON, chờ tối đa 25 giây. Mã HTTP lỗi thì lấy <code>message</code> của server làm thông báo.</li>
   <li>Phản hồi phải có <code>valid: true</code> và <code>machine_id</code>, không thì báo lỗi.</li>
 </ol>
 </div>
@@ -176,7 +176,7 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 <p>Tra <code>ROUTES</code>: <code>/app/dang-ky-may</code> ứng với <code>receive_register</code> của luồng đăng ký máy.</p>
 </div>
 <div class="step">
-<h3><span class="num">14</span><a href="machine_register_process.py">machine_register_process.py</a>, hàm <code>receive_register(data)</code> (dòng 12)</h3>
+<h3><span class="num">14</span><a href="machine_register_process.py">machine_register_process.py</a>, hàm <code>receive_register(data)</code></h3>
 <ol>
   <li><code>check_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
   <li><code>check_login(data)</code> trong <a href="../../lib/session.py">server/lib/session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>

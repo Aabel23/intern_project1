@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:simple_app/feature/machine_register/machine_register_qr.dart';
-import 'package:simple_app/feature/machine_share/machine_share_qr.dart';
+import 'package:simple_app/feature/dashboard/ui/machine_qr_page.dart';
+import 'package:simple_app/core/machine_packet.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -81,6 +81,52 @@ void main() {
       expect(() => parseMachineQr(raw), throwsFormatException);
     }
   });
+
+  test('QR share validates code types and exact length boundaries', () {
+    for (final code in [null, true, 123, [], {}, 'a' * 19, 'a' * 101]) {
+      expect(
+        () => parseMachineQr(jsonEncode({'type': 'share', 'code': code})),
+        throwsFormatException,
+      );
+    }
+    for (final length in [20, 100]) {
+      final code = 'a' * length;
+      expect(
+        parseMachineQr(
+          jsonEncode({
+            'type': 'share',
+            'code': code,
+            'server_url': 'https://untrusted.example',
+            'token': 'injected',
+          }),
+        ),
+        {'type': 'share', 'code': code},
+      );
+    }
+  });
+
+  test(
+    'QR size limit measures UTF-8 bytes and rejects oversized pairing fields',
+    () {
+      expect(
+        () => parseMachineQr(
+          jsonEncode({
+            'type': 'share',
+            'code': 'a' * 32,
+            'padding': '😀' * 1024,
+          }),
+        ),
+        throwsFormatException,
+      );
+      for (final packet in [
+        {'type': 'pairing', 'machine_name': 'x' * 151, 'product_key': 'key'},
+        {'type': 'pairing', 'machine_name': 'valid', 'product_key': 'x' * 1025},
+        {'type': 'pairing', 'machine_name': {}, 'product_key': 'key'},
+      ]) {
+        expect(() => parseMachineQr(jsonEncode(packet)), throwsFormatException);
+      }
+    },
+  );
 
   testWidgets('Nhận QR lặp chỉ gửi một POST và hiển thị ID server', (
     tester,

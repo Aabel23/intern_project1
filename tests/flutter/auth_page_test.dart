@@ -1,12 +1,14 @@
+import 'package:simple_app/app/app_navigation.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simple_app/main.dart';
-import 'package:simple_app/UI/dashboard/dashboard/main_dashboard.dart';
-import 'package:simple_app/UI/login/auth_page.dart';
-import 'package:simple_app/UI/login/otp_page.dart';
+import 'package:simple_app/feature/dashboard/ui/dashboard_page.dart';
+import 'package:simple_app/feature/user_auth/ui/auth_page.dart';
+import 'package:simple_app/feature/user_auth/ui/otp_page.dart';
 
 void main() {
   testWidgets('Nút gửi lại mã chỉ bật sau 60 giây', (tester) async {
@@ -69,7 +71,7 @@ void main() {
       try {
         await tester.pumpWidget(
           MaterialApp(
-            home: AuthPage(serverUrl: 'http://127.0.0.1:${server.port}'),
+            home: buildAuthPage(serverUrl: 'http://127.0.0.1:${server.port}'),
           ),
         );
         await tester.ensureVisible(find.text('Đăng ký ngay'));
@@ -216,7 +218,7 @@ void main() {
       try {
         await tester.pumpWidget(
           MaterialApp(
-            home: AuthPage(serverUrl: 'http://127.0.0.1:${server.port}'),
+            home: buildAuthPage(serverUrl: 'http://127.0.0.1:${server.port}'),
           ),
         );
         expect(find.byKey(const ValueKey('email')), findsNothing);

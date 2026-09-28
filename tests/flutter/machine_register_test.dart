@@ -1,8 +1,10 @@
+import 'package:simple_app/feature/machine_register/machine_register_request.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_app/UI/dashboard/machine_api.dart';
+import 'package:simple_app/core/server_client.dart';
 
 void main() {
   test('Gửi nguyên gói pairing đến route đăng ký và nhận ID', () async {
@@ -24,7 +26,7 @@ void main() {
       await request.response.close();
     });
     try {
-      final api = MachineApi('http://127.0.0.1:${server.port}');
+      final api = ServerClient('http://127.0.0.1:${server.port}');
       final result = await api.registerMachine(packet);
       expect(result['machine_id'], 'fm_test');
       await received;

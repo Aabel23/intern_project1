@@ -22,6 +22,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urljoin
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "log"
@@ -31,6 +32,7 @@ PYTHON = sys.executable
 
 # (ID, nhóm, mô tả, cách chạy). py: module unittest; app: lệnh flutter; e2e: bước trong run_e2e.py.
 FLOWS = [
+    ("S10", "py", "Ranh giới phụ thuộc và trách nhiệm của app", "tests.python.test_app_boundaries"),
     ("S1", "py", "HTTP chung cổng, rate limit, relay, long-poll", "tests.python.test_server"),
     ("S2", "py", "Đăng ký + OTP", "tests.python.test_user_register"),
     ("S3", "py", "Đăng nhập / đăng xuất", "tests.python.test_user_login"),
@@ -43,6 +45,7 @@ FLOWS = [
     ("X1", "py", "Kịch bản tấn công server (lỗ hổng đã biết = expectedFailure, xem SECURITY_NOTES)",
      "tests.python.test_server_security"),
     ("A1", "app", "flutter analyze sạch", "analyze"),
+    ("A2", "app", "Static check test Flutter ngoài package app", "analyze-tests"),
     ("F1", "app", "Đăng nhập / đăng ký / OTP (widget)", "../../tests/flutter/auth_page_test.dart"),
     ("F2", "app", "Dashboard: menu, kho, nạp, phiên hết hạn (widget)", "../../tests/flutter/widget_test.dart"),
     ("F3", "app", "Danh sách máy đồng bộ server, máy offline (widget)", "../../tests/flutter/dashboard_controller_test.dart"),
@@ -80,6 +83,19 @@ def run(cmd, cwd=ROOT, timeout=900):
         out += f"\nHẾT THỜI GIAN sau {timeout}s"
         code = -1
     return code, out.replace("\r\n", "\n"), time.monotonic() - started
+
+
+def prepare_flutter_test_packages():
+    """Let IDE/analyzer resolve relocated tests using the app's existing dependencies."""
+    source = APP / ".dart_tool" / "package_config.json"
+    if not source.exists():
+        return
+    config = json.loads(source.read_text(encoding="utf-8"))
+    for package in config["packages"]:
+        package["rootUri"] = urljoin(source.as_uri(), package["rootUri"])
+    target = ROOT / "tests" / "flutter" / ".dart_tool" / "package_config.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
 
 def wake_phone():
@@ -174,6 +190,7 @@ def main():
                            + "\n".join(out.splitlines()[-60:]) + "\n```\n")
 
     flutter = shutil.which("flutter")
+    prepare_flutter_test_packages()
     for flow_id in ids:
         _, group, _, target = BY_ID[flow_id]
         if group == "py":
@@ -183,8 +200,12 @@ def main():
             if flutter is None:
                 record(flow_id, "LỖI", 0, "Không tìm thấy flutter trong PATH")
                 continue
-            cmd = [flutter, "analyze", "--no-pub"] if target == "analyze" else \
-                [flutter, "test", "--no-pub", *target.split()]
+            if target in ("analyze", "analyze-tests"):
+                cmd = [flutter, "analyze", "--no-pub"]
+                if target == "analyze-tests":
+                    cmd.append("../../tests/flutter")
+            else:
+                cmd = [flutter, "test", "--no-pub", *target.split()]
             code, out, s = run(cmd, cwd=APP)
             record(flow_id, "ĐẠT" if code == 0 else "LỖI", s, out)
 

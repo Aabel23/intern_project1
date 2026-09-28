@@ -1,13 +1,15 @@
+import 'package:simple_app/app/app_navigation.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_app/UI/dashboard/dashboard/main_dashboard.dart';
-import 'package:simple_app/UI/dashboard/machine_api.dart';
-import 'package:simple_app/feature/data_sync/ingredients_sync.dart';
-import 'package:simple_app/UI/login/auth_page.dart';
-import 'package:simple_app/feature/machine_register/machine_register_qr.dart';
+import 'package:simple_app/feature/dashboard/ui/dashboard_page.dart';
+import 'package:simple_app/core/server_client.dart';
+import 'package:simple_app/feature/machine_ingredient/machine_ingredient_sync.dart';
+import 'package:simple_app/feature/user_auth/ui/auth_page.dart';
+import 'package:simple_app/feature/dashboard/ui/machine_qr_page.dart';
 
 // Kho máy giả, cùng dạng máy trả qua /app/nhan-kho.
 const _kho = {
@@ -113,7 +115,7 @@ void main() {
         try {
           await tester.pumpWidget(
             MaterialApp(
-              home: MainDashboard(
+              home: buildDashboard(
                 serverUrl: 'http://127.0.0.1:${server.port}',
                 token: 'token-1',
               ),
@@ -167,7 +169,7 @@ void main() {
       final received = <Map<String, dynamic>>[];
       final server = await _fakeServer(received);
       final inventory = IngredientsSync(
-        MachineApi('http://127.0.0.1:${server.port}', token: 'token-1'),
+        ServerClient('http://127.0.0.1:${server.port}', token: 'token-1'),
         () => 'MAY-TEST',
       );
       try {
@@ -216,7 +218,7 @@ void main() {
       try {
         await tester.pumpWidget(
           MaterialApp(
-            home: MainDashboard(
+            home: buildDashboard(
               serverUrl: 'http://127.0.0.1:${server.port}',
               token: 'token-cu',
             ),
@@ -242,7 +244,7 @@ void main() {
 
   testWidgets('Nút Quét QR mở màn hình đăng ký máy', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: MainDashboard(serverUrl: 'http://127.0.0.1:1')),
+      MaterialApp(home: buildDashboard(serverUrl: 'http://127.0.0.1:1')),
     );
     await tester.tap(find.text('Máy').last);
     await tester.pumpAndSettle();

@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_app/feature/machine_share/machine_share_bluetooth.dart';
-import 'package:simple_app/feature/machine_share/machine_share_qr.dart';
+import 'package:simple_app/feature/machine_share/ui/machine_share_bluetooth_page.dart';
+import 'package:simple_app/core/machine_packet.dart';
 
 void main() {
   const channel = MethodChannel('flexmix/bluetooth_pairing');

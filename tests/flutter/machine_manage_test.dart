@@ -1,9 +1,10 @@
+import 'package:simple_app/app/app_navigation.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_app/UI/dashboard/dashboard/main_dashboard.dart';
 
 void main() {
   testWidgets('Chủ máy đổi tên rồi gỡ máy khỏi quán', (tester) async {
@@ -64,7 +65,7 @@ void main() {
       try {
         await tester.pumpWidget(
           MaterialApp(
-            home: MainDashboard(
+            home: buildDashboard(
               serverUrl: 'http://127.0.0.1:${server.port}',
               token: 'owner-token',
             ),

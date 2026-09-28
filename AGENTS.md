@@ -25,3 +25,8 @@ tiếp tục theo cấu trúc dưới đây.
   `tests/run_tests.py`; chạy bằng `tests/test.ps1 -Flow py` hoặc unittest trực tiếp.
 
 - Toàn bộ test và công cụ mô phỏng nằm trong `tests/`; không đặt test trong module nghiệp vụ.
+
+- App Flutter theo `app/flutter_app/README.md`: `app` lắp ghép điều hướng,
+  `config` giữ route, `core` giữ transport/gói tin, `shared/ui` giữ widget chung.
+  Feature giữ request/state/ui riêng; chỉ dashboard lắp ghép feature khác.
+  Auth và dashboard không import nhau. Test ranh giới ở `tests/python/test_app_boundaries.py`.

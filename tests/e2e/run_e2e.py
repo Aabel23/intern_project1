@@ -410,6 +410,10 @@ def main():
     failed = False
     try:
         t = step("E0 Kiểm tra điện thoại, mạng và server")
+        # Keep the phone awake even when this script is invoked without the runner.
+        phone.shell("svc", "power", "stayon", "usb")
+        phone.shell("input", "keyevent", "224")
+        phone.shell("wm", "dismiss-keyguard", check=False)
         if args.wifi:
             phone_ip = phone.wifi_ip()
             assert phone_ip, "Điện thoại chưa bật Wi-Fi (cần cùng mạng với laptop)."

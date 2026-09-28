@@ -1,34 +1,37 @@
 # App FlexMix (Flutter, Android)
 
-App quản lý máy pha: đăng ký/đăng nhập tài khoản, thêm máy (Bluetooth hoặc tem QR),
-chia sẻ máy cho nhân viên (QR hoặc Bluetooth), xem menu/kho và bật tắt món qua server.
-
-## Địa chỉ server
-
-App không nhúng sẵn địa chỉ server; truyền lúc build/chạy:
-
-```powershell
-flutter run --dart-define=SERVER_URL=http://<IP máy chạy server>:8000
-flutter build apk --release --dart-define=SERVER_URL=http://<IP máy chạy server>:8000
-```
-
-Thiếu `SERVER_URL` thì màn hình đăng nhập báo cần build lại. Điện thoại và máy chạy
-server phải cùng mạng; server nghe `0.0.0.0:8000` (xem `server/START.md`).
-`python tests/e2e/run_e2e.py` tự dò IP laptop, build, cài và test trên điện thoại.
+App quản lý máy pha: tài khoản, thêm/chia sẻ máy qua QR hoặc Bluetooth, menu và kho.
 
 ## Cấu trúc
 
-- `lib/UI/login`: đăng nhập, đăng ký + OTP.
-- `lib/UI/dashboard`: khung chính, các tab và `machine_api.dart` (mọi request tới server).
-  Server báo `login_required` ở bất kỳ API nào thì app quay về màn hình đăng nhập.
-- `lib/feature/machine_register`: thêm máy qua Bluetooth (`BluetoothPairing.kt`) hoặc tem QR.
-- `lib/feature/machine_share`: chia sẻ máy (QR, Bluetooth), danh sách và thu hồi nhân viên.
-  Nội dung QR/gói Bluetooth tạo và đọc tập trung trong `machine_share_qr.dart`.
-- `lib/feature/data_sync`: dữ liệu từng tab (hiện có menu sản phẩm).
+- `lib/app/`: lắp ghép màn hình và điều hướng. Auth và dashboard không import nhau.
+- `lib/config/`: địa chỉ server và route HTTP, chia nhóm như server.
+- `lib/core/`: vận chuyển HTTP, lỗi/phiên và cấu trúc gói QR/Bluetooth dùng chung.
+- `lib/shared/ui/`: theme và widget trình bày dùng chung, không biết feature.
+- `lib/feature/<tính năng>/`: request, dữ liệu/trạng thái và `ui/` của chính tính năng.
 
-## Kiểm tra
+Các feature: `user_auth`, `machine_register`, `machine_share`, `machine_list`,
+`machine_menu`, `machine_ingredient`, `orders`, `dashboard`.
+Dashboard lắp ghép các tab; màn hình QR ở đây phân luồng tem đăng ký và mã chia sẻ.
+`orders` hiện dùng dữ liệu demo, chưa có API đơn hàng.
+
+Request từng feature dùng extension trên `ServerClient`: route, payload và kiểm tra
+kết quả nằm trong feature. Client chung không import feature và không biết nghiệp vụ.
+`core/http_json.dart` giữ cách đọc phản hồi đăng nhập/OTP hiện có; `ServerClient`
+xử lý hai dạng phản hồi tài khoản/máy cùng thông báo phiên hết hạn.
+UI gọi request hoặc state của feature; không tự tạo HTTP client.
+Không bắt buộc thêm controller/model/repository khi chưa có trách nhiệm cần tách.
+
+## Build và kiểm tra
+
+Chạy từ `app/flutter_app`:
 
 ```powershell
 flutter analyze
-flutter test
+flutter test ../../tests/flutter
+flutter build apk --release --dart-define=SERVER_URL=http://<IP server>:8000
 ```
+
+`lib/config/app_config.dart` chứa URL mặc định; `--dart-define=SERVER_URL=...` ghi đè.
+Test điện thoại từ thư mục gốc: `python tests/e2e/run_e2e.py` (ADB USB reverse).
+Bộ test và công cụ mô phỏng nằm trong `../../tests/`; không đặt test trong app.

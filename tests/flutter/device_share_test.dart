@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:simple_app/UI/dashboard/machine_api.dart';
-import 'package:simple_app/feature/machine_share/machine_share.dart';
+import 'package:simple_app/core/server_client.dart';
+import 'package:simple_app/feature/machine_share/ui/machine_share_page.dart';
 
 void main() {
   testWidgets('Chủ máy hiện QR mã mời, xem và thu hồi nhân viên', (
@@ -52,7 +52,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: DeviceSharePage(
-              api: MachineApi(
+              api: ServerClient(
                 'http://127.0.0.1:${server.port}',
                 token: 'owner-token',
               ),

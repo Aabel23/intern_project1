@@ -94,11 +94,11 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 
 <h2>Giai đoạn A: Chủ máy tạo mã mời</h2>
 <div class="step">
-<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, hàm <code>_onMenu()</code> (dòng 24)</h3>
+<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/feature/dashboard/ui/machines_tab.dart">machines_tab.dart</a>, hàm <code>_onMenu()</code></h3>
 <p>Menu ⋮ của mỗi máy chỉ có mục "Chia sẻ cho nhân viên" khi <code>controller.roles[id] == 'owner'</code>. Chọn mục đó thì mở <code>DeviceSharePage(api, machineId, machineName)</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/feature/machine_share/machine_share.dart">machine_share.dart</a>, hàm <code>_DeviceSharePageState.createCode()</code> (dòng 55)</h3>
+<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/feature/machine_share/ui/machine_share_page.dart">machine_share_page.dart</a>, hàm <code>_DeviceSharePageState.createCode()</code></h3>
 <ol>
   <li><code>initState()</code> gọi <code>createCode()</code> và <code>loadStaff()</code> ngay khi mở trang, và chạy một timer mỗi giây để cập nhật thời gian còn lại.</li>
   <li>Gọi <code>MachineApi.createShare(machineId)</code>.</li>
@@ -107,7 +107,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, hàm <code>createShare()</code> và <code>_account()</code> (dòng 47, 102)</h3>
+<h3><span class="num">3</span><a href="../../../app/flutter_app/lib/feature/machine_share/machine_share_request.dart">machine_share_request.dart</a>, hàm <code>createShare()</code> và <code>account()</code></h3>
 <p><code>_account(path, body)</code> là hàm chung cho các API cần đăng nhập: thêm <code>token</code> vào body, gửi POST, và báo lỗi bằng <code>message</code> của server nếu <code>valid</code> không phải true. <code>createShare()</code> gọi nó với <code>/app/tao-ma-chia-se</code> và <code>{machine_id}</code>.</p>
 </div>
 <div class="step">
@@ -115,7 +115,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 <p><code>ROUTES</code> gộp thêm các route trong <a href="machine_share_request.py">machine_share_request.py</a>: <code>/app/tao-ma-chia-se</code>, <code>/app/nhan-chia-se</code>, <code>/app/may-cua-toi</code>, <code>/app/nhan-vien-may</code>, <code>/app/thu-hoi-quyen</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">5</span><a href="machine_share_process.py">machine_share_process.py</a>, hàm <code>create_invite(data)</code> (dòng 19)</h3>
+<h3><span class="num">5</span><a href="machine_share_process.py">machine_share_process.py</a>, hàm <code>create_invite(data)</code></h3>
 <ol>
   <li><code>user_from_request(data)</code>: token phải hợp lệ.</li>
   <li>Kiểm tra <code>machine_id</code> đúng dạng.</li>
@@ -128,7 +128,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 
 <h2>Giai đoạn B: Nhân viên quét mã</h2>
 <div class="step">
-<h3><span class="num">6</span><a href="../../../app/flutter_app/lib/feature/machine_register/machine_register_qr.dart">machine_register_qr.dart</a>, hàm <code>detect()</code>; <a href="../../../app/flutter_app/lib/feature/machine_share/machine_share_qr.dart">machine_share_qr.dart</a>, hàm <code>parseMachineQr()</code></h3>
+<h3><span class="num">6</span><a href="../../../app/flutter_app/lib/feature/dashboard/ui/machine_qr_page.dart">machine_qr_page.dart</a>, hàm <code>detect()</code>; <a href="../../../app/flutter_app/lib/core/machine_packet.dart">machine_packet.dart</a>, hàm <code>parseMachineQr()</code></h3>
 <ol>
   <li>Nhân viên vào tab Máy → "Quét QR", cùng màn với đăng ký máy.</li>
   <li><code>parseMachineQr()</code> nhận ra <code>type: "share"</code>, kiểm tra <code>code</code> dài 20–100 ký tự, trả <code>{type: share, code}</code>.</li>
@@ -137,7 +137,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">7</span><a href="machine_share_process.py">machine_share_process.py</a>, hàm <code>accept_invite(data)</code> (dòng 45)</h3>
+<h3><span class="num">7</span><a href="machine_share_process.py">machine_share_process.py</a>, hàm <code>accept_invite(data)</code></h3>
 <ol>
   <li><code>user_from_request(data)</code>: token phải hợp lệ.</li>
   <li>Kiểm tra <code>code</code> đúng độ dài.</li>
@@ -151,7 +151,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 
 <h2>Giai đoạn C: Danh sách máy cập nhật</h2>
 <div class="step">
-<h3><span class="num">8</span><a href="../../../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, hàm <code>loadMyMachines()</code> (dòng 32)</h3>
+<h3><span class="num">8</span><a href="../../../app/flutter_app/lib/feature/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, hàm <code>loadMyMachines()</code></h3>
 <ol>
   <li>Màn quét đóng lại thì <code>machines_tab._open()</code> gọi hàm này. Hàm cũng chạy khi mở dashboard sau đăng nhập.</li>
   <li>Không có token thì bỏ qua.</li>
@@ -167,7 +167,7 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 <h2>Giai đoạn D: Gửi mã qua Bluetooth thay vì QR</h2>
 <p>Cùng mã mời, cùng nội dung <code>{"type":"share","code":...}</code>; chỉ khác đường đi từ điện thoại chủ sang điện thoại nhân viên.</p>
 <div class="step">
-<h3><span class="num">10</span><a href="../../../app/flutter_app/lib/feature/machine_share/machine_share_bluetooth.dart">machine_share_bluetooth.dart</a>, <code>ShareBluetoothReceivePage.receive()</code> (dòng 174), phía nhân viên</h3>
+<h3><span class="num">10</span><a href="../../../app/flutter_app/lib/feature/machine_share/ui/machine_share_bluetooth_page.dart">machine_share_bluetooth_page.dart</a>, <code>ShareBluetoothReceivePage.receive()</code>, phía nhân viên</h3>
 <ol>
   <li>Nhân viên mở tab Máy → "Nhận chia sẻ qua Bluetooth". Android hỏi cho phép hiện điện thoại 120 giây.</li>
   <li>Native <code>receiveShare</code>/<code>listenShare</code> (<code>BluetoothPairing.kt</code>, dòng 205, 229) mở RFCOMM với <code>SHARE_UUID</code>, chờ <code>identify</code>, trả <code>ready</code>, nhận một dòng <code>type: share</code>, trả <code>ack</code>.</li>
@@ -175,9 +175,9 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/machine_share/machine_share_bluetooth.dart">machine_share_bluetooth.dart</a>, <code>ShareBluetoothSendPage.send()</code> (dòng 73), phía chủ</h3>
+<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/machine_share/ui/machine_share_bluetooth_page.dart">machine_share_bluetooth_page.dart</a>, <code>ShareBluetoothSendPage.send()</code>, phía chủ</h3>
 <ol>
-  <li>Trong trang chia sẻ, nút "Gửi qua Bluetooth" (<code>sendBluetooth()</code>, dòng 124 của <code>machine_share.dart</code>) mở trang quét 15 giây, hiện mọi thiết bị có tên.</li>
+  <li>Trong trang chia sẻ, nút "Gửi qua Bluetooth" (<code>sendBluetooth()</code>, dòng 124 của <code>machine_share_page.dart</code>) mở trang quét 15 giây, hiện mọi thiết bị có tên.</li>
   <li>Chủ chọn điện thoại nhân viên; native <code>sendShare</code> (<code>BluetoothPairing.kt</code>, dòng 148) gửi <code>identify</code>, chờ <code>ready</code>, gửi đúng nội dung QR, chờ <code>ack</code>. Tối đa 60 giây.</li>
   <li>Đóng trang gửi thì <code>loadStaff()</code> chạy lại để nhân viên vừa nhận hiện ngay trong danh sách.</li>
 </ol>
@@ -185,14 +185,14 @@ Mã mời dùng một lần và hết hạn sau 5 phút.</p>
 
 <h2>Giai đoạn E: Chủ xem và thu hồi nhân viên</h2>
 <div class="step">
-<h3><span class="num">12</span><a href="../../../app/flutter_app/lib/feature/machine_share/machine_share.dart">machine_share.dart</a>, <code>loadStaff()</code> (dòng 81) và <code>revoke()</code> (dòng 95)</h3>
+<h3><span class="num">12</span><a href="../../../app/flutter_app/lib/feature/machine_share/ui/machine_share_page.dart">machine_share_page.dart</a>, <code>loadStaff()</code> và <code>revoke()</code></h3>
 <ol>
   <li>Cuối trang chia sẻ là danh sách "Nhân viên đang quản lý", tải bằng <code>MachineApi.listStaff()</code> → <code>/app/nhan-vien-may</code>.</li>
   <li>Nút thu hồi hỏi xác nhận rồi gọi <code>MachineApi.revokeStaff()</code> → <code>/app/thu-hoi-quyen</code>, sau đó tải lại danh sách.</li>
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">13</span><a href="machine_share_process.py">machine_share_process.py</a>, <code>list_staff()</code> (dòng 77) và <code>revoke_staff()</code> (dòng 92)</h3>
+<h3><span class="num">13</span><a href="machine_share_process.py">machine_share_process.py</a>, <code>list_staff()</code> và <code>revoke_staff()</code></h3>
 <ol>
   <li>Cả hai yêu cầu token hợp lệ và người gọi là <code>owner</code> của máy.</li>
   <li><code>list_staff</code> trả các dòng <code>role='manager'</code> kèm username, họ tên (không gồm chủ).</li>

@@ -146,3 +146,11 @@ chỉ khi giúp đọc và bảo trì. Máy không nhận token app; server ki�
 khi gửi lệnh. Các thao tác ghi nhiều dòng giữ cùng một transaction.
 
 Toàn bộ code kiểm thử nằm trong `tests/`, chia theo Python, Flutter và E2E. Module nghiệp vụ không chứa test.
+
+## Ranh giới app Flutter
+
+Quy ước app ở `app/flutter_app/README.md`. `lib/app` lắp ghép điều hướng;
+`config` giữ route, `core` giữ transport/gói tin, `shared/ui` giữ widget dùng chung.
+Mỗi feature có request/state/ui riêng. Dashboard lắp ghép các feature, không giữ
+request nghiệp vụ của chúng; Auth và dashboard giao tiếp qua callback từ app.
+Không thêm các tầng rỗng chỉ để đồng đều cấu trúc.

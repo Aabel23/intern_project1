@@ -87,7 +87,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 
 <h2>Giai đoạn A: App gửi thông tin đăng ký</h2>
 <div class="step">
-<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code> (dòng 56)</h3>
+<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/feature/user_auth/ui/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code></h3>
 <p>Cùng hàm với đăng nhập, nhưng đi vào nhánh <code>_register == true</code>.</p>
 <ol>
   <li>Kiểm tra form, khóa nút bằng <code>_busy</code>.</li>
@@ -98,7 +98,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/login/registration_request.dart">registration_request.dart</a>, hàm <code>postRegistrationJson()</code></h3>
+<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/core/http_json.dart">http_json.dart</a>, hàm <code>postJson()</code></h3>
 <p>Hàm gửi JSON dùng chung, giống hệt bước 3 của luồng đăng nhập: POST JSON, chờ tối đa 25 giây, trả về <code>Map</code>.</p>
 </div>
 
@@ -146,9 +146,9 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <div class="step">
 <h3><span class="num">8</span><a href="otp/user_otp_process.py">user_otp_process.py</a>, các hàm <code>create_session()</code>, <code>start_otp()</code>, <code>resend_otp()</code></h3>
 <ol>
-  <li><code>create_session()</code> (dòng 42): tạo phiên OTP trong <code>SESSIONS</code> gắn với <code>registration_id</code> và email, chưa có mã.</li>
-  <li><code>start_otp()</code> (dòng 57): phiên đã có mã rồi (app gửi lại) thì không gửi email nữa; chưa có thì gọi <code>resend_otp()</code>.</li>
-  <li><code>resend_otp()</code> (dòng 70), trong khóa:
+  <li><code>create_session()</code>: tạo phiên OTP trong <code>SESSIONS</code> gắn với <code>registration_id</code> và email, chưa có mã.</li>
+  <li><code>start_otp()</code>: phiên đã có mã rồi (app gửi lại) thì không gửi email nữa; chưa có thì gọi <code>resend_otp()</code>.</li>
+  <li><code>resend_otp()</code>, trong khóa:
     <ul>
       <li>kiểm tra phiên còn hạn, chưa xác minh, không đang gửi;</li>
       <li>giới hạn theo email: cách nhau ít nhất 60 giây, tối đa 5 email mỗi giờ. Lượt được trừ trước khi gửi, gửi lỗi cũng không hoàn lại;</li>
@@ -177,20 +177,20 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 
 <h2>Giai đoạn C: Người dùng nhập mã OTP</h2>
 <div class="step">
-<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/UI/login/otp_page.dart">otp_page.dart</a>, hàm <code>_OtpPageState._verify()</code> (dòng 78)</h3>
+<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/user_auth/ui/otp_page.dart">otp_page.dart</a>, hàm <code>_OtpPageState._verify()</code></h3>
 <ol>
   <li>Đã xác minh hoặc đang bận thì bỏ qua; kiểm tra ô nhập đủ 6 số.</li>
   <li>Gửi <code>/app/xac-minh-otp</code> với <code>{registration_id, code}</code>.</li>
   <li>Được thì đặt <code>_verified = true</code>, xóa ô nhập, dừng đồng hồ đếm ngược. Luôn hiện thông báo của server.</li>
 </ol>
-<p>Hàm <code>_resend()</code> (dòng 43) gọi <code>/app/gui-ma-otp</code> khi hết 60 giây chờ, và lấy <code>retry_after</code> server trả về để đếm ngược tiếp.</p>
+<p>Hàm <code>_resend()</code> gọi <code>/app/gui-ma-otp</code> khi hết 60 giây chờ, và lấy <code>retry_after</code> server trả về để đếm ngược tiếp.</p>
 </div>
 <div class="step">
 <h3><span class="num">12</span><a href="user_register_process.py">user_register_process.py</a>, hàm <code>confirm_otp(data)</code></h3>
 <p>Gọi <code>user_otp_process.confirm_otp()</code>. Đúng mã thì giữ <code>FLOW_LOCK</code> và gọi <code>finish_registration()</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">13</span><a href="otp/user_otp_process.py">user_otp_process.py</a>, hàm <code>confirm_otp(data)</code> (dòng 122)</h3>
+<h3><span class="num">13</span><a href="otp/user_otp_process.py">user_otp_process.py</a>, hàm <code>confirm_otp(data)</code></h3>
 <ol>
   <li><code>check_request()</code> trong <a href="otp/user_otp_validate.py">user_otp_validate.py</a>: có <code>registration_id</code>, mã đúng 6 chữ số.</li>
   <li>Phiên hết hạn, đang gửi mã mới, hoặc mã đã hết 5 phút thì báo lỗi tương ứng.</li>
@@ -209,7 +209,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">15</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>add_user_with_hash()</code> (dòng 74)</h3>
+<h3><span class="num">15</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>add_user_with_hash()</code></h3>
 <ol>
   <li>Chuẩn hóa từng trường; role mặc định <code>staff</code>.</li>
   <li><code>INSERT INTO users</code> với mật khẩu đã băm. Nếu username hoặc email vừa bị người khác đăng ký trước (lỗi <code>IntegrityError</code>) thì báo trùng.</li>

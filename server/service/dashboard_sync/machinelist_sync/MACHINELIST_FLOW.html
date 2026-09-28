@@ -86,11 +86,11 @@ có kèm token đăng nhập. Code server: <a href="machine_list_request.py">mac
 
 <h2>Đổi tên máy: từ lúc bấm nút</h2>
 <div class="step">
-<h3><span class="num">1</span>Menu ⋮ → Đổi tên (<a href="../../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, <code>_rename()</code>)</h3>
+<h3><span class="num">1</span>Menu ⋮ → Đổi tên (<a href="../../../../app/flutter_app/lib/feature/dashboard/ui/machines_tab.dart">machines_tab.dart</a>, <code>_rename()</code>)</h3>
 <p>Chỉ chủ máy thấy mục này. Hộp <code>_RenameDialog</code> điền sẵn tên hiện tại; bấm <strong>Lưu</strong> trả tên đã bỏ khoảng trắng hai đầu, tên rỗng hoặc bấm Hủy thì dừng.</p>
 </div>
 <div class="step">
-<h3><span class="num">2</span><a href="../../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, <code>renameMachine()</code></h3>
+<h3><span class="num">2</span><a href="../../../../app/flutter_app/lib/feature/machine_list/machine_list_request.dart">machine_list_request.dart</a>, <code>renameMachine()</code></h3>
 <p>POST <code>/app/doi-ten-may</code> với <code>{machine_id, name, token}</code>.</p>
 </div>
 <div class="step">
@@ -125,7 +125,7 @@ có kèm token đăng nhập. Code server: <a href="machine_list_request.py">mac
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">4</span>App cập nhật (<a href="../../../../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, <code>forgetMachine()</code>)</h3>
+<h3><span class="num">4</span>App cập nhật (<a href="../../../../app/flutter_app/lib/feature/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, <code>forgetMachine()</code>)</h3>
 <p>Bỏ máy khỏi danh sách; nếu đang chọn thì bỏ chọn, xóa menu/kho đang hiện. Sau đó <code>loadMyMachines()</code>; còn máy khác thì tự chọn máy đầu.</p>
 <p>Máy bị gỡ hoặc bị thu hồi từ <em>điện thoại khác</em> (chủ gỡ máy, nhân viên đang mở app) cũng biến mất: <code>loadMyMachines()</code> lấy danh sách server làm chuẩn, chạy khi mở dashboard, khi đóng các màn thêm máy và khi kéo xuống để tải lại ở tab Máy.</p>
 </div>
