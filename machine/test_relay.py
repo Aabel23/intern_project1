@@ -58,7 +58,7 @@ class MachineRelayTest(unittest.TestCase):
         from server import main as server_main
         from server.database.connection import get_connection
         from server.database.machine.init_db import init_db
-        from server.service.user_login.session import create_session
+        from server.lib.session import create_session
         init_db()
         self.server = server_main.Server(("127.0.0.1", 0), server_main.Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()

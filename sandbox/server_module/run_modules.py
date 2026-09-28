@@ -29,7 +29,7 @@ from server.service.machine_register import machine_register_api  # noqa: E402
 from server.service.machine_link import link_api  # noqa: E402
 from server.service.machine_share import share_api  # noqa: E402
 from server.service.user_login import login_api  # noqa: E402
-from server.service.user_register.user_register import user_register_api  # noqa: E402
+from server.service.user_register import user_register_api  # noqa: E402
 
 MODULES = {
     "register": user_register_api,

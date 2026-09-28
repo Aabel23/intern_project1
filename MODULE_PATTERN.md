@@ -20,9 +20,9 @@ Những thứ **bắt buộc dùng chung**, module gọi tới chứ không gi�
 |---|---|---|
 | Gửi lệnh xuống máy | `service/machine_link/link_queue.py`: `send(machine_id, instruction, data)` → `(thân, status)` | Máy chỉ long-poll **một** chỗ cho mọi loại lệnh; mỗi module một hộp thư = mỗi máy N kết nối treo, lệnh các tab tới lệch thứ tự |
 | Quyền của tab dữ liệu máy | `service/dashboard_sync/sync_rules.py`: `check_access(data, roles)` | Cùng một luật token → người dùng → quản lý máy → vai trò cho Menu, Kho |
-| Phiên đăng nhập | `service/user_login/session.py` (`user_from_request`, `NOT_LOGGED_IN`) | Một token dùng cho mọi API |
+| Phiên đăng nhập | `server/lib/session.py` (`check_login`, `user_from_request`, `create_session`) | Một token dùng cho mọi API; nằm trong lib để không module nào phải import module đăng nhập |
 | Đọc/ghi database | `server/database/...` (`machine_read`, `machine_write`, `get_connection`) | Một database cho cả server |
-| Đọc/ghi JSON | `server/lib/http_json.py` (`read_json`, `send_json`) | Giống hệt nhau ở mọi module |
+| Đọc/ghi JSON, gắn status | `server/lib/http_json.py` (`handle_routes`, `with_valid_status`, `invalid`) | Giống hệt nhau ở mọi module |
 | Giới hạn theo IP | `server/lib/rate_limit.py` | Đếm theo IP trên toàn server |
 
 ## 2. Module phía server
@@ -78,7 +78,10 @@ def handle(request):
 
 - Docstring đầu file vẽ luồng từng route trong 1-2 dòng:
   `rename_machine: đăng nhập → mã máy → tên → phải là chủ → đổi tên`.
-- Mỗi hàm route nhận body đã parse, trả **`(kết quả, HTTP status)`**.
+- Mỗi hàm route nhận body đã parse. Module dạng `{"loi"}` (Menu, Kho, cổng máy) trả
+  **`(kết quả, HTTP status)`**; module dạng `{"valid"}` (tài khoản, máy, chia sẻ, tab Máy)
+  chỉ trả **thân**, api bọc `ROUTES` bằng `with_valid_status()` để status suy ra từ `valid`
+  (200 / 400 / 429 khi kèm `retry_after`).
 - Không đọc/ghi HTTP, không kiểm tra lặt vặt tại chỗ: gọi verify.
 - Không có khối `if __name__ == "__main__"`. Module không tự chạy riêng: cần thử riêng
   thì dùng `sandbox/server_module/run_modules.py`, ghép module với những module nó cần
@@ -180,11 +183,12 @@ lại code làm gì.
 
 ## 5. Chuyển một module cũ sang mẫu
 
-1. Tạo `<module>_verify.py`: gom các kiểm tra đang nằm rải trong flow.
-2. Sửa flow: gọi verify, trả `(kết quả, status)` với status **đúng như cũ** (200/400...).
-3. Sửa api: `handle()` gọi `handle_routes` như mẫu ở mục 2, bỏ `handle_valid_routes`.
+1. Tạo `<module>_verify.py`: gom các kiểm tra đang nằm rải trong flow (chỉ đọc).
+2. Sửa flow: gọi verify, không đọc/ghi HTTP, trả thân hoặc `(thân, status)` theo dạng của module
+   (xem mục flow), status **đúng như cũ**.
+3. Sửa api: `handle()` gọi `handle_routes` như mẫu ở mục 2.
 4. Thêm module vào `MODULES` của `sandbox/server_module/run_modules.py`.
-5. `test_flow.py`: nhận `(kết quả, status)`, kiểm cả status.
+5. `test_flow.py` gọi thẳng hàm flow.
 6. Chạy toàn bộ test (server + `machine.test_relay`), thử chạy riêng bằng `run_modules.py`, cập nhật
    file `*_FLOW.html` nếu có.
 
@@ -196,8 +200,18 @@ lại code làm gì.
 | `dashboard_sync/ingredient_sync` (server + máy) | ✅ |
 | `dashboard_sync/machinelist_sync` (tab Máy: danh sách, đổi tên, gỡ máy, trạng thái) | ✅ |
 | `machine_link` (cổng máy: hộp thư, heartbeat, hỏi lệnh, trả kết quả) | ✅ |
-| `machine_register`, `machine_share` (mời, nhân viên), `user_login`, `user_register` | chưa, còn dùng `lib/valid_api.py` |
+| `machine_register` (đăng ký máy) | ✅ |
+| `machine_share` (mời nhân viên, xem và thu hồi quyền) | ✅ |
+| `user_login` (đăng nhập hai bước, đăng xuất) | ✅ |
+| `user_register` (đăng ký + `otp/`) | ✅ |
 
-Việc chung còn lại: kiểm "token → người dùng → quyền với máy → vai trò" đã gom cho Menu và
-Kho (`sync_rules.check_access`), còn chép riêng ở `machinelist_verify` (dạng `{"valid"}`),
-`machine_share`, `machine_register`.
+### Phụ thuộc giữa các module
+
+Ngoài `server/lib`, `server/config`, `server/database`, code module chỉ import:
+
+| Module | Dùng của module khác | Vì sao |
+|---|---|---|
+| `menu_sync`, `ingredient_sync` | `dashboard_sync/sync_rules.check_access`, `machine_link/link_queue.send` | quyền tab dữ liệu máy; gửi lệnh xuống máy |
+| `machinelist_sync` | `machine_link/link_queue.is_online`, `last_seen_of` | trạng thái Online/Offline |
+
+Test được import flow của module khác để dựng dữ liệu (vd đăng ký máy, mời nhân viên).

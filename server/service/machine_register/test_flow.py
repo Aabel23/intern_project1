@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
-from server.service.user_login.session import create_session
+from server.lib.session import create_session
 from server import main as server_main
 
 

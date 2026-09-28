@@ -14,17 +14,16 @@ from urllib.parse import parse_qs, urlparse
 
 # Server chung: đường dẫn, xử lý HTTP
 from server.config.routing import APP_MY_MACHINES, APP_REMOVE_MACHINE, APP_RENAME_MACHINE, MACHINE_STATUS
-from server.lib.http_json import handle_routes, send_json
+from server.lib.http_json import handle_routes, invalid, send_json, with_valid_status
 
 # Trong module machinelist_sync
 from .machinelist_flow import list_my_machines, machine_status, remove_machine, rename_machine
-from .machinelist_verify import invalid
 
-ROUTES = {
+ROUTES = with_valid_status({
     APP_MY_MACHINES: list_my_machines,
     APP_RENAME_MACHINE: rename_machine,
     APP_REMOVE_MACHINE: remove_machine,
-}
+})
 MAX_BODY = 4096
 
 

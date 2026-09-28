@@ -1,29 +1,15 @@
 """Hàm kiểm tra của tab Máy; chỉ đọc, không ghi database, không đọc/ghi HTTP.
 
-Mỗi hàm kiểm tra trả lỗi là thân JSON gửi app ({"valid": false, "message"}),
-flow tự gắn status.
+Lỗi trả về là thân JSON gửi app ({"valid": false, "message"}).
 """
 
-# Server chung: database máy, hàm kiểm tra
+# Server chung: database máy, hàm kiểm tra, phiên đăng nhập, dạng lỗi
 from server.database.machine import machine_read
 from server.lib.checks import is_machine_id
-
-# Module khác: phiên đăng nhập
-from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
+from server.lib.http_json import invalid
+from server.lib.session import check_login
 
 NAME_MAX_LENGTH = 150
-
-
-def invalid(message):
-    return {"valid": False, "message": message}
-
-
-def check_login(data):
-    """Trả (user_id, None) nếu token còn hiệu lực, sai thì (None, NOT_LOGGED_IN)."""
-    user_id = user_from_request(data)
-    if user_id is None:
-        return None, NOT_LOGGED_IN
-    return user_id, None
 
 
 def check_request(data):

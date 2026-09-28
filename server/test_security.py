@@ -25,7 +25,7 @@ from server.database.machine.init_db import init_db
 from server.lib import rate_limit
 from server.database.user.user_add import hash_password
 from server.service.user_login import login_flow
-from server.service.user_login.session import create_session
+from server.lib.session import create_session
 
 
 class SecurityScenarioTest(unittest.TestCase):
@@ -213,7 +213,7 @@ class SecurityScenarioTest(unittest.TestCase):
     def test_SEC05_registration_does_not_reveal_existing_email(self):
         """SEC-05: đăng ký trả "Email đã tồn tại" -> dò được email nào có tài khoản."""
         self.user("co_that")
-        from server.service.user_register.user_register.user_verify import verify_user
+        from server.service.user_register.user_register_verify import verify_user
         base = {"full_name": "X", "username": "moi_hoan_toan", "password": "12345678", "request_id": "b" * 32}
         taken = verify_user({**base, "email": "co_that@t.local"})
         free = verify_user({**base, "email": "chua_co@t.local"})

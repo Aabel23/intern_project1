@@ -1,15 +1,21 @@
-"""Route đăng ký máy; module tự nghe, server.main chỉ gọi handle()."""
+"""HTTP của đăng ký máy: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
 
+    POST /app/dang-ky-may  {token, machine_name, product_key, type?}   quét tem QR / nhận gói Bluetooth
+"""
+
+# Server chung: đường dẫn, xử lý HTTP
 from server.config.routing import APP_REGISTER_MACHINE
-from server.lib.valid_api import handle_valid_routes
+from server.lib.http_json import handle_routes, invalid, with_valid_status
+
+# Trong module machine_register
 from .machine_register_flow import receive_register
 
-
-ROUTES = {
+ROUTES = with_valid_status({
     APP_REGISTER_MACHINE: receive_register,
-}
+})
+MAX_BODY = 4096
 
 
 def handle(request):
     """True nếu request thuộc module này và đã trả lời (server chính chỉ gọi hàm này)."""
-    return handle_valid_routes(request, ROUTES)
+    return handle_routes(request, ROUTES, MAX_BODY, invalid)

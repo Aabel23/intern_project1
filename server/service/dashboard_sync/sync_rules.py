@@ -5,12 +5,10 @@ trong dashboard_sync: token → người dùng → có quản lý máy này → 
 Lỗi trả dạng {"loi": ...} như các tab dữ liệu máy đang trả.
 """
 
-# Server chung: database máy, hàm kiểm tra
+# Server chung: database máy, hàm kiểm tra, phiên đăng nhập
 from server.database.machine.machine_read import can_manage, is_owner
 from server.lib.checks import is_machine_id
-
-# Module khác: phiên đăng nhập
-from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
+from server.lib.session import NOT_LOGGED_IN, user_from_request
 
 # Tab Menu: nhận gói menu, gửi thay đổi món.
 QUYEN_MENU = {"owner", "manager"}

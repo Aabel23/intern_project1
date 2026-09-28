@@ -1,7 +1,13 @@
-"""Kiểm tra dữ liệu đăng ký trước khi xử lý."""
+"""Kiểm tra dữ liệu đăng ký; chỉ đọc database (trùng tên/email), không ghi, không đọc/ghi HTTP.
 
+Trả câu lỗi cho người dùng, hoặc None nếu hợp lệ.
+"""
+
+# Thư viện chuẩn
 import re
-from server.database.user.user_read import get_by_username, get_by_email
+
+# Server chung: database tài khoản
+from server.database.user.user_read import get_by_email, get_by_username
 
 
 def check_duplicate(username, email):

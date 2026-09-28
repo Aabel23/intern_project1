@@ -9,7 +9,7 @@ from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
 from server.service.machine_share.share_flow import accept_invite, create_invite
-from server.service.user_login.session import create_session
+from server.lib.session import create_session
 from . import machinelist_flow as flow
 
 
@@ -39,10 +39,8 @@ class MachineListTest(unittest.TestCase):
         return create_session(user_id)
 
     def call(self, route, data):
-        """Gọi flow, kiểm status khớp valid (200/400) như app đang nhận, trả thân kết quả."""
-        result, status = route(data)
-        self.assertEqual(status, 200 if result['valid'] else 400)
-        return result
+        """Gọi flow, trả thân kết quả."""
+        return route(data)
 
     def rename(self, data):
         return self.call(flow.rename_machine, data)

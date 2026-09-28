@@ -1,14 +1,28 @@
-"""Điều phối đăng ký: kiểm tra dữ liệu -> OTP -> ghi tài khoản."""
+"""Luồng đăng ký tài khoản: dữ liệu hợp lệ → gửi OTP → OTP đúng → ghi tài khoản.
+
+    receive_register: request_id → (gửi lại cùng request_id thì tiếp phiên cũ) → kiểm dữ liệu
+                      → băm mật khẩu, giữ phiên trong RAM → gửi OTP qua email
+    resend_otp:       gửi lại OTP (có thời gian chờ)
+    confirm_otp:      OTP đúng → đủ hai cờ (dữ liệu đúng + OTP đúng) → ghi tài khoản
+
+Mỗi hàm nhận body JSON đã parse, trả thân {"valid", "message", ...}; api gắn status theo
+valid (429 khi kèm retry_after). Phần OTP (sinh mã, gửi mail, đếm lần thử) ở otp/.
+"""
+
+# Thư viện chuẩn
 import secrets
 import threading
 import time
 
+# Server chung: database tài khoản, hàm kiểm tra, băm
+from server.database.user.user_add import hash_password
 from server.lib.checks import is_request_id, remove_expired
 from server.lib.hashing import request_fingerprint
-from server.database.user.user_add import hash_password
-from ..otp import otp_flow
-from .user_verify import verify_user
-from .user_register import register_user
+
+# Trong module user_register
+from .otp import otp_flow
+from .user_register_database import register_user
+from .user_register_verify import verify_user
 
 REGISTRATIONS = {}
 FLOW_LOCK = threading.Lock()

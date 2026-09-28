@@ -108,7 +108,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <p>Như luồng đăng nhập: giới hạn 30 request/phút mỗi IP, đọc tối đa 4096 byte JSON, tra <code>ROUTES</code> thấy <code>/app/dang-ky-nguoi-dung</code> ứng với <code>receive_register</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">4</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 73)</h3>
+<h3><span class="num">4</span><a href="user_register_flow.py">user_register_flow.py</a>, hàm <code>receive_register(data)</code></h3>
 <ol>
   <li>Kiểm tra <code>request_id</code> đúng 32 ký tự hex.</li>
   <li>Tạo <code>fingerprint</code> (HMAC của toàn bộ gói) để phát hiện gửi lại cùng mã nhưng dữ liệu khác.</li>
@@ -122,7 +122,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">5</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>prepare_registration()</code> (dòng 35)</h3>
+<h3><span class="num">5</span><a href="user_register_flow.py">user_register_flow.py</a>, hàm <code>prepare_registration()</code></h3>
 <ol>
   <li>Quá 1000 phiên đang chờ thì báo server bận.</li>
   <li>Gọi <code>verify_user(data)</code> kiểm tra dữ liệu.</li>
@@ -132,7 +132,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">6</span><a href="user_register/user_verify.py">user_verify.py</a>, hàm <code>verify_user(data)</code></h3>
+<h3><span class="num">6</span><a href="user_register_verify.py">user_register_verify.py</a>, hàm <code>verify_user(data)</code></h3>
 <ol>
   <li>Cả 4 trường phải là chuỗi và không rỗng.</li>
   <li>Mật khẩu 8–1024 ký tự; họ tên và username tối đa 150 ký tự; email đúng dạng <code>a@b.c</code>, tối đa 254 ký tự. Giới hạn trùng với luồng đăng nhập, để không tạo được tài khoản không đăng nhập được.</li>
@@ -186,7 +186,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <p>Hàm <code>_resend()</code> (dòng 43) gọi <code>/app/gui-ma-otp</code> khi hết 60 giây chờ, và lấy <code>retry_after</code> server trả về để đếm ngược tiếp.</p>
 </div>
 <div class="step">
-<h3><span class="num">12</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>confirm_otp(data)</code> (dòng 121)</h3>
+<h3><span class="num">12</span><a href="user_register_flow.py">user_register_flow.py</a>, hàm <code>confirm_otp(data)</code></h3>
 <p>Gọi <code>otp_flow.confirm_otp()</code>. Đúng mã thì giữ <code>FLOW_LOCK</code> và gọi <code>finish_registration()</code>.</p>
 </div>
 <div class="step">
@@ -200,11 +200,11 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">14</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>finish_registration()</code> (dòng 100)</h3>
+<h3><span class="num">14</span><a href="user_register_flow.py">user_register_flow.py</a>, hàm <code>finish_registration()</code></h3>
 <ol>
   <li>Bật cờ <code>otp_verified</code>. Chỉ khi cả <code>data_valid</code> và <code>otp_verified</code> đều bật mới đi tiếp.</li>
   <li>Tài khoản đã tạo rồi (app gửi lại) thì trả thành công luôn, không tạo lần hai.</li>
-  <li>Gọi <code>register_user()</code> trong <a href="user_register/user_register.py">user_register.py</a>, hàm này gọi <code>add_user_with_hash()</code>.</li>
+  <li>Gọi <code>register_user()</code> trong <a href="user_register_database.py">user_register_database.py</a>, hàm này gọi <code>add_user_with_hash()</code>.</li>
   <li>Bật cờ <code>account_created</code>, trả "Tạo tài khoản thành công".</li>
 </ol>
 </div>
@@ -221,7 +221,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
 <pre><code>auth_page._submit  (chế độ đăng ký)
  └─ postRegistrationJson → POST /app/dang-ky-nguoi-dung
      main.Handler.do_POST
-      └─ registration_flow.receive_register
+      └─ user_register_flow.receive_register
           ├─ prepare_registration
           │   ├─ user_verify.verify_user → user_read.get_by_username / get_by_email
           │   ├─ user_add.hash_password                (PBKDF2)
@@ -231,7 +231,7 @@ Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p
               └─ otp_email.send_otp                    (Gmail SMTP)
      ← {registration_id}
  └─ OtpPage._verify → POST /app/xac-minh-otp
-     └─ registration_flow.confirm_otp
+     └─ user_register_flow.confirm_otp
          ├─ otp_flow.confirm_otp → otp_verify.matches_code
          └─ finish_registration → user_register.register_user
                                   → user_add.add_user_with_hash  (INSERT users)

@@ -1,4 +1,4 @@
-"""Token phiên app: cấp sau khi đăng nhập, gửi kèm các API cần biết người gọi."""
+"""Token phiên app: cấp sau khi đăng nhập, mọi module cần biết người gọi đều dùng file này."""
 
 import secrets
 import time
@@ -43,6 +43,14 @@ def user_from_request(data):
             (sha256_hex(token), time.time()),
         ).fetchone()
     return row["user_id"] if row else None
+
+
+def check_login(data):
+    """Trả (user_id, None) nếu token còn hiệu lực, sai thì (None, NOT_LOGGED_IN)."""
+    user_id = user_from_request(data)
+    if user_id is None:
+        return None, NOT_LOGGED_IN
+    return user_id, None
 
 
 def end_session(data):

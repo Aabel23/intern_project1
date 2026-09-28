@@ -12,7 +12,7 @@ from unittest.mock import patch
 from .otp import otp_flow as flow
 from server import main as server_main
 from server.lib import rate_limit
-from .user_register import registration_flow
+from . import user_register_flow as registration_flow
 from server.database import connection
 
 
@@ -189,7 +189,7 @@ class RegistrationFlowTest(unittest.TestCase):
             IP_REQUESTS.clear()
 
     def test_real_validation_and_duplicate_database_constraint(self):
-        from .user_register.user_verify import verify_user
+        from .user_register_verify import verify_user
         self.verify_user.side_effect = verify_user
         self.assertFalse(registration_flow.receive_register(dict(self.data, password="short"))["valid"])
         # Quá giới hạn đăng nhập thì không cho tạo (tài khoản sẽ không đăng nhập được).

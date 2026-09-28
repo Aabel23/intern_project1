@@ -178,8 +178,8 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 <div class="step">
 <h3><span class="num">14</span><a href="machine_register_flow.py">machine_register_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 12)</h3>
 <ol>
-  <li><code>verify_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
-  <li><code>user_from_request(data)</code> trong <a href="../user_login/session.py">session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>
+  <li><code>check_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
+  <li><code>check_login(data)</code> trong <a href="../../lib/session.py">server/lib/session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>
   <li>Băm key bằng <code>sha256_hex()</code> (SHA-256, <code>server/lib/hashing.py</code>).</li>
   <li><code>BEGIN IMMEDIATE</code> khóa ghi database, để hai lần quét cùng lúc không tạo hai máy.</li>
   <li>Tìm máy theo mã băm key:
@@ -210,7 +210,7 @@ machines_tab._open                        machine_register_bluetooth.scan
           MachineApi.registerMachine → POST /app/dang-ky-may {name, key, token}
            main.Handler.do_POST
             └─ machine_register_flow.receive_register
-                ├─ verify_machine
+                ├─ check_machine
                 ├─ session.user_from_request        (token → user_id)
                 ├─ INSERT machines                  (nếu key mới)
                 └─ INSERT machine_managers owner    (nếu chưa có chủ)

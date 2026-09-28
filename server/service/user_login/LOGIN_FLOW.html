@@ -131,7 +131,7 @@ mật khẩu thì nhận luôn token.</p>
       <li>Gọi <code>too_many_requests()</code> (dòng 89): một địa chỉ IP quá 30 request trong một phút thì trả mã 429.</li>
       <li>Đọc body, chỉ nhận từ 1 đến 4096 byte, giải mã JSON rồi gọi <code>receive_login(data)</code>.</li>
       <li>Có lỗi JSON thì trả 400, lỗi database thì trả 503.</li>
-      <li><code>handle()</code> trong <code>login_api.py</code> gọi <code>server/lib/valid_api.py</code> trả kết quả: 200 nếu <code>valid</code> là true, 400 nếu false, 429 nếu kết quả có <code>retry_after</code>.</li>
+      <li><code>handle()</code> trong <code>login_api.py</code> gọi <code>server/lib/http_json.handle_routes</code> (kèm <code>with_valid_status</code>) trả kết quả: 200 nếu <code>valid</code> là true, 400 nếu false, 429 nếu kết quả có <code>retry_after</code>.</li>
     </ol>
   </li>
 </ul>
@@ -189,7 +189,7 @@ mật khẩu thì nhận luôn token.</p>
 </div>
 
 <div class="step">
-<h3><span class="num">9</span><a href="session.py">session.py</a>, hàm <code>create_session(user_id)</code></h3>
+<h3><span class="num">9</span><a href="../../lib/session.py">server/lib/session.py</a>, hàm <code>create_session(user_id)</code> (gọi từ <code>login_flow.login_result</code>)</h3>
 <ol>
   <li>Xóa các phiên đã hết hạn trong <code>app_sessions</code>.</li>
   <li>Tạo <code>token = secrets.token_urlsafe(32)</code>.</li>

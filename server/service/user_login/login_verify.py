@@ -1,58 +1,50 @@
-"""Đọc tài khoản trong database và xác minh mật khẩu đăng nhập."""
+"""Kiểm tra tài khoản và mật khẩu đăng nhập; chỉ đọc database, không tạo phiên.
 
+Lỗi trả về là thân JSON gửi app ({"valid": false, "message"}).
+"""
+
+# Thư viện chuẩn
 import hashlib
 import hmac
 
+# Server chung: database tài khoản, dạng lỗi
 from server.database.user.user_read import get_credentials
-from .session import create_session
-
+from server.lib.http_json import invalid
 
 INVALID_LOGIN = "Tên đăng nhập hoặc mật khẩu không đúng"
+# Băm cả khi không có tài khoản, để thời gian trả lời không lộ tên nào tồn tại.
 DUMMY_PASSWORD = f"pbkdf2_sha256$200000${'00' * 16}${'00' * 32}"
 
 
-def _matches_password(password, stored_password):
-    """So sánh mật khẩu với chuỗi PBKDF2 do user_add.hash_password tạo."""
+def parse_stored(stored_password):
+    """(thuật toán, số vòng, salt, digest) từ chuỗi do user_add.hash_password tạo; None nếu sai dạng."""
     try:
         algorithm, iterations, salt, expected = stored_password.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
-            return False
-        iterations = int(iterations)
-        if not 1 <= iterations <= 1_000_000:
-            return False
-        salt = bytes.fromhex(salt)
-        expected = bytes.fromhex(expected)
+        return algorithm, int(iterations), bytes.fromhex(salt), bytes.fromhex(expected)
     except (AttributeError, TypeError, ValueError):
-        return False
+        return None
 
-    actual = hashlib.pbkdf2_hmac(
-        "sha256", password.encode("utf-8"), salt, iterations
-    )
+
+def matches_password(password, stored_password):
+    parsed = parse_stored(stored_password)
+    if parsed is None or parsed[0] != "pbkdf2_sha256" or not 1 <= parsed[1] <= 1_000_000:
+        return False
+    _, iterations, salt, expected = parsed
+    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return hmac.compare_digest(actual, expected)
 
 
 def verify_login(data):
-    """Trả về kết quả tối giản; tuyệt đối không trả password hash cho app."""
-    if not isinstance(data, dict):
-        return {"valid": False, "message": "Dữ liệu phải là JSON object"}
-
-    username = data.get("username")
-    password = data.get("password")
+    """(user_id, None) nếu đúng tài khoản và mật khẩu, sai thì (None, lỗi)."""
+    username, password = data.get("username"), data.get("password")
     if not isinstance(username, str) or not username.strip():
-        return {"valid": False, "message": "Thiếu tên đăng nhập"}
+        return None, invalid("Thiếu tên đăng nhập")
     if not isinstance(password, str) or not password:
-        return {"valid": False, "message": "Thiếu mật khẩu"}
+        return None, invalid("Thiếu mật khẩu")
     if len(username) > 150 or len(password) > 1024:
-        return {"valid": False, "message": "Thông tin đăng nhập không hợp lệ"}
-
+        return None, invalid("Thông tin đăng nhập không hợp lệ")
     credentials = get_credentials(username.strip())
     stored_password = credentials["password"] if credentials else DUMMY_PASSWORD
-    if not _matches_password(password, stored_password) or credentials is None:
-        return {"valid": False, "message": INVALID_LOGIN}
-
-    return {
-        "valid": True,
-        "verified": True,
-        "token": create_session(credentials["id"]),
-        "message": "Đăng nhập thành công",
-    }
+    if not matches_password(password, stored_password) or credentials is None:
+        return None, invalid(INVALID_LOGIN)
+    return credentials["id"], None

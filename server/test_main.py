@@ -14,7 +14,7 @@ from server import main
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server.lib import rate_limit
-from server.service.user_login.session import create_session
+from server.lib.session import create_session
 
 
 class StartpointTest(unittest.TestCase):
@@ -182,7 +182,7 @@ class StartpointTest(unittest.TestCase):
     def test_cleanup_callbacks(self):
         # Mỗi module tự khai tick(); server chỉ gọi các tick đó định kỳ.
         from server.service.user_login import login_api
-        from server.service.user_register.user_register import user_register_api
+        from server.service.user_register import user_register_api
         with patch.object(user_register_api, 'tick') as registration:
             with patch.object(login_api, 'tick') as login:
                 self.server.service_actions()

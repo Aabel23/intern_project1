@@ -1,4 +1,6 @@
-"""Ghi tài khoản sau khi registration_flow đã kiểm tra đủ hai cờ."""
+"""Ghi tài khoản vào database, sau khi user_register_flow đã kiểm tra đủ hai cờ."""
+
+# Server chung: database tài khoản
 from server.database.user.user_add import add_user_with_hash
 
 

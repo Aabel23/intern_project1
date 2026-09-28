@@ -1,6 +1,6 @@
 # Luồng đăng ký và OTP
 
-`main.py` chỉ nối route và khởi động API. `user_register/registration_flow.py` quản lý trạng thái đăng ký theo `registration_id`:
+`main.py` chỉ nối route và khởi động API. `user_register_flow.py` quản lý trạng thái đăng ký theo `registration_id`:
 
 1. `user_verify.verify_user` kiểm tra dữ liệu; hợp lệ thì bật `data_valid`.
 2. Registration flow băm mật khẩu, giữ dữ liệu đăng ký và yêu cầu `otp_flow` gửi mã.

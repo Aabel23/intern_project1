@@ -15,7 +15,7 @@ from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server import main as server_main
 from .login_api import ROUTES
-from .session import create_session, end_session, user_from_request
+from server.lib.session import create_session, end_session, user_from_request
 
 
 def password_hash(password):
@@ -38,7 +38,7 @@ class LoginFlowTest(unittest.TestCase):
             "password": password_hash("password123"),
         }
         # Không ghi phiên vào database thật trong test.
-        with patch.object(login_verify, "get_credentials", return_value=credentials),                 patch.object(login_verify, "create_session", return_value="token-test") as session:
+        with patch.object(login_verify, "get_credentials", return_value=credentials),                 patch.object(login_flow, "create_session", return_value="token-test") as session:
             accepted = login_flow.receive_login(
                 {
                     "request_id": self.request_id,
@@ -85,7 +85,7 @@ class LoginFlowTest(unittest.TestCase):
         }
         with patch.object(
             login_flow,
-            "verify_login",
+            "login_result",
             return_value={"valid": True, "verified": True, "message": "OK"},
         ) as verify:
             first = login_flow.receive_login(data)
@@ -105,7 +105,7 @@ class LoginFlowTest(unittest.TestCase):
         try:
             with patch.object(
                 login_flow,
-                "verify_login",
+                "login_result",
                 return_value={"valid": True, "verified": True, "message": "OK"},
             ):
                 connection = http.client.HTTPConnection("127.0.0.1", server.server_port)

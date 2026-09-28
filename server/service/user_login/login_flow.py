@@ -1,13 +1,25 @@
-"""State machine nhận yêu cầu đăng nhập rồi giữ kết quả xác minh ngắn hạn."""
+"""Luồng đăng nhập hai bước: nhận yêu cầu, xác minh ngay, giữ kết quả ngắn hạn cho app hỏi lại.
 
+    receive_login:     request_id → (gửi lại cùng request_id thì trả login_id cũ) → xác minh
+                       → tạo phiên nếu đúng → giữ kết quả 60 giây → trả login_id
+    send_verification: request_id + login_id → kết quả đã giữ (token nếu đúng mật khẩu)
+
+Mỗi hàm nhận body JSON đã parse, trả thân {"valid", "message", ...}; api gắn status theo valid.
+"""
+
+# Thư viện chuẩn
 import hmac
 import secrets
 import threading
 import time
 
+# Server chung: đường dẫn, hàm kiểm tra, băm, phiên đăng nhập
 from server.config.routing import APP_VERIFY_LOGIN
 from server.lib.checks import is_request_id, remove_expired
 from server.lib.hashing import request_fingerprint
+from server.lib.session import create_session
+
+# Trong module user_login
 from .login_verify import verify_login
 
 
@@ -24,6 +36,14 @@ def cleanup_locked():
 def cleanup():
     with FLOW_LOCK:
         cleanup_locked()
+
+
+def login_result(data):
+    """Kết quả gửi app: đúng mật khẩu thì kèm token phiên mới."""
+    user_id, error = verify_login(data)
+    if error:
+        return error
+    return {"valid": True, "verified": True, "token": create_session(user_id), "message": "Đăng nhập thành công"}
 
 
 def find_login(request_id):
@@ -70,7 +90,7 @@ def receive_login(data):
         }
 
     try:
-        result = verify_login(data)
+        result = login_result(data)
     except Exception:
         with FLOW_LOCK:
             LOGIN_STATES.pop(login_id, None)
