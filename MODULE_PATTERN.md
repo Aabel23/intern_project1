@@ -42,27 +42,24 @@ server/service/<nhóm>/<module>/
 - `ROUTES = {đường_dẫn: hàm_flow}`; đường dẫn lấy từ `server/config/routing.py`.
 - `MAX_BODY`: module tự chọn (4096 cho gói tài khoản, 64 000 cho menu...).
 - `handle(request) -> bool`: `False` nếu đường dẫn không thuộc module; nếu thuộc thì
-  đọc JSON, gọi flow, gửi JSON, trả `True`. Bắt `sqlite3.Error` → 503.
+  đọc JSON, gọi flow, gửi JSON, trả `True`. Không tự viết: gọi
+  `lib/http_json.handle_routes`, truyền hàm tạo thân lỗi theo dạng app của module
+  (lỗi JSON → 400, `sqlite3.Error` → 503).
 - Tùy chọn: `handle_get(request)` cho GET, `tick()` cho việc định kỳ (dọn phiên hết
   hạn), `module_server` gọi mỗi ~0,5 giây.
 - Không có logic nghiệp vụ.
 
 ```python
+ROUTES = {
+    APP_RENAME_MACHINE: rename_machine,
+    APP_REMOVE_MACHINE: remove_machine,
+}
+MAX_BODY = 4096
+
+
 def handle(request):
-    """request là BaseHTTPRequestHandler của server; True nếu đã trả lời."""
-    route = ROUTES.get(request.path)
-    if route is None:
-        return False
-    data = read_json(request, MAX_BODY)
-    if data is None:
-        send_json(request, {"valid": False, "message": "JSON không hợp lệ"}, 400)
-        return True
-    try:
-        result, status = route(data)
-    except sqlite3.Error:
-        result, status = {"valid": False, "message": "Database tạm thời không sẵn sàng"}, 503
-    send_json(request, result, status)
-    return True
+    """True nếu request thuộc module này và đã trả lời (server chính chỉ gọi hàm này)."""
+    return handle_routes(request, ROUTES, MAX_BODY, invalid)   # menu: lambda m: {"loi": m}
 ```
 
 ### `*_verify.py`: chỉ kiểm tra
@@ -170,7 +167,7 @@ lại code làm gì.
 
 1. Tạo `<module>_verify.py`: gom các kiểm tra đang nằm rải trong flow.
 2. Sửa flow: gọi verify, trả `(kết quả, status)` với status **đúng như cũ** (200/400...).
-3. Sửa api: `handle()` tự đọc/ghi như mẫu ở mục 2, bỏ `handle_valid_routes`.
+3. Sửa api: `handle()` gọi `handle_routes` như mẫu ở mục 2, bỏ `handle_valid_routes`.
 4. Thêm khối `__main__` gọi `run_standalone`.
 5. `test_flow.py`: nhận `(kết quả, status)`, kiểm cả status.
 6. Chạy toàn bộ test (server + `machine.test_relay`), thử chạy riêng module, cập nhật

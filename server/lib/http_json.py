@@ -1,6 +1,8 @@
 """Đọc body JSON và gửi trả lời JSON; mọi module dùng chung, mỗi module tự chọn giới hạn body."""
 
+# Thư viện chuẩn
 import json
+import sqlite3
 
 
 def read_body(request, max_body):
@@ -40,3 +42,25 @@ def send_json(request, data, status=200):
         request.wfile.write(body)
     except (BrokenPipeError, ConnectionResetError):
         pass  # App đã ngắt kết nối.
+
+
+def handle_routes(request, routes, max_body, error):
+    """handle() chung của module: tra đường dẫn, đọc JSON, gọi flow, gửi (kết quả, status).
+
+    routes: {đường_dẫn: hàm_flow(data) -> (kết quả, status)}.
+    error(message): thân lỗi theo dạng app của module đang đọc, vd {"loi": message}.
+    Trả False nếu đường dẫn không thuộc routes.
+    """
+    route = routes.get(request.path)
+    if route is None:
+        return False
+    data = read_json(request, max_body)
+    if data is None:
+        send_json(request, error("JSON không hợp lệ"), 400)
+        return True
+    try:
+        result, status = route(data)
+    except sqlite3.Error:
+        result, status = error("Database tạm thời không sẵn sàng"), 503
+    send_json(request, result, status)
+    return True

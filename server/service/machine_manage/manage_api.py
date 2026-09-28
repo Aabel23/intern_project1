@@ -7,15 +7,13 @@ Module tự quyết giới hạn body và status; server chính chỉ gọi hand
 request POST, handle() trả False nếu đường dẫn không thuộc module này.
 """
 
-# Thư viện chuẩn
-import sqlite3
-
-# Server chung: đường dẫn, đọc/ghi JSON
+# Server chung: đường dẫn, xử lý HTTP
 from server.config.routing import APP_REMOVE_MACHINE, APP_RENAME_MACHINE
-from server.lib.http_json import read_json, send_json
+from server.lib.http_json import handle_routes
 
 # Trong module machine_manage
 from .manage_flow import remove_machine, rename_machine
+from .manage_verify import invalid
 
 ROUTES = {
     APP_RENAME_MACHINE: rename_machine,
@@ -25,17 +23,5 @@ MAX_BODY = 4096
 
 
 def handle(request):
-    """request là BaseHTTPRequestHandler của server; True nếu đã trả lời."""
-    route = ROUTES.get(request.path)
-    if route is None:
-        return False
-    data = read_json(request, MAX_BODY)
-    if data is None:
-        send_json(request, {"valid": False, "message": "JSON không hợp lệ"}, 400)
-        return True
-    try:
-        result, status = route(data)
-    except sqlite3.Error:
-        result, status = {"valid": False, "message": "Database tạm thời không sẵn sàng"}, 503
-    send_json(request, result, status)
-    return True
+    """True nếu request thuộc module này và đã trả lời (server chính chỉ gọi hàm này)."""
+    return handle_routes(request, ROUTES, MAX_BODY, invalid)
