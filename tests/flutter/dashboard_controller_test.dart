@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -66,4 +67,64 @@ void main() {
     expect(controller.machines, isEmpty);
     expect(controller.machineId, isNull);
   });
+
+  test('Late status responses cannot overwrite a newer refresh', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final requests = StreamIterator<HttpRequest>(server);
+    addTearDown(() async {
+      await requests.cancel();
+      await server.close(force: true);
+    });
+    final controller = DashboardController(
+      ServerClient('http://127.0.0.1:${server.port}'),
+    );
+    addTearDown(controller.dispose);
+    controller.machines.add('fm_a');
+
+    final oldRefresh = controller.refreshStatuses();
+    await requests.moveNext();
+    final oldRequest = requests.current;
+    final newRefresh = controller.refreshStatuses();
+    await requests.moveNext();
+    final newRequest = requests.current;
+    newRequest.response
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode({'online': false}));
+    await newRequest.response.close();
+    await newRefresh;
+    oldRequest.response
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode({'online': true}));
+    await oldRequest.response.close();
+    await oldRefresh;
+    expect(controller.online['fm_a'], isFalse);
+  });
+
+  test(
+    'Disposed dashboard ignores successful and failed status responses',
+    () async {
+      for (final status in [200, 503]) {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final requests = StreamIterator<HttpRequest>(server);
+        final controller = DashboardController(
+          ServerClient('http://127.0.0.1:${server.port}'),
+        );
+        controller.machines.add('fm_a');
+        final pending = controller.refreshStatuses();
+        await requests.moveNext();
+        controller.dispose();
+        requests.current.response
+          ..statusCode = status
+          ..headers.contentType = ContentType.json
+          ..write(
+            jsonEncode(status == 200 ? {'online': true} : {'loi': 'offline'}),
+          );
+        await requests.current.response.close();
+        await pending;
+        await requests.cancel();
+        await server.close(force: true);
+        expect(controller.online, isEmpty);
+      }
+    },
+  );
 }

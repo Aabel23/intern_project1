@@ -27,6 +27,7 @@ class DashboardController extends ChangeNotifier {
 
   // Tăng khi đổi máy hoặc đóng dashboard để bỏ các kết quả trả về muộn.
   int _session = 0;
+  int _statusRequest = 0;
 
   bool get hasMachine => machineId != null;
 
@@ -99,6 +100,8 @@ class DashboardController extends ChangeNotifier {
 
   Future<void> refreshStatuses() async {
     final session = _session;
+    final request = ++_statusRequest;
+    bool isCurrent() => session == _session && request == _statusRequest;
     checking = true;
     notifyListeners();
     // Hỏi mọi máy cùng lúc thay vì lần lượt từng máy.
@@ -106,10 +109,16 @@ class DashboardController extends ChangeNotifier {
       for (final id in List.of(machines))
         api
             .status(id)
-            .then((result) => online[id] = result['online'] == true)
-            .catchError((Object _) => online[id] = false),
+            .then((result) {
+              if (isCurrent() && machines.contains(id)) {
+                online[id] = result['online'] == true;
+              }
+            })
+            .catchError((Object _) {
+              if (isCurrent() && machines.contains(id)) online[id] = false;
+            }),
     ]);
-    if (session != _session) return;
+    if (!isCurrent()) return;
     checking = false;
     notifyListeners();
   }

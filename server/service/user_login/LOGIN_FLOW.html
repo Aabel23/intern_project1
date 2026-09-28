@@ -98,7 +98,7 @@ mật khẩu thì nhận luôn token.</p>
 </div>
 
 <div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/feature/user_auth/user_user_login_request.dart">user_login_request.dart</a>, hàm <code>requestLogin()</code></h3>
+<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/feature/user_auth/user_login_request.dart">user_login_request.dart</a>, hàm <code>requestLogin()</code></h3>
 <ol>
   <li>Tạo <code>requestId</code>: 16 byte ngẫu nhiên, viết thành 32 ký tự hex. Đây là mã của lần đăng nhập này, dùng để ghép hai request với nhau.</li>
   <li>Request 1: gọi <code>postRegistrationJson(serverUrl, '/app/dang-nhap', {request_id, username, password})</code>.</li>
