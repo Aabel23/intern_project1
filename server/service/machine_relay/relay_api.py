@@ -8,7 +8,6 @@ relay_queue.gui_va_cho(), không đi qua file này.
 import queue
 import sqlite3
 import time
-from urllib.parse import parse_qs, urlparse
 
 from server.config.config import POLL_WAIT_SECONDS
 from server.config.routing import (
@@ -19,7 +18,6 @@ from server.config.routing import (
     MACHINE_REFILL,
     MACHINE_SEND_RESULT,
     MACHINE_SEND_SYNC,
-    MACHINE_STATUS,
 )
 from server.database.machine.machine_read import can_manage, is_owner
 from server.lib.checks import is_machine_id
@@ -35,26 +33,11 @@ from .relay_queue import (
     LAN_HEARTBEAT_CUOI,
     gui_va_cho,
     is_online,
-    last_seen_of,
     machine_from_key,
 )
 
 # Kết quả đồng bộ của máy có thể lớn hơn các gói tài khoản.
 MAX_BODY = 1_000_000
-
-
-def handle_get(request):
-    # Xem máy còn liên lạc với server không.
-    url = urlparse(request.path)
-    if url.path != MACHINE_STATUS:
-        return False
-    machine_id = parse_qs(url.query).get("machine_id", [""])[0]
-    send_json(request, {
-        "machine_id": machine_id,
-        "online": is_online(machine_id),
-        "last_seen": last_seen_of(machine_id),
-    })
-    return True
 
 
 def handle(request):

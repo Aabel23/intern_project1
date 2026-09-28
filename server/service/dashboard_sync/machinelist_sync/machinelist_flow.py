@@ -1,19 +1,23 @@
 """Luồng tab Máy: xỏ kiểm tra (machinelist_verify) với database máy của server.
 
     list_my_machines: đăng nhập → các máy người này là chủ hoặc nhân viên
+    machine_status:   máy có heartbeat trong 15 giây gần nhất không (Online/Offline)
     rename_machine:   đăng nhập → mã máy → tên 1-150 ký tự → phải là chủ → đổi tên
     remove_machine:   đăng nhập → mã máy → khóa ghi → chủ thì xóa máy,
                       nhân viên thì chỉ bỏ quyền của mình, người lạ thì từ chối
 
-Dữ liệu tab này là của server (bảng machines), không hỏi xuống máy nên máy
-offline vẫn dùng được. Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP
-status); đọc/ghi HTTP nằm ở machinelist_api.py. Thân kết quả giữ dạng
-{"valid", "message", ...} app đang đọc.
+Dữ liệu tab này là của server (bảng machines, giờ heartbeat trong RAM), không
+hỏi xuống máy nên máy offline vẫn dùng được. Hàm route nhận body JSON đã parse,
+trả (kết quả, HTTP status); đọc/ghi HTTP nằm ở machinelist_api.py. Thân kết quả
+giữ dạng {"valid", "message", ...} app đang đọc.
 """
 
 # Server chung: database
 from server.database.connection import get_connection
 from server.database.machine import machine_read, machine_write
+
+# Module khác: giờ heartbeat của máy
+from server.service.machine_relay.relay_queue import is_online, last_seen_of
 
 # Trong module machinelist_sync
 from .machinelist_verify import check_login, check_request, clean_name, invalid, role_of
@@ -25,6 +29,11 @@ def list_my_machines(data):
     if error:
         return error, 400
     return {"valid": True, "machines": machine_read.list_by_user(user_id)}, 200
+
+
+def machine_status(machine_id):
+    """Không cần token: chỉ báo máy còn liên lạc với server, như trước."""
+    return {"machine_id": machine_id, "online": is_online(machine_id), "last_seen": last_seen_of(machine_id)}
 
 
 def rename_machine(data):
