@@ -1,4 +1,4 @@
-"""Hàm kiểm tra của quản lý máy; chỉ đọc, không ghi database, không đọc/ghi HTTP.
+"""Hàm kiểm tra của tab Máy; chỉ đọc, không ghi database, không đọc/ghi HTTP.
 
 Mỗi hàm kiểm tra trả lỗi là thân JSON gửi app ({"valid": false, "message"}),
 flow tự gắn status.
@@ -18,11 +18,19 @@ def invalid(message):
     return {"valid": False, "message": message}
 
 
-def check_request(data):
-    """Trả (user_id, machine_id, None) nếu đã đăng nhập và mã máy đúng dạng, sai thì (None, None, lỗi)."""
+def check_login(data):
+    """Trả (user_id, None) nếu token còn hiệu lực, sai thì (None, NOT_LOGGED_IN)."""
     user_id = user_from_request(data)
     if user_id is None:
-        return None, None, NOT_LOGGED_IN
+        return None, NOT_LOGGED_IN
+    return user_id, None
+
+
+def check_request(data):
+    """Trả (user_id, machine_id, None) nếu đã đăng nhập và mã máy đúng dạng, sai thì (None, None, lỗi)."""
+    user_id, error = check_login(data)
+    if error:
+        return None, None, error
     machine_id = data.get("machine_id")
     if not is_machine_id(machine_id):
         return None, None, invalid("Thiếu mã máy hợp lệ")

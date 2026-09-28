@@ -2,7 +2,7 @@
 
 Quy ước cho mọi tính năng mới và cho các module cũ khi được chuyển sang. Mẫu gốc:
 `server/service/dashboard_sync/menu_sync/` (server) và `machine/menu_sync/` (máy);
-`server/service/machine_manage/` là module cũ đầu tiên đã chuyển.
+`server/service/dashboard_sync/machinelist_sync/` (tab Máy) là module cũ đầu tiên đã chuyển.
 
 ## 1. Ý tưởng
 
@@ -79,18 +79,15 @@ def handle(request):
   `rename_machine: đăng nhập → mã máy → tên → phải là chủ → đổi tên`.
 - Mỗi hàm route nhận body đã parse, trả **`(kết quả, HTTP status)`**.
 - Không đọc/ghi HTTP, không kiểm tra lặt vặt tại chỗ: gọi verify.
-- Chạy riêng được, cuối file:
+- Không có khối `if __name__ == "__main__"`. Module không tự chạy riêng: cần thử riêng
+  thì dùng `sandbox/server_module/run_modules.py`, ghép module với những module nó cần
+  (`login` để có token, `relay` để máy nhận lệnh):
 
-```python
-if __name__ == "__main__":
-    run_standalone((f"{__package__}.manage_api",), "Quản lý máy")
+```sh
+python sandbox/server_module/run_modules.py machinelist login --port 8001
 ```
 
-  `run_standalone` (trong `lib/module_server.py`) nhận **tên** module và import lúc
-  chạy. Flow **không import api của chính nó**: api đã import flow, import ngược lại
-  thành vòng và `from ... import <module>_flow` sẽ lỗi khi test import flow trước.
-  Module cần hộp thư (gửi lệnh xuống máy) thêm `"server.service.machine_relay.relay_api"`
-  vào danh sách để máy có chỗ heartbeat và hỏi lệnh.
+  Module mới thêm một dòng vào bảng `MODULES` của script đó.
 
 ### Định dạng trả về
 
@@ -103,11 +100,22 @@ Giữ đúng dạng app đang đọc cho từng route, **không đổi khi refac
 
 Muốn thống nhất hai dạng là một thay đổi riêng, phải sửa app đi kèm.
 
+### Nhóm `dashboard_sync/`: chia theo tab của app
+
+Mỗi tab dashboard một folder, **không** chia theo nguồn dữ liệu:
+
+| Folder | Tab | Dữ liệu ở đâu |
+|---|---|---|
+| `menu_sync/` | Menu | của máy: hỏi xuống qua hộp thư, máy offline thì không đọc được |
+| `ingredient_sync/` | Kho | của máy (chưa tách, đang ở `machine_relay`) |
+| `machinelist_sync/` | Máy | của server (bảng `machines`), không cần máy online |
+
 ### Đăng ký module
 
 1. Thêm hằng đường dẫn vào `server/config/routing.py`.
 2. Thêm `<module>_api` vào `MODULES` trong `server/main.py`.
 3. Nếu có bảng quyền theo vai trò: khai trong `sync_rules.py` (dashboard) hoặc trong verify.
+4. Thêm vào `MODULES` của `sandbox/server_module/run_modules.py` để chạy thử riêng.
 
 ## 3. Module phía máy
 
@@ -138,15 +146,15 @@ chia nhóm theo nguồn, mỗi nhóm một dòng chú thích:
 # Thư viện chuẩn
 import sqlite3
 
-# Server chung: đường dẫn, đọc/ghi JSON
-from server.config.routing import APP_REMOVE_MACHINE, APP_RENAME_MACHINE
-from server.lib.http_json import read_json, send_json
+# Server chung: đường dẫn, xử lý HTTP
+from server.config.routing import APP_MY_MACHINES, APP_REMOVE_MACHINE, APP_RENAME_MACHINE
+from server.lib.http_json import handle_routes
 
 # Module khác: phiên đăng nhập
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
 
-# Trong module machine_manage
-from .manage_flow import remove_machine, rename_machine
+# Trong module machinelist_sync
+from .machinelist_flow import list_my_machines, remove_machine, rename_machine
 ```
 
 Thứ tự nhóm: thư viện chuẩn → server chung (`server.config`, `server.lib`,
@@ -168,9 +176,9 @@ lại code làm gì.
 1. Tạo `<module>_verify.py`: gom các kiểm tra đang nằm rải trong flow.
 2. Sửa flow: gọi verify, trả `(kết quả, status)` với status **đúng như cũ** (200/400...).
 3. Sửa api: `handle()` gọi `handle_routes` như mẫu ở mục 2, bỏ `handle_valid_routes`.
-4. Thêm khối `__main__` gọi `run_standalone`.
+4. Thêm module vào `MODULES` của `sandbox/server_module/run_modules.py`.
 5. `test_flow.py`: nhận `(kết quả, status)`, kiểm cả status.
-6. Chạy toàn bộ test (server + `machine.test_relay`), thử chạy riêng module, cập nhật
+6. Chạy toàn bộ test (server + `machine.test_relay`), thử chạy riêng bằng `run_modules.py`, cập nhật
    file `*_FLOW.html` nếu có.
 
 ### Tình trạng
@@ -178,9 +186,9 @@ lại code làm gì.
 | Module | Theo mẫu |
 |---|---|
 | `dashboard_sync/menu_sync` (server + máy) | ✅ |
-| `machine_manage` | ✅ |
+| `dashboard_sync/machinelist_sync` (tab Máy: danh sách, đổi tên, gỡ máy) | ✅ |
 | `machine_relay` | có `handle`/`handle_get`, chưa tách verify/flow; còn giữ `/app/gui-lenh`, `/app/dong-bo`, `/machine/refill` |
-| `machine_register`, `machine_share`, `user_login`, `user_register` | chưa, còn dùng `lib/valid_api.py` |
+| `machine_register`, `machine_share` (mời, nhân viên), `user_login`, `user_register` | chưa, còn dùng `lib/valid_api.py` |
 
 Việc chung còn lại: gom kiểm "token → người dùng → quyền với máy → vai trò" (đang chép ở
 share, register, menu, relay, manage) thành một hàm trong `server/lib/`.

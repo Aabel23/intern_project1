@@ -56,7 +56,7 @@ class MachineRegisterTest(unittest.TestCase):
         with response:
             return response.status, json.loads(response.read())
 
-    def test_register_retry_and_verify(self):
+    def test_register_retry(self):
         packet = {'type': 'pairing', 'machine_name': 'FlexMix-01', 'product_key': 'test-key',
                   'token': self.token}
         status, first = self.post('/app/dang-ky-may', packet)
@@ -65,15 +65,10 @@ class MachineRegisterTest(unittest.TestCase):
         status, second = self.post('/app/dang-ky-may', packet)
         self.assertEqual(first['machine_id'], second['machine_id'])
         self.assertFalse(second['created'])
-        status, verified = self.post('/app/xac-minh-dang-ky-may', {
+        # Route xác minh riêng đã bỏ (app không gọi).
+        self.assertEqual(self.post('/app/xac-minh-dang-ky-may', {
             'machine_id': first['machine_id'], 'product_key': 'test-key',
-        })
-        self.assertTrue(verified['verified'])
-        status, rejected = self.post('/app/xac-minh-dang-ky-may', {
-            'machine_id': first['machine_id'], 'product_key': 'wrong-key',
-        })
-        self.assertEqual(status, 400)
-        self.assertFalse(rejected['valid'])
+        })[0], 404)
         with get_connection() as conn:
             rows = conn.execute('SELECT * FROM machines').fetchall()
         self.assertEqual(len(rows), 1)

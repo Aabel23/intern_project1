@@ -5,13 +5,17 @@ tự kiểm tra và tự trả lời (xem server/lib/module_server.py). Thêm t�
 là thêm một dòng vào MODULES.
 """
 
+# Thư viện chuẩn
 import sys
 
+# Server chung: cấu hình, database, khung server
 from server.config.config import SERVER_HOST, SERVER_PORT
 from server.database.machine.init_db import init_db
 from server.lib.module_server import ModuleServer, make_handler
+
+# Các module: mỗi module tự nghe đường dẫn của mình
+from server.service.dashboard_sync.machinelist_sync import machinelist_api
 from server.service.dashboard_sync.menu_sync import menu_sync_api
-from server.service.machine_manage import manage_api
 from server.service.machine_register import machine_register_api
 from server.service.machine_relay import relay_api
 from server.service.machine_share import share_api
@@ -23,7 +27,7 @@ MODULES = (
     login_api,
     machine_register_api,
     share_api,
-    manage_api,
+    machinelist_api,
     relay_api,
     menu_sync_api,
 )

@@ -6,13 +6,7 @@
 Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP status); đọc/ghi HTTP nằm ở
 menu_sync_api.py. Gói menu (base64 zlib) đi nguyên từ máy tới app, server không
 giải nén, không lưu. Cấu trúc gói: machine/menu_sync/menu_sync_packet.py.
-
-Chạy riêng module (chỉ có route menu + relay để máy nhận lệnh):
-    python -m server.service.dashboard_sync.menu_sync.menu_sync_flow --port 8000
 """
-
-# Server chung: chạy riêng module
-from server.lib.module_server import run_standalone
 
 # Trong module menu_sync
 from .menu_sync_verify import check_access, is_changes, is_menu_version, send_to_machine
@@ -40,10 +34,3 @@ def gui_menu(data):
         return {"loi": "Gói thay đổi menu không hợp lệ"}, 400
     return send_to_machine(machine_id, "gui_menu", {"menu_version": menu_version, "thay_doi": thay_doi})
 
-
-if __name__ == "__main__":
-    # Chỉ tab Menu và relay (máy cần heartbeat, hỏi lệnh, trả kết quả).
-    run_standalone(
-        (f"{__package__}.menu_sync_api", "server.service.machine_relay.relay_api"),
-        "Menu sync",
-    )

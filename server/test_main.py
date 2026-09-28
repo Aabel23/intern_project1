@@ -68,10 +68,6 @@ class StartpointTest(unittest.TestCase):
             'machine_name': 'FlexMix-Test', 'product_key': 'test-key', 'token': token,
         })
         self.assertEqual(status, 200)
-        status, result = self.request('/app/xac-minh-dang-ky-may', {
-            'machine_id': machine['machine_id'], 'product_key': 'test-key',
-        })
-        self.assertTrue(result['verified'])
         status, _ = self.request('/app/tao-ma-chia-se', {
             'token': token, 'machine_id': machine['machine_id'],
         })

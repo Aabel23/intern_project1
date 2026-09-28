@@ -36,7 +36,7 @@ FLOWS = [
     ("S3", "py", "Đăng nhập / đăng xuất", "server.service.user_login.test_flow"),
     ("S4", "py", "Đăng ký máy (chủ đầu tiên)", "server.service.machine_register.test_flow"),
     ("S5", "py", "Chia sẻ máy, thu hồi nhân viên", "server.service.machine_share.test_flow"),
-    ("S6", "py", "Đổi tên / gỡ máy", "server.service.machine_manage.test_flow"),
+    ("S6", "py", "Tab Máy: danh sách, đổi tên, gỡ máy", "server.service.dashboard_sync.machinelist_sync.test_flow"),
     ("S7", "py", "Gói pairing Bluetooth của máy", "machine.pairing.test_bluetooth_pairing"),
     ("S8", "py", "Máy thật ↔ relay: lệnh, đồng bộ, nạp kho, chặn lệnh lạ", "machine.test_relay"),
     ("X1", "py", "Kịch bản tấn công server (lỗ hổng đã biết = expectedFailure, xem SECURITY_NOTES)",

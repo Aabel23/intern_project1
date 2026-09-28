@@ -1,23 +1,30 @@
-"""Luồng quản lý máy: xỏ kiểm tra (manage_verify) với ghi database (machine_write).
+"""Luồng tab Máy: xỏ kiểm tra (machinelist_verify) với database máy của server.
 
-    rename_machine: đăng nhập → mã máy → tên 1-150 ký tự → phải là chủ → đổi tên
-    remove_machine: đăng nhập → mã máy → khóa ghi → chủ thì xóa máy,
-                    nhân viên thì chỉ bỏ quyền của mình, người lạ thì từ chối
+    list_my_machines: đăng nhập → các máy người này là chủ hoặc nhân viên
+    rename_machine:   đăng nhập → mã máy → tên 1-150 ký tự → phải là chủ → đổi tên
+    remove_machine:   đăng nhập → mã máy → khóa ghi → chủ thì xóa máy,
+                      nhân viên thì chỉ bỏ quyền của mình, người lạ thì từ chối
 
-Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP status); đọc/ghi HTTP nằm ở
-manage_api.py. Thân kết quả giữ dạng {"valid", "message", ...} app đang đọc.
-
-Chạy riêng module (token lấy từ server đầy đủ, vì dùng chung database):
-    python -m server.service.machine_manage.manage_flow --port 8000
+Dữ liệu tab này là của server (bảng machines), không hỏi xuống máy nên máy
+offline vẫn dùng được. Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP
+status); đọc/ghi HTTP nằm ở machinelist_api.py. Thân kết quả giữ dạng
+{"valid", "message", ...} app đang đọc.
 """
 
-# Server chung: database, chạy riêng module
+# Server chung: database
 from server.database.connection import get_connection
-from server.database.machine import machine_write
-from server.lib.module_server import run_standalone
+from server.database.machine import machine_read, machine_write
 
-# Trong module machine_manage
-from .manage_verify import check_request, clean_name, invalid, role_of
+# Trong module machinelist_sync
+from .machinelist_verify import check_login, check_request, clean_name, invalid, role_of
+
+
+def list_my_machines(data):
+    """Các máy tài khoản đang là chủ (owner) hoặc được giao quản lý (manager)."""
+    user_id, error = check_login(data)
+    if error:
+        return error, 400
+    return {"valid": True, "machines": machine_read.list_by_user(user_id)}, 200
 
 
 def rename_machine(data):
@@ -52,7 +59,3 @@ def remove_machine(data):
             return invalid("Bạn không quản lý máy này"), 400
         machine_write.remove_manager(conn, machine_id, user_id)
     return {"valid": True, "deleted": False, "message": "Đã bỏ quản lý máy"}, 200
-
-
-if __name__ == "__main__":
-    run_standalone((f"{__package__}.manage_api",), "Quản lý máy")

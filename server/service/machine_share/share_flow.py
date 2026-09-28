@@ -67,13 +67,6 @@ def accept_invite(data):
     }
 
 
-def list_my_machines(data):
-    user_id = user_from_request(data)
-    if user_id is None:
-        return NOT_LOGGED_IN
-    return {"valid": True, "machines": machine_read.list_by_user(user_id)}
-
-
 def list_staff(data):
     """Chủ máy xem nhân viên đang được giao máy để thu hồi khi cần."""
     user_id = user_from_request(data)

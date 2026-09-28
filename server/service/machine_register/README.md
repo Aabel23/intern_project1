@@ -15,19 +15,12 @@ POST `/app/dang-ky-may`:
 `token` lấy từ kết quả đăng nhập. Người đăng ký đầu tiên thành `owner` trong
 `machine_managers`; tài khoản khác gửi lại cùng key bị từ chối.
 
-Trả `valid`, `registered`, `created`, `machine_id`, `verify_route`, `message`.
+Trả `valid`, `registered`, `created`, `machine_id`, `message`.
 `type` từ Bluetooth được phép gửi kèm; hai trường bắt buộc là tên và key.
 Gửi lại cùng key trả cùng ID, không sửa tên hoặc tạo bản ghi mới.
 Key được lưu dưới dạng SHA-256 trong `machines.product_key_hash`.
 
-POST `/app/xac-minh-dang-ky-may`:
-
-```json
-{"machine_id":"fm_ID_SERVER_TRA_VE","product_key":"key-cua-may"}
-```
-
-Trả `valid`, `verified`, `machine_id`, `message` khi khớp bản ghi.
-Đây là kiểm tra đăng ký đã lưu, không phải bước kích hoạt riêng.
+Route phụ `/app/xac-minh-dang-ky-may` (đối chiếu `machine_id` với key) đã bỏ vì app không gọi.
 Chưa có danh sách key nhà máy nên không xác minh key có thực sự do nhà máy cấp.
 Chưa gán cửa hàng, chưa cấp credential hoặc gửi ID xuống Raspberry Pi.
 

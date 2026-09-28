@@ -71,7 +71,6 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
 <div class="table-wrap"><table>
 <tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
 <tr><td><code>POST</code></td><td><code>/app/dang-ky-may</code></td><td>App, sau khi quét tem QR hoặc nhận gói Bluetooth</td><td>type, machine_name, product_key, token</td><td>valid, registered, created, machine_id</td></tr>
-<tr><td><code>POST</code></td><td><code>/app/xac-minh-dang-ky-may</code></td><td>App (tùy chọn)</td><td>machine_id, product_key</td><td>valid, verified, machine_id</td></tr>
 </table></div>
 <h3>Đăng ký máy</h3>
 <pre><code>{"type": "pairing", "machine_name": "FlexMix-01", "product_key": "fm_...", "token": "..."}
@@ -197,10 +196,6 @@ Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<co
   </li>
   <li>Trả <code>{valid, created, machine_id, message}</code>.</li>
 </ol>
-</div>
-<div class="step">
-<h3><span class="num">15</span><a href="machine_register_verify.py">machine_register_verify.py</a>, hàm <code>verify_registration(data)</code> (dòng 20)</h3>
-<p>Route phụ <code>/app/xac-minh-dang-ky-may</code>: cho <code>machine_id</code> và key, trả về có khớp bản ghi đã lưu không. App hiện chưa gọi route này.</p>
 </div>
 
 <h2>Sơ đồ tóm tắt</h2>

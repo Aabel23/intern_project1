@@ -61,14 +61,15 @@
 </head>
 <body>
 <main>
-<h1>Đổi tên và gỡ máy</h1>
+<h1>Tab Máy: danh sách, đổi tên và gỡ máy</h1>
 <p class="lead">Hai thao tác trong menu ⋮ của mỗi máy ở tab Máy. Cả hai đều là JSON gửi bằng POST tới server,
-có kèm token đăng nhập. Code server: <a href="manage_api.py">manage_api.py</a> (nhận POST) → <a href="manage_flow.py">manage_flow.py</a> (luồng) → <a href="manage_verify.py">manage_verify.py</a> (kiểm tra), SQL: <a href="../../database/machine/machine_write.py">machine_write.py</a>.</p>
+có kèm token đăng nhập. Code server: <a href="machinelist_api.py">machinelist_api.py</a> (nhận POST) → <a href="machinelist_flow.py">machinelist_flow.py</a> (luồng) → <a href="machinelist_verify.py">machinelist_verify.py</a> (kiểm tra), SQL: <a href="../../../database/machine/machine_write.py">machine_write.py</a>.</p>
 
 <h2>API và gói tin</h2>
 <p>Mọi gói là JSON gửi bằng <code>POST</code>, <code>Content-Type: application/json</code>. Token hết hạn thì server trả <code>login_required: true</code> và app quay về màn hình đăng nhập.</p>
 <div class="table-wrap"><table>
 <tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
+<tr><td><code>POST</code></td><td><code>/app/may-cua-toi</code></td><td>Chủ máy và nhân viên</td><td>token</td><td>valid, machines [{machine_id, name, role}]</td></tr>
 <tr><td><code>POST</code></td><td><code>/app/doi-ten-may</code></td><td>Chủ máy</td><td>machine_id, name, token</td><td>valid, name, message</td></tr>
 <tr><td><code>POST</code></td><td><code>/app/go-may</code></td><td>Chủ máy (xóa máy) hoặc nhân viên (bỏ quyền của mình)</td><td>machine_id, token</td><td>valid, deleted, message</td></tr>
 </table></div>
@@ -85,19 +86,19 @@ có kèm token đăng nhập. Code server: <a href="manage_api.py">manage_api.py
 
 <h2>Đổi tên máy: từ lúc bấm nút</h2>
 <div class="step">
-<h3><span class="num">1</span>Menu ⋮ → Đổi tên (<a href="../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, <code>_rename()</code>)</h3>
+<h3><span class="num">1</span>Menu ⋮ → Đổi tên (<a href="../../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, <code>_rename()</code>)</h3>
 <p>Chỉ chủ máy thấy mục này. Hộp <code>_RenameDialog</code> điền sẵn tên hiện tại; bấm <strong>Lưu</strong> trả tên đã bỏ khoảng trắng hai đầu, tên rỗng hoặc bấm Hủy thì dừng.</p>
 </div>
 <div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, <code>renameMachine()</code></h3>
+<h3><span class="num">2</span><a href="../../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, <code>renameMachine()</code></h3>
 <p>POST <code>/app/doi-ten-may</code> với <code>{machine_id, name, token}</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="manage_flow.py">manage_flow.py</a>, <code>rename_machine()</code></h3>
+<h3><span class="num">3</span><a href="machinelist_flow.py">machinelist_flow.py</a>, <code>rename_machine()</code></h3>
 <ol>
-  <li><code>manage_api.handle()</code> đọc body (tối đa 4096 byte) rồi gọi flow.</li>
-  <li><code>manage_verify.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>clean_name()</code>: tên 1-150 ký tự.</li>
-  <li><code>manage_verify.role_of()</code>: phải là chủ máy.</li>
+  <li><code>machinelist_api.handle()</code> đọc body (tối đa 4096 byte) rồi gọi flow.</li>
+  <li><code>machinelist_verify.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>clean_name()</code>: tên 1-150 ký tự.</li>
+  <li><code>machinelist_verify.role_of()</code>: phải là chủ máy.</li>
   <li><code>machine_write.rename_machine()</code>: <code>UPDATE machines SET name=?</code>; trigger tự cập nhật <code>updated_at</code>.</li>
 </ol>
 </div>
@@ -116,15 +117,15 @@ có kèm token đăng nhập. Code server: <a href="manage_api.py">manage_api.py
 <p>POST <code>/app/go-may</code> với <code>{machine_id, token}</code>.</p>
 </div>
 <div class="step">
-<h3><span class="num">3</span><a href="manage_flow.py">manage_flow.py</a>, <code>remove_machine()</code></h3>
+<h3><span class="num">3</span><a href="machinelist_flow.py">machinelist_flow.py</a>, <code>remove_machine()</code></h3>
 <ol>
-  <li><code>manage_verify.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>BEGIN IMMEDIATE</code> khóa ghi rồi <code>role_of()</code> đọc vai trò.</li>
+  <li><code>machinelist_verify.check_request()</code>: token → <code>user_id</code>, kiểm tra <code>machine_id</code>; <code>BEGIN IMMEDIATE</code> khóa ghi rồi <code>role_of()</code> đọc vai trò.</li>
   <li><strong>Chủ:</strong> <code>machine_write.delete_machine()</code> xóa dòng <code>machines</code>; <code>ON DELETE CASCADE</code> xóa luôn quyền mọi nhân viên và mã mời. <code>product_key_hash</code> mất nên tem QR đăng ký lại được.</li>
   <li><strong>Nhân viên:</strong> <code>machine_write.remove_manager()</code> xóa đúng dòng <code>role='manager'</code> của người đó.</li>
 </ol>
 </div>
 <div class="step">
-<h3><span class="num">4</span>App cập nhật (<a href="../../../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, <code>forgetMachine()</code>)</h3>
+<h3><span class="num">4</span>App cập nhật (<a href="../../../../app/flutter_app/lib/UI/dashboard/dashboard/dashboard_controller.dart">dashboard_controller.dart</a>, <code>forgetMachine()</code>)</h3>
 <p>Bỏ máy khỏi danh sách; nếu đang chọn thì bỏ chọn, xóa menu/kho đang hiện. Sau đó <code>loadMyMachines()</code>; còn máy khác thì tự chọn máy đầu.</p>
 <p>Máy bị gỡ hoặc bị thu hồi từ <em>điện thoại khác</em> (chủ gỡ máy, nhân viên đang mở app) cũng biến mất: <code>loadMyMachines()</code> lấy danh sách server làm chuẩn, chạy khi mở dashboard, khi đóng các màn thêm máy và khi kéo xuống để tải lại ở tab Máy.</p>
 </div>

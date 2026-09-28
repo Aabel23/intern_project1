@@ -113,7 +113,7 @@ App ─ POST /app/gui-menu {token, machine_id, menu_version, thay_doi: [{drink_i
 mỗi món là một mảng theo thứ tự `fields`. `menu_version` là CRC32 của `drinks`, app
 chưa có menu gửi `0`. Mã máy: `machine/menu_sync/menu_sync_packet.py`; mã server: `menu_sync/`
 (`menu_sync_api.py` đọc/ghi HTTP, `menu_sync_verify.py` kiểm tra + chuyển lệnh xuống máy,
-`menu_sync_flow.py` xỏ hai phần lại; chạy riêng: `python -m server.service.dashboard_sync.menu_sync.menu_sync_flow`); mã app: `lib/feature/data_sync/products_sync.dart`.
+`menu_sync_flow.py` xỏ hai phần lại; chạy riêng: `python sandbox/server_module/run_modules.py menu_sync relay login`); mã app: `lib/feature/data_sync/products_sync.dart`.
 
 | Status | Khi nào |
 | --- | --- |

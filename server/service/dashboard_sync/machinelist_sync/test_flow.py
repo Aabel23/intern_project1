@@ -1,4 +1,4 @@
-"""Chạy: python -m unittest server.service.machine_manage.test_flow"""
+"""Chạy: python -m unittest server.service.dashboard_sync.machinelist_sync.test_flow"""
 
 import tempfile
 import unittest
@@ -8,12 +8,12 @@ from unittest.mock import patch
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
-from server.service.machine_share.share_flow import accept_invite, create_invite, list_my_machines
+from server.service.machine_share.share_flow import accept_invite, create_invite
 from server.service.user_login.session import create_session
-from . import manage_flow
+from . import machinelist_flow as flow
 
 
-class MachineManageTest(unittest.TestCase):
+class MachineListTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -45,13 +45,13 @@ class MachineManageTest(unittest.TestCase):
         return result
 
     def rename(self, data):
-        return self.call(manage_flow.rename_machine, data)
+        return self.call(flow.rename_machine, data)
 
     def remove(self, data):
-        return self.call(manage_flow.remove_machine, data)
+        return self.call(flow.remove_machine, data)
 
     def machines(self, token):
-        return {m['machine_id']: m for m in list_my_machines({'token': token})['machines']}
+        return {m['machine_id']: m for m in self.call(flow.list_my_machines, {'token': token})['machines']}
 
     def test_only_owner_renames(self):
         self.assertFalse(self.rename({
@@ -83,6 +83,7 @@ class MachineManageTest(unittest.TestCase):
         self.assertEqual(self.machines(self.staff)[again['machine_id']]['role'], 'owner')
 
     def test_requires_login(self):
+        self.assertTrue(self.call(flow.list_my_machines, {})['login_required'])
         self.assertTrue(self.rename({'machine_id': self.machine_id, 'name': 'x'})['login_required'])
         self.assertTrue(self.remove({'machine_id': self.machine_id})['login_required'])
 

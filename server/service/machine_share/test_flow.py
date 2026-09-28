@@ -11,7 +11,8 @@ from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
 from server.service.user_login.session import create_session
 from server.service.user_login.session import user_from_request
-from .share_flow import accept_invite, create_invite, list_my_machines, list_staff, revoke_staff
+from server.service.dashboard_sync.machinelist_sync.machinelist_flow import list_my_machines
+from .share_flow import accept_invite, create_invite, list_staff, revoke_staff
 
 
 class MachineShareTest(unittest.TestCase):
@@ -38,7 +39,7 @@ class MachineShareTest(unittest.TestCase):
         return create_session(user_id)
 
     def roles(self, token):
-        machines = list_my_machines({'token': token})['machines']
+        machines = list_my_machines({'token': token})[0]['machines']
         return {machine['machine_id']: machine['role'] for machine in machines}
 
     def test_owner_shares_once(self):

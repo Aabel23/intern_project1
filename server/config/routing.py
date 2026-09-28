@@ -5,7 +5,6 @@ MACHINE_POLL_COMMAND = "/machine/hoi-lenh"
 MACHINE_HEARTBEAT = "/machine/heartbeat"
 MACHINE_SEND_RESULT = "/machine/tra-ket-qua"
 MACHINE_SEND_SYNC = "/machine/tra-dong-bo"
-MACHINE_UPDATE_FIRMWARE = "/machine/cap-nhat-firmware"
 MACHINE_REFILL = "/machine/refill"
 
 
@@ -18,7 +17,6 @@ APP_VERIFY_LOGIN = "/app/xac-minh-dang-nhap"
 APP_LOGOUT = "/app/dang-xuat"
 
 APP_REGISTER_MACHINE = "/app/dang-ky-may"
-APP_REGISTER_MACHINE_VERIFY = "/app/xac-minh-dang-ky-may"
 APP_CREATE_SHARE = "/app/tao-ma-chia-se"
 APP_ACCEPT_SHARE = "/app/nhan-chia-se"
 APP_MY_MACHINES = "/app/may-cua-toi"

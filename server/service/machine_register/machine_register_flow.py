@@ -1,6 +1,5 @@
 """Nhận thông tin máy (QR/Bluetooth) -> kiểm tra -> lưu máy, gán chủ -> trả ID cho app."""
 
-from server.config.routing import APP_REGISTER_MACHINE_VERIFY
 from server.database.connection import get_connection
 from server.database.machine.machine_read import find_id_by_key_hash, get_owner_id
 from server.database.machine.machine_write import add_machine, set_owner
@@ -40,6 +39,5 @@ def receive_register(data):
         "registered": True,
         "created": created,
         "machine_id": machine_id,
-        "verify_route": APP_REGISTER_MACHINE_VERIFY,
         "message": "Đăng ký máy thành công" if created else "Máy đã được đăng ký",
     }
