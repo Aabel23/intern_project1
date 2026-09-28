@@ -10,7 +10,7 @@ from server.database.machine.init_db import init_db
 from server.service.machine_register.machine_register_flow import receive_register
 from server.service.machine_share.share_flow import accept_invite, create_invite, list_my_machines
 from server.service.user_login.session import create_session
-from .manage_flow import remove_machine, rename_machine
+from . import manage_flow
 
 
 class MachineManageTest(unittest.TestCase):
@@ -38,30 +38,42 @@ class MachineManageTest(unittest.TestCase):
             ).lastrowid
         return create_session(user_id)
 
+    def call(self, route, data):
+        """Gọi flow, kiểm status khớp valid (200/400) như app đang nhận, trả thân kết quả."""
+        result, status = route(data)
+        self.assertEqual(status, 200 if result['valid'] else 400)
+        return result
+
+    def rename(self, data):
+        return self.call(manage_flow.rename_machine, data)
+
+    def remove(self, data):
+        return self.call(manage_flow.remove_machine, data)
+
     def machines(self, token):
         return {m['machine_id']: m for m in list_my_machines({'token': token})['machines']}
 
     def test_only_owner_renames(self):
-        self.assertFalse(rename_machine({
+        self.assertFalse(self.rename({
             'token': self.staff, 'machine_id': self.machine_id, 'name': 'FlexMix-Moi',
         })['valid'])
-        self.assertFalse(rename_machine({
+        self.assertFalse(self.rename({
             'token': self.owner, 'machine_id': self.machine_id, 'name': '   ',
         })['valid'])
-        result = rename_machine({'token': self.owner, 'machine_id': self.machine_id, 'name': ' FlexMix-Moi '})
+        result = self.rename({'token': self.owner, 'machine_id': self.machine_id, 'name': ' FlexMix-Moi '})
         self.assertTrue(result['valid'])
         self.assertEqual(self.machines(self.staff)[self.machine_id]['name'], 'FlexMix-Moi')
 
     def test_staff_removes_only_own_access(self):
-        result = remove_machine({'token': self.staff, 'machine_id': self.machine_id})
+        result = self.remove({'token': self.staff, 'machine_id': self.machine_id})
         self.assertEqual((result['valid'], result['deleted']), (True, False))
         self.assertEqual(self.machines(self.staff), {})
         self.assertIn(self.machine_id, self.machines(self.owner))
         # Không còn quyền thì không gỡ được nữa.
-        self.assertFalse(remove_machine({'token': self.staff, 'machine_id': self.machine_id})['valid'])
+        self.assertFalse(self.remove({'token': self.staff, 'machine_id': self.machine_id})['valid'])
 
     def test_owner_deletes_machine_and_tag_can_register_again(self):
-        result = remove_machine({'token': self.owner, 'machine_id': self.machine_id})
+        result = self.remove({'token': self.owner, 'machine_id': self.machine_id})
         self.assertEqual((result['valid'], result['deleted']), (True, True))
         self.assertEqual(self.machines(self.owner), {})
         self.assertEqual(self.machines(self.staff), {})
@@ -71,8 +83,8 @@ class MachineManageTest(unittest.TestCase):
         self.assertEqual(self.machines(self.staff)[again['machine_id']]['role'], 'owner')
 
     def test_requires_login(self):
-        self.assertTrue(rename_machine({'machine_id': self.machine_id, 'name': 'x'})['login_required'])
-        self.assertTrue(remove_machine({'machine_id': self.machine_id})['login_required'])
+        self.assertTrue(self.rename({'machine_id': self.machine_id, 'name': 'x'})['login_required'])
+        self.assertTrue(self.remove({'machine_id': self.machine_id})['login_required'])
 
 
 if __name__ == '__main__':

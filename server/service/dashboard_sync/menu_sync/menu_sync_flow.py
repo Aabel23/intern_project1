@@ -11,20 +11,10 @@ Chạy riêng module (chỉ có route menu + relay để máy nhận lệnh):
     python -m server.service.dashboard_sync.menu_sync.menu_sync_flow --port 8000
 """
 
-# Thư viện chuẩn
-import argparse
-import sys
-
-# Server chung: cấu hình, database, khung server (chỉ dùng khi chạy riêng)
-from server.config.config import SERVER_HOST, SERVER_PORT
-from server.database.machine.init_db import init_db
-from server.lib.module_server import ModuleServer, make_handler
-
-# Module khác: relay để máy nhận lệnh khi chạy riêng
-from server.service.machine_relay import relay_api
+# Server chung: chạy riêng module
+from server.lib.module_server import run_standalone
 
 # Trong module menu_sync
-from . import menu_sync_api
 from .menu_sync_verify import check_access, is_changes, is_menu_version, send_to_machine
 
 
@@ -51,21 +41,9 @@ def gui_menu(data):
     return send_to_machine(machine_id, "gui_menu", {"menu_version": menu_version, "thay_doi": thay_doi})
 
 
-def run_standalone(port):
-    """Server chỉ gồm tab Menu và relay (máy cần heartbeat, hỏi lệnh, trả kết quả)."""
-    modules = (menu_sync_api, relay_api)
-    init_db()
-    with ModuleServer((SERVER_HOST, port), make_handler(modules)) as server:
-        server.modules = modules
-        print(f"Menu sync chạy riêng: http://{SERVER_HOST}:{port}", flush=True)
-        server.serve_forever()
-
-
 if __name__ == "__main__":
-    sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Chạy riêng module menu sync.")
-    parser.add_argument("--port", type=int, default=SERVER_PORT)
-    try:
-        run_standalone(parser.parse_args().port)
-    except KeyboardInterrupt:
-        pass
+    # Chỉ tab Menu và relay (máy cần heartbeat, hỏi lệnh, trả kết quả).
+    run_standalone(
+        (f"{__package__}.menu_sync_api", "server.service.machine_relay.relay_api"),
+        "Menu sync",
+    )

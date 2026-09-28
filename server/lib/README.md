@@ -11,9 +11,10 @@ Các block trong `server/` import trực tiếp; sửa ở đây là ảnh hư�
 | `checks.py` | `is_request_id(value)` | `login_flow.py`, `registration_flow.py` |
 | `checks.py` | `is_machine_id(value)` | `machine_register_verify.py`, `share_flow.py`, `manage_flow.py`, `machine_relay/relay_api.py` |
 | `checks.py` | `remove_expired(states)` | dọn phiên RAM hết hạn: `login_flow.py`, `registration_flow.py` |
-| `module_server.py` | `make_handler(modules)`, `ModuleServer` | `server/main.py` và chạy riêng module (`menu_sync_flow.py`): gọi `handle`/`handle_get`/`tick` của từng module |
+| `module_server.py` | `make_handler(modules)`, `ModuleServer` | `server/main.py`: gọi `handle`/`handle_get`/`tick` của từng module |
+| `module_server.py` | `run_standalone(module_names, title)` | khối `__main__` của `*_flow.py` để chạy riêng module (`menu_sync_flow.py`, `manage_flow.py`) |
 | `http_json.py` | `read_json`, `read_body`, `discard_body`, `send_json` | mọi `*_api.py` |
-| `valid_api.py` | `handle_valid_routes(request, routes, limited)` | module có flow trả `{"valid", "message"}`: đăng ký, đăng nhập, đăng ký máy, chia sẻ, quản lý máy |
+| `valid_api.py` | `handle_valid_routes(request, routes, limited)` | module chưa chuyển sang mẫu mới (xem `androidv0.1/MODULE_PATTERN.md`): đăng ký, đăng nhập, đăng ký máy, chia sẻ. Bỏ khi không còn ai dùng |
 | `rate_limit.py` | `too_many_requests(ip)` | `valid_api.py` khi `limited=True` (đăng ký, đăng nhập) |
 
 Đổi `sha256_hex` là đổi cách băm mọi dữ liệu đã lưu trong DB (key, token, mã mời):
