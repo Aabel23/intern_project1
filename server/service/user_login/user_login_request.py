@@ -4,7 +4,8 @@
     POST /app/xac-minh-dang-nhap  {request_id, login_id}             lấy kết quả (token)
     POST /app/dang-xuat           {token}                            xóa phiên trên server
 
-Chưa cần token nên giới hạn request theo IP (dò mật khẩu).
+Đăng nhập chưa cần token nên giới hạn request theo IP (dò mật khẩu). Đăng xuất đã mang
+token nên không tính, để kẻ cùng IP dò mật khẩu không chặn được việc xóa phiên.
 """
 
 # Routing tập trung và HTTP dùng chung, phiên đăng nhập
@@ -26,7 +27,7 @@ MAX_BODY = 4096
 
 def handle(request):
     """True nếu request thuộc module này và đã trả lời (server chính chỉ gọi hàm này)."""
-    return handle_routes(request, ROUTES, MAX_BODY, invalid, limited=True)
+    return handle_routes(request, ROUTES, MAX_BODY, invalid, limited=request.path != APP_LOGOUT)
 
 
 # Dọn phiên đăng nhập hết hạn ngay cả khi không có request mới.

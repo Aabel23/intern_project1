@@ -150,6 +150,16 @@ class SecurityScenarioTest(unittest.TestCase):
                                                  "password": f"doan-{i:04d}-xx"})[0] for i in range(35)]
         self.assertIn(429, statuses)
 
+    def test_login_flood_from_same_ip_cannot_block_logout(self):
+        """Kẻ cùng IP (cùng Wi-Fi quán) dò mật khẩu tới 429 thì đăng xuất vẫn phải xóa phiên:
+        app bỏ qua lỗi đăng xuất nên token bị lộ sẽ còn sống 30 ngày."""
+        _, victim = self.user("nan_nhan")
+        for i in range(35):
+            self.post("/app/dang-nhap", {"request_id": f"{i:032x}", "username": "nan_nhan",
+                                         "password": f"doan-{i:04d}-xx"})
+        self.assertEqual(self.post("/app/dang-xuat", {"token": victim})[0], 200)
+        self.assertEqual(self.post("/app/may-cua-toi", {"token": victim})[0], 400)
+
     def test_machine_cannot_answer_for_another_machine(self):
         _, owner = self.user("chu")
         machine_id = self.machine(owner)
