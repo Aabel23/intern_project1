@@ -7,7 +7,7 @@ Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP status); đọc
 menu_sync_api.py. Gói menu (base64 zlib) đi nguyên từ máy tới app, server không
 giải nén, không lưu. Cấu trúc gói: machine/menu_sync/menu_sync_packet.py.
 
-Chạy riêng module (chỉ có route menu + các route máy cần để nhận lệnh):
+Chạy riêng module (chỉ có route menu + relay để máy nhận lệnh):
     python -m server.service.dashboard_sync.menu_sync.menu_sync_flow --port 8000
 """
 
@@ -38,21 +38,17 @@ def gui_menu(data):
 
 
 def run_standalone(port):
-    """Server chỉ gồm tab Menu và relay phía máy (heartbeat, hỏi lệnh, trả kết quả)."""
-    from http.server import ThreadingHTTPServer
-
-    from server import server as relay
+    """Server chỉ gồm tab Menu và relay (máy cần heartbeat, hỏi lệnh, trả kết quả)."""
     from server.config.config import SERVER_HOST
     from server.database.machine.init_db import init_db
+    from server.lib.module_server import ModuleServer, make_handler
+    from server.service.machine_relay import relay_api
     from . import menu_sync_api
 
-    class Handler(relay.Handler):
-        def do_POST(self):
-            if not menu_sync_api.handle(self):
-                super().do_POST()
-
+    modules = (menu_sync_api, relay_api)
     init_db()
-    with ThreadingHTTPServer((SERVER_HOST, port), Handler) as server:
+    with ModuleServer((SERVER_HOST, port), make_handler(modules)) as server:
+        server.modules = modules
         print(f"Menu sync chạy riêng: http://{SERVER_HOST}:{port}", flush=True)
         server.serve_forever()
 

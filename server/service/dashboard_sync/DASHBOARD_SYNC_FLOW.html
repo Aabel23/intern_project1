@@ -65,7 +65,7 @@
 <p class="lead">App đọc dữ liệu của máy (hiện có: kho nguyên liệu) để vẽ các tab dashboard. Server không lưu dữ liệu này:
 nó kiểm tra quyền rồi chuyển lệnh xuống máy qua hộp thư relay trong RAM, máy đọc MySQL của nó và trả về.
 Mọi tab dùng chung một sublink, phân biệt bằng <code>lenh</code> trong body. Lệnh ghi (nạp kho, bật/tắt món) không đi qua đây.
-Code server: <a href="../../server.py">server.py</a>, bảng quyền: <a href="sync_rules.py">sync_rules.py</a>.</p>
+Code server: <a href="../machine_relay/relay_api.py">machine_relay/relay_api.py</a>, bảng quyền: <a href="sync_rules.py">sync_rules.py</a>.</p>
 
 <h2>Luồng tổng quát</h2>
 <pre><code>App  ─ POST /app/dong-bo {token, machine_id, lenh}   header If-None-Match: &lt;ETag đang giữ&gt;
@@ -155,7 +155,7 @@ ETag: "47e88d389d1422864e67805f467c61cd"
 <h2>File liên quan</h2>
 <div class="table-wrap"><table>
 <tr><th>Phần</th><th>File</th></tr>
-<tr><td>Server</td><td><code>server/server.py</code> (<code>app_dong_bo</code>, <code>may_tra_dong_bo</code>, <code>gui_va_cho</code>), <code>sync_rules.py</code></td></tr>
+<tr><td>Server</td><td><code>server/service/machine_relay/</code> (<code>app_dong_bo</code>, <code>may_tra_dong_bo</code>, <code>gui_va_cho</code>), <code>sync_rules.py</code></td></tr>
 <tr><td>Máy</td><td><code>machine/main.py</code> (<code>pack_sync</code>), <code>machine/server_connection/instruction_api.py</code> (<code>send_sync</code>)</td></tr>
 <tr><td>App</td><td><code>machine_api.dart</code> (<code>sync</code>), <code>feature/data_sync/ingredients_sync.dart</code>, <code>minitab/inventory_tab.dart</code></td></tr>
 </table></div>

@@ -78,7 +78,7 @@ khi máy báo lỗi, `503` khi máy offline.
 
 | Phần | File |
 | --- | --- |
-| Server | `server/server.py` (`app_dong_bo`, `may_tra_dong_bo`, `gui_va_cho`), `sync_rules.py` |
+| Server | `service/machine_relay/relay_api.py` (`app_dong_bo`, `may_tra_dong_bo`), `relay_queue.py` (`gui_va_cho`), `sync_rules.py` |
 | Máy | `machine/main.py` (`pack_sync`), `machine/server_connection/instruction_api.py` (`send_sync`) |
 | App | `lib/UI/dashboard/machine_api.dart` (`sync`), `lib/feature/data_sync/ingredients_sync.dart`, `lib/UI/dashboard/minitab/inventory_tab.dart` |
 

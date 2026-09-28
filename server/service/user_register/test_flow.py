@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from .otp import otp_flow as flow
 from server import main as server_main
+from server.lib import rate_limit
 from .user_register import registration_flow
 from server.database import connection
 
@@ -157,7 +158,7 @@ class RegistrationFlowTest(unittest.TestCase):
         self.assertFalse(registration_flow.REGISTRATIONS[key]["otp_verified"])
 
     def test_http_flow_and_rate_limit(self):
-        IP_REQUESTS = server_main.IP_REQUESTS
+        IP_REQUESTS = rate_limit.IP_REQUESTS
         IP_REQUESTS.clear()
         server = server_main.Server(("127.0.0.1", 0), server_main.Handler)
         worker = threading.Thread(target=server.serve_forever, daemon=True)

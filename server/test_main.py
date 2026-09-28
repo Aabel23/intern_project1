@@ -13,6 +13,7 @@ from urllib.error import HTTPError
 from server import main
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
+from server.lib import rate_limit
 from server.service.user_login.session import create_session
 
 
@@ -25,10 +26,10 @@ class StartpointTest(unittest.TestCase):
         self.addCleanup(override.stop)
         init_db()
         # Long-poll ngắn để máy hỏi lệnh khi hộp thư rỗng không làm chậm test.
-        wait = patch('server.server.POLL_WAIT_SECONDS', 0.3)
+        wait = patch('server.service.machine_relay.relay_api.POLL_WAIT_SECONDS', 0.3)
         wait.start()
         self.addCleanup(wait.stop)
-        main.IP_REQUESTS.clear()
+        rate_limit.IP_REQUESTS.clear()
         self.server = main.Server(('127.0.0.1', 0), main.Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -38,7 +39,7 @@ class StartpointTest(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()
-        main.IP_REQUESTS.clear()
+        rate_limit.IP_REQUESTS.clear()
 
     def request(self, path, data=None):
         body = None if data is None else json.dumps(data).encode()
@@ -97,7 +98,7 @@ class StartpointTest(unittest.TestCase):
         return token, machine['machine_id']
 
     def test_waiting_app_does_not_block_machine(self):
-        from server import server as relay
+        from server.service.machine_relay import relay_queue as relay
         token, machine_id = self.make_owner_machine()
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
         with ThreadPoolExecutor(max_workers=1) as pool:
@@ -124,7 +125,7 @@ class StartpointTest(unittest.TestCase):
         import time
         token, machine_id = self.make_owner_machine()
         self.request('/machine/heartbeat', {'product_key': 'relay-key'})
-        with patch('server.server.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
+        with patch('server.service.machine_relay.relay_api.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
             started = time.monotonic()
             poll = pool.submit(self.request, '/machine/hoi-lenh', {'product_key': 'relay-key'})
             threading.Event().wait(0.3)
@@ -142,7 +143,7 @@ class StartpointTest(unittest.TestCase):
                 self.assertEqual(app.result(timeout=3), (200, {'ok': 1}))
 
     def test_relay_checks_login_owner_and_product_key(self):
-        from server import server as relay
+        from server.service.machine_relay import relay_queue as relay
         token, machine_id = self.make_owner_machine()
         other, other_machine = self.make_owner_machine('other', 'other-key')
         status, data = self.request('/app/gui-lenh', {'machine_id': machine_id, 'ten': 'xem_nguyen_lieu'})
@@ -183,8 +184,11 @@ class StartpointTest(unittest.TestCase):
             self.assertEqual(app.result(timeout=3), (200, {'that': True}))
 
     def test_cleanup_callbacks(self):
-        with patch.object(main, 'cleanup_registration') as registration:
-            with patch.object(main, 'cleanup_login') as login:
+        # Mỗi module tự khai tick(); server chỉ gọi các tick đó định kỳ.
+        from server.service.user_login import login_api
+        from server.service.user_register.user_register import user_register_api
+        with patch.object(user_register_api, 'tick') as registration:
+            with patch.object(login_api, 'tick') as login:
                 self.server.service_actions()
                 registration.assert_called()
                 login.assert_called()

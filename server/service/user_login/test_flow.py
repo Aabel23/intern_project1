@@ -143,8 +143,9 @@ class LoginFlowTest(unittest.TestCase):
             thread.join()
 
     def test_main_server_exposes_login_and_registration_routes(self):
+        routes = {path for module in server_main.MODULES for path in getattr(module, "ROUTES", ())}
         for path in (*ROUTES, "/app/dang-ky-nguoi-dung", "/app/gui-ma-otp", "/app/xac-minh-otp"):
-            self.assertIn(path, server_main.ROUTES)
+            self.assertIn(path, routes)
 
 
 

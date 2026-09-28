@@ -23,6 +23,7 @@ from urllib.request import Request, urlopen
 from server import main
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
+from server.lib import rate_limit
 from server.database.user.user_add import hash_password
 from server.service.user_login import login_flow
 from server.service.user_login.session import create_session
@@ -33,18 +34,18 @@ class SecurityScenarioTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         for target, value in (("server.database.connection.DB_PATH", Path(directory.name) / "t.db"),
-                              ("server.server.POLL_WAIT_SECONDS", 0.3)):
+                              ("server.service.machine_relay.relay_api.POLL_WAIT_SECONDS", 0.3)):
             p = patch(target, value)
             p.start()
             self.addCleanup(p.stop)
         init_db()
-        main.IP_REQUESTS.clear()
+        rate_limit.IP_REQUESTS.clear()
         login_flow.LOGIN_STATES.clear()
         self.server = main.Server(("127.0.0.1", 0), main.Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
-        self.addCleanup(main.IP_REQUESTS.clear)
+        self.addCleanup(rate_limit.IP_REQUESTS.clear)
         self.addCleanup(login_flow.LOGIN_STATES.clear)
 
     # ---------- tiện ích ----------
@@ -140,7 +141,7 @@ class SecurityScenarioTest(unittest.TestCase):
     def test_wrong_password_and_unknown_user_look_the_same(self):
         self.user("co_that")
         s1, d1 = self.login("co_that", "sai-mat-khau-123")
-        main.IP_REQUESTS.clear()
+        rate_limit.IP_REQUESTS.clear()
         s2, d2 = self.login("khong_ton_tai", "sai-mat-khau-123")
         self.assertEqual((s1, d1["message"]), (s2, d2["message"]))
 
@@ -194,7 +195,7 @@ class SecurityScenarioTest(unittest.TestCase):
         self.user("khach")
         now = time.monotonic()
         for i in range(1000):
-            main.IP_REQUESTS[f"10.0.{i // 250}.{i % 250}"] = [now + 60, 1]
+            rate_limit.IP_REQUESTS[f"10.0.{i // 250}.{i % 250}"] = [now + 60, 1]
         status, _ = self.login("khach", "matkhau-dung-123")
         self.assertEqual(status, 200)
 

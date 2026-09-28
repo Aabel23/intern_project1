@@ -4,7 +4,7 @@ Kiểm tra: người gửi có quyền với máy không, gói app gửi có đ�
 Chức năng: chuyển lệnh xuống máy qua hộp thư relay dùng chung và chờ kết quả.
 """
 
-from server import server as relay
+from server.service.machine_relay import relay_queue as relay
 from server.database.machine.machine_read import can_manage, is_owner
 from server.lib.checks import is_machine_id
 from server.service.dashboard_sync.sync_rules import QUYEN_MENU
@@ -66,7 +66,7 @@ def check_access(data):
 def send_to_machine(machine_id, ten, thamso):
     """Bỏ lệnh vào hộp thư chung của máy và chờ máy long-poll lấy, trả (kết quả, status).
 
-    Hộp thư nằm ở server.server vì máy chỉ hỏi lệnh ở một chỗ (/machine/hoi-lenh)
+    Hộp thư nằm ở machine_relay/relay_queue.py vì máy chỉ hỏi lệnh ở một chỗ (/machine/hoi-lenh)
     cho mọi loại lệnh; module này chỉ dùng, không giữ hộp thư riêng.
     """
     if not relay.is_online(machine_id):
