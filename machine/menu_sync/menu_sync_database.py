@@ -1,5 +1,6 @@
 """Đọc/ghi bảng drink trong machine/database/database.db cho tab Menu."""
 
+# Thư viện chuẩn
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path

@@ -7,10 +7,14 @@ Module tự quyết giới hạn body và status; server chính chỉ gọi hand
 request POST, handle() trả False nếu đường dẫn không thuộc tab Menu.
 """
 
+# Thư viện chuẩn
 import sqlite3
 
+# Server chung: đường dẫn, đọc/ghi JSON
 from server.config.routing import APP_RECEIVE_MENU, APP_SEND_MENU
 from server.lib.http_json import read_json, send_json
+
+# Trong module menu_sync
 from .menu_sync_flow import gui_menu, nhan_menu
 
 ROUTES = {

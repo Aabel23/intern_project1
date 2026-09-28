@@ -5,9 +5,10 @@
                khớp → kiểm từng thay đổi, ghi trong một transaction → gói mới
 """
 
+# Trong module menu_sync: database → kiểm tra → đóng gói
 from .menu_sync_database import connect, read_drinks, update_drink
-from .menu_sync_packet import menu_version_of, reply_with_menu
 from .menu_sync_verify import check_changes, check_menu_version
+from .menu_sync_packet import menu_version_of, reply_with_menu
 
 
 def nhan_menu(thamso):

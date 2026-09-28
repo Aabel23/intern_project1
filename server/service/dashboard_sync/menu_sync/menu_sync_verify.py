@@ -4,10 +4,13 @@ Kiểm tra: người gửi có quyền với máy không, gói app gửi có đ�
 Chức năng: chuyển lệnh xuống máy qua hộp thư relay dùng chung và chờ kết quả.
 """
 
-from server.service.machine_relay import relay_queue as relay
+# Server chung: database máy, hàm kiểm tra
 from server.database.machine.machine_read import can_manage, is_owner
 from server.lib.checks import is_machine_id
+
+# Module khác: phiên đăng nhập, bảng quyền, hộp thư lệnh của máy
 from server.service.dashboard_sync.sync_rules import QUYEN_MENU
+from server.service.machine_relay import relay_queue as relay
 from server.service.user_login.session import NOT_LOGGED_IN, user_from_request
 
 # Cột app được sửa, kèm kiểu hợp lệ; máy cũng chỉ ghi đúng các cột này.

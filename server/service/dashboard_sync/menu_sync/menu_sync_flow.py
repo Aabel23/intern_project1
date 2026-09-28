@@ -11,13 +11,19 @@ Chạy riêng module (chỉ có route menu + relay để máy nhận lệnh):
     python -m server.service.dashboard_sync.menu_sync.menu_sync_flow --port 8000
 """
 
+# Thư viện chuẩn
 import argparse
 import sys
 
+# Server chung: cấu hình, database, khung server (chỉ dùng khi chạy riêng)
 from server.config.config import SERVER_HOST, SERVER_PORT
 from server.database.machine.init_db import init_db
 from server.lib.module_server import ModuleServer, make_handler
+
+# Module khác: relay để máy nhận lệnh khi chạy riêng
 from server.service.machine_relay import relay_api
+
+# Trong module menu_sync
 from . import menu_sync_api
 from .menu_sync_verify import check_access, is_changes, is_menu_version, send_to_machine
 

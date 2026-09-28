@@ -4,6 +4,7 @@ machine/main.py gộp bảng COMMANDS này; mỗi hàm nhận thamso của lện
 kết quả gửi lên server (xem menu_sync_flow.py).
 """
 
+# Trong module menu_sync
 from .menu_sync_flow import gui_menu, nhan_menu
 
 COMMANDS = {

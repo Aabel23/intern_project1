@@ -13,11 +13,13 @@ Cấu trúc gói (trước khi nén):
 Gói gửi đi = base64(zlib(JSON gọn, UTF-8)) để đi được trong kết quả JSON của relay.
 """
 
+# Thư viện chuẩn
 import base64
 import json
 import zlib
 from datetime import datetime
 
+# Trong module menu_sync
 from .menu_sync_database import FIELDS
 
 PACKET_TYPE = "menu_sync"
