@@ -30,7 +30,6 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from machine.config.create_env import build_env  # noqa: E402
 from tests.e2e.phone import Phone  # noqa: E402
 from server.config.config import SERVER_PORT  # noqa: E402
 from server.database.connection import get_connection  # noqa: E402
@@ -441,7 +440,8 @@ def main():
 
         owner, staff = create_user(run, "owner"), create_user(run, "staff")
         machine_name = f"FlexMix-E2E-{secrets.token_hex(2)}"
-        env = build_env(machine_name, LOCAL_SERVER)
+        env = (f"MACHINE_NAME={machine_name}\n"
+               f"PRODUCT_KEY=fm_{secrets.token_hex(32)}\nSERVER_URL={LOCAL_SERVER}\n")
         run.env_file = run.logs / "machine.env"
         run.env_file.write_text(env, encoding="utf-8")
         key = next(line.split("=", 1)[1] for line in env.splitlines() if line.startswith("PRODUCT_KEY="))

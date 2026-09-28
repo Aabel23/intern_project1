@@ -19,4 +19,3 @@ def set_owner(conn, machine_id, user_id):
         " ON CONFLICT (machine_id, user_id) DO UPDATE SET role='owner'",
         (machine_id, user_id),
     )
-

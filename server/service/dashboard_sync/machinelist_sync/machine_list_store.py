@@ -22,4 +22,3 @@ def rename_machine(conn, machine_id, name):
 def delete_machine(conn, machine_id):
     # Quyền quản lý và mã mời của máy bị xóa theo (ON DELETE CASCADE).
     conn.execute("DELETE FROM machines WHERE machine_id=?", (machine_id,))
-

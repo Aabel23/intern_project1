@@ -57,4 +57,3 @@ def add_manager(conn, machine_id, user_id):
         "INSERT OR IGNORE INTO machine_managers (machine_id, user_id, role) VALUES (?, ?, 'manager')",
         (machine_id, user_id),
     )
-
