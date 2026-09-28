@@ -179,6 +179,43 @@ class StartpointTest(unittest.TestCase):
             })
             self.assertEqual(app.result(timeout=3), (200, {'that': True}))
 
+    def test_timed_out_command_is_not_run_or_answered_later(self):
+        token, machine_id = self.make_owner_machine()
+        self.request('/machine/heartbeat', {'product_key': 'relay-key'})
+        refill = {'token': token, 'machine_id': machine_id, 'target': 'all', 'value': 'full'}
+
+        def take():
+            for _ in range(20):
+                lenh = self.request('/machine/hoi-lenh', {'product_key': 'relay-key'})[1]['lenh']
+                if lenh is not None:
+                    return lenh
+            self.fail('Máy không nhận được lệnh')
+
+        with patch('server.lib.machine_transport.COMMAND_TIMEOUT_SECONDS', 1):
+            # Máy còn heartbeat nhưng chưa lấy lệnh: hết giờ thì hủy, online lại không nạp kho lần nữa.
+            status, data = self.request('/app/nap-kho', refill)
+            self.assertEqual((status, data), (502, {'loi': 'Máy không phản hồi, lệnh đã được hủy'}))
+            self.assertIsNone(self.request('/machine/hoi-lenh', {'product_key': 'relay-key'})[1]['lenh'])
+            # Máy lấy lệnh nhưng trả muộn: kết quả muộn không thành kết quả của lần hỏi sau.
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                late = pool.submit(self.request, '/app/nhan-kho', {
+                    'token': token, 'machine_id': machine_id, 'version': 0,
+                })
+                old = take()
+                self.assertEqual(late.result(timeout=3),
+                                 (502, {'loi': 'Máy chưa trả kết quả, hãy tải lại để kiểm tra'}))
+                retry = pool.submit(self.request, '/app/nhan-kho', {
+                    'token': token, 'machine_id': machine_id, 'version': 0,
+                })
+                new = take()
+                self.request('/machine/tra-ket-qua', {
+                    'product_key': 'relay-key', 'id': old['id'], 'ket_qua': {'cu': True},
+                })
+                self.request('/machine/tra-ket-qua', {
+                    'product_key': 'relay-key', 'id': new['id'], 'ket_qua': {'moi': True},
+                })
+                self.assertEqual(retry.result(timeout=3), (200, {'moi': True}))
+
     def test_owner_removes_machine_and_same_tag_can_register_again(self):
         owner, machine_id = self.make_owner_machine(key="reusable-tag")
         other, _ = self.make_owner_machine("new-owner", "other-tag")

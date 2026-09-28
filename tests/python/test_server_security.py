@@ -224,17 +224,49 @@ class SecurityScenarioTest(unittest.TestCase):
         self.assertEqual(self.post("/machine/tra-dong-bo", {"product_key": "x"})[0], 404)
 
     def test_nested_json_gets_an_error_response(self):
-        """JSON lồng sâu (RecursionError khi parse) vẫn nhận 400, server không rớt kết nối."""
-        conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
-        body = b"[" * 4000
-        conn.request("POST", "/app/dang-nhap", body=body, headers={"Content-Type": "application/json"})
-        try:
-            status = conn.getresponse().status
-        except (RemoteDisconnected, ConnectionResetError):
-            status = None
-        finally:
-            conn.close()
-        self.assertEqual(status, 400)
+        """JSON lồng sâu (RecursionError khi parse) vẫn nhận 400, server không rớt kết nối.
+        Route nhận body lớn (Menu 64 KB, cổng máy 1 MB) đủ chỗ vượt giới hạn đệ quy của parser."""
+        for path, depth in (("/app/dang-nhap", 4000), ("/app/gui-menu", 60000),
+                            ("/machine/tra-ket-qua", 200000)):
+            with self.subTest(path=path):
+                conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
+                conn.request("POST", path, body=b"[" * depth, headers={"Content-Type": "application/json"})
+                try:
+                    status = conn.getresponse().status
+                except (RemoteDisconnected, ConnectionResetError):
+                    status = None
+                finally:
+                    conn.close()
+                self.assertEqual(status, 400)
+
+    def test_lone_surrogate_json_gets_an_error_response(self):
+        """Chuỗi JSON chứa surrogate lẻ (\\ud800) không mã hóa được UTF-8 khi băm/ghi SQLite:
+        mọi module phải trả 400 JSON, không làm rớt kết nối."""
+        text = '"\\ud800-khong-phai-unicode-hop-le"'
+        body = ('{"request_id": "%s", "full_name": %s, "username": %s, "password": %s,'
+                ' "email": "a@b.cc", "token": %s, "product_key": %s, "machine_name": "M",'
+                ' "code": %s, "machine_id": "fm_x", "registration_id": %s}'
+                % (("a" * 32,) + (text,) * 7)).encode()
+        for path in ("/app/dang-nhap", "/app/dang-ky-nguoi-dung", "/app/dang-xuat", "/app/dang-ky-may",
+                     "/app/nhan-chia-se", "/app/may-cua-toi", "/app/nhan-menu", "/app/nhan-kho",
+                     "/machine/heartbeat"):
+            with self.subTest(path=path):
+                conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
+                conn.request("POST", path, body=body, headers={"Content-Type": "application/json"})
+                try:
+                    response = conn.getresponse()
+                    status, data = response.status, json.loads(response.read())
+                except (RemoteDisconnected, ConnectionResetError):
+                    status, data = None, None
+                finally:
+                    conn.close()
+                self.assertEqual(status, 400)
+                self.assertIsInstance(data, dict)
+        # Cặp surrogate hợp lệ (json.dumps escape emoji thành 😀) vẫn được nhận.
+        _, owner = self.user("chu")
+        status, _ = self.post("/app/dang-ky-may", {"machine_name": "Máy 😀", "product_key": "fm_emoji",
+                                                   "token": owner})
+        self.assertEqual(status, 200)
 
     @unittest.expectedFailure
     def test_SEC14_usernames_differing_only_in_case_cannot_coexist(self):

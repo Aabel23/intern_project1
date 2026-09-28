@@ -20,7 +20,10 @@ def read_json(request, max_body):
     """Body JSON object; None nếu sai kích thước, sai định dạng hoặc quá thời gian."""
     try:
         data = json.loads(read_body(request, max_body))
-    except (ValueError, UnicodeDecodeError, TimeoutError):
+        # Phải ghi lại được: surrogate lẻ (\ud800) không mã hóa UTF-8 khi băm/ghi SQLite,
+        # lồng quá sâu thì không gửi tiếp cho app được.
+        json.dumps(data, ensure_ascii=False).encode("utf-8")
+    except (ValueError, UnicodeDecodeError, TimeoutError, RecursionError):
         return None
     return data if isinstance(data, dict) else None
 
