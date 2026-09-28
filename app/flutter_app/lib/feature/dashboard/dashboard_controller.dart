@@ -28,13 +28,17 @@ class DashboardController extends ChangeNotifier {
   // Tăng khi đổi máy hoặc đóng dashboard để bỏ các kết quả trả về muộn.
   int _session = 0;
   int _statusRequest = 0;
+  int _listRequest = 0;
 
   bool get hasMachine => machineId != null;
 
   Future<void> loadMyMachines() async {
     if (api.token == null) return;
+    final request = ++_listRequest;
     try {
       final rows = await api.myMachines();
+      // Lượt tải cũ trả về sau lượt mới hoặc sau khi đóng dashboard thì bỏ.
+      if (request != _listRequest) return;
       machinesError = null;
       // Danh sách server là bản đúng: máy bị thu hồi/gỡ ở nơi khác cũng biến mất.
       final ids = <String>[];
@@ -62,6 +66,7 @@ class DashboardController extends ChangeNotifier {
         inventory.reset();
       }
     } on ApiException catch (error) {
+      if (request != _listRequest) return;
       machinesError = error.message;
     }
     if (machineId == null && machines.isNotEmpty) {
@@ -126,6 +131,7 @@ class DashboardController extends ChangeNotifier {
   @override
   void dispose() {
     _session++;
+    _listRequest++;
     products.dispose();
     inventory.dispose();
     super.dispose();

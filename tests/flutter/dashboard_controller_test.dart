@@ -33,7 +33,82 @@ Future<HttpServer> _fakeServer(List<Map<String, String>> machines) async {
   return server;
 }
 
+// Server giả giữ các request /app/may-cua-toi để test tự chọn thứ tự trả lời;
+// các route khác trả ngay như máy offline.
+Future<(HttpServer, StreamIterator<HttpRequest>)> _heldListServer() async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  final lists = StreamController<HttpRequest>();
+  server.listen((request) async {
+    await utf8.decoder.bind(request).join();
+    if (request.uri.path == '/app/may-cua-toi') {
+      lists.add(request);
+      return;
+    }
+    final status = request.uri.path == '/machine/trang-thai' ? 200 : 503;
+    request.response
+      ..statusCode = status
+      ..headers.contentType = ContentType.json
+      ..write(
+        jsonEncode(status == 200 ? {'online': false} : {'loi': 'offline'}),
+      );
+    await request.response.close();
+  });
+  return (server, StreamIterator(lists.stream));
+}
+
+Future<void> _replyMachines(HttpRequest request, List<String> ids) async {
+  request.response
+    ..headers.contentType = ContentType.json
+    ..write(
+      jsonEncode({
+        'valid': true,
+        'machines': [
+          for (final id in ids) {'machine_id': id, 'name': id, 'role': 'owner'},
+        ],
+      }),
+    );
+  await request.response.close();
+}
+
 void main() {
+  test('Late machine list cannot overwrite a newer list', () async {
+    final (server, lists) = await _heldListServer();
+    addTearDown(() => server.close(force: true));
+    final controller = DashboardController(
+      ServerClient('http://127.0.0.1:${server.port}', token: 'x' * 43),
+    );
+    addTearDown(controller.dispose);
+
+    // Kéo làm mới (bản cũ còn máy A) rồi gỡ máy A: lượt sau trả trước.
+    final oldLoad = controller.loadMyMachines();
+    await lists.moveNext();
+    final oldRequest = lists.current;
+    final newLoad = controller.loadMyMachines();
+    await lists.moveNext();
+    await _replyMachines(lists.current, ['fm_b']);
+    await newLoad;
+    await _replyMachines(oldRequest, ['fm_a', 'fm_b']);
+    await oldLoad;
+    expect(controller.machines, ['fm_b']);
+    expect(controller.names.containsKey('fm_a'), isFalse);
+    expect(controller.machineId, 'fm_b');
+  });
+
+  test('Disposed dashboard ignores a late machine list', () async {
+    final (server, lists) = await _heldListServer();
+    addTearDown(() => server.close(force: true));
+    final controller = DashboardController(
+      ServerClient('http://127.0.0.1:${server.port}', token: 'x' * 43),
+    );
+    final pending = controller.loadMyMachines();
+    await lists.moveNext();
+    controller.dispose();
+    await _replyMachines(lists.current, ['fm_a']);
+    await pending;
+    expect(controller.machines, isEmpty);
+    expect(controller.machineId, isNull);
+  });
+
   test('Máy bị thu hồi/gỡ ở nơi khác biến mất khi tải lại danh sách', () async {
     final machines = [
       {'machine_id': 'fm_a', 'name': 'Máy A', 'role': 'manager'},
