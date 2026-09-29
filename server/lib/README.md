@@ -1,23 +1,22 @@
-# Thư viện dùng chung của server
+# Tài nguyên dùng chung của server
 
-## Module đang dùng
+Nhóm theo trách nhiệm, không theo thứ tự bước của feature.
+Hàm nhiều module dùng tương đồng nằm ở đây; helper riêng của feature giữ trong feature.
+Lib không import server/service.
 
-Các block trong `server/` import trực tiếp; sửa ở đây là ảnh hưởng mọi nơi gọi.
-
-| File | Hàm | Ai dùng |
+| Nhóm | File | Trách nhiệm |
 | --- | --- | --- |
-| `hashing.py` | `sha256_hex(text)` | product key (đăng ký máy, relay), token phiên (`session.py`), mã mời (`share_flow.py`), OTP (`otp_generator.py`) |
-| `hashing.py` | `request_fingerprint(data)` | chống gửi lại khác nội dung cùng `request_id`: `login_flow.py`, `registration_flow.py` |
-| `checks.py` | `is_request_id(value)` | `login_flow.py`, `registration_flow.py` |
-| `checks.py` | `is_machine_id(value)` | `machine_register_verify.py`, `share_flow.py`, `manage_flow.py`, relay `server.py` |
-| `checks.py` | `remove_expired(states)` | dọn phiên RAM hết hạn: `login_flow.py`, `registration_flow.py` |
+| HTTP | `http/http_server.py` | Mở cổng, lắp module, dispatch HTTP, kiểm route trùng |
+| HTTP | `http/http_json.py` | Đọc/ghi JSON và xử lý route |
+| HTTP | `http/http_rate_limit.py` | Giới hạn request theo IP |
+| Security | `security/user_session.py` | Cấp, tra và xóa phiên người dùng |
+| Security | `security/user_password.py` | Băm và kiểm mật khẩu |
+| Security | `security/data_hash.py` | SHA-256 và fingerprint request |
+| Machine | `machine/machine_access.py` | Kiểm quyền truy cập máy |
+| Machine | `machine/machine_transport.py` | Hộp thư lệnh, kết quả và heartbeat |
+| Validation | `validation/identifier_validate.py` | Kiểm định dạng request_id/machine_id |
+| Validation | `validation/state_expire.py` | Dọn trạng thái RAM hết hạn |
 
-Đổi `sha256_hex` là đổi cách băm mọi dữ liệu đã lưu trong DB (key, token, mã mời):
-dữ liệu cũ sẽ không khớp nữa.
-
-## Bản sao tham khảo cũ
-
-`http_api.py`, `connection.py`, `user_password.py`, `password_verify.py` là bản copy
-để tham khảo từ trước, **không module nào import**. Nguồn của chúng đã thay đổi
-(server HTTP riêng đã bỏ, `hash_password` chuyển vào `server/database/user/user_add.py`),
-nên đừng dùng; chỉ xóa khi người dùng yêu cầu.
+Kết nối SQLite vẫn ở server/database/connection.py. Quyền cho từng tác vụ,
+chuẩn gói tin và thứ tự bước thuộc module nghiệp vụ. Chỉ thay đường dẫn import;
+không tạo bản sao trạng thái phiên, rate limit hay transport ở đường dẫn cũ.

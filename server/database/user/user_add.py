@@ -1,21 +1,9 @@
 """Thêm người dùng mới vào bảng users."""
 
-import hashlib
-import os
 import sqlite3
 
 from ..connection import get_connection
-
-
-def hash_password(password):
-    """Băm mật khẩu bằng PBKDF2 trước khi lưu; login_verify đối chiếu đúng định dạng này."""
-    if not password:
-        raise ValueError("Mật khẩu không được để trống")
-
-    salt = os.urandom(16)
-    iterations = 200_000
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
-    return f"pbkdf2_sha256${iterations}${salt.hex()}${digest.hex()}"
+from server.lib.security.user_password import hash_password
 
 
 def add_full_name(full_name):

@@ -34,7 +34,7 @@ Mã dùng một lần, hết hạn sau 5 phút. Sau khi quét, dashboard đọc 
 ## Chia sẻ qua Bluetooth
 
 Dùng khi không tiện quét QR. Nội dung gửi đi giống hệt QR (`encodeShareQr`),
-nên mã hóa sau này trong `machine_share_qr.dart` áp dụng cho cả hai đường.
+nên mã hóa sau này trong `core/machine_packet.dart` áp dụng cho cả hai đường.
 
 1. Nhân viên: tab Máy → **Nhận chia sẻ qua Bluetooth**, cho phép hiện điện thoại
    (120 giây). App mở RFCOMM server với UUID `e53b1694-9a6d-41e7-8b4a-00e228b8164e`.
@@ -50,5 +50,5 @@ nên mã hóa sau này trong `machine_share_qr.dart` áp dụng cho cả hai đ�
    như khi quét QR. Mã vẫn dùng một lần, hết hạn sau 5 phút.
 
 Thử với một điện thoại: laptop Windows đóng vai nhân viên bằng
-`python sandbox/bluetooth_pair/app2app_pair.py` (cần server đang chạy và một
+`python tests/bluetooth_pair/app2app_pair.py` (cần server đang chạy và một
 tài khoản thứ hai).

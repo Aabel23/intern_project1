@@ -12,4 +12,9 @@ tem_*.png
 machine/config/machine.env
 
 # Log, ảnh chụp của test tự động trên điện thoại.
+tests/e2e/logs/
+tests/runs/
+.dart_tool/
+
+# Historical local test artifacts
 sandbox/e2e/logs/
