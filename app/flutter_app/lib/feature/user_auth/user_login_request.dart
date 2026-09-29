@@ -16,13 +16,13 @@ Future<Map<String, dynamic>> requestLogin(
     16,
     (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
   ).join();
-  final sent = await postJson(serverUrl, Routes.userLogin, {
+  final sent = await postJson(serverUrl, Routes.userSessionLogin, {
     'request_id': requestId,
     'username': username,
     'password': password,
   });
   if (sent['valid'] == false) return sent;
-  return postJson(serverUrl, Routes.verifyLogin, {
+  return postJson(serverUrl, Routes.userLoginVerify, {
     'request_id': requestId,
     if (sent['login_id'] is String) 'login_id': sent['login_id'] as String,
   });

@@ -5,9 +5,9 @@ kết quả gửi lên server (xem machine_menu_sync.py).
 """
 
 # Trong module menu_sync
-from .machine_menu_sync import gui_menu, nhan_menu
+from .machine_menu_sync import cap_nhat_menu, nhan_menu
 
 COMMANDS = {
     "nhan_menu": nhan_menu,
-    "gui_menu": gui_menu,
+    "cap_nhat_menu": cap_nhat_menu,
 }

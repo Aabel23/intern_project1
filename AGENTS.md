@@ -5,6 +5,8 @@ Người dùng đã yêu cầu khóa thiết kế hiện tại. Quy ước chi t
 khi người dùng yêu cầu thay đổi đó; các sửa lỗi và bổ sung tính năng thông thường
 tiếp tục theo cấu trúc dưới đây.
 
+- Biến routing theo `đối_tượng_lớn_mục_tiêu_chính_hành_động`: Python
+  `MACHINE_MENU_UPDATE`, Dart `machineMenuUpdate`. Chi tiết trong MODULE_PATTERN.md.
 - Route HTTP nằm trong `server/config/routing.py`, chia nhóm bằng comment.
 - `server/main.py` import trực tiếp các module và mặc định chạy toàn bộ.
   Không thêm registry import động hoặc cơ chế chọn/tháo module.

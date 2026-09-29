@@ -3,16 +3,16 @@ import 'package:simple_app/core/server_client.dart';
 
 extension MachineMenuRequests on ServerClient {
   Future<Map<String, dynamic>> receiveMenu(String machineId, int menuVersion) =>
-      machineData(Routes.receiveMenu, {
+      machineData(Routes.machineMenuGet, {
         'machine_id': machineId,
         'menu_version': menuVersion,
       });
 
-  Future<Map<String, dynamic>> sendMenu(
+  Future<Map<String, dynamic>> updateMenu(
     String machineId,
     int menuVersion,
     List<Map<String, dynamic>> changes,
-  ) => machineData(Routes.sendMenu, {
+  ) => machineData(Routes.machineMenuUpdate, {
     'machine_id': machineId,
     'menu_version': menuVersion,
     'thay_doi': changes,

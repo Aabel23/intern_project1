@@ -1,7 +1,7 @@
 """Luồng tab Menu trên máy: xỏ verify → database → đóng gói.
 
     nhan_menu: menu_version trùng → up_to_date, khác → gói menu mới
-    gui_menu:  menu_version khác bản trên máy → conflict + gói mới nhất, không ghi;
+    cap_nhat_menu:  menu_version khác bản trên máy → conflict + gói mới nhất, không ghi;
                khớp → kiểm từng thay đổi, ghi trong một transaction → gói mới
 """
 
@@ -21,7 +21,7 @@ def nhan_menu(data):
     return reply_with_menu("ok", drinks)
 
 
-def gui_menu(data):
+def cap_nhat_menu(data):
     menu_version = check_menu_version(data)
     with connect() as conn:
         drinks = read_drinks(conn)

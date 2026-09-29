@@ -8,7 +8,7 @@ request POST, handle() trả False nếu đường dẫn không thuộc module n
 """
 
 # Routing tập trung và HTTP dùng chung
-from server.config.routing import APP_RECEIVE_INGREDIENTS, APP_REFILL
+from server.config.routing import MACHINE_INGREDIENT_GET, MACHINE_INGREDIENT_REFILL
 from server.lib.http_json import handle_routes
 
 # Trong module ingredient_sync
@@ -16,8 +16,8 @@ from .machine_ingredient_sync import nap_kho, nhan_kho
 
 
 ROUTES = {
-    APP_RECEIVE_INGREDIENTS: nhan_kho,
-    APP_REFILL: nap_kho,
+    MACHINE_INGREDIENT_GET: nhan_kho,
+    MACHINE_INGREDIENT_REFILL: nap_kho,
 }
 MAX_BODY = 4096
 

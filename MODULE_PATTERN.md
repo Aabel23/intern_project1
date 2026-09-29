@@ -21,6 +21,27 @@ python -m server.main --port 8001
 
 Thêm tính năng: thêm hằng vào routing, viết module rồi import/đăng ký ở main.
 
+## Tên biến routing
+
+Dùng tiếng Anh theo thứ tự `<đối_tượng_lớn>_<mục_tiêu_chính>_<hành_động>`.
+Đối tượng là miền nghiệp vụ (`USER`, `MACHINE`), mục tiêu là dữ liệu hoặc tác vụ
+(`MENU`, `OTP`, `STAFF`), hành động đứng cuối (`GET`, `UPDATE`, `SEND`, `VERIFY`).
+Không dùng `APP` làm đối tượng chỉ vì app gọi route. GET/UPDATE diễn tả nghiệp vụ,
+không bắt buộc trùng HTTP method; route lấy menu hiện vẫn dùng POST.
+
+Python dùng UPPER_SNAKE_CASE; Dart dùng lowerCamelCase với cùng thứ tự ý nghĩa:
+
+| Python | Dart | Ý nghĩa |
+| --- | --- | --- |
+| `MACHINE_MENU_GET` | `machineMenuGet` | Lấy menu từ máy |
+| `MACHINE_MENU_UPDATE` | `machineMenuUpdate` | Cập nhật giá/trạng thái món trong menu |
+| `USER_OTP_SEND` | `userOtpSend` | Gửi OTP cho người dùng |
+| `MACHINE_STAFF_REVOKE` | `machineStaffRevoke` | Thu hồi quyền nhân viên |
+
+`MACHINE_MENU_UPDATE` dùng `/app/cap-nhat-menu`; lệnh máy là `cap_nhat_menu`.
+Đây là thao tác cập nhật món, không phải đường gửi phản hồi của thao tác lấy menu.
+Các bên app/server/machine phải cập nhật đồng thời khi đổi URL hoặc tên lệnh.
+
 ## Giao diện với server
 
 | Thành phần | Hợp đồng |

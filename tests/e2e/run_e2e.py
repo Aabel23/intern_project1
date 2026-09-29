@@ -264,7 +264,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     switch = min(switches, key=lambda node: abs(node.y - tile.y))
     assert not switch.checked, "Matcha latte phải đang tắt"
     phone.tap(switch)
-    wait_for(lambda: "gui_menu" in run.log_text("machine_sim"), 30, "Máy giả không nhận lệnh bật món")
+    wait_for(lambda: "cap_nhat_menu" in run.log_text("machine_sim"), 30, "Máy giả không nhận lệnh bật món")
 
     def matcha_on():
         nodes = phone.nodes()

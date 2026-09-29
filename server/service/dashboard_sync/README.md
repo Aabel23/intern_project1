@@ -4,7 +4,7 @@ Mỗi tab dashboard của app là một folder, **chia theo tab, không chia the
 
 | Folder | Tab | Route | Dữ liệu ở đâu |
 | --- | --- | --- | --- |
-| `menu_sync/` | Menu | `/app/nhan-menu`, `/app/gui-menu` | của máy, hỏi xuống qua hộp thư |
+| `menu_sync/` | Menu | `/app/nhan-menu`, `/app/cap-nhat-menu` | của máy, hỏi xuống qua hộp thư |
 | `ingredient_sync/` | Kho | `/app/nhan-kho`, `/app/nap-kho` | của máy, hỏi xuống qua hộp thư |
 | `machinelist_sync/` | Máy | `/app/may-cua-toi`, `/app/doi-ten-may`, `/app/go-may`, GET `/machine/trang-thai` | của server (bảng `machines`, giờ heartbeat) |
 
@@ -37,7 +37,7 @@ vậy với `menu_version`, kết quả thêm gói `packet` = base64(zlib(JSON))
 | Route | Gửi | Kết quả |
 | --- | --- | --- |
 | `/app/nhan-menu` | `token`, `machine_id`, `menu_version` | `{status: up_to_date \| ok, menu_version, packet?}` |
-| `/app/gui-menu` | `token`, `machine_id`, `menu_version`, `thay_doi: [{drink_id, available?, price?}]` | `{status: ok \| conflict, menu_version, packet}`; `conflict` = app đang giữ bản cũ, máy không ghi |
+| `/app/cap-nhat-menu` | `token`, `machine_id`, `menu_version`, `thay_doi: [{drink_id, available?, price?}]` | `{status: ok \| conflict, menu_version, packet}`; `conflict` = app đang giữ bản cũ, máy không ghi |
 | `/app/nhan-kho` | `token`, `machine_id`, `version` | `{status: up_to_date \| ok, version, ingredients?}` |
 | `/app/nap-kho` | `token`, `machine_id`, `target` (id hoặc `"all"`), `value` (`"full"` hoặc số gram, số gram chỉ khi `target` là id) | kết quả `refill()` của máy, kèm `warning` nếu dựng lại menu màn bán hàng lỗi |
 

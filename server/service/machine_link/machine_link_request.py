@@ -8,7 +8,7 @@ Module khác gửi lệnh xuống máy bằng machine_transport.send(), không q
 """
 
 # Routing tập trung và HTTP dùng chung
-from server.config.routing import MACHINE_HEARTBEAT, MACHINE_POLL_COMMAND, MACHINE_SEND_RESULT
+from server.config.routing import MACHINE_HEARTBEAT_SEND, MACHINE_COMMAND_POLL, MACHINE_RESULT_SEND
 from server.lib.http_json import handle_routes
 
 # Trong module machine_link
@@ -16,9 +16,9 @@ from .machine_link_process import heartbeat, poll, send_result
 
 
 ROUTES = {
-    MACHINE_HEARTBEAT: heartbeat,
-    MACHINE_POLL_COMMAND: poll,
-    MACHINE_SEND_RESULT: send_result,
+    MACHINE_HEARTBEAT_SEND: heartbeat,
+    MACHINE_COMMAND_POLL: poll,
+    MACHINE_RESULT_SEND: send_result,
 }
 # Kết quả máy trả (gói menu, danh sách kho) lớn hơn các gói tài khoản.
 MAX_BODY = 1_000_000

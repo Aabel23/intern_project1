@@ -6,7 +6,7 @@ import urllib.error
 import urllib.request
 
 from config.env import get_product_key, get_server_url
-from config.routing import HEARTBEAT_INTERVAL_SECONDS, HEARTBEAT_PATH
+from config.routing import HEARTBEAT_INTERVAL_SECONDS, MACHINE_HEARTBEAT_SEND
 
 
 def send_heartbeat():
@@ -14,7 +14,7 @@ def send_heartbeat():
     data = {"product_key": get_product_key()}
     body = json.dumps(data).encode("utf-8")
     request = urllib.request.Request(
-        get_server_url() + HEARTBEAT_PATH,
+        get_server_url() + MACHINE_HEARTBEAT_SEND,
         data=body,
         headers={"Content-Type": "application/json"},
     )

@@ -236,7 +236,7 @@ class SecurityScenarioTest(unittest.TestCase):
     def test_nested_json_gets_an_error_response(self):
         """JSON lồng sâu (RecursionError khi parse) vẫn nhận 400, server không rớt kết nối.
         Route nhận body lớn (Menu 64 KB, cổng máy 1 MB) đủ chỗ vượt giới hạn đệ quy của parser."""
-        for path, depth in (("/app/dang-nhap", 4000), ("/app/gui-menu", 60000),
+        for path, depth in (("/app/dang-nhap", 4000), ("/app/cap-nhat-menu", 60000),
                             ("/machine/tra-ket-qua", 200000)):
             with self.subTest(path=path):
                 conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)

@@ -1,7 +1,7 @@
 """Luồng tab Menu: quyền → dạng gói → gửi lệnh cho máy → trả nguyên kết quả máy.
 
     nhan_menu: quyền → menu_version → máy trả up_to_date hoặc gói menu mới
-    gui_menu:  quyền → menu_version + thay_doi → máy ghi rồi trả gói mới (hoặc conflict)
+    cap_nhat_menu:  quyền → menu_version + thay_doi → máy ghi rồi trả gói mới (hoặc conflict)
 
 Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP status); đọc/ghi HTTP nằm ở
 machine_menu_request.py. Gói menu (base64 zlib) đi nguyên từ máy tới app, server không
@@ -29,7 +29,7 @@ def nhan_menu(data):
     return send(machine_id, "nhan_menu", {"menu_version": menu_version})
 
 
-def gui_menu(data):
+def cap_nhat_menu(data):
     # {token, machine_id, menu_version, thay_doi: [{drink_id, available?, price?}]}.
     # menu_version là bản app đang sửa; máy từ chối (conflict) nếu đã có bản mới hơn.
     machine_id, error = check_access(data, QUYEN_MENU)
@@ -38,4 +38,4 @@ def gui_menu(data):
     menu_version, thay_doi = data.get("menu_version"), data.get("thay_doi")
     if not is_menu_version(menu_version) or not is_changes(thay_doi):
         return {"loi": "Gói thay đổi menu không hợp lệ"}, 400
-    return send(machine_id, "gui_menu", {"menu_version": menu_version, "thay_doi": thay_doi})
+    return send(machine_id, "cap_nhat_menu", {"menu_version": menu_version, "thay_doi": thay_doi})

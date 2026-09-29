@@ -114,7 +114,7 @@ class ProductsSync extends ChangeNotifier {
     final id = machineId();
     if (id == null) throw const ApiException('Chưa chọn máy.');
     final session = _session;
-    final reply = await api.sendMenu(id, menuVersion, changes);
+    final reply = await api.updateMenu(id, menuVersion, changes);
     if (session != _session || _disposed) return;
     // Máy luôn trả menu mới nhất; conflict nghĩa là thay đổi chưa được ghi.
     _apply(reply);

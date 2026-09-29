@@ -5,7 +5,7 @@ extension UserAuthRequests on ServerClient {
   Future<void> logout() async {
     if (token == null) return;
     try {
-      await request('POST', Routes.logout, body: {'token': token});
+      await request('POST', Routes.userSessionLogout, body: {'token': token});
     } on ApiException {
       // Token cũ sẽ tự hết hạn trên server.
     }

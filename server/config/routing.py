@@ -1,39 +1,41 @@
 """Đường dẫn HTTP của server, chia theo module xử lý."""
 
+# Tên route: ĐỐI_TƯỢNG_MỤC_TIÊU_HÀNH_ĐỘNG (xem MODULE_PATTERN.md).
+
 # Đăng ký tài khoản và xác minh OTP
-APP_REGISTER_USER = "/app/dang-ky-nguoi-dung"
-APP_SEND_OTP = "/app/gui-ma-otp"
-APP_VERIFY_OTP = "/app/xac-minh-otp"
+USER_ACCOUNT_REGISTER = "/app/dang-ky-nguoi-dung"
+USER_OTP_SEND = "/app/gui-ma-otp"
+USER_OTP_VERIFY = "/app/xac-minh-otp"
 
 # Đăng nhập, lấy kết quả xác minh và đăng xuất
-APP_LOGIN = "/app/dang-nhap"
-APP_VERIFY_LOGIN = "/app/xac-minh-dang-nhap"
-APP_LOGOUT = "/app/dang-xuat"
+USER_SESSION_LOGIN = "/app/dang-nhap"
+USER_LOGIN_VERIFY = "/app/xac-minh-dang-nhap"
+USER_SESSION_LOGOUT = "/app/dang-xuat"
 
 # Đăng ký máy qua QR hoặc Bluetooth
-APP_REGISTER_MACHINE = "/app/dang-ky-may"
+USER_MACHINE_REGISTER = "/app/dang-ky-may"
 
 # Chia sẻ máy và quản lý quyền nhân viên
-APP_CREATE_SHARE = "/app/tao-ma-chia-se"
-APP_ACCEPT_SHARE = "/app/nhan-chia-se"
-APP_MACHINE_STAFF = "/app/nhan-vien-may"
-APP_REVOKE_STAFF = "/app/thu-hoi-quyen"
+MACHINE_SHARE_CREATE = "/app/tao-ma-chia-se"
+MACHINE_SHARE_ACCEPT = "/app/nhan-chia-se"
+MACHINE_STAFF_LIST = "/app/nhan-vien-may"
+MACHINE_STAFF_REVOKE = "/app/thu-hoi-quyen"
 
 # Dashboard — danh sách, đổi tên, gỡ máy và trạng thái kết nối
-APP_MY_MACHINES = "/app/may-cua-toi"
-APP_RENAME_MACHINE = "/app/doi-ten-may"
-APP_REMOVE_MACHINE = "/app/go-may"
-MACHINE_STATUS = "/machine/trang-thai"  # GET, app gọi
+USER_MACHINE_LIST = "/app/may-cua-toi"
+MACHINE_NAME_UPDATE = "/app/doi-ten-may"
+USER_MACHINE_REMOVE = "/app/go-may"
+MACHINE_STATUS_GET = "/machine/trang-thai"  # GET, app gọi
 
 # Dashboard — đồng bộ Menu
-APP_RECEIVE_MENU = "/app/nhan-menu"
-APP_SEND_MENU = "/app/gui-menu"
+MACHINE_MENU_GET = "/app/nhan-menu"
+MACHINE_MENU_UPDATE = "/app/cap-nhat-menu"
 
 # Dashboard — đồng bộ và nạp Kho
-APP_RECEIVE_INGREDIENTS = "/app/nhan-kho"
-APP_REFILL = "/app/nap-kho"
+MACHINE_INGREDIENT_GET = "/app/nhan-kho"
+MACHINE_INGREDIENT_REFILL = "/app/nap-kho"
 
 # Cổng máy — heartbeat, long-poll nhận lệnh và trả kết quả
-MACHINE_HEARTBEAT = "/machine/heartbeat"
-MACHINE_POLL_COMMAND = "/machine/hoi-lenh"
-MACHINE_SEND_RESULT = "/machine/tra-ket-qua"
+MACHINE_HEARTBEAT_SEND = "/machine/heartbeat"
+MACHINE_COMMAND_POLL = "/machine/hoi-lenh"
+MACHINE_RESULT_SEND = "/machine/tra-ket-qua"

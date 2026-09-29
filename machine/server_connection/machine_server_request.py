@@ -4,7 +4,7 @@ import json
 import urllib.request
 
 from config.env import get_product_key, get_server_url
-from config.routing import GET_COMMAND_PATH, POST_RESULT_PATH
+from config.routing import MACHINE_COMMAND_POLL, MACHINE_RESULT_SEND
 
 
 def post_json(path, data):
@@ -21,10 +21,10 @@ def post_json(path, data):
 
 def poll_command():
     # Hỏi server lệnh tiếp theo trong hộp thư của máy này.
-    return post_json(GET_COMMAND_PATH, {})["lenh"]
+    return post_json(MACHINE_COMMAND_POLL, {})["lenh"]
 
 
 def send_result(lenh_id, ket_qua):
     # Đóng gói kết quả để server chuyển lại cho app.
-    post_json(POST_RESULT_PATH, {"id": lenh_id, "ket_qua": ket_qua})
+    post_json(MACHINE_RESULT_SEND, {"id": lenh_id, "ket_qua": ket_qua})
 

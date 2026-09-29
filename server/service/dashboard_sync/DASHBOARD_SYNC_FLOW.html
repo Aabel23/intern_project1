@@ -67,7 +67,7 @@
 <h2>Các tab</h2>
 <div class="table-wrap"><table>
 <tr><th>Tab</th><th>Module server</th><th>Route</th><th>Lệnh xuống máy</th></tr>
-<tr><td>Menu</td><td><a href="menu_sync/machine_menu_sync.py">menu_sync</a></td><td><code>/app/nhan-menu</code>, <code>/app/gui-menu</code></td><td><code>nhan_menu</code>, <code>gui_menu</code></td></tr>
+<tr><td>Menu</td><td><a href="menu_sync/machine_menu_sync.py">menu_sync</a></td><td><code>/app/nhan-menu</code>, <code>/app/cap-nhat-menu</code></td><td><code>nhan_menu</code>, <code>cap_nhat_menu</code></td></tr>
 <tr><td>Kho</td><td><a href="ingredient_sync/machine_ingredient_sync.py">ingredient_sync</a></td><td><code>/app/nhan-kho</code>, <code>/app/nap-kho</code></td><td><code>nhan_kho</code>, <code>nap_kho</code></td></tr>
 <tr><td>Máy</td><td><a href="machinelist_sync/machine_list_manage.py">machinelist_sync</a></td><td><code>/app/may-cua-toi</code>, <code>/app/doi-ten-may</code>, <code>/app/go-may</code>, <code>GET /machine/trang-thai</code></td><td>không</td></tr>
 </table></div>
@@ -92,7 +92,7 @@
 
 <h2>Ghi dữ liệu máy</h2>
 <ul>
-  <li><strong>Menu</strong> (<code>/app/gui-menu</code>): app gửi kèm <code>menu_version</code> đang sửa. Máy đã có bản khác thì không ghi, trả <code>conflict</code> + menu mới nhất; khớp thì kiểm hết các dòng rồi ghi trong một transaction.</li>
+  <li><strong>Menu</strong> (<code>/app/cap-nhat-menu</code>): app gửi kèm <code>menu_version</code> đang sửa. Máy đã có bản khác thì không ghi, trả <code>conflict</code> + menu mới nhất; khớp thì kiểm hết các dòng rồi ghi trong một transaction.</li>
   <li><strong>Kho</strong> (<code>/app/nap-kho</code>): <code>target</code> = id hoặc <code>"all"</code>, <code>value</code> = <code>"full"</code> hoặc số gram. Máy nạp bằng hàm <code>refill()</code> của trang admin máy rồi dựng lại <code>menu-data.js</code> cho màn bán hàng.</li>
 </ul>
 

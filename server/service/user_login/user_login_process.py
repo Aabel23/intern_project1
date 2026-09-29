@@ -14,7 +14,7 @@ import threading
 import time
 
 # Tài khoản/phiên dùng chung; nghiệp vụ đăng nhập nằm trong file này.
-from server.config.routing import APP_VERIFY_LOGIN
+from server.config.routing import USER_LOGIN_VERIFY
 from server.database.user.user_read import get_credentials
 from server.lib.checks import is_request_id, remove_expired
 from server.lib.hashing import request_fingerprint
@@ -80,7 +80,7 @@ def receive_login(data):
             return {
                 "valid": True,
                 "login_id": old_login_id,
-                "verify_route": APP_VERIFY_LOGIN,
+                "verify_route": USER_LOGIN_VERIFY,
                 "message": "Yêu cầu đăng nhập đã được tiếp nhận",
             }
         if len(LOGIN_STATES) >= MAX_LOGIN_STATES:
@@ -110,7 +110,7 @@ def receive_login(data):
     return {
         "valid": True,
         "login_id": login_id,
-        "verify_route": APP_VERIFY_LOGIN,
+        "verify_route": USER_LOGIN_VERIFY,
         "message": "Đã nhận yêu cầu đăng nhập",
     }
 

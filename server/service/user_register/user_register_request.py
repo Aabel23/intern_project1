@@ -8,7 +8,7 @@ Chưa cần token nên giới hạn request theo IP (spam OTP).
 """
 
 # Routing tập trung và HTTP dùng chung
-from server.config.routing import APP_REGISTER_USER, APP_SEND_OTP, APP_VERIFY_OTP
+from server.config.routing import USER_ACCOUNT_REGISTER, USER_OTP_SEND, USER_OTP_VERIFY
 from server.lib.http_json import handle_routes, invalid, with_valid_status
 
 # Trong module user_register
@@ -16,9 +16,9 @@ from .user_register_process import cleanup, confirm_otp, receive_register, resen
 
 
 ROUTES = with_valid_status({
-    APP_REGISTER_USER: receive_register,
-    APP_SEND_OTP: resend_otp,
-    APP_VERIFY_OTP: confirm_otp,
+    USER_ACCOUNT_REGISTER: receive_register,
+    USER_OTP_SEND: resend_otp,
+    USER_OTP_VERIFY: confirm_otp,
 })
 MAX_BODY = 4096
 

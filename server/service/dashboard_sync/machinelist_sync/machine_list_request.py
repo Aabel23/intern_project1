@@ -13,7 +13,7 @@ request POST, handle() trả False nếu đường dẫn không thuộc module n
 from urllib.parse import parse_qs, urlparse
 
 # Routing tập trung và HTTP dùng chung
-from server.config.routing import APP_MY_MACHINES, APP_REMOVE_MACHINE, APP_RENAME_MACHINE, MACHINE_STATUS
+from server.config.routing import USER_MACHINE_LIST, USER_MACHINE_REMOVE, MACHINE_NAME_UPDATE, MACHINE_STATUS_GET
 from server.lib.http_json import handle_routes, invalid, send_json, with_valid_status
 
 # Trong module machinelist_sync
@@ -21,11 +21,11 @@ from .machine_list_manage import list_my_machines, machine_status, remove_machin
 
 
 ROUTES = with_valid_status({
-    APP_MY_MACHINES: list_my_machines,
-    APP_RENAME_MACHINE: rename_machine,
-    APP_REMOVE_MACHINE: remove_machine,
+    USER_MACHINE_LIST: list_my_machines,
+    MACHINE_NAME_UPDATE: rename_machine,
+    USER_MACHINE_REMOVE: remove_machine,
 })
-GET_ROUTES = (MACHINE_STATUS,)
+GET_ROUTES = (MACHINE_STATUS_GET,)
 MAX_BODY = 4096
 
 
@@ -37,7 +37,7 @@ def handle(request):
 def handle_get(request):
     """GET trạng thái máy; False nếu đường dẫn không phải của module này."""
     url = urlparse(request.path)
-    if url.path != MACHINE_STATUS:
+    if url.path != MACHINE_STATUS_GET:
         return False
     machine_id = parse_qs(url.query).get("machine_id", [""])[0]
     send_json(request, machine_status(machine_id))

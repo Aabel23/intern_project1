@@ -7,7 +7,7 @@
 """
 
 # Routing tập trung và HTTP dùng chung
-from server.config.routing import APP_ACCEPT_SHARE, APP_CREATE_SHARE, APP_MACHINE_STAFF, APP_REVOKE_STAFF
+from server.config.routing import MACHINE_SHARE_ACCEPT, MACHINE_SHARE_CREATE, MACHINE_STAFF_LIST, MACHINE_STAFF_REVOKE
 from server.lib.http_json import handle_routes, invalid, with_valid_status
 
 # Trong module machine_share
@@ -16,10 +16,10 @@ from .machine_share_process import accept_invite, create_invite, list_staff, rev
 
 
 ROUTES = with_valid_status({
-    APP_CREATE_SHARE: create_invite,
-    APP_ACCEPT_SHARE: accept_invite,
-    APP_MACHINE_STAFF: list_staff,
-    APP_REVOKE_STAFF: revoke_staff,
+    MACHINE_SHARE_CREATE: create_invite,
+    MACHINE_SHARE_ACCEPT: accept_invite,
+    MACHINE_STAFF_LIST: list_staff,
+    MACHINE_STAFF_REVOKE: revoke_staff,
 })
 MAX_BODY = 4096
 

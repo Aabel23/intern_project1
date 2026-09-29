@@ -5,7 +5,7 @@ extension MachineIngredientRequests on ServerClient {
   Future<Map<String, dynamic>> receiveIngredients(
     String machineId,
     int version,
-  ) => machineData(Routes.receiveIngredients, {
+  ) => machineData(Routes.machineIngredientGet, {
     'machine_id': machineId,
     'version': version,
   });
@@ -17,7 +17,7 @@ extension MachineIngredientRequests on ServerClient {
   ]) async {
     final result = await request(
       'POST',
-      Routes.refill,
+      Routes.machineIngredientRefill,
       body: {
         'machine_id': machineId,
         'target': target,

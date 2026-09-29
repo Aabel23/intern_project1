@@ -227,7 +227,7 @@ machines_tab._open → loadMyMachines → POST /app/may-cua-toi → list_my_mach
   <li><strong>Mã mời không phải <code>machine_id</code>.</strong> Ai chụp được QR sau khi đã dùng hoặc sau 5 phút cũng không làm gì được.</li>
   <li><strong>Server chỉ lưu mã băm của mã mời</strong>, lộ database cũng không lấy được mã còn hiệu lực.</li>
   <li><strong>Chỉ chủ máy mới chia sẻ được</strong>; nhân viên không chia sẻ tiếp.</li>
-  <li><strong>Nhân viên dùng được máy như chủ</strong> ở tab Menu và Kho: <code>/app/nhan-menu</code>, <code>/app/gui-menu</code>, <code>/app/nhan-kho</code>, <code>/app/nap-kho</code> đều qua <code>machine_access.check_access()</code>: người gửi là chủ hoặc nhân viên của máy, vai trò có trong bảng quyền (<code>QUYEN_MENU</code>, <code>QUYEN_KHO</code>, <code>QUYEN_NAP_KHO</code>). Nhân viên không đổi tên, chia sẻ, xem/thu hồi nhân viên.</li>
+  <li><strong>Nhân viên dùng được máy như chủ</strong> ở tab Menu và Kho: <code>/app/nhan-menu</code>, <code>/app/cap-nhat-menu</code>, <code>/app/nhan-kho</code>, <code>/app/nap-kho</code> đều qua <code>machine_access.check_access()</code>: người gửi là chủ hoặc nhân viên của máy, vai trò có trong bảng quyền (<code>QUYEN_MENU</code>, <code>QUYEN_KHO</code>, <code>QUYEN_NAP_KHO</code>). Nhân viên không đổi tên, chia sẻ, xem/thu hồi nhân viên.</li>
   <li class="note"><strong>Rủi ro còn mở:</strong> người đứng gần chụp được QR trong 5 phút; chủ có thể chọn nhầm thiết bị đặt tên giả khi gửi Bluetooth; màn nhận nhận mã từ bất kỳ ai. Xem <code>androidv0.1/log/SECURITY_NOTES.md</code> (SEC-10, SEC-11).</li>
 </ul>
 </main>

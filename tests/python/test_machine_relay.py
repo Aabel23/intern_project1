@@ -153,18 +153,18 @@ class MachineRelayTest(unittest.TestCase):
                          (200, {"status": "up_to_date", "menu_version": version}))
 
         # Gửi thay đổi dựa trên bản đang giữ: máy ghi rồi trả menu mới.
-        status, reply = self.call("/app/gui-menu", {"menu_version": version, "thay_doi": [
+        status, reply = self.call("/app/cap-nhat-menu", {"menu_version": version, "thay_doi": [
             {"drink_id": 1001, "available": False}, {"drink_id": 1002, "price": 35000}]})
         self.assertEqual((status, reply["status"]), (200, "ok"))
         drinks = {row[0]: dict(zip(packet["fields"], row)) for row in unpack(reply)["drinks"]}
         self.assertEqual((drinks[1001]["available"], drinks[1002]["price"]), (0, 35000))
         self.assertNotEqual(reply["menu_version"], version)
         # Gửi lại trên bản cũ thì máy không ghi, trả conflict kèm menu mới nhất.
-        status, stale = self.call("/app/gui-menu", {"menu_version": version, "thay_doi": [
+        status, stale = self.call("/app/cap-nhat-menu", {"menu_version": version, "thay_doi": [
             {"drink_id": 1001, "available": True}]})
         self.assertEqual((status, stale["status"], stale["menu_version"]), (200, "conflict", reply["menu_version"]))
         # Món không có trên máy: máy báo lỗi, không ghi gì.
-        status, error = self.call("/app/gui-menu", {"menu_version": reply["menu_version"], "thay_doi": [
+        status, error = self.call("/app/cap-nhat-menu", {"menu_version": reply["menu_version"], "thay_doi": [
             {"drink_id": 1002, "price": 1}, {"drink_id": 1003, "price": 1}]})
         self.assertEqual(status, 502)
         self.assertIn("loi", error)
@@ -176,7 +176,7 @@ class MachineRelayTest(unittest.TestCase):
         for thay_doi in ([], [{"drink_id": 1001}], [{"drink_id": 1001, "drink_name": "x"}],
                          [{"drink_id": 1001, "price": -1}], [{"drink_id": 1001, "available": 1}],
                          [{"drink_id": True, "price": 1}], {"drink_id": 1001}):
-            self.assertEqual(self.call("/app/gui-menu", {"menu_version": 0, "thay_doi": thay_doi})[0], 400)
+            self.assertEqual(self.call("/app/cap-nhat-menu", {"menu_version": 0, "thay_doi": thay_doi})[0], 400)
 
     def check_ingredient_tab(self):
         # Lần đầu (version 0) nhận nguyên danh sách kho kèm version.

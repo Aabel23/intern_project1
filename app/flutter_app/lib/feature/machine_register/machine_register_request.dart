@@ -7,7 +7,7 @@ extension MachineRegisterRequests on ServerClient {
   ) async {
     final result = await request(
       'POST',
-      Routes.machineRegister,
+      Routes.userMachineRegister,
       body: {...packet, 'token': ?token},
     );
     if (result is! Map<String, dynamic> ||

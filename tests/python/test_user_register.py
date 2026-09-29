@@ -172,16 +172,16 @@ class RegistrationFlowTest(unittest.TestCase):
             finally:
                 client.close()
         try:
-            from server.service.user_register.user_register_request import APP_REGISTER_USER, APP_VERIFY_OTP
+            from server.service.user_register.user_register_request import USER_ACCOUNT_REGISTER, USER_OTP_VERIFY
             with patch.object(server.RequestHandlerClass, "log_message"):
-                status, result = post(APP_REGISTER_USER, self.data)
+                status, result = post(USER_ACCOUNT_REGISTER, self.data)
                 self.assertEqual(status, 200)
-                status, result = post(APP_VERIFY_OTP, {"registration_id": result["registration_id"], "code": "012345"})
+                status, result = post(USER_OTP_VERIFY, {"registration_id": result["registration_id"], "code": "012345"})
                 self.assertEqual(status, 200)
                 self.assertTrue(result["account_created"])
                 self.assertEqual(post("/unknown", {})[0], 404)
                 IP_REQUESTS["127.0.0.1"] = [1060, 30]
-                self.assertEqual(post(APP_REGISTER_USER, self.data)[0], 429)
+                self.assertEqual(post(USER_ACCOUNT_REGISTER, self.data)[0], 429)
         finally:
             server.shutdown()
             server.server_close()

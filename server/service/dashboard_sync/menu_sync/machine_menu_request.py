@@ -1,23 +1,23 @@
 """HTTP của tab Menu: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
 
     POST /app/nhan-menu  {token, machine_id, menu_version}
-    POST /app/gui-menu   {token, machine_id, menu_version, thay_doi}
+    POST /app/cap-nhat-menu   {token, machine_id, menu_version, thay_doi}
 
 Module tự quyết giới hạn body và status; server chính chỉ gọi handle() cho mỗi
 request POST, handle() trả False nếu đường dẫn không thuộc tab Menu.
 """
 
 # Routing tập trung và HTTP dùng chung
-from server.config.routing import APP_RECEIVE_MENU, APP_SEND_MENU
+from server.config.routing import MACHINE_MENU_GET, MACHINE_MENU_UPDATE
 from server.lib.http_json import handle_routes
 
 # Trong module menu_sync
-from .machine_menu_sync import gui_menu, nhan_menu
+from .machine_menu_sync import cap_nhat_menu, nhan_menu
 
 
 ROUTES = {
-    APP_RECEIVE_MENU: nhan_menu,
-    APP_SEND_MENU: gui_menu,
+    MACHINE_MENU_GET: nhan_menu,
+    MACHINE_MENU_UPDATE: cap_nhat_menu,
 }
 # Đủ cho 200 dòng thay_doi; gói menu trả về không bị giới hạn này.
 MAX_BODY = 64_000
