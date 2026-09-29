@@ -58,7 +58,7 @@ class MachineRelayTest(unittest.TestCase):
         from server import main as server_main
         from server.database.connection import get_connection
         from server.database.machine.init_db import init_db
-        from server.lib.session import create_session
+        from server.lib.security.user_session import create_session
         init_db()
         self.server = server_main.create_server(("127.0.0.1", 0))
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -208,9 +208,12 @@ class MachineRelayTest(unittest.TestCase):
         self.assertEqual(self.calls, [("refill", 1, "full"), ("publish",), ("refill", "all", "full"), ("publish",),
                                       ("refill", 2, 750), ("publish",)])
         # Gói sai bị server chặn, không xuống máy.
-        for target, value in (("all", 500), (0, "full"), (1, -5), (1, "nhieu"), (True, "full")):
+        for target, value in (("all", 500), (0, "full"), (1, -5), (1, "nhieu"), (True, "full"),
+                              (None, "full"), (1, True), (1, None), (1, 100000000),
+                              (1, float('nan')), (1, float('inf'))):
             self.assertEqual(self.call("/app/nap-kho", {"target": target, "value": value})[0], 400)
-        for bad in ({"version": -1}, {"version": "x"}):
+        for bad in ({"version": -1}, {"version": "x"}, {"version": True}, {"version": 2**32},
+                    {"version": None}, {"version": 1.5}):
             self.assertEqual(self.call("/app/nhan-kho", bad)[0], 400)
         self.assertEqual(len(self.calls), 6)
 

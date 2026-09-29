@@ -5,7 +5,7 @@ import json
 import sqlite3
 
 # Trong lib
-from .rate_limit import too_many_requests
+from .http_rate_limit import too_many_requests
 
 
 def read_body(request, max_body):

@@ -10,8 +10,8 @@ token nên không tính, để kẻ cùng IP dò mật khẩu không chặn đư
 
 # Routing tập trung và HTTP dùng chung, phiên đăng nhập
 from server.config.routing import USER_SESSION_LOGIN, USER_SESSION_LOGOUT, USER_LOGIN_VERIFY
-from server.lib.http_json import handle_routes, invalid, with_valid_status
-from server.lib.session import end_session
+from server.lib.http.http_json import handle_routes, invalid, with_valid_status
+from server.lib.security.user_session import end_session
 
 # Trong module user_login
 from .user_login_process import cleanup, receive_login, send_verification

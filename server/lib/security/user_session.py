@@ -10,7 +10,7 @@ from server.config.config import (
     TOKEN_MIN_LENGTH,
 )
 from server.database.connection import get_connection
-from server.lib.hashing import sha256_hex
+from server.lib.security.data_hash import sha256_hex
 
 # login_required báo app xóa token đã lưu và quay về màn hình đăng nhập.
 NOT_LOGGED_IN = {

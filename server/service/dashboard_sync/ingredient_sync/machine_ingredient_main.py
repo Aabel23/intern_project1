@@ -1,4 +1,4 @@
-"""HTTP của tab Kho: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
+"""Cửa vào ingredient_sync: nhận POST, chọn luồng và trả JSON.
 
     POST /app/nhan-kho  {token, machine_id, version}          xem tồn kho
     POST /app/nap-kho   {token, machine_id, target, value}    nạp kho
@@ -9,10 +9,11 @@ request POST, handle() trả False nếu đường dẫn không thuộc module n
 
 # Routing tập trung và HTTP dùng chung
 from server.config.routing import MACHINE_INGREDIENT_GET, MACHINE_INGREDIENT_REFILL
-from server.lib.http_json import handle_routes
+from server.lib.http.http_json import handle_routes
 
 # Trong module ingredient_sync
-from .machine_ingredient_sync import nap_kho, nhan_kho
+from .machine_ingredient_get import nhan_kho
+from .machine_ingredient_refill import nap_kho
 
 
 ROUTES = {

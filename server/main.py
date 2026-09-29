@@ -5,26 +5,26 @@ import sys
 
 from server.config.config import SERVER_HOST, SERVER_PORT
 from server.database.machine.init_db import init_db
-from server.lib.module_server import ModuleServer
-from server.service.dashboard_sync.ingredient_sync import machine_ingredient_request
-from server.service.dashboard_sync.machinelist_sync import machine_list_request
-from server.service.dashboard_sync.menu_sync import machine_menu_request
-from server.service.machine_link import machine_link_request
-from server.service.machine_register import machine_register_request
-from server.service.machine_share import machine_share_request
-from server.service.user_login import user_login_request
-from server.service.user_register import user_register_request
+from server.lib.http.http_server import ModuleServer
+from server.service.dashboard_sync.ingredient_sync import machine_ingredient_main
+from server.service.dashboard_sync.machinelist_sync import machine_list_main
+from server.service.dashboard_sync.menu_sync import machine_menu_main
+from server.service.machine_link import machine_link_main
+from server.service.machine_register import machine_register_main
+from server.service.machine_share import machine_share_main
+from server.service.user_login import user_login_main
+from server.service.user_register import user_register_main
 
 
 MODULES = (
-    user_register_request,
-    user_login_request,
-    machine_register_request,
-    machine_share_request,
-    machine_list_request,
-    machine_link_request,
-    machine_menu_request,
-    machine_ingredient_request,
+    user_register_main,
+    user_login_main,
+    machine_register_main,
+    machine_share_main,
+    machine_list_main,
+    machine_link_main,
+    machine_menu_main,
+    machine_ingredient_main,
 )
 
 

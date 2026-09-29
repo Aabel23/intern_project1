@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu sync — luồng app, server và máy</title>
+<style>
+:root{--bg:#faf9f5;--fg:#252520;--muted:#68685d;--line:#e6e3d9;--accent:#a64f32}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,"Segoe UI",sans-serif}main{max-width:1000px;margin:auto;padding:40px 24px 64px}h1{font-size:clamp(28px,5vw,42px);line-height:1.2}h2{margin-top:36px;color:var(--accent)}h3{margin:0 0 16px;font-size:21px;line-height:1.4}.eyebrow{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--muted)}nav{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}nav a{padding:7px 15px;border:1px solid var(--line);border-radius:20px;color:var(--accent);text-decoration:none}nav a:hover{background:#f0e9df}.step{background:white;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:24px;margin:18px 0}p{margin:12px 0}code{font:0.9em/1.5 Consolas,monospace;background:#f0eee6;padding:2px 5px;border-radius:4px}pre{overflow:auto;background:#f0eee6;border-radius:6px;padding:16px}pre code{padding:0;background:none}li{margin:7px 0}section{scroll-margin-top:20px}footer{margin-top:40px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:14px}footer a{color:var(--accent)}@media(max-width:600px){main{padding:24px 14px}.step{padding:18px}}@media print{body{background:white}main{padding:0;max-width:none}nav{display:none}.step{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:inherit}}
+.table-scroll{overflow-x:auto;margin:22px 0}table{width:100%;border-collapse:collapse;font-size:15px;min-width:760px}th,td{border:1px solid var(--line);padding:12px;text-align:left;vertical-align:top}th{background:#f0eee6;font-weight:650}td code{overflow-wrap:anywhere}tbody tr:nth-child(even){background:#fff}@media print{table{min-width:0;font-size:11px}th,td{padding:7px}.table-scroll{overflow:visible}}
+</style>
+</head>
+<body><main>
+<header><span class="eyebrow">MINIMODULE · MENU SYNC</span><h1>Menu sync — luồng app, server và máy</h1></header>
+<nav aria-label="Mục lục"><a href="#api">API và gói tin</a><a href="#get-menu">Lấy menu</a><a href="#update-menu">Cập nhật món</a><a href="#errors">Nhánh lỗi</a><a href="#structure">Cấu trúc code</a></nav>
+<p>Feature có hai việc: lấy menu hiện tại từ máy và cập nhật giá/trạng thái món. Server chuyển yêu cầu/kết quả; máy giữ dữ liệu menu. Ví dụ ID và phiên bản dưới đây là minh họa. <code>packet</code> là chuỗi chứa menu đã nén, không phải URL.</p>
+<section id="api">
+<h2>API và gói tin</h2>
+<p>Các gói tin đều là JSON gửi bằng <code>POST</code>. App gửi <code>token</code> để xác thực người dùng; máy gửi <code>product_key</code> để xác thực máy. Server trả kết quả menu trên request ban đầu của app.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr></thead>
+<tbody>
+<tr><td><code>POST</code></td><td><code>/app/nhan-menu</code></td><td>App</td><td>token, machine_id, menu_version (thiếu thì mặc định 0)</td><td>status, menu_version; có packet khi status là ok. up_to_date không có packet.</td></tr>
+<tr><td><code>POST</code></td><td><code>/app/cap-nhat-menu</code></td><td>App</td><td>token, machine_id, menu_version, thay_doi: [{drink_id, available?, price?}]</td><td>status: ok hoặc conflict, menu_version, packet. conflict nghĩa là chưa ghi thay đổi.</td></tr>
+<tr><td><code>POST</code></td><td><code>/machine/heartbeat</code></td><td>Máy</td><td>product_key</td><td>da_nhan: true; giúp server biết máy đang hoạt động.</td></tr>
+<tr><td><code>POST</code></td><td><code>/machine/hoi-lenh</code></td><td>Máy</td><td>product_key</td><td>lenh: {id, instruction, data}, hoặc null nếu chưa có lệnh.</td></tr>
+<tr><td><code>POST</code></td><td><code>/machine/tra-ket-qua</code></td><td>Máy</td><td>product_key, id, ket_qua (kết quả menu hoặc lỗi)</td><td>da_nhan: true; server chuyển kết quả đến request app đang chờ nếu khớp lệnh/máy.</td></tr>
+</tbody></table></div>
+<p><code>available?</code> / <code>price?</code> là trường tùy chọn, nhưng mỗi dòng thay_doi phải có ít nhất một trường sửa. <code>packet</code> là chuỗi menu nén dạng base64(zlib(JSON)). Khi có lỗi, response chứa <code>loi</code>; mã HTTP và nhánh lỗi được mô tả bên dưới.</p>
+</section>
+
+<section id="get-menu"><h2>A. App lấy menu</h2>
+<article class="step"><h3>1. App gửi yêu cầu lấy menu lên server</h3>
+<p>POST <code>/app/nhan-menu</code>, body:</p>
+<pre><code>{
+  &quot;token&quot;: &quot;token_app&quot;,
+  &quot;machine_id&quot;: &quot;may_01&quot;,
+  &quot;menu_version&quot;: 0
+}</code></pre>
+<p>Token xác định người dùng, machine_id chọn máy. menu_version là phiên bản app đang giữ; app chưa có menu gửi 0. Server cũng mặc định 0 nếu thiếu trường này.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>App <code>ProductsSync.load()</code>: bắt đầu tải menu cho máy đang chọn.</li>
+<li>App <code>receiveMenu()</code>: tạo yêu cầu lấy menu.</li>
+<li>App <code>ServerClient.machineData()</code>: gửi dữ liệu máy kèm token.</li>
+</ul>
+</article>
+<article class="step"><h3>2. Server nhận yêu cầu và kiểm tra</h3>
+<p>Server khớp URL, đọc JSON rồi kiểm phiên đăng nhập, quyền với máy và phiên bản. Nếu không hợp lệ, server trả lỗi cho app ngay; chưa giao lệnh xuống máy.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Server <code>machine_menu_main.handle()</code>: cửa vào menu_sync.</li>
+<li>Server <code>handle_routes()</code> / <code>read_json()</code>: chọn luồng và đọc gói JSON.</li>
+<li>Server <code>machine_menu_get.nhan_menu()</code>: điều phối yêu cầu lấy menu.</li>
+<li>Server <code>check_access()</code>: kiểm phiên và quyền máy.</li>
+<li>Server <code>is_menu_version()</code>: kiểm phiên bản là số nguyên 32 bit hợp lệ.</li>
+</ul>
+</article>
+<article class="step"><h3>3. Server chuẩn bị lệnh; máy hỏi server để nhận lệnh</h3>
+<p>Server đặt lệnh vào hộp thư và chờ kết quả. Máy POST <code>/machine/hoi-lenh</code> với:</p>
+<pre><code>{
+  &quot;product_key&quot;: &quot;key_may&quot;
+}</code></pre>
+<p>Server trả lệnh trong response của request này:</p>
+<pre><code>{
+  &quot;lenh&quot;: {
+    &quot;id&quot;: 123,
+    &quot;instruction&quot;: &quot;nhan_menu&quot;,
+    &quot;data&quot;: {
+      &quot;menu_version&quot;: 0
+    }
+  }
+}</code></pre>
+<p>Server không gọi URL riêng trên máy. Token app không được gửi xuống máy. Nếu chưa có lệnh, máy chờ hoặc nhận <code>{&quot;lenh&quot;: null}</code> rồi hỏi tiếp.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Server <code>send()</code>: đưa lệnh vào hộp thư, chờ kết quả.</li>
+<li>Máy <code>poll()</code> / <code>poll_command()</code>: hỏi server lấy lệnh.</li>
+<li>Server <code>machine_link_process.poll()</code> / <code>take()</code>: xác thực máy và trả lệnh.</li>
+</ul>
+</article>
+<article class="step"><h3>4. Máy đọc menu và chuẩn bị kết quả</h3>
+<p>Máy so menu_version app gửi với phiên bản dữ liệu hiện tại:</p>
+<ul>
+<li>Giống nhau: trả <code>{&quot;status&quot;: &quot;up_to_date&quot;, &quot;menu_version&quot;: 456}</code>, không gửi lại menu.</li>
+<li>Khác nhau: đóng gói menu và trả</li>
+</ul>
+<p>  <code>{&quot;status&quot;: &quot;ok&quot;, &quot;menu_version&quot;: 456, &quot;packet&quot;: &quot;chuoi_menu_da_nen&quot;}</code>.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Máy <code>handle_command()</code>: chọn chức năng theo tên lệnh.</li>
+<li>Máy <code>machine_menu_sync.nhan_menu()</code>: xử lý lấy menu.</li>
+<li>Máy <code>read_drinks()</code> / <code>menu_version_of()</code>: đọc món và tính phiên bản.</li>
+<li>Máy <code>reply_with_menu()</code> / <code>build_packet()</code> / <code>encode_packet()</code>: đóng gói menu.</li>
+</ul>
+</article>
+<article class="step"><h3>5. Máy gửi kết quả lên server</h3>
+<p>POST <code>/machine/tra-ket-qua</code>, ví dụ:</p>
+<pre><code>{
+  &quot;product_key&quot;: &quot;key_may&quot;,
+  &quot;id&quot;: 123,
+  &quot;ket_qua&quot;: {
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;menu_version&quot;: 456,
+    &quot;packet&quot;: &quot;chuoi_menu_da_nen&quot;
+  }
+}</code></pre>
+<p>ID giúp server ghép kết quả với đúng lệnh đang chờ. Server xác thực máy rồi phản hồi <code>{&quot;da_nhan&quot;: true}</code> cho request gửi kết quả của máy.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Máy <code>reply()</code> / <code>send_result()</code>: gửi kết quả cùng ID lệnh.</li>
+<li>Server <code>machine_link_process.send_result()</code> / <code>deliver()</code>: chuyển kết quả</li>
+</ul>
+<p>  đến yêu cầu app đang chờ của đúng máy.</p>
+</article>
+<article class="step"><h3>6. Server trả menu cho app; app hiển thị</h3>
+<p>Server trả nguyên <code>ket_qua</code> làm response cho POST <code>/app/nhan-menu</code> ở bước 1. Không có link gửi menu riêng và app không cần tạo request khác để nhận kết quả. Nếu <code>ok</code>, app giải nén packet và cập nhật danh sách; nếu <code>up_to_date</code>, giữ menu cũ.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Server <code>send()</code>: nhận kết quả máy và kết thúc chờ.</li>
+<li>Server <code>send_json()</code>: trả HTTP response cho app.</li>
+<li>App <code>_apply()</code> / <code>decodeMenuPacket()</code>: đọc gói menu, cập nhật món và phiên bản.</li>
+<li>App <code>ProductsSync.load()</code>: cập nhật trạng thái tải/lỗi cho giao diện.</li>
+</ul>
+</article>
+</section>
+<section id="update-menu"><h2>B. App cập nhật món trong menu</h2>
+<article class="step"><h3>1. App gửi các món cần sửa lên server</h3>
+<p>POST <code>/app/cap-nhat-menu</code>, body ví dụ:</p>
+<pre><code>{
+  &quot;token&quot;: &quot;token_app&quot;,
+  &quot;machine_id&quot;: &quot;may_01&quot;,
+  &quot;menu_version&quot;: 456,
+  &quot;thay_doi&quot;: [
+    {
+      &quot;drink_id&quot;: 1001,
+      &quot;available&quot;: false
+    },
+    {
+      &quot;drink_id&quot;: 1002,
+      &quot;price&quot;: 35000
+    }
+  ]
+}</code></pre>
+<p>Chỉ sửa <code>available</code> và/hoặc <code>price</code>. UI hiện dùng bật/tắt món; API cũng hỗ trợ giá. menu_version là phiên bản app đang sửa, không được bỏ qua.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>App <code>setAvailable()</code> / <code>_send()</code>: tạo thay đổi và bắt đầu cập nhật.</li>
+<li>App <code>updateMenu()</code> / <code>ServerClient.machineData()</code>: gửi gói kèm token.</li>
+</ul>
+</article>
+<article class="step"><h3>2. Server nhận và kiểm tra toàn bộ gói</h3>
+<p>Server kiểm phiên/quyền, phiên bản, số dòng, ID món và giá trị sửa. Một dòng sai thì từ chối cả gói. Server chưa biết ID đó có thực sự tồn tại trên máy hay không; phần này máy kiểm ở bước 4.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Server <code>machine_menu_main.handle()</code> / <code>handle_routes()</code>: nhận URL và đọc JSON.</li>
+<li>Server <code>machine_menu_update.cap_nhat_menu()</code> / <code>check_access()</code>: kiểm quyền và điều phối.</li>
+<li>Server <code>is_menu_version()</code> / <code>is_changes()</code> / <code>is_change()</code>: kiểm phiên bản và từng dòng.</li>
+<li>Server <code>is_drink_id()</code> / <code>is_price()</code> / <code>is_number()</code> / <code>is_available()</code>:</li>
+</ul>
+<p>  kiểm kiểu và giới hạn giá trị.</p>
+</article>
+<article class="step"><h3>3. Server giao lệnh cập nhật cho máy đang hỏi lệnh</h3>
+<p>Máy vẫn POST <code>/machine/hoi-lenh</code> với product_key như luồng lấy menu. Response server chứa:</p>
+<pre><code>{
+  &quot;lenh&quot;: {
+    &quot;id&quot;: 124,
+    &quot;instruction&quot;: &quot;cap_nhat_menu&quot;,
+    &quot;data&quot;: {
+      &quot;menu_version&quot;: 456,
+      &quot;thay_doi&quot;: [
+        {
+          &quot;drink_id&quot;: 1001,
+          &quot;available&quot;: false
+        },
+        {
+          &quot;drink_id&quot;: 1002,
+          &quot;price&quot;: 35000
+        }
+      ]
+    }
+  }
+}</code></pre>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Server <code>send()</code>: đưa lệnh cập nhật vào hộp thư.</li>
+<li>Máy <code>poll()</code> / <code>poll_command()</code>: hỏi lấy lệnh.</li>
+<li>Server <code>machine_link_process.poll()</code> / <code>take()</code>: trả lệnh cho đúng máy.</li>
+</ul>
+</article>
+<article class="step"><h3>4. Máy kiểm phiên bản và cập nhật</h3>
+<ul>
+<li>Phiên bản đã đổi: không ghi thay đổi, trả <code>conflict</code> kèm menu mới nhất.</li>
+<li>Phiên bản khớp: kiểm tất cả món, ghi trong một transaction rồi trả <code>ok</code></li>
+</ul>
+<p>  kèm menu sau cập nhật. Một thay đổi không hợp lệ thì không ghi cả gói.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Máy <code>handle_command()</code> / <code>machine_menu_sync.cap_nhat_menu()</code>: chọn và xử lý cập nhật.</li>
+<li>Máy <code>check_menu_version()</code> / <code>menu_version_of()</code>: kiểm và so phiên bản.</li>
+<li>Máy <code>check_changes()</code> / <code>update_drink()</code>: kiểm món và ghi dữ liệu.</li>
+<li>Máy <code>read_drinks()</code> / <code>reply_with_menu()</code>: lấy menu mới nhất và đóng gói kết quả.</li>
+</ul>
+</article>
+<article class="step"><h3>5. Máy gửi kết quả cập nhật về server</h3>
+<p>POST <code>/machine/tra-ket-qua</code>, body:</p>
+<pre><code>{
+  &quot;product_key&quot;: &quot;key_may&quot;,
+  &quot;id&quot;: 124,
+  &quot;ket_qua&quot;: {
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;menu_version&quot;: 789,
+    &quot;packet&quot;: &quot;chuoi_menu_da_nen&quot;
+  }
+}</code></pre>
+<p>Nếu xung đột, status là <code>conflict</code>, packet chứa menu hiện tại và thay đổi chưa được ghi.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Máy <code>reply()</code> / <code>send_result()</code>: gửi kết quả.</li>
+<li>Server <code>machine_link_process.send_result()</code> / <code>deliver()</code>: ghép kết quả với lệnh chờ.</li>
+</ul>
+</article>
+<article class="step"><h3>6. Server trả kết quả cho app; app cập nhật giao diện</h3>
+<p>Server trả kết quả trên request <code>/app/cap-nhat-menu</code> ở bước 1. App đọc menu mới. Nếu <code>conflict</code>, app cũng tải menu từ packet nhưng báo người dùng thử sửa lại.</p>
+<p>Hàm tham gia:</p>
+<ul>
+<li>Server <code>send()</code> / <code>send_json()</code>: kết thúc chờ và trả HTTP response.</li>
+<li>App <code>_send()</code> / <code>_apply()</code> / <code>decodeMenuPacket()</code>: cập nhật menu, báo xung đột nếu có.</li>
+</ul>
+</article>
+</section>
+<section id="errors"><h2>Khi có lỗi</h2>
+<ul>
+<li>JSON/gói tin sai: HTTP 400, <code>{&quot;loi&quot;: &quot;...&quot;}</code>.</li>
+<li>Phiên hết hạn: HTTP 401, có <code>login_required: true</code> để app yêu cầu đăng nhập lại.</li>
+<li>Không có quyền máy: HTTP 403.</li>
+<li>Máy offline: HTTP 503; máy báo lỗi hoặc chờ quá hạn: HTTP 502.</li>
+<li>Conflict phiên bản: HTTP 200 với status <code>conflict</code>, không phải lỗi HTTP.</li>
+</ul>
+</section>
+<section id="structure"><h2>Cấu trúc code phía server</h2>
+<pre><code>menu_sync/
+    machine_menu_main.py      # cửa vào HTTP
+    machine_menu_get.py       # luồng lấy menu
+    machine_menu_update.py    # luồng cập nhật menu
+    README.md</code></pre>
+<p>Packet menu là <code>base64(zlib(JSON))</code>, chứa type <code>menu_sync</code>, v <code>1</code>, menu_version, generated_at, fields và drinks. Server chuyển nguyên packet; app giải nén để đọc.</p>
+</section>
+<footer>Tài liệu cho riêng menu_sync. Ví dụ gói tin minh họa; luồng và URL theo code hiện tại. <a href="README.md">Bản Markdown</a></footer>
+</main></body></html>

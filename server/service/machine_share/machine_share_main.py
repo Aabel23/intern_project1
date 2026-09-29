@@ -8,11 +8,13 @@
 
 # Routing tập trung và HTTP dùng chung
 from server.config.routing import MACHINE_SHARE_ACCEPT, MACHINE_SHARE_CREATE, MACHINE_STAFF_LIST, MACHINE_STAFF_REVOKE
-from server.lib.http_json import handle_routes, invalid, with_valid_status
+from server.lib.http.http_json import handle_routes, invalid, with_valid_status
 
 # Trong module machine_share
-from .machine_share_store import setup
-from .machine_share_process import accept_invite, create_invite, list_staff, revoke_staff
+from .machine_share_create import create_invite
+from .machine_share_accept import accept_invite
+from .machine_staff_list import list_staff
+from .machine_staff_revoke import revoke_staff
 
 
 ROUTES = with_valid_status({

@@ -1,7 +1,7 @@
 """Sinh mã OTP; trạng thái phiên được quản lý tại user_otp_process.py."""
 import secrets
 
-from server.lib.hashing import sha256_hex
+from server.lib.security.data_hash import sha256_hex
 
 OTP_DIGITS = 6
 OTP_TTL_SECONDS = 300

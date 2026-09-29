@@ -16,11 +16,12 @@ import time
 # Tài khoản/phiên dùng chung; nghiệp vụ đăng nhập nằm trong file này.
 from server.config.routing import USER_LOGIN_VERIFY
 from server.database.user.user_read import get_credentials
-from server.lib.checks import is_request_id, remove_expired
-from server.lib.hashing import request_fingerprint
-from server.lib.http_json import invalid
-from server.lib.passwords import matches_password
-from server.lib.session import create_session
+from server.lib.validation.identifier_validate import is_request_id
+from server.lib.validation.state_expire import remove_expired
+from server.lib.security.data_hash import request_fingerprint
+from server.lib.http.http_json import invalid
+from server.lib.security.user_password import matches_password
+from server.lib.security.user_session import create_session
 
 
 INVALID_LOGIN = "Tên đăng nhập hoặc mật khẩu không đúng"

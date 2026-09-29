@@ -15,9 +15,10 @@ import threading
 import time
 
 # Server chung: database tài khoản, hàm kiểm tra, băm
-from server.lib.passwords import hash_password
-from server.lib.checks import is_request_id, remove_expired
-from server.lib.hashing import request_fingerprint
+from server.lib.security.user_password import hash_password
+from server.lib.validation.identifier_validate import is_request_id
+from server.lib.validation.state_expire import remove_expired
+from server.lib.security.data_hash import request_fingerprint
 
 # Trong module user_register
 from .otp import user_otp_process

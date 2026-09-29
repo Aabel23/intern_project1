@@ -1,3 +1,100 @@
+# Dashboard: chọn máy, menu và kho
+
+Dashboard kết hợp danh sách máy, trạng thái kết nối, menu và kho. Mỗi mini-module có tài liệu riêng; bảng này là các API app sử dụng.
+
+## API và gói tin
+
+Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc app; product_key thuộc máy nếu API yêu cầu. Các ví dụ trường dữ liệu minh họa cấu trúc, không phải giá trị thực.
+
+| Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
+| --- | --- | --- | --- | --- |
+| POST | /app/may-cua-toi | App | token | valid, machines |
+| GET | /machine/trang-thai | App | machine_id trong query | trạng thái heartbeat |
+| POST | /app/doi-ten-may | Chủ máy | token, machine_id, name | valid, name, message |
+| POST | /app/go-may | App | token, machine_id | valid, deleted, message |
+| POST | /app/nhan-menu | App | token, machine_id, menu_version | status, menu_version, packet khi có dữ liệu mới |
+| POST | /app/cap-nhat-menu | App | token, machine_id, menu_version, thay_doi | status: ok/conflict, menu_version, packet |
+| POST | /app/nhan-kho | App | token, machine_id, version | status, version, ingredients khi có dữ liệu mới |
+| POST | /app/nap-kho | App | token, machine_id, target, value | kết quả nạp, warning tùy trường hợp |
+
+## A. Mở dashboard và chọn máy
+
+### 1. App lấy danh sách máy
+
+POST `/app/may-cua-toi` với `{token}`. Server trả `{valid, machines}`; app chọn máy và hiển thị tên/quyền.
+
+Hàm tham gia:
+
+- App loadMyMachines(): lấy và áp dụng danh sách.
+- Server list_my_machines(): kiểm phiên và đọc máy.
+
+### 2. App xem trạng thái kết nối
+
+GET `/machine/trang-thai?machine_id=...`. Trạng thái được tính từ heartbeat, không bảo đảm request nghiệp vụ tiếp theo sẽ thành công.
+
+Hàm tham gia:
+
+- App status(): hỏi trạng thái.
+- Server handle_get() / is_online(): đọc heartbeat.
+
+
+## B. Đọc menu và kho
+
+### 1. App gửi yêu cầu đọc dữ liệu
+
+Menu: POST `/app/nhan-menu` với `{token, machine_id, menu_version}`. Kho: POST `/app/nhan-kho` với `{token, machine_id, version}`. Hai luồng độc lập, cùng chọn một máy.
+
+Hàm tham gia:
+
+- App receiveMenu() / receiveIngredients(): gửi yêu cầu.
+- Server nhan_menu() / nhan_kho(): kiểm và giao lệnh.
+
+### 2. Máy nhận lệnh và trả dữ liệu
+
+Máy gọi `/machine/hoi-lenh` rồi gửi kết quả lên `/machine/tra-ket-qua`. Bản không đổi trả up_to_date; bản mới trả menu nén hoặc kho JSON. Server phản hồi trên request app ban đầu.
+
+Hàm tham gia:
+
+- Server send() / take() / deliver(): chuyển lệnh và kết quả.
+- Máy nhan_menu() / nhan_kho(): đọc dữ liệu.
+
+### 3. App cập nhật màn hình
+
+App đọc kết quả, giữ bản cũ nếu up_to_date. Đổi máy hoặc đóng dashboard thì bỏ kết quả cũ trả về muộn.
+
+Hàm tham gia:
+
+- App ProductsSync.load() / reset(): quản lý dữ liệu menu.
+- App dashboard controller: quản lý máy đang chọn.
+
+
+## C. Thay đổi dữ liệu
+
+### 1. App gửi tác vụ cần làm
+
+Đổi tên/gỡ máy gửi API quản lý máy. Cập nhật món gửi `/app/cap-nhat-menu`; nạp kho gửi `/app/nap-kho`. Các gói được liệt kê ở bảng đầu.
+
+Hàm tham gia:
+
+- Server rename_machine() / remove_machine(): sửa dữ liệu quản lý trên server.
+- Server cap_nhat_menu() / nap_kho(): chuyển tác vụ dữ liệu xuống máy.
+
+### 2. App đọc kết quả và tải lại khi cần
+
+Đổi tên/gỡ máy làm mới danh sách. Menu conflict tải bản mới và yêu cầu sửa lại. Nạp xong tải kho mới; warning dựng menu được giữ trong kết quả.
+
+Hàm tham gia:
+
+- App loadMyMachines() / forgetMachine(): làm mới máy.
+- App ProductsSync._send() / _apply(): đọc kết quả cập nhật món.
+
+
+## Nhánh lỗi và lưu ý
+
+Chi tiết: MACHINELIST_FLOW.html, MENU_SYNC_FLOW.html và INGREDIENT_SYNC_FLOW.html trong các folder mini-module tương ứng. Trang Orders hiện là dữ liệu demo; không mô tả như feature đồng bộ server.
+
+## Tài liệu kỹ thuật và vận hành
+
 # Đồng bộ dashboard
 
 Mỗi tab dashboard của app là một folder, **chia theo tab, không chia theo nguồn dữ liệu**:
@@ -9,13 +106,13 @@ Mỗi tab dashboard của app là một folder, **chia theo tab, không chia the
 | `machinelist_sync/` | Máy | `/app/may-cua-toi`, `/app/doi-ten-may`, `/app/go-may`, GET `/machine/trang-thai` | của server (bảng `machines`, giờ heartbeat) |
 
 Vai trò được phép nằm trong flow của mỗi module (`QUYEN_MENU`, `QUYEN_KHO`,
-`QUYEN_NAP_KHO`). `server/lib/machine_access.py` cung cấp `check_access(data, roles)`:
+`QUYEN_NAP_KHO`). `server/lib/machine/machine_access.py` cung cấp `check_access(data, roles)`:
 token → người dùng → có quản lý máy → vai trò đủ quyền.
 
 ## Tab dữ liệu máy (Menu, Kho)
 
 Server không lưu dữ liệu máy. Module kiểm quyền và dạng gói, rồi gọi
-`server.lib.machine_transport.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
+`server.lib.machine.machine_transport.send(machine_id, instruction, data)`: lệnh nằm trong hộp thư
 tới khi máy long-poll lấy, máy trả kết quả, server chuyển nguyên cho app.
 
 ```
@@ -67,3 +164,15 @@ Thân lỗi `{"loi": ...}`:
 
 Module tự chọn cách chia file, xem `androidv0.1/MODULE_PATTERN.md`. Chạy server:
 `python -m server.main`.
+
+## Cửa vào các submodule phía server
+
+| Submodule | Cửa vào | File tác vụ |
+| --- | --- | --- |
+| Máy | `machinelist_sync/machine_list_main.py` | `machine_list_get.py`, `machine_list_rename.py`, `machine_list_remove.py` |
+| Menu | `menu_sync/machine_menu_main.py` | `machine_menu_get.py`, `machine_menu_update.py` |
+| Kho | `ingredient_sync/machine_ingredient_main.py` | `machine_ingredient_get.py`, `machine_ingredient_refill.py` |
+
+`server/main.py` đăng ký trực tiếp ba cửa vào. Mỗi luồng chứa validate và SQL
+riêng; phiên, quyền, HTTP và vận chuyển lệnh dùng helper chung. Mỗi module có
+README và HTML flow trong cùng folder.

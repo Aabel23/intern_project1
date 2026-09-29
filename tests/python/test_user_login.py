@@ -14,8 +14,8 @@ from server.service.user_login import user_login_process
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
 from server import main as server_main
-from server.service.user_login.user_login_request import ROUTES
-from server.lib.session import create_session, end_session, user_from_request
+from server.service.user_login.user_login_main import ROUTES
+from server.lib.security.user_session import create_session, end_session, user_from_request
 
 
 def password_hash(password):

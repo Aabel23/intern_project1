@@ -1,12 +1,5 @@
-"""Các hàm đọc/ghi bảng machine_invites (mã mời chia sẻ máy, lưu dạng hash)."""
+"""SQL mã mời và nhân viên; nhận conn từ tác vụ, không tự commit."""
 
-from pathlib import Path
-from server.database.connection import get_connection
-
-
-def setup():
-    with get_connection() as conn:
-        conn.executescript(Path(__file__).with_name("machine_share_schema.sql").read_text(encoding="utf-8"))
 
 
 def replace_invite(conn, code_hash, machine_id, created_by, expires_at, now):

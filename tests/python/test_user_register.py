@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from server.service.user_register.otp import user_otp_process as flow
 from server import main as server_main
-from server.lib import rate_limit
+from server.lib.http import http_rate_limit as rate_limit
 from server.service.user_register import user_register_process as registration_flow
 from server.database import connection
 
@@ -172,7 +172,7 @@ class RegistrationFlowTest(unittest.TestCase):
             finally:
                 client.close()
         try:
-            from server.service.user_register.user_register_request import USER_ACCOUNT_REGISTER, USER_OTP_VERIFY
+            from server.service.user_register.user_register_main import USER_ACCOUNT_REGISTER, USER_OTP_VERIFY
             with patch.object(server.RequestHandlerClass, "log_message"):
                 status, result = post(USER_ACCOUNT_REGISTER, self.data)
                 self.assertEqual(status, 200)

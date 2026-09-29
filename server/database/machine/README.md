@@ -65,9 +65,9 @@ Schema dùng chung ở đây gồm máy và quyền quản lý. Module chia sẻ
 | --- | --- |
 | `machine_read.py` | Tra danh tính máy và quyền quản lý dùng chung |
 | `machine_write.py` | Xóa quyền nhân viên, dùng cho thu hồi và tự rời máy |
-| `service/machine_register/machine_register_store.py` | Tạo máy và gán chủ |
-| `service/machine_share/machine_share_store.py`, `machine_share_schema.sql` | Mã mời, danh sách/thêm nhân viên, khởi tạo bảng riêng |
-| `service/dashboard_sync/machinelist_sync/machine_list_store.py` | Danh sách máy, đổi tên và xóa máy |
+| `machine_write.py` → `add_machine()`, `set_owner()` | Tạo máy và gán chủ |
+| `machine_share_store.py`, `machine_share_schema.sql` | SQL mã mời, danh sách/thêm nhân viên; init_db khởi tạo schema chia sẻ máy |
+| `service/dashboard_sync/machinelist_sync/machine_list_{get,rename,remove}.py` | SQL riêng của danh sách máy, đổi tên và xóa máy |
 
 Transaction do flow sở hữu; các bước đọc quyền và ghi liên quan dùng cùng `conn`.
-`init_db` chỉ khởi tạo schema chung; bảng mã mời được tạo qua hook setup của module chia sẻ.
+`init_db` khởi tạo schema tài khoản, máy và mã mời; giữ dữ liệu hiện có khi chạy lại.

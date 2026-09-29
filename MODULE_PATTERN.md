@@ -52,7 +52,7 @@ Các bên app/server/machine phải cập nhật đồng thời khi đổi URL h
 | `setup()` | Tùy chọn; khởi tạo/nâng cấp dữ liệu riêng, chạy lại an toàn |
 | `tick()` | Tùy chọn; dọn trạng thái định kỳ |
 
-`server/lib/http_json.py` cung cấp đọc/ghi JSON, giới hạn body và xử lý lỗi SQLite.
+`server/lib/http/http_json.py` cung cấp đọc/ghi JSON, giới hạn body và xử lý lỗi SQLite.
 Module tự chọn giới hạn body, kiểm tra gói tin và quyết định kết quả.
 Route lấy từ `server/config/routing.py`. Flow đăng nhập cũng dùng cùng hằng khi trả route xác minh cho app.
 
@@ -72,9 +72,9 @@ vị trí thư mục cho biết nơi chạy.
 
 | Phần cuối | Trách nhiệm | Ví dụ |
 | --- | --- | --- |
-| `request` | Nhận/gửi yêu cầu hoặc khai bảng lệnh | `machine_menu_request.py` |
-| `process` | Điều phối nghiệp vụ | `machine_share_process.py` |
-| `manage` | Quản lý đối tượng: liệt kê, đổi tên, gỡ | `machine_list_manage.py` |
+| `request` | Nhận/gửi yêu cầu hoặc khai bảng lệnh | `machine_menu_request.py` (phía máy) |
+| `process` | Điều phối nghiệp vụ | `user_login_process.py` |
+| `main` | Cửa vào HTTP, chọn luồng nghiệp vụ | `machine_list_main.py` |
 | `sync` | Đồng bộ dữ liệu | `machine_menu_sync.py` |
 | `validate` | Kiểm dữ liệu | `user_register_validate.py` |
 | `store` | Đọc/ghi dữ liệu | `machine_share_store.py` |
@@ -89,10 +89,11 @@ công cụ unittest nhận diện, ví dụ `test_machine_share.py`.
 
 ```text
 server/service/machine_share/
-    machine_share_request.py
-    machine_share_process.py
-    machine_share_store.py
-    machine_share_schema.sql
+    machine_share_main.py
+    machine_share_create.py
+    machine_share_accept.py
+    machine_staff_list.py
+    machine_staff_revoke.py
 
 machine/menu_sync/
     machine_menu_request.py
@@ -111,12 +112,12 @@ Hiện tại:
 | --- | --- |
 | `user_login` | Ánh xạ route, xác minh thông tin, trạng thái đăng nhập hai bước trong `user_login_process.py` |
 | `user_register` | Dữ liệu đăng ký, OTP, gửi mail và cấu hình SMTP trong `otp/user_otp_send.py` |
-| `machine_register` | Kiểm tra gói, transaction đăng ký và SQL tạo máy/gán chủ trong `machine_register_store.py` |
-| `machine_share` | Quy tắc mời, hạn mã, SQL mã mời/nhân viên, `machine_share_schema.sql`, hook `setup` |
-| `dashboard_sync/machinelist_sync` | Kiểm tra, danh sách/đổi tên/gỡ máy, SQL riêng trong `machine_list_store.py` |
-| `dashboard_sync/menu_sync` | Quyền Menu, kiểm gói Menu, tạo lệnh Menu và trả kết quả |
+| `machine_register` | Cửa vào main, kiểm tra gói và transaction trong process; SQL tạo máy/gán chủ ở database/machine/machine_write.py |
+| `machine_share` | Quy tắc mời, hạn mã và điều phối quyền; SQL/schema ở `server/database/machine` |
+| `dashboard_sync/machinelist_sync` | Cửa vào main; kiểm tra và SQL riêng trong get/rename/remove |
+| `dashboard_sync/menu_sync` | Hai file luồng lấy/cập nhật menu; main là cửa vào HTTP |
 | `dashboard_sync/ingredient_sync` | Quyền Kho/nạp Kho, kiểm gói Kho, tạo lệnh Kho và trả kết quả |
-| `machine_link` | Xác minh máy và HTTP heartbeat/hỏi lệnh/trả kết quả |
+| `machine_link` | Cửa vào machine_link_main; process xác minh máy và điều phối heartbeat/hỏi lệnh/trả kết quả qua transport chung |
 
 Tên thư mục hiện tại được giữ để tránh trộn đổi tên với thay đổi ranh giới trách nhiệm.
 
@@ -124,18 +125,18 @@ Tên thư mục hiện tại được giữ để tránh trộn đổi tên vớ
 
 | Tài nguyên | Giao diện | Vì sao dùng chung |
 | --- | --- | --- |
-| Phiên tài khoản | `server/lib/session.py` | Một token dùng cho mọi tính năng; tắt login không làm mất phiên đang có |
-| Mật khẩu | `server/lib/passwords.py` | Đăng ký và đăng nhập phải dùng cùng định dạng băm |
+| Phiên tài khoản | `server/lib/security/user_session.py` | Một token dùng cho mọi tính năng; tắt login không làm mất phiên đang có |
+| Mật khẩu | `server/lib/security/user_password.py` | Đăng ký và đăng nhập phải dùng cùng định dạng băm |
 | Tài khoản, máy, quyền quản lý | `server/database/` | Cùng một danh tính và quyền trên toàn hệ thống |
 | Kết nối SQLite | `server/database/connection.py` | Transaction, commit/rollback và foreign key thống nhất |
-| Tra quyền từ token/máy | `server/lib/machine_access.py` | Cơ chế chung; danh sách vai trò được phép do từng module giữ |
-| Hộp thư lệnh và heartbeat | `server/lib/machine_transport.py` | Máy long-poll một chỗ; các tính năng gửi qua cùng kết nối máy |
+| Tra quyền từ token/máy | `server/lib/machine/machine_access.py` | Cơ chế chung; danh sách vai trò được phép do từng module giữ |
+| Hộp thư lệnh và heartbeat | `server/lib/machine/machine_transport.py` | Máy long-poll một chỗ; các tính năng gửi qua cùng kết nối máy |
 | HTTP JSON, rate limit | `server/lib/` | Cơ chế vận chuyển và giới hạn request dùng chung |
 
 Các file dùng chung không import `server.service`. Không đưa quy tắc riêng của
 một tính năng vào `lib` chỉ để giảm số dòng ở module.
 SQL dùng riêng nằm trong module; thao tác danh tính/quyền dùng chung vẫn ở database.
-Bảng `machine_invites` do hook setup của module chia sẻ khởi tạo. Các bảng tài khoản,
+Bảng `machine_invites` do `server/database/machine/init_db.py` khởi tạo từ `machine_share_schema.sql`. Các bảng tài khoản,
 phiên, máy và quyền được khởi tạo chung trước hook `setup` của module.
 
 Độc lập ở đây là giữ nghiệp vụ trong module và giảm import nội bộ giữa các tính năng.
@@ -175,3 +176,42 @@ Quy ước app ở `app/flutter_app/README.md`. `lib/app` lắp ghép điều h�
 Mỗi feature có request/state/ui riêng. Dashboard lắp ghép các feature, không giữ
 request nghiệp vụ của chúng; Auth và dashboard giao tiếp qua callback từ app.
 Không thêm các tầng rỗng chỉ để đồng đều cấu trúc.
+
+## Cấu trúc menu_sync
+
+Riêng menu_sync phía server làm phẳng thành `machine_menu_main.py`,
+`machine_menu_get.py`, `machine_menu_update.py`. Mỗi luồng nằm trọn trong một file,
+validate nằm cùng file, các bước ghi bằng comment. Không ép mỗi bước thành một file.
+Chi tiết ở [README menu_sync](server/service/dashboard_sync/menu_sync/README.md).
+Hàm nhiều module dùng tương đồng nằm trong lib.
+
+## Nhóm lib dùng chung
+
+Lib chia theo HTTP, security, machine và validation; chi tiết ở
+[server/lib/README.md](server/lib/README.md). Không đánh số bước cho helper chung.
+
+Startpoint menu_sync phía server: `machine_menu_main.py` → `handle(request)`.
+File main nhận HTTP, chọn luồng lấy/cập nhật menu và trả response.
+
+File cửa vào menu_sync dùng `<đối_tượng>_<tính_năng>_main.py`: `machine_menu_main.py`.
+Các file nghiệp vụ giữ hậu tố tác vụ get/update; chỉ đổi module khác khi được yêu cầu.
+
+## Cấu trúc các submodule dashboard còn lại
+
+`machinelist_sync`: `machine_list_main.py` → `machine_list_get.py`,
+`machine_list_rename.py`, `machine_list_remove.py`. Trạng thái heartbeat nằm trong
+get; SQL riêng nằm cùng tác vụ. Kiểm quyền dùng `machine_read`, bỏ quyền nhân viên
+dùng `machine_write.remove_manager`; gỡ máy giữ khóa ghi trước bước kiểm quyền.
+
+`ingredient_sync`: `machine_ingredient_main.py` → `machine_ingredient_get.py`,
+`machine_ingredient_refill.py`. Validate nằm trong từng file luồng; kiểm quyền và
+gửi lệnh dùng lib chung. Server trả kết quả máy trên request app ban đầu.
+
+Ngoại lệ đã chốt cho machine_share: module giữ kiểm tra/nghiệp vụ, SQL và schema
+ở `server/database/machine`; transaction do tác vụ điều phối qua cùng conn.
+
+Machine_register: `machine_register_main.py` → `machine_register_process.py`;
+SQL tạo máy/gán chủ nằm trong `server/database/machine/machine_write.py`.
+
+Cửa vào HTTP của user_login/user_register dùng `user_login_main.py` và
+`user_register_main.py`; nghiệp vụ và trạng thái vẫn giữ trong process.

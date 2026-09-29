@@ -8,10 +8,12 @@ from unittest.mock import patch
 
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
-from server.lib.session import create_session
-from server.lib.session import user_from_request
-from server.service.machine_share.machine_share_store import setup
-from server.service.machine_share.machine_share_process import accept_invite, create_invite, list_staff, revoke_staff
+from server.lib.security.user_session import create_session
+from server.lib.security.user_session import user_from_request
+from server.service.machine_share.machine_share_accept import accept_invite
+from server.service.machine_share.machine_share_create import create_invite
+from server.service.machine_share.machine_staff_list import list_staff
+from server.service.machine_share.machine_staff_revoke import revoke_staff
 
 
 class MachineShareTest(unittest.TestCase):
@@ -22,7 +24,6 @@ class MachineShareTest(unittest.TestCase):
         override.start()
         self.addCleanup(override.stop)
         init_db()
-        setup()
         self.owner = self.make_user('owner')
         self.staff = self.make_user('staff')
         self.machine_id = "fm_test"
@@ -89,7 +90,7 @@ class MachineShareTest(unittest.TestCase):
         self.assertEqual(self.roles(self.owner), {self.machine_id: 'owner'})
         invite = create_invite({'token': self.owner, 'machine_id': self.machine_id})
         later = time.time() + 600
-        with patch('server.service.machine_share.machine_share_process.time.time', return_value=later):
+        with patch('server.service.machine_share.machine_share_accept.time.time', return_value=later):
             self.assertFalse(accept_invite({'token': self.staff, 'code': invite['code']})['valid'])
 
 

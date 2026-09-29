@@ -9,7 +9,7 @@ Module khác gửi lệnh xuống máy bằng machine_transport.send(), không q
 
 # Routing tập trung và HTTP dùng chung
 from server.config.routing import MACHINE_HEARTBEAT_SEND, MACHINE_COMMAND_POLL, MACHINE_RESULT_SEND
-from server.lib.http_json import handle_routes
+from server.lib.http.http_json import handle_routes
 
 # Trong module machine_link
 from .machine_link_process import heartbeat, poll, send_result

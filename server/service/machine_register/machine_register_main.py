@@ -5,7 +5,7 @@
 
 # Routing tập trung và HTTP dùng chung
 from server.config.routing import USER_MACHINE_REGISTER
-from server.lib.http_json import handle_routes, invalid, with_valid_status
+from server.lib.http.http_json import handle_routes, invalid, with_valid_status
 
 # Trong module machine_register
 from .machine_register_process import receive_register

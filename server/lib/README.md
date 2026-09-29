@@ -1,20 +1,22 @@
 # Tài nguyên dùng chung của server
 
-Các file này không import module tính năng trong `server/service`.
-Chỉ để ở đây những cơ chế nhiều module thật sự cần dùng chung.
+Nhóm theo trách nhiệm, không theo thứ tự bước của feature.
+Hàm nhiều module dùng tương đồng nằm ở đây; helper riêng của feature giữ trong feature.
+Lib không import server/service.
 
-| File | Trách nhiệm |
-| --- | --- |
-| `module_server.py` | Lắp module, phát hiện route trùng, gọi handle/setup/tick |
-| `http_json.py` | Đọc/ghi JSON, giới hạn body, ánh xạ lỗi SQLite sang HTTP |
-| `session.py` | Cấp/tra/xóa token phiên dùng chung |
-| `passwords.py` | Một triển khai băm và đối chiếu mật khẩu |
-| `machine_access.py` | Tra người dùng và quyền máy; module truyền vai trò được phép |
-| `machine_transport.py` | Hộp thư lệnh, long-poll, kết quả và heartbeat trong một tiến trình |
-| `hashing.py` | Băm SHA-256, fingerprint request |
-| `checks.py` | Kiểm dạng ID, dọn trạng thái hết hạn |
-| `rate_limit.py` | Giới hạn request theo IP |
+| Nhóm | File | Trách nhiệm |
+| --- | --- | --- |
+| HTTP | `http/http_server.py` | Mở cổng, lắp module, dispatch HTTP, kiểm route trùng |
+| HTTP | `http/http_json.py` | Đọc/ghi JSON và xử lý route |
+| HTTP | `http/http_rate_limit.py` | Giới hạn request theo IP |
+| Security | `security/user_session.py` | Cấp, tra và xóa phiên người dùng |
+| Security | `security/user_password.py` | Băm và kiểm mật khẩu |
+| Security | `security/data_hash.py` | SHA-256 và fingerprint request |
+| Machine | `machine/machine_access.py` | Kiểm quyền truy cập máy |
+| Machine | `machine/machine_transport.py` | Hộp thư lệnh, kết quả và heartbeat |
+| Validation | `validation/identifier_validate.py` | Kiểm định dạng request_id/machine_id |
+| Validation | `validation/state_expire.py` | Dọn trạng thái RAM hết hạn |
 
-Kết nối SQLite ở `server/database/connection.py`. Các bản copy HTTP, connection,
-băm/đối chiếu mật khẩu cũ đã bỏ. Quyền Menu/Kho, hạn mã mời và SMTP thuộc
-module sở hữu tính năng; route tập trung ở `server/config/routing.py`.
+Kết nối SQLite vẫn ở server/database/connection.py. Quyền cho từng tác vụ,
+chuẩn gói tin và thứ tự bước thuộc module nghiệp vụ. Chỉ thay đường dẫn import;
+không tạo bản sao trạng thái phiên, rate limit hay transport ở đường dẫn cũ.

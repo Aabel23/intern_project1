@@ -34,7 +34,7 @@ from tests.e2e.phone import Phone  # noqa: E402
 from server.config.config import SERVER_PORT  # noqa: E402
 from server.database.connection import get_connection  # noqa: E402
 from server.database.user.user_add import hash_password  # noqa: E402
-from server.lib.hashing import sha256_hex  # noqa: E402
+from server.lib.security.data_hash import sha256_hex  # noqa: E402
 
 PACKAGE = "com.example.simple_app"
 PYTHON = sys.executable

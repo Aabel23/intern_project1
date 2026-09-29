@@ -3,7 +3,7 @@
 import sqlite3
 
 from ..connection import get_connection
-from server.lib.passwords import hash_password
+from server.lib.security.user_password import hash_password
 
 
 def add_full_name(full_name):

@@ -22,10 +22,10 @@ from urllib.request import Request, urlopen
 from server import main
 from server.database.connection import get_connection
 from server.database.machine.init_db import init_db
-from server.lib import rate_limit
+from server.lib.http import http_rate_limit as rate_limit
 from server.database.user.user_add import hash_password
 from server.service.user_login import user_login_process
-from server.lib.session import create_session
+from server.lib.security.user_session import create_session
 
 
 class SecurityScenarioTest(unittest.TestCase):
@@ -33,7 +33,7 @@ class SecurityScenarioTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         for target, value in (("server.database.connection.DB_PATH", Path(directory.name) / "t.db"),
-                              ("server.lib.machine_transport.POLL_WAIT_SECONDS", 0.3)):
+                              ("server.lib.machine.machine_transport.POLL_WAIT_SECONDS", 0.3)):
             p = patch(target, value)
             p.start()
             self.addCleanup(p.stop)

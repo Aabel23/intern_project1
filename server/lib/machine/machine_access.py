@@ -6,8 +6,8 @@ Lỗi trả dạng {"loi": ...} như các tab dữ liệu máy đang trả.
 
 # Server chung: database máy, hàm kiểm tra, phiên đăng nhập
 from server.database.machine.machine_read import can_manage, is_owner
-from server.lib.checks import is_machine_id
-from server.lib.session import NOT_LOGGED_IN, user_from_request
+from server.lib.validation.identifier_validate import is_machine_id
+from server.lib.security.user_session import NOT_LOGGED_IN, user_from_request
 
 def check_access(data, roles):
     """Trả (machine_id, None) nếu được làm việc này với máy, sai thì (None, (lỗi, status))."""

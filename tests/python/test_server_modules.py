@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from server.database.connection import get_connection
-from server.lib.module_server import ModuleServer
+from server.lib.http.http_server import ModuleServer
 from server.main import create_server
 
 

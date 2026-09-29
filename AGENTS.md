@@ -13,7 +13,7 @@ tiếp tục theo cấu trúc dưới đây.
 - Mỗi tính năng giữ nghiệp vụ, kiểm tra, cấu hình và truy vấn riêng trong folder
   hiện tại. Không import nội bộ của tính năng khác.
 - File tính năng Python dùng `đối_tượng_thành_phần_hành_động.py`, snake_case tiếng Anh:
-  `machine_share_request.py`, `machine_share_process.py`, `machine_share_store.py`,
+  `machine_share_main.py`, `machine_share_create.py`, `machine_share_accept.py`,
   `machine_menu_sync.py`, `user_login_process.py`.
 - Test dùng `test_<đối_tượng>_<thành_phần>.py`. File nền tảng như `main.py`,
   `config.py`, `routing.py`, `__init__.py` và helper dùng chung giữ tên theo vai trò.
@@ -32,3 +32,30 @@ tiếp tục theo cấu trúc dưới đây.
   `config` giữ route, `core` giữ transport/gói tin, `shared/ui` giữ widget chung.
   Feature giữ request/state/ui riêng; chỉ dashboard lắp ghép feature khác.
   Auth và dashboard không import nhau. Test ranh giới ở `tests/python/test_app_boundaries.py`.
+
+- Hàm nhiều module dùng tương đồng đặt trong `server/lib`; helper chỉ dùng chung
+  nội bộ một module giữ trong module đó. Ghi bước rõ trong luồng xử lý,
+  dùng helper lib cho cơ chế chung. Dashboard_sync đã rework cả menu, kho và danh sách máy.
+
+- Menu_sync phía server làm phẳng: main/get/update; mỗi luồng trong một file,
+  validate đặt cùng file, thứ tự bước ghi bằng comment. Không ép mỗi bước thành file.
+
+- Cửa vào menu_sync là `machine_menu_main.py` → `handle(request)`.
+
+- Ingredient_sync phía server: `machine_ingredient_main.py` → get/refill.
+- Machinelist_sync phía server: `machine_list_main.py` → get/rename/remove;
+  cửa vào có `handle(request)` cho POST và `handle_get(request)` cho trạng thái GET.
+- Mỗi luồng giữ kiểm tra và SQL riêng tại file tác vụ; quyền/phiên/heartbeat dùng
+  helper chung. Gỡ máy giữ `BEGIN IMMEDIATE` trước khi đọc quyền.
+
+- Machine_share đã chốt: cửa vào `machine_share_main.py`, các tác vụ create/accept/list/revoke
+  giữ kiểm tra và nghiệp vụ; SQL/schema ở `server/database/machine`.
+  `init_db` khởi tạo bảng mã mời; transaction do tác vụ điều phối qua cùng conn.
+
+- Machine_register: cửa vào `machine_register_main.py`, nghiệp vụ/transaction trong
+  `machine_register_process.py`; SQL tạo máy/gán chủ ở database/machine/machine_write.py.
+
+- Machine_link: `machine_link_main.py` là cửa vào HTTP, process điều phối ba tác vụ;
+  hộp thư/heartbeat/timeout dùng chung giữ trong lib/machine/machine_transport.py.
+
+- Cửa vào HTTP user_login/user_register dùng hậu tố main; giữ nghiệp vụ hiện tại.
