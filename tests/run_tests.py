@@ -52,6 +52,7 @@ FLOWS = [
     ("F4", "app", "Chia sẻ QR + xem/thu hồi nhân viên (widget)", "../../tests/flutter/device_share_test.dart"),
     ("F5", "app", "Chia sẻ qua Bluetooth (widget)", "../../tests/flutter/share_bluetooth_test.dart"),
     ("F6", "app", "Đổi tên / gỡ máy (widget)", "../../tests/flutter/machine_manage_test.dart"),
+    ("F8", "app", "Gói Menu/Kho sai version không thay dữ liệu hợp lệ", "../../tests/flutter/machine_sync_test.dart"),
     ("F7", "app", "Đăng ký máy QR/Bluetooth (widget)",
      "../../tests/flutter/machine_register_test.dart ../../tests/flutter/machine_qr_test.dart ../../tests/flutter/bluetooth_pairing_test.dart"),
     ("E0", "e2e", "Chuẩn bị: USB reverse, server, build/cài, cấp quyền", None),

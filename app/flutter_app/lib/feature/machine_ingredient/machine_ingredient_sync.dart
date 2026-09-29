@@ -88,11 +88,16 @@ class IngredientsSync extends ChangeNotifier {
     if (rows is! List) {
       throw const ApiException('Máy trả kho không đúng định dạng.');
     }
-    ingredients = [
+    final nextVersion = reply['version'];
+    if (nextVersion is! int || nextVersion < 0 || nextVersion > 0xffffffff) {
+      throw const ApiException('Phiên bản kho không hợp lệ.');
+    }
+    final nextIngredients = [
       for (final row in rows.whereType<Map<String, dynamic>>())
         Ingredient.fromJson(row),
     ];
-    version = (reply['version'] as num).toInt();
+    ingredients = nextIngredients;
+    version = nextVersion;
   }
 
   // Nạp kho rồi đọc lại danh sách; target là id nguyên liệu hoặc 'all'.

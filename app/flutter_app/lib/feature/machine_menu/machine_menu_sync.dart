@@ -46,8 +46,12 @@ class Drink {
     throw const ApiException('Gói menu không đúng loại hoặc sai phiên bản.');
   }
   final fields = (json['fields'] as List).cast<String>();
+  final version = json['menu_version'];
+  if (version is! int || version < 0 || version > 0xffffffff) {
+    throw const ApiException('Phiên bản menu không hợp lệ.');
+  }
   return (
-    version: (json['menu_version'] as num).toInt(),
+    version: version,
     drinks: [
       for (final row in (json['drinks'] as List).whereType<List>())
         Drink.fromRow(Map.fromIterables(fields, row)),

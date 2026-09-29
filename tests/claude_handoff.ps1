@@ -15,6 +15,11 @@ Set-Content -LiteralPath (Join-Path $runs "claude.takeover") -Value "Requested a
 # Let the current test batch finish and release the phone before Claude starts.
 while (Test-Path (Join-Path $runs "night_loop.lock")) {
     if ([DateTimeOffset]::Now -ge $end) { exit 0 }
+    $runnerPid = Get-Content -LiteralPath (Join-Path $runs "night_loop.lock") -ErrorAction SilentlyContinue
+    if ($runnerPid -match '^\d+$' -and -not (Get-Process -Id ([int]$runnerPid) -ErrorAction SilentlyContinue)) {
+        Remove-Item -LiteralPath (Join-Path $runs "night_loop.lock")
+        break
+    }
     Start-Sleep -Seconds 10
 }
 if ([DateTimeOffset]::Now -ge $end) { exit 0 }
