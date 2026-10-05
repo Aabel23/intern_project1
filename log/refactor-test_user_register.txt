@@ -1,0 +1,26 @@
+VALID: Registration data; waiting for OTP
+VALID: User created
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: User created
+VALID: Registration data; waiting for OTP
+VALID: User created
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: User created
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+VALID: Registration data; waiting for OTP
+----------------------------------------------------------------------
+Ran 14 tests in 3.887s
+
+OK

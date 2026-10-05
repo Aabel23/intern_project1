@@ -1,0 +1,41 @@
+
+▶ Kiểm tra điện thoại, mạng và server
+  ✓ 2.6s điện thoại USB, server http://127.0.0.1:8000
+
+▶ Đăng nhập tài khoản chủ trên điện thoại
+  ✓ 20.6s e2e_owner_f7f070
+
+▶ Pair máy qua Bluetooth (laptop giả máy, key mới)
+  ✓ 41.1s fm_7b04e1e478654b69a302db101b69a0b7
+
+▶ Máy online qua relay, đọc menu, bật/tắt món, xem kho
+  ✓ 29.3s menu + bật món + kho
+
+▶ Nạp kho qua /machine/refill: nạp đầy một bình, rồi nạp tất cả
+  ✓ 25.8s một bình + tất cả
+
+▶ Chủ đổi tên máy trên app
+  ✓ 31.0s FlexMix-E2E-e301-R
+
+▶ Chia sẻ qua Bluetooth: điện thoại (chủ) → laptop (nhân viên)
+  ✓ 45.6s 
+
+▶ Chủ xem danh sách nhân viên và thu hồi quyền
+  ✓ 16.1s 
+
+▶ Chia sẻ qua QR: laptop chụp màn hình điện thoại đọc mã
+  ✓ 9.1s 
+
+▶ Đăng xuất xóa phiên trên server
+  ✓ 10.2s 
+
+▶ Nhân viên nhận chia sẻ qua Bluetooth: laptop (chủ) → điện thoại
+  ✓ 44.5s 
+
+▶ Phiên hết hạn giữa chừng thì app quay về màn hình đăng nhập
+  ✓ 9.8s 
+
+▶ Chủ thu hồi quyền thì máy biến mất khỏi app nhân viên sau khi tải lại
+  ✓ 35.4s 
+
+✓ TẤT CẢ ĐẠT sau 322s. Log: D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\logs\20260928-001533

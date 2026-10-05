@@ -1,0 +1,26 @@
+
+▶ Kiểm tra điện thoại, mạng và server
+  ✓ 3.3s điện thoại USB, server http://127.0.0.1:8000
+
+▶ Build app với SERVER_URL và cài lên điện thoại
+  ✓ 111.4s 
+
+▶ Đăng nhập tài khoản chủ trên điện thoại
+  ✓ 22.1s e2e_owner_b5aac4
+
+▶ Pair máy qua Bluetooth (laptop giả máy, key mới)
+
+✗ LỖI:
+Traceback (most recent call last):
+  File "D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\run_e2e.py", line 429, in main
+    scenario(run, phone, owner, staff, machine_name, socket.gethostname())
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\run_e2e.py", line 228, in scenario
+    phone.wait("^Không thấy máy|^Chọn máy", 40)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\phone.py", line 78, in wait
+    raise AssertionError(f"Không thấy /{pattern}/ sau {timeout}s. Đang hiện: {self.labels()}")
+AssertionError: Không thấy /^Không thấy máy|^Chọn máy/ sau 40s. Đang hiện: ['Allow FlexMix to find, connect to and determine the relative position of nearby devices?', 'Allow', "Don't allow"]
+
+
+✗ THẤT BẠI sau 196s. Log: D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\logs\20260928-001159

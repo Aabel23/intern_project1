@@ -1,0 +1,91 @@
+127.0.0.1 - - [29/Sep/2026 11:53:39] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 503 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "GET /machine/trang-thai?machine_id=fm_92aebdd3cedf4204a2b05e558d4c688f HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/heartbeat HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "GET /machine/trang-thai?machine_id=fm_92aebdd3cedf4204a2b05e558d4c688f HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 1, 'instruction': 'nhan_menu', 'data': {'menu_version': 0}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-menu HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 2, 'instruction': 'nhan_menu', 'data': {'menu_version': 3617985721}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-menu HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 3, 'instruction': 'cap_nhat_menu', 'data': {'menu_version': 3617985721, 'thay_doi': [{'drink_id': 1001, 'available': False}, {'drink_id': 1002, 'price': 35000}]}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 4, 'instruction': 'cap_nhat_menu', 'data': {'menu_version': 3617985721, 'thay_doi': [{'drink_id': 1001, 'available': True}]}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 5, 'instruction': 'cap_nhat_menu', 'data': {'menu_version': 1059358182, 'thay_doi': [{'drink_id': 1002, 'price': 1}, {'drink_id': 1003, 'price': 1}]}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 502 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 6, 'instruction': 'nhan_menu', 'data': {'menu_version': 1059358182}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-menu HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/cap-nhat-menu HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 7, 'instruction': 'nhan_kho', 'data': {'version': 0}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 8, 'instruction': 'nhan_kho', 'data': {'version': 283293435}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 9, 'instruction': 'nhan_kho', 'data': {'version': 283293435}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 10, 'instruction': 'nhan_kho', 'data': {'version': 0}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 502 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 11, 'instruction': 'nap_kho', 'data': {'target': 1, 'value': 'full'}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 12, 'instruction': 'nap_kho', 'data': {'target': 'all', 'value': 'full'}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+Machine nhan lenh: {'id': 13, 'instruction': 'nap_kho', 'data': {'target': 2, 'value': 750}}
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nap-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/nhan-kho HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/gui-lenh HTTP/1.1" 404 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /app/dong-bo HTTP/1.1" 404 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/refill HTTP/1.1" 404 -
+127.0.0.1 - - [29/Sep/2026 11:53:40] "POST /machine/tra-dong-bo HTTP/1.1" 404 -
+----------------------------------------------------------------------
+Ran 1 test in 1.158s
+
+OK
