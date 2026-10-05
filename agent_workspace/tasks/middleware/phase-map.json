@@ -1,0 +1,479 @@
+{
+  "status": "planning_only",
+  "major_phases": [
+    {
+      "id": "G0",
+      "title": "Nền nghiên cứu và kiểm chứng",
+      "path": "phases/foundation/index.html",
+      "requires": [],
+      "subphases": [
+        {
+          "id": "G0.1",
+          "path": "phases/foundation/contract-research.html",
+          "requires": [],
+          "tasks": [
+            "B01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G0.2",
+          "path": "phases/foundation/fixture-repair.html",
+          "requires": [
+            "G0.1"
+          ],
+          "tasks": [
+            "B02"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G0.3",
+          "path": "phases/foundation/risk-scenarios.html",
+          "requires": [
+            "G0.2"
+          ],
+          "tasks": [
+            "B03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G0.4",
+          "path": "phases/foundation/environment-baseline.html",
+          "requires": [
+            "G0.3"
+          ],
+          "tasks": [
+            "B04"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G1",
+      "title": "Vòng đời request và quan sát an toàn",
+      "path": "phases/lifecycle/index.html",
+      "requires": [
+        "G0"
+      ],
+      "subphases": [
+        {
+          "id": "G1.1",
+          "path": "phases/lifecycle/context-design.html",
+          "requires": [
+            "G0.4"
+          ],
+          "tasks": [
+            "L01",
+            "D01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G1.2",
+          "path": "phases/lifecycle/response-boundary.html",
+          "requires": [
+            "G1.1"
+          ],
+          "tasks": [
+            "L02",
+            "L03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G1.3",
+          "path": "phases/lifecycle/dispatch-correlation.html",
+          "requires": [
+            "G1.2"
+          ],
+          "tasks": [
+            "L04",
+            "D04"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G1.4",
+          "path": "phases/lifecycle/safe-observability.html",
+          "requires": [
+            "G1.3"
+          ],
+          "tasks": [
+            "O01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G2",
+      "title": "Biên HTTP, body và tương thích client",
+      "path": "phases/http-boundary/index.html",
+      "requires": [
+        "G1"
+      ],
+      "subphases": [
+        {
+          "id": "G2.1",
+          "path": "phases/http-boundary/framing-policy.html",
+          "requires": [
+            "G1.4"
+          ],
+          "tasks": [
+            "H01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G2.2",
+          "path": "phases/http-boundary/body-integrity.html",
+          "requires": [
+            "G2.1"
+          ],
+          "tasks": [
+            "H02"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G2.3",
+          "path": "phases/http-boundary/read-deadline.html",
+          "requires": [
+            "G2.2"
+          ],
+          "tasks": [
+            "H03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G2.4",
+          "path": "phases/http-boundary/client-compatibility.html",
+          "requires": [
+            "G2.3"
+          ],
+          "tasks": [
+            "H04"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G3",
+      "title": "Sức chứa và tiến triển lệnh máy",
+      "path": "phases/capacity/index.html",
+      "requires": [
+        "G2"
+      ],
+      "subphases": [
+        {
+          "id": "G3.1",
+          "path": "phases/capacity/ingress-bound.html",
+          "requires": [
+            "G2.4"
+          ],
+          "tasks": [
+            "C01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G3.2",
+          "path": "phases/capacity/workload-lanes.html",
+          "requires": [
+            "G3.1"
+          ],
+          "tasks": [
+            "C02"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G3.3",
+          "path": "phases/capacity/queue-invariants.html",
+          "requires": [
+            "G3.2"
+          ],
+          "tasks": [
+            "C03",
+            "D03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G3.4",
+          "path": "phases/capacity/budgets-recovery.html",
+          "requires": [
+            "G3.3"
+          ],
+          "tasks": [
+            "C04",
+            "C05",
+            "O02",
+            "O03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G4",
+      "title": "Danh tính, quyền và chính sách bảo vệ",
+      "path": "phases/identity/index.html",
+      "requires": [
+        "G3"
+      ],
+      "subphases": [
+        {
+          "id": "G4.1",
+          "path": "phases/identity/route-policy.html",
+          "requires": [
+            "G3.4"
+          ],
+          "tasks": [
+            "S01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G4.2",
+          "path": "phases/identity/session-revocation.html",
+          "requires": [
+            "G4.1"
+          ],
+          "tasks": [
+            "S02"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G4.3",
+          "path": "phases/identity/authorization-transaction.html",
+          "requires": [
+            "G4.2"
+          ],
+          "tasks": [
+            "D02",
+            "S04"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G4.4",
+          "path": "phases/identity/limiter-threat-model.html",
+          "requires": [
+            "G4.3"
+          ],
+          "tasks": [
+            "S03",
+            "S05"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G5",
+      "title": "Nghiệm thu tích hợp, lỗi và tải",
+      "path": "phases/acceptance/index.html",
+      "requires": [
+        "G4"
+      ],
+      "subphases": [
+        {
+          "id": "G5.1",
+          "path": "phases/acceptance/contract-regression.html",
+          "requires": [
+            "G4.4"
+          ],
+          "tasks": [
+            "V01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G5.2",
+          "path": "phases/acceptance/fault-concurrency.html",
+          "requires": [
+            "G5.1"
+          ],
+          "tasks": [
+            "V03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G5.3",
+          "path": "phases/acceptance/load-measurement.html",
+          "requires": [
+            "G5.2"
+          ],
+          "tasks": [
+            "V02",
+            "O04"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G5.4",
+          "path": "phases/acceptance/target-team-gate.html",
+          "requires": [
+            "G5.3"
+          ],
+          "tasks": [
+            "V04",
+            "V05"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G6",
+      "title": "Vận hành, rollout và phục hồi",
+      "path": "phases/operations/index.html",
+      "requires": [
+        "G5"
+      ],
+      "subphases": [
+        {
+          "id": "G6.1",
+          "path": "phases/operations/configuration-validation.html",
+          "requires": [
+            "G5.4"
+          ],
+          "tasks": [
+            "P01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G6.2",
+          "path": "phases/operations/shutdown-restart.html",
+          "requires": [
+            "G6.1"
+          ],
+          "tasks": [
+            "P02"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G6.3",
+          "path": "phases/operations/rollout-rollback.html",
+          "requires": [
+            "G6.2"
+          ],
+          "tasks": [
+            "P03"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G6.4",
+          "path": "phases/operations/network-runbooks.html",
+          "requires": [
+            "G6.3"
+          ],
+          "tasks": [
+            "P04",
+            "P05"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    },
+    {
+      "id": "G7",
+      "title": "Mở rộng dài hạn theo bằng chứng",
+      "path": "phases/evolution/index.html",
+      "requires": [
+        "G6"
+      ],
+      "subphases": [
+        {
+          "id": "G7.1",
+          "path": "phases/evolution/runtime-network.html",
+          "requires": [
+            "G6.4"
+          ],
+          "tasks": [
+            "E01"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G7.2",
+          "path": "phases/evolution/device-credentials.html",
+          "requires": [
+            "G6.4"
+          ],
+          "tasks": [
+            "E02"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G7.3",
+          "path": "phases/evolution/command-durability.html",
+          "requires": [
+            "G6.4"
+          ],
+          "tasks": [
+            "E03",
+            "E04"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        },
+        {
+          "id": "G7.4",
+          "path": "phases/evolution/shared-state-evolution.html",
+          "requires": [
+            "G6.4"
+          ],
+          "tasks": [
+            "E05",
+            "E06"
+          ],
+          "requirements": 4,
+          "status": "not_started"
+        }
+      ]
+    }
+  ]
+}

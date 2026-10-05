@@ -12,15 +12,22 @@
 
 ## Kế hoạch (lead ghi từ kết quả planner nếu cần)
 
-### Phase 00 — <tên và mục tiêu>
+### Phase lớn — <giai đoạn triển khai team AI>
 
-- Cần từ phase trước: không
-- Component/task và thứ tự: <mỗi bước có kết quả kiểm được>
-- File báo cáo: `phase-00.html`
-- Xong khi: <điều kiện → kết quả, cách kiểm>
-- Mở đường cho: <phase tiếp theo hoặc hoàn tất task>
+- Trang đọc: `phases/<ten-giai-doan>/index.html`.
+- Mục tiêu, đầu vào, phạm vi, cổng nghiệm thu: <...>.
+- Team / thứ tự bàn giao: lead → planner → tester/coder → reviewer/security → lead.
+- Phụ thuộc / đi tiếp / quay lui: <...>.
 
-<!-- Thêm Phase 01, 02... theo phụ thuộc; mỗi phase một phase-XX.html. -->
+#### Phase con — <tên và mục tiêu>
+
+- Đặc tả: `phases/<ten-giai-doan>/<ten-phase-con>.html`.
+- Nghiên cứu/source/file:dòng và giả thuyết cần kiểm: <...>.
+- Định hướng/lý do/luồng hoạt động và dữ liệu: <...>.
+- Input, yêu cầu, task/bước, file/caller: <...>.
+- Vai phụ trách/hiện vật bàn giao: <...>.
+- Phép kiểm, acceptance, lỗi/timeout/quay lui: <...>.
+- Trạng thái và bằng chứng: CHƯA THỰC HIỆN.
 
 ## Tiêu chí nghiệm thu
 

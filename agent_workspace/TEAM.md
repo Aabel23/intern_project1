@@ -13,9 +13,9 @@ Lead là phiên chính: giữ yêu cầu gốc, chọn vai, đọc kết quả, 
 
 Không gọi planner nếu lead đã hiểu luồng và tiêu chí. Tester và coder có thể làm song song khi không sửa cùng file; với lỗi cần test tái hiện, tester viết và chạy test trước, coder sửa sau. Reviewer bắt đầu khi có diff và kết quả test. Lead dùng `tasks/TEMPLATE.md` để lưu trạng thái qua các phiên.
 
-## Task gồm các phase
+## Task và bộ kế hoạch dài hạn
 
-Đọc `PHASE_FORMAT.md` khi lập hoặc thực thi task. Planner đề xuất thứ tự phase, lead ghi vào `TASK.md`. Mỗi phase có một báo cáo HTML riêng `tasks/<tên>/phase-XX.html` theo cấu trúc của `../phase-00.pdf`; đây là mẫu cách báo cáo, không phải đặc tả công nghệ của dự án. Khi thực hiện, lead cập nhật HTML bằng bằng chứng từ coder, tester và reviewer. Chỉ chuyển sang phase phụ thuộc khi tiêu chí của phase trước đã được kiểm hoặc đã ghi rõ phần chưa kiểm và tác động của nó. Task một phase vẫn có `phase-00.html`.
+Đọc `PHASE_FORMAT.md` khi lập hoặc thực thi task. Planner vạch lộ trình dài hạn theo phụ thuộc và cổng nghiệm thu; lead ghi vào `TASK.md`. Bộ tài liệu đọc có `tasks/<tên>/index.html` và các file HTML con tên theo nội dung, không dùng `phase-XX.html`. Luồng hoạt động và dữ liệu thể hiện bằng sơ đồ khối, bố cục tham khảo PDF mẫu khi có file. Lead cập nhật kết quả thực tế vào phần tương ứng; chỉ đi tiếp khi tiêu chí trước đã được kiểm hoặc đã ghi rõ giới hạn và tác động.
 
 ## Bàn giao
 
@@ -31,4 +31,31 @@ Mỗi tiêu chí có bằng chứng lệnh/output mới chạy hoặc lý do ch�
 
 Với task tối ưu hiệu năng, lead chỉ giao sửa điểm nghẽn sau khi tester có số đo nền và reviewer nêu nguyên nhân có thể kiểm. Sau sửa, tester đo lại cùng điều kiện; lead ghi cả thời gian từng khối, toàn flow và số lỗi vào báo cáo phase. Nếu không có điểm nghẽn rõ, kết luận “chưa cần sửa mã” là hợp lệ.
 
-Thứ tự ưu tiên: yêu cầu người dùng → `AGENTS.md` → `TEAM.md` và `TASK.md` → file vai → repo trong `sources/`. Hướng dẫn nguồn về commit từng bước, coverage cố định, nhiều agent song song hoặc đường dẫn plan riêng không tự áp dụng ở đây.
+Quy ước code và chuẩn chất lượng chung cho mọi vai ở `CODE_STYLE.md`.
+
+Thứ tự ưu tiên: yêu cầu người dùng → `AGENTS.md` → `MODULE_PATTERN.md` → `CODE_STYLE.md` → `TEAM.md` và `TASK.md` → file vai → repo trong `sources/`. Hướng dẫn nguồn về commit từng bước, coverage cố định, nhiều agent song song hoặc đường dẫn plan riêng không tự áp dụng ở đây.
+
+
+## Phase lớn và phase con của team AI
+
+Theo yêu cầu người dùng ngày 05/10/2026, kế hoạch triển khai có hai cấp:
+**phase lớn** là giai đoạn triển khai của cả team AI; **phase con** là phần việc
+có đầu vào/đầu ra riêng, đủ rõ để giao và kiểm. Task/bước nằm bên trong phase con,
+không thay phase con bằng danh sách chuyên đề hay task phẳng.
+
+- Trang tổng quan `index.html` → `phases/<ten-giai-doan>/index.html` → các file
+  `<ten-phase-con>.html`. Tên file theo nội dung, số hiệu phase chỉ để tra phụ thuộc.
+- Mỗi phase lớn: mục tiêu, phạm vi, đầu vào, sơ đồ phụ thuộc phase con, team tham
+  gia và thứ tự bàn giao, cổng nghiệm thu, điều kiện đi tiếp/quay lui.
+- Mỗi phase con: nghiên cứu mã và nguồn có file:dòng; thông tin đã biết/giả thuyết
+  cần kiểm; luồng hoạt động/dữ liệu bằng sơ đồ khối; định hướng và lý do; câu hỏi
+  cần giải quyết; yêu cầu chức năng/ràng buộc; việc cần làm theo thứ tự; file/caller;
+  phân công từng vai; input/output/bằng chứng bàn giao; phép kiểm và acceptance;
+  nhánh lỗi/timeout/hủy/rollback; trạng thái thực và giới hạn kiểm chứng.
+- Lead điều phối; planner nghiên cứu/đặc tả; tester sở hữu test/số đo; một coder
+  ghi sản phẩm mỗi task; reviewer rà diff; cybersecurity tham gia theo rủi ro.
+  Vai không cần chạy đồng thời. Chỉ mở việc phụ thuộc khi đầu vào đã có bằng chứng.
+- Kế hoạch chưa triển khai ghi rõ CHƯA THỰC HIỆN. Nghiên cứu đọc mã khác kết quả
+  test. Test/harness được chuẩn bị trước cổng cần nó, tránh phụ thuộc vòng.
+- Phase mở rộng chỉ kích hoạt theo nhu cầu/số đo; không buộc làm mọi nhánh hoặc
+  tự thay thiết kế đã chốt. PDF không là điều kiện chặn khi người dùng đã bỏ yêu cầu.

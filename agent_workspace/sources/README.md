@@ -16,4 +16,4 @@ git clone --depth 1 --filter=blob:none --sparse https://github.com/obra/superpow
 git -C agent_workspace/sources/superpowers sparse-checkout set skills/writing-plans skills/executing-plans skills/verification-before-completion skills/test-driven-development skills/systematic-debugging
 ```
 
-Các file trong `agent_workspace/agents/` nêu rõ đoạn cần tham khảo. Không thực hiện nguyên xi những bước commit, PR, cài plugin hoặc gọi nhiều agent từ tài liệu nguồn nếu task và `TEAM.md` không yêu cầu.
+Nguồn nghiên cứu và chuẩn ngoài (bài báo, OWASP, NIST, trailofbits/skills) ở `RESEARCH.md`. Các file trong `agent_workspace/agents/` nêu rõ đoạn cần tham khảo. Không thực hiện nguyên xi những bước commit, PR, cài plugin hoặc gọi nhiều agent từ tài liệu nguồn nếu task và `TEAM.md` không yêu cầu.

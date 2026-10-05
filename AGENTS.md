@@ -1,5 +1,25 @@
 # Thiết kế đã chốt
 
+## Tài liệu bàn giao cho người dùng
+
+- Báo cáo, nghiên cứu, kế hoạch và các tài liệu tạo để người dùng đọc phải viết
+  bằng HTML, theo mẫu và bố cục trong `agent_workspace/PHASE_FORMAT.md`.
+- Kế hoạch dài hạn nằm ở `agent_workspace/tasks/<tên-task>/index.html`, liên kết
+  các file HTML con có tên theo nội dung (`architecture.html`, `request-lifecycle.html`,
+  `data-model.html`, `roadmap.html`...). Không đặt tài liệu đọc theo tên `phase-00.html`.
+- Planner vạch lộ trình hai cấp: phase lớn là giai đoạn triển khai của cả team AI,
+  bên trong có phase con với nghiên cứu, thông tin, định hướng, việc cần làm và yêu cầu.
+  Mỗi cấp có phụ thuộc, phân công/bàn giao, bằng chứng và điều kiện nghiệm thu.
+  Trang đọc: `index.html` → `phases/<ten-giai-doan>/index.html` → HTML phase con.
+- Luồng hoạt động, luồng dữ liệu và quan hệ thành phần phải có sơ đồ khối có nhãn,
+  chiều mũi tên và chú giải hiện trạng/đề xuất; tham khảo PDF mẫu khi có file.
+  HTML mở trực tiếp và in được. Không bàn giao Markdown thay HTML.
+- Markdown như `TASK.md`, file vai và quy ước vẫn dùng cho hồ sơ vận hành nội bộ.
+- Khi thiếu file mẫu tham chiếu, ghi rõ giới hạn đối chiếu; không tự khẳng định
+  đã khớp mẫu chưa đọc được.
+
+## Quy ước kiến trúc
+
 Người dùng đã yêu cầu khóa thiết kế hiện tại. Quy ước chi tiết nằm trong
 [MODULE_PATTERN.md](MODULE_PATTERN.md). Chỉ thay kiến trúc hoặc quy ước đặt tên
 khi người dùng yêu cầu thay đổi đó; các sửa lỗi và bổ sung tính năng thông thường
