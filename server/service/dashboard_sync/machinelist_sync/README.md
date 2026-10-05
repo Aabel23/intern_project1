@@ -2,6 +2,8 @@
 
 App lấy danh sách máy thuộc tài khoản, đổi tên hoặc gỡ quyền. Cổng trạng thái đọc heartbeat của máy.
 
+Xem [bốn sơ đồ luồng của machine list](MACHINE_LIST_DECISION_TREE.html) để theo dõi từng request giữa app, server và máy.
+
 ## API và gói tin
 
 Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc app; product_key thuộc máy nếu API yêu cầu. Các ví dụ trường dữ liệu minh họa cấu trúc, không phải giá trị thực.

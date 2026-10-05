@@ -7,9 +7,8 @@ USER_ACCOUNT_REGISTER = "/app/dang-ky-nguoi-dung"
 USER_OTP_SEND = "/app/gui-ma-otp"
 USER_OTP_VERIFY = "/app/xac-minh-otp"
 
-# Đăng nhập, lấy kết quả xác minh và đăng xuất
+# Đăng nhập và đăng xuất
 USER_SESSION_LOGIN = "/app/dang-nhap"
-USER_LOGIN_VERIFY = "/app/xac-minh-dang-nhap"
 USER_SESSION_LOGOUT = "/app/dang-xuat"
 
 # Đăng ký máy qua QR hoặc Bluetooth
