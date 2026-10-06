@@ -1,0 +1,22 @@
+
+▶ Kiểm tra điện thoại, mạng và server
+  ✓ 2.7s điện thoại 192.168.1.38, server http://192.168.1.29:8000
+
+▶ Build app với SERVER_URL và cài lên điện thoại
+
+✗ LỖI:
+Traceback (most recent call last):
+  File "D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\run_e2e.py", line 378, in main
+    build_and_install(run, phone, server_url)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\run_e2e.py", line 174, in build_and_install
+    phone.adb("install", "-r", str(apk), timeout=300)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\phone.py", line 34, in adb
+    raise RuntimeError(f"adb {' '.join(args)}: {result.stderr.decode('utf-8', 'replace')}")
+RuntimeError: adb install -r D:\PROJECT\CODE\InternProj\androidv0.1\app\flutter_app\build\app\outputs\flutter-apk\app-release.apk: adb.exe: failed to install D:\PROJECT\CODE\InternProj\androidv0.1\app\flutter_app\build\app\outputs\flutter-apk\app-release.apk: Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package com.example.simple_app signatures do not match newer version; ignoring!]
+
+
+
+
+✗ THẤT BẠI sau 56s. Log: D:\PROJECT\CODE\InternProj\androidv0.1\sandbox\e2e\logs\20260928-000525

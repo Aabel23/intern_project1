@@ -1,119 +1,65 @@
-"""Nhận lệnh từ server rồi chọn hàm dữ liệu cần chạy."""
+"""Vòng lặp của máy: hỏi server lệnh {id, instruction, data} → chạy → gửi kết quả lên.
 
-import gzip
-import hashlib
-import json
-import time
+main chỉ tra bảng COMMANDS của các module; module tự kiểm lệnh và tự đụng database.
+"""
+
+# Thư viện chuẩn
 import threading
+import time
 import urllib.error
 
-from server_connection import heartbeat, instruction_api
+# Kết nối server
+from server_connection import machine_server_heartbeat as heartbeat, machine_server_request
 
-# Đọc menu và cập nhật món uống từ tầng database.
-from database.admin_functions.drinks import (
-    get_menu,
-    set_drink_available,
-    set_drink_price,
-)
+# Các module: instruction → hàm xử lý
+from ingredient_sync.machine_ingredient_request import COMMANDS as INGREDIENT_COMMANDS
+from menu_sync.machine_menu_request import COMMANDS as MENU_COMMANDS
 
-# Đọc nguyên liệu theo cấu trúc gọn cho machine.
-from database.admin_functions.ingredients import get_ingredients
-
-# Dữ liệu kho đầy đủ (max_gram, pump_no...) giống trang admin của máy.
-from admin_gui.serve import ingredients_payload
-
-# Cập nhật kho bằng các hàm sẵn có trong database.
-from database.inventory_service import (
-    set_inventory as set_ingredient_amount,
-    add_inventory as add_ingredient_amount,
-    subtract_inventory as subtract_ingredient_amount,
-)
+COMMANDS = {**MENU_COMMANDS, **INGREDIENT_COMMANDS}
 
 
 def handle_command(lenh):
-    # Server chỉ giao lệnh trong hộp thư của máy xưng đúng product key.
-    ten = lenh.get("ten")
-    thamso = lenh.get("thamso", {})
-
-    # Đọc dữ liệu.
-    if ten == "xem_menu":
-        return get_menu()
-    if ten == "xem_nguyen_lieu":
-        return get_ingredients()
-
-    # Cập nhật món uống.
-    if ten == "doi_trang_thai_mon":
-        set_drink_available(thamso["drink_id"], thamso["available"])
-        return {"ok": True}
-    if ten == "doi_gia_mon":
-        set_drink_price(thamso["drink_id"], thamso["price"])
-        return {"ok": True}
-
-    # Cập nhật kho nguyên liệu.
-    if ten == "dat_luong_nguyen_lieu":
-        amount = set_ingredient_amount(thamso["ingredient_id"], thamso["gram"])
-        return {"amount": float(amount)}
-    if ten == "them_nguyen_lieu":
-        amount = add_ingredient_amount(thamso["ingredient_id"], thamso["gram"])
-        return {"amount": float(amount)}
-    if ten == "tru_nguyen_lieu":
-        amount = subtract_ingredient_amount(thamso["ingredient_id"], thamso["gram"])
-        return {"amount": float(amount)}
-
-    return {"loi": "Lenh khong hop le"}
+    """Chạy một lệnh; lỗi tham số hay lỗi database trả {"loi"} cho app, máy vẫn chạy tiếp."""
+    command = COMMANDS.get(lenh.get("instruction"))
+    if command is None:
+        return {"loi": "Lệnh không hợp lệ"}
+    try:
+        return command(lenh.get("data") or {})
+    except Exception as error:
+        return {"loi": str(error)}
 
 
-# Lệnh đồng bộ dashboard: tên lệnh -> hàm đọc database.
-LENH_DONG_BO = {
-    "dong_bo_nguyen_lieu": ingredients_payload,
-}
+def poll():
+    """Lệnh kế tiếp, hoặc None khi hết giờ long-poll hay mất kết nối."""
+    started = time.monotonic()
+    try:
+        lenh = machine_server_request.poll_command()
+    except (urllib.error.URLError, OSError, ValueError) as error:
+        print("Khong ket noi duoc server:", error, flush=True)
+        time.sleep(1)
+        return None
+    # Server trả ngay (không giữ long-poll) thì chờ 1 giây trước khi hỏi lại.
+    if lenh is None and time.monotonic() - started < 1:
+        time.sleep(1)
+    return lenh
 
 
-def pack_sync(lenh):
-    # ETag là hash của dữ liệu; trùng ETag app đang giữ thì gửi gói rỗng (không đổi).
-    du_lieu = LENH_DONG_BO[lenh["ten"]]()
-    raw = json.dumps(du_lieu, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    etag = '"' + hashlib.sha256(raw).hexdigest()[:32] + '"'
-    if etag == lenh.get("etag"):
-        return etag, b""
-    return etag, gzip.compress(raw, mtime=0)
+def reply(lenh, ket_qua):
+    try:
+        machine_server_request.send_result(lenh["id"], ket_qua)
+    except (urllib.error.URLError, OSError) as error:
+        print("Khong gui duoc ket qua:", error, flush=True)
 
 
 def run():
     # Heartbeat chạy riêng để vẫn báo máy đang hoạt động khi xử lý lệnh lâu.
     threading.Thread(target=heartbeat.run_heartbeat, daemon=True).start()
-
     while True:
-        # Nhận lệnh từ server.
-        try:
-            lenh = instruction_api.poll_command()
-        except (urllib.error.URLError, OSError, ValueError) as error:
-            print("Khong ket noi duoc server:", error, flush=True)
-            time.sleep(1)
-            continue
+        lenh = poll()
         if lenh is None:
-            time.sleep(1)
             continue
-
-        # Phân tích lệnh và chạy hàm dữ liệu.
         print("Machine nhan lenh:", lenh, flush=True)
-        try:
-            if lenh.get("ten") in LENH_DONG_BO:
-                ket_qua = pack_sync(lenh)
-            else:
-                ket_qua = handle_command(lenh)
-        except Exception as error:
-            # Lỗi tham số hay lỗi database đều trả về app, không làm dừng vòng lặp của máy.
-            ket_qua = {"loi": str(error)}
-
-        # Gửi kết quả về server để trả cho app.
-        try:
-            if isinstance(ket_qua, tuple):
-                instruction_api.send_sync(lenh["id"], *ket_qua)
-            else:
-                instruction_api.send_result(lenh["id"], ket_qua)
-        except (urllib.error.URLError, OSError) as error:
-            print("Khong gui duoc ket qua:", error, flush=True)
+        reply(lenh, handle_command(lenh))
 
 
 if __name__ == "__main__":

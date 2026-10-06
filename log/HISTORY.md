@@ -1,0 +1,16 @@
+- 20260928-000653 `61c405b*` KHÔNG ĐẠT (1 lỗi) — baseline e2e (build, retry)
+- 20260928-001057 `61c405b*` KHÔNG ĐẠT (1 lỗi) — fix: danh sach may, whitelist lenh, an product key; e2e qua USB + E5/E11
+- 20260928-001532 `61c405b*` ĐẠT — e2e: cap quyen runtime
+- 20260928-002326 `61c405b*` ĐẠT — long-poll hoi-lenh; gioi han do dai dang ky
+- 20260928-003326 `61c405b*` ĐẠT — [all] lan dau chay theo danh sach luong
+- 20260928-004018 `61c405b*` ĐẠT — [X1] them kich ban tan cong X1
+- 20260928-004157 `61c405b*` ĐẠT — [X1] X1 them SEC-14
+- 20260929-010800 `fed65b7*` ĐẠT — [S10,A1,A2] Validate app boundaries and relocated test analyzer
+- 20260929-010929 `4640e14*` ĐẠT — [e2e] Verify refactored Flutter app on Samsung SM_A256E
+- 20260929-030258 `a5588c6*` ĐẠT — [app] claude: dashboard list race fix
+- 20260929-031334 `16fd283*` ĐẠT — [all] claude round 1 sau 3 ban sua
+- 20260929-032138 `16fd283*` ĐẠT — [all] claude round 2
+- 20260929-032859 `16fd283*` LỖI: S2, S3, S4, S5, S6, S7, S8, S9, X1, A1, A2, F1, F2, F3, F4, F5, F6, F8, F7 — [all] claude round 3
+- 20260929-074552 `1838d3e*` ĐẠT — [py,app] Final integration check; investigate incomplete Claude round 3 report
+- 20260929-101222 `5bf2710*` ĐẠT — [py] -
+- 20260929-112203 `5bf2710*` ĐẠT — [py] kiem tra rework dashboard_sync

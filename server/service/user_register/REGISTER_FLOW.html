@@ -1,250 +1,35 @@
 <!doctype html>
-<html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Luồng đăng ký FlexMix</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
-<style>
-  /* Bảng màu kem và cam đất theo phong cách Claude. */
-  :root {
-    --bg: #faf9f5; --fg: #141413; --muted: #6b6a63; --card: #ffffff;
-    --line: #e8e6dc; --accent: #c96442; --code-bg: #f0eee6; --warn: #a3542f;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.65 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  main { max-width: 820px; margin: 0 auto; padding: 48px 16px 72px; }
-  h1, h2, h3 {
-    font-family: "Source Serif 4", "Tiempos Text", Georgia, serif;
-    font-weight: 500; letter-spacing: -0.01em;
-  }
-  h1 { font-size: 2.2rem; margin: 0 0 10px; }
-  h2 {
-    font-size: 1.45rem; margin: 44px 0 12px; padding-top: 18px;
-    border-top: 1px solid var(--line); color: var(--accent);
-  }
-  h3 { font-size: 1.12rem; margin: 24px 0 8px; }
-  p.lead { color: var(--muted); margin-top: 0; }
-  code {
-    font: 0.9em ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
-  }
-  pre {
-    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
-    padding: 14px 16px; overflow-x: auto; line-height: 1.45;
-  }
-  pre code { background: none; padding: 0; }
-  .step {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 4px 18px 10px; margin: 14px 0;
-  }
-  .step h3 { margin-top: 14px; }
-  .num {
-    display: inline-block; min-width: 1.8em; text-align: center; margin-right: 6px;
-    background: var(--accent); color: var(--card); border-radius: 999px;
-    font-size: 0.85em; padding: 0 6px;
-  }
-  a { color: var(--accent); }
-  ul, ol { padding-left: 1.4em; }
-  li { margin: 3px 0; }
-  .note { color: var(--warn); }
-  .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
-  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
-  th { background: var(--code-bg); font-weight: 600; }
-</style>
-</head>
-<body>
-<main>
-<h1>Luồng đăng ký tài khoản</h1>
-<p class="lead">Đăng ký gồm hai bước. App gửi thông tin tài khoản, server kiểm tra rồi gửi mã OTP
-6 số qua email. Người dùng nhập mã, server xác minh đúng thì mới ghi tài khoản vào database.
-Trước khi xác minh xong, mọi thứ chỉ nằm trong bộ nhớ server.</p>
-
-<h2>API và gói tin</h2>
-<p>Mọi gói là JSON gửi bằng <code>POST</code>, chưa cần token (chưa có tài khoản). Các route này bị giới hạn 30 request/phút/IP; vượt giới hạn hoặc gửi OTP quá sớm thì server trả 429 kèm <code>retry_after</code>.</p>
-<div class="table-wrap"><table>
-<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
-<tr><td><code>POST</code></td><td><code>/app/dang-ky-nguoi-dung</code></td><td>App</td><td>request_id, full_name, username, email, password</td><td>valid, registration_id</td></tr>
-<tr><td><code>POST</code></td><td><code>/app/gui-ma-otp</code></td><td>App (gửi lại mã)</td><td>registration_id</td><td>valid, retry_after, message</td></tr>
-<tr><td><code>POST</code></td><td><code>/app/xac-minh-otp</code></td><td>App</td><td>registration_id, code</td><td>valid, verified, account_created, message</td></tr>
-</table></div>
-<h3>Đăng ký</h3>
-<pre><code>{"request_id": "&lt;32 ký tự hex&gt;", "full_name": "Nguyễn Văn A",
- "username": "vana", "email": "a@gmail.com", "password": "..."}
-→ {"valid": true, "registration_id": "..."}</code></pre>
-<h3>Gửi lại mã OTP</h3>
-<pre><code>{"registration_id": "..."}
-→ {"valid": true, "registration_id": "...", "retry_after": 60, "message": "Đã gửi mã xác minh tới email"}</code></pre>
-<h3>Xác minh OTP</h3>
-<pre><code>{"registration_id": "...", "code": "123456"}
-→ {"valid": true, "verified": true, "account_created": true, "message": "Tạo tài khoản thành công"}</code></pre>
-
-<h2>Giai đoạn A: App gửi thông tin đăng ký</h2>
-<div class="step">
-<h3><span class="num">1</span><a href="../../../app/flutter_app/lib/UI/login/auth_page.dart">auth_page.dart</a>, hàm <code>_AuthPageState._submit()</code> (dòng 58)</h3>
-<p>Cùng hàm với đăng nhập, nhưng đi vào nhánh <code>_register == true</code>.</p>
-<ol>
-  <li>Kiểm tra form, khóa nút bằng <code>_busy</code>.</li>
-  <li>Gom 4 trường: họ tên, username, email, mật khẩu.</li>
-  <li>Tạo <code>_requestId</code> (32 ký tự hex ngẫu nhiên) <strong>chỉ khi dữ liệu khác lần trước</strong>. Bấm lại với cùng dữ liệu thì dùng lại mã cũ, để server nhận ra đây là lần gửi lại chứ không phải đăng ký mới.</li>
-  <li>Gọi <code>postRegistrationJson(serverUrl, '/app/dang-ky-nguoi-dung', {request_id, full_name, username, email, password})</code>.</li>
-  <li>Lỗi thì hiện SnackBar. Được thì mở <code>OtpPage</code> với <code>registration_id</code> server trả về.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/login/registration_request.dart">registration_request.dart</a>, hàm <code>postRegistrationJson()</code></h3>
-<p>Hàm gửi JSON dùng chung, giống hệt bước 3 của luồng đăng nhập: POST JSON, chờ tối đa 25 giây, trả về <code>Map</code>.</p>
-</div>
-
-<h2>Giai đoạn B: Server kiểm tra dữ liệu và gửi OTP</h2>
-<div class="step">
-<h3><span class="num">3</span><a href="../../main.py">server/main.py</a>, hàm <code>Handler.do_POST()</code></h3>
-<p>Như luồng đăng nhập: giới hạn 30 request/phút mỗi IP, đọc tối đa 4096 byte JSON, tra <code>ROUTES</code> thấy <code>/app/dang-ky-nguoi-dung</code> ứng với <code>receive_register</code>.</p>
-</div>
-<div class="step">
-<h3><span class="num">4</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 79)</h3>
-<ol>
-  <li>Kiểm tra <code>request_id</code> đúng 32 ký tự hex.</li>
-  <li>Tạo <code>fingerprint</code> (HMAC của toàn bộ gói) để phát hiện gửi lại cùng mã nhưng dữ liệu khác.</li>
-  <li>Giữ khóa <code>FLOW_LOCK</code>, gọi <code>cleanup_locked()</code> xóa phiên quá hạn, rồi <code>find_registration(request_id)</code>:
-    <ul>
-      <li>chưa có thì gọi <code>prepare_registration()</code>;</li>
-      <li>đã có (app gửi lại) thì gọi <code>resume_registration()</code>.</li>
-    </ul>
-  </li>
-  <li>Thả khóa rồi mới gọi <code>otp_flow.start_otp()</code>, vì gửi email chậm, không được giữ khóa lúc đó.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">5</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>prepare_registration()</code> (dòng 41)</h3>
-<ol>
-  <li>Quá 1000 phiên đang chờ thì báo server bận.</li>
-  <li>Gọi <code>verify_user(data)</code> kiểm tra dữ liệu.</li>
-  <li>Băm mật khẩu ngay bằng <code>hash_password()</code>. Từ đây server chỉ giữ mã băm, không giữ mật khẩu gốc.</li>
-  <li>Tạo <code>registration_id</code> ngẫu nhiên, gọi <code>otp_flow.create_session()</code>.</li>
-  <li>Lưu vào <code>REGISTRATIONS</code>: dữ liệu user và ba cờ <code>data_valid = True</code>, <code>otp_verified = False</code>, <code>account_created = False</code>. Hết hạn sau 15 phút.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">6</span><a href="user_register/user_verify.py">user_verify.py</a>, hàm <code>verify_user(data)</code></h3>
-<ol>
-  <li>Cả 4 trường phải là chuỗi và không rỗng.</li>
-  <li>Mật khẩu ít nhất 8 ký tự; email đúng dạng <code>a@b.c</code>.</li>
-  <li>Gọi <code>check_duplicate()</code>: dùng <code>get_by_username()</code> và <code>get_by_email()</code> trong <a href="../../database/user/user_read.py">user_read.py</a> để báo trùng username hoặc email.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">7</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>hash_password()</code></h3>
-<p>Tạo salt ngẫu nhiên 16 byte, băm PBKDF2-SHA256 200.000 vòng, trả chuỗi <code>pbkdf2_sha256$200000$salt$mã_băm</code>. Đây là chuỗi mà luồng đăng nhập sẽ tách ra để so sánh.</p>
-</div>
-<div class="step">
-<h3><span class="num">8</span><a href="otp/otp_flow.py">otp_flow.py</a>, các hàm <code>create_session()</code>, <code>start_otp()</code>, <code>resend_otp()</code></h3>
-<ol>
-  <li><code>create_session()</code> (dòng 42): tạo phiên OTP trong <code>SESSIONS</code> gắn với <code>registration_id</code> và email, chưa có mã.</li>
-  <li><code>start_otp()</code> (dòng 57): phiên đã có mã rồi (app gửi lại) thì không gửi email nữa; chưa có thì gọi <code>resend_otp()</code>.</li>
-  <li><code>resend_otp()</code> (dòng 70), trong khóa:
-    <ul>
-      <li>kiểm tra phiên còn hạn, chưa xác minh, không đang gửi;</li>
-      <li>giới hạn theo email: cách nhau ít nhất 60 giây, tối đa 5 email mỗi giờ. Lượt được trừ trước khi gửi, gửi lỗi cũng không hoàn lại;</li>
-      <li>đánh dấu <code>sending = True</code>, sinh mã bằng <code>generate_code()</code>.</li>
-    </ul>
-  </li>
-  <li>Thả khóa, gọi <code>send_otp(email, code)</code>.</li>
-  <li>Giữ khóa lại: lưu <code>hash_code(registration_id, code)</code>, hạn mã 5 phút, đặt lại số lần nhập sai về 0. Trả <code>{valid, registration_id, retry_after: 60}</code>.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">9</span><a href="otp/otp_generator.py">otp_generator.py</a></h3>
-<ul>
-  <li><code>generate_code()</code>: số ngẫu nhiên 6 chữ số bằng <code>secrets.randbelow</code>.</li>
-  <li><code>hash_code(registration_id, code)</code>: SHA-256 của <code>registration_id:code</code>. Server chỉ giữ mã băm; ghép thêm <code>registration_id</code> để cùng một mã OTP ở hai phiên khác nhau cho ra mã băm khác nhau.</li>
-</ul>
-</div>
-<div class="step">
-<h3><span class="num">10</span><a href="otp/otp_email.py">otp_email.py</a>, hàm <code>send_otp()</code></h3>
-<ol>
-  <li><code>build_email()</code> tạo email tiêu đề "Mã xác minh email" có mã và thời hạn.</li>
-  <li><code>send_email()</code> đăng nhập Gmail qua SMTP SSL, mật khẩu đọc từ <code>server/config/.env</code> bằng <code>get_smtp_password()</code>.</li>
-  <li>Lỗi SMTP hoặc mạng thì trả thông báo "Không gửi được email", không làm sập server.</li>
-</ol>
-</div>
-
-<h2>Giai đoạn C: Người dùng nhập mã OTP</h2>
-<div class="step">
-<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/UI/login/otp_page.dart">otp_page.dart</a>, hàm <code>_OtpPageState._verify()</code> (dòng 78)</h3>
-<ol>
-  <li>Đã xác minh hoặc đang bận thì bỏ qua; kiểm tra ô nhập đủ 6 số.</li>
-  <li>Gửi <code>/app/xac-minh-otp</code> với <code>{registration_id, code}</code>.</li>
-  <li>Được thì đặt <code>_verified = true</code>, xóa ô nhập, dừng đồng hồ đếm ngược. Luôn hiện thông báo của server.</li>
-</ol>
-<p>Hàm <code>_resend()</code> (dòng 43) gọi <code>/app/gui-ma-otp</code> khi hết 60 giây chờ, và lấy <code>retry_after</code> server trả về để đếm ngược tiếp.</p>
-</div>
-<div class="step">
-<h3><span class="num">12</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>confirm_otp(data)</code> (dòng 128)</h3>
-<p>Gọi <code>otp_flow.confirm_otp()</code>. Đúng mã thì giữ <code>FLOW_LOCK</code> và gọi <code>finish_registration()</code>.</p>
-</div>
-<div class="step">
-<h3><span class="num">13</span><a href="otp/otp_flow.py">otp_flow.py</a>, hàm <code>confirm_otp(data)</code> (dòng 122)</h3>
-<ol>
-  <li><code>check_request()</code> trong <a href="otp/otp_verify.py">otp_verify.py</a>: có <code>registration_id</code>, mã đúng 6 chữ số.</li>
-  <li>Phiên hết hạn, đang gửi mã mới, hoặc mã đã hết 5 phút thì báo lỗi tương ứng.</li>
-  <li>Nhập sai quá 5 lần thì hủy mã, phải xin mã mới.</li>
-  <li>So mã bằng <code>matches_code()</code> (dùng <code>hmac.compare_digest</code>).</li>
-  <li>Đúng thì xóa mã băm (mỗi mã dùng một lần) và đặt <code>verified = True</code>.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">14</span><a href="user_register/registration_flow.py">registration_flow.py</a>, hàm <code>finish_registration()</code> (dòng 107)</h3>
-<ol>
-  <li>Bật cờ <code>otp_verified</code>. Chỉ khi cả <code>data_valid</code> và <code>otp_verified</code> đều bật mới đi tiếp.</li>
-  <li>Tài khoản đã tạo rồi (app gửi lại) thì trả thành công luôn, không tạo lần hai.</li>
-  <li>Gọi <code>register_user()</code> trong <a href="user_register/user_register.py">user_register.py</a>, hàm này gọi <code>add_user_with_hash()</code>.</li>
-  <li>Bật cờ <code>account_created</code>, trả "Tạo tài khoản thành công".</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">15</span><a href="../../database/user/user_add.py">user_add.py</a>, hàm <code>add_user_with_hash()</code> (dòng 62)</h3>
-<ol>
-  <li>Chuẩn hóa từng trường; role mặc định <code>staff</code>.</li>
-  <li><code>INSERT INTO users</code> với mật khẩu đã băm. Nếu username hoặc email vừa bị người khác đăng ký trước (lỗi <code>IntegrityError</code>) thì báo trùng.</li>
-  <li>Đọc lại dòng vừa tạo, không chọn cột mật khẩu.</li>
-</ol>
-</div>
-
-<h2>Sơ đồ tóm tắt</h2>
-<pre><code>auth_page._submit  (chế độ đăng ký)
- └─ postRegistrationJson → POST /app/dang-ky-nguoi-dung
-     main.Handler.do_POST
-      └─ registration_flow.receive_register
-          ├─ prepare_registration
-          │   ├─ user_verify.verify_user → user_read.get_by_username / get_by_email
-          │   ├─ user_add.hash_password                (PBKDF2)
-          │   └─ otp_flow.create_session               (SESSIONS trong RAM)
-          └─ otp_flow.start_otp → resend_otp
-              ├─ otp_generator.generate_code / hash_code
-              └─ otp_email.send_otp                    (Gmail SMTP)
-     ← {registration_id}
- └─ OtpPage._verify → POST /app/xac-minh-otp
-     └─ registration_flow.confirm_otp
-         ├─ otp_flow.confirm_otp → otp_verify.matches_code
-         └─ finish_registration → user_register.register_user
-                                  → user_add.add_user_with_hash  (INSERT users)
- (OtpPage._resend → POST /app/gui-ma-otp → otp_flow.resend_otp)</code></pre>
-
-<h2>Vài điểm cần biết</h2>
-<ul>
-  <li><strong>Chưa xác minh email thì chưa có tài khoản.</strong> Dữ liệu chờ nằm trong RAM tối đa 15 phút; server khởi động lại là mất, phải đăng ký lại.</li>
-  <li><strong>Mật khẩu được băm ngay từ bước đầu</strong>, nên ngay cả trong RAM lúc chờ OTP cũng không có mật khẩu gốc.</li>
-  <li><strong>Gửi lại an toàn</strong> nhờ <code>request_id</code> và <code>fingerprint</code>: bấm đăng ký lại không gửi thêm email, không tạo hai tài khoản.</li>
-  <li><strong>Chống spam email:</strong> 60 giây mỗi lần, 5 lần mỗi giờ cho một email; nhập sai 5 lần phải xin mã mới.</li>
-  <li class="note"><strong>Kiểm tra trùng username/email ở bước đầu có thể đã cũ</strong> sau 15 phút chờ OTP. Database vẫn chặn trùng nhờ ràng buộc <code>UNIQUE</code>, nên trường hợp đó chỉ báo lỗi ở bước cuối.</li>
-</ul>
-</main>
-</body>
-</html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng ký tài khoản và OTP</title><style>
+:root{--bg:#faf9f5;--fg:#252520;--muted:#68685d;--line:#e6e3d9;--accent:#a64f32}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,"Segoe UI",sans-serif;overflow-x:hidden}
+main{max-width:1200px;margin:auto;padding:40px 24px 64px}h1{font-size:clamp(28px,5vw,42px);line-height:1.2}h2{margin-top:40px;color:var(--accent)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}nav a{padding:7px 15px;border:1px solid var(--line);border-radius:20px;color:var(--accent);text-decoration:none}nav a:hover{background:#f0e9df}
+p{margin:12px 0}code{font:0.9em/1.5 "Cascadia Code",Consolas,monospace;background:#f0eee6;padding:2px 5px;border-radius:4px}li{margin:7px 0}section{scroll-margin-top:20px}
+pre{overflow:auto;background:#f3f1ea;border-radius:8px;padding:14px}pre code{background:none;padding:0}
+footer{margin-top:40px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:14px}footer a{color:var(--accent)}
+.table-scroll{overflow-x:auto;margin:22px 0;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px #0000000a}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:12px 16px;text-align:left;vertical-align:middle;border-bottom:1px solid #eeebe3}
+thead th{font-size:12.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);background:#f5f3ec;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fbf8f2}
+td code{background:#f3f1ea;color:#3d3929;padding:2px 7px;border-radius:5px;font-size:13.5px}
+.m{display:inline-block;min-width:48px;text-align:center;font:600 12px/1 Consolas,monospace;padding:5px 8px;border-radius:6px}
+.m.post{background:#fbe9e1;color:#b4532f}.m.get{background:#e6f0e3;color:#3c7a2d}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted)}.legend span::before{content:"";display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:6px;vertical-align:-2px;border:1.5px solid var(--b);background:var(--c)}
+.flow{position:relative;left:50%;transform:translateX(-50%);width:min(var(--w),calc(100vw - 32px));overflow-x:auto;background:#fdfcf9;border:1px solid var(--line);border-radius:14px;margin:18px 0}
+.flow svg{display:block;width:100%;height:auto;min-width:1300px}
+.flow text{font-family:system-ui,"Segoe UI",-apple-system,sans-serif}
+.flow .t{font-size:14px;font-weight:600}.flow .s{font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px}
+.flow .n{font-family:"Cascadia Code",Consolas,monospace;font-size:11px;fill:#4a463c}.flow .nh{font-size:12.5px;font-weight:650;fill:#a64f32}
+.flow .lb{font-size:11.5px;font-weight:600;fill:#857f71}
+.flow-desc{color:var(--muted);margin-top:-4px}
+@media(max-width:600px){main{padding:24px 14px}}
+@media print{body{background:white}main{padding:0;max-width:none}nav{display:none}.flow{left:0;transform:none;width:auto;break-inside:avoid;overflow:visible}.flow svg{min-width:0}}
+</style></head><body><main><header><span class="eyebrow">TÀI LIỆU LUỒNG HOẠT ĐỘNG</span><h1>Đăng ký tài khoản và OTP</h1><p>App gửi thông tin đăng ký, nhận mã phiên, nhập OTP gửi qua email rồi tạo tài khoản. Các API này chưa cần token.</p></header>
+<nav aria-label="Mục lục"><a href="#api">API và gói tin</a><a href="#flow-0">A. Tạo tài khoản</a><a href="#flow-1">B. Gửi lại OTP</a><a href="#notes">Lưu ý</a></nav>
+<section id="api"><h2>API và gói tin</h2><p>POST gửi JSON; GET dùng query. Các ví dụ thể hiện cấu trúc trường dữ liệu. Token thuộc app; product_key thuộc máy nếu API yêu cầu.</p><div class="table-scroll"><table><thead><tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr></thead><tbody><tr><td><span class="m post">POST</span></td><td><code>/app/dang-ky-nguoi-dung</code></td><td>App</td><td><code>request_id</code>, <code>full_name</code>, <code>username</code>, <code>email</code>, <code>password</code></td><td>valid, registration_id, message; retry_after tùy kết quả</td></tr><tr><td><span class="m post">POST</span></td><td><code>/app/gui-ma-otp</code></td><td>App</td><td><code>registration_id</code></td><td><code>valid</code>, <code>registration_id</code>, <code>retry_after</code>, <code>message</code></td></tr><tr><td><span class="m post">POST</span></td><td><code>/app/xac-minh-otp</code></td><td>App</td><td><code>registration_id</code>, <code>code</code></td><td><code>valid</code>, <code>verified</code>, <code>account_created</code>, <code>message</code></td></tr></tbody></table></div><div class="legend"><span style="--c:#c96442;--b:#c96442">App</span><span style="--c:#5f8a55;--b:#5f8a55">Server</span><span style="--c:#ffffff;--b:#d6d0c2">Bước xử lý</span><span style="--c:#fdf1e3;--b:#e3ae74">Điểm quyết định</span><span style="--c:#ebf3e7;--b:#93b886">Kết quả</span><span style="--c:#fbeae5;--b:#dc8f7b">Nhánh lỗi</span><span style="--c:#f6f4ee;--b:#e3ded2">Chú thích: gói tin, hàm, dữ liệu</span></div></section>
+<section id="flow-0"><h2>A. Tạo tài khoản</h2><div class="flow" style="--w:1532px"><svg viewBox="0 0 1530 1946" width="1530" role="img"><defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8f8a7c"/></marker><filter id="sh" x="-5%" y="-10%" width="110%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#3d3929" flood-opacity=".08"/></filter></defs><rect x="440" y="20" width="250" height="38" rx="10" fill="#c96442" stroke="#c96442" stroke-width="1.5" filter="url(#sh)"/><text x="565.0" y="44" fill="#fff" text-anchor="middle" class="t">App</text><rect x="810" y="20" width="250" height="38" rx="10" fill="#5f8a55" stroke="#5f8a55" stroke-width="1.5" filter="url(#sh)"/><text x="935.0" y="44" fill="#fff" text-anchor="middle" class="t">Server</text><rect x="440" y="94" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="119" fill="#2b2a26" text-anchor="start" class="t">Nhập form đăng ký</text><text x="454" y="133" fill="#857f71" text-anchor="start" class="s">requestRegistration()</text><path d="M565.0,58 V94" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><rect x="440" y="179" width="250" height="35" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="204" fill="#2b2a26" text-anchor="start" class="t">POST /app/dang-ky-nguoi-dung</text><path d="M565.0,143 V175" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="120.64999999999998" y="179" width="289.35" height="256" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="134.64999999999998" y="201" class="nh" xml:space="preserve">▲ Request</text><text x="134.64999999999998" y="218" class="n" xml:space="preserve">{</text><text x="134.64999999999998" y="235" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="134.64999999999998" y="252" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json&quot;,</text><text x="134.64999999999998" y="269" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;1–4096&gt;&quot;</text><text x="134.64999999999998" y="286" class="n" xml:space="preserve">  },</text><text x="134.64999999999998" y="303" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="134.64999999999998" y="320" class="n" xml:space="preserve">    &quot;request_id&quot;: &quot;&lt;32 ký tự hex&gt;&quot;,</text><text x="134.64999999999998" y="337" class="n" xml:space="preserve">    &quot;full_name&quot;: &quot;...&quot;,</text><text x="134.64999999999998" y="354" class="n" xml:space="preserve">    &quot;username&quot;: &quot;...&quot;,</text><text x="134.64999999999998" y="371" class="n" xml:space="preserve">    &quot;email&quot;: &quot;...&quot;,</text><text x="134.64999999999998" y="388" class="n" xml:space="preserve">    &quot;password&quot;: &quot;...&quot;</text><text x="134.64999999999998" y="405" class="n" xml:space="preserve">  }</text><text x="134.64999999999998" y="422" class="n" xml:space="preserve">}</text><path d="M440,196.5 H410.0" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="250" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="275" fill="#2b2a26" text-anchor="start" class="t">Nhận request</text><text x="824" y="289" fill="#857f71" text-anchor="start" class="s">receive_register()</text><path d="M935.0,58 V250" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M565.0,214 V274.5 H806" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="659.5" y="266.5" class="lb">request</text><rect x="1120" y="250" width="189.60000000000002" height="35" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="272" class="n" xml:space="preserve">• Giới hạn theo IP → 429</text><path d="M1060,274.5 H1108 V271 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="335" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="360" fill="#6b3f12" text-anchor="start" class="t">request_id hợp lệ?</text><text x="824" y="374" fill="#a07444" text-anchor="start" class="s">is_request_id()</text><path d="M935.0,299 V331" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="1120" y="342.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="367.0" fill="#8f2f1c" text-anchor="start" class="t">400 + message</text><path d="M1060,359.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="351.5" class="lb">Không</text><rect x="810" y="420" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="445" fill="#6b3f12" text-anchor="start" class="t">request_id đã có phiên?</text><text x="824" y="459" fill="#a07444" text-anchor="start" class="s">find_registration()</text><path d="M935.0,384 V416" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="408" class="lb">Có</text><rect x="1120" y="420.0" width="230" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="445.0" fill="#2b2a26" text-anchor="start" class="t">Tiếp phiên cũ</text><text x="1134" y="459.0" fill="#857f71" text-anchor="start" class="s">dữ liệu đổi → 400</text><path d="M1060,444.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="436.5" class="lb">Có</text><rect x="810" y="505" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="530" fill="#6b3f12" text-anchor="start" class="t">Dữ liệu đúng, không trùng?</text><text x="824" y="544" fill="#a07444" text-anchor="start" class="s">verify_user()</text><path d="M935.0,469 V501" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="493" class="lb">Không</text><rect x="1120" y="512.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="537.0" fill="#8f2f1c" text-anchor="start" class="t">400 + message</text><path d="M1060,529.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="521.5" class="lb">Không</text><rect x="810" y="590" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="615" fill="#2b2a26" text-anchor="start" class="t">Băm mật khẩu, giữ phiên RAM</text><text x="824" y="629" fill="#857f71" text-anchor="start" class="s">hash_password()</text><path d="M935.0,554 V586" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="578" class="lb">Có</text><rect x="810" y="675" width="250" height="63" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="700" fill="#6b3f12" text-anchor="start" class="t">Được gửi email?</text><text x="824" y="714" fill="#a07444" text-anchor="start" class="s">chờ 60 giây, 5 lần/giờ</text><text x="824" y="728" fill="#a07444" text-anchor="start" class="s">send_otp()</text><path d="M935.0,639 V671" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="1120" y="682.0" width="230" height="49" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="707.0" fill="#8f2f1c" text-anchor="start" class="t">429 + retry_after</text><text x="1134" y="721.0" fill="#b0604c" text-anchor="start" class="s">chưa tới lượt / lỗi SMTP</text><path d="M1060,706.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="698.5" class="lb">Không</text><rect x="810" y="774" width="250" height="35" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="799" fill="#2b2a26" text-anchor="start" class="t">Lưu hash OTP</text><path d="M935.0,738 V770" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="762" class="lb">Có</text><rect x="1120" y="774" width="389.1" height="256" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="796" class="nh" xml:space="preserve">▼ Response</text><text x="1134" y="813" class="n" xml:space="preserve">{</text><text x="1134" y="830" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="1134" y="847" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json; charset=utf-8&quot;,</text><text x="1134" y="864" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;số byte&gt;&quot;,</text><text x="1134" y="881" class="n" xml:space="preserve">    &quot;Retry-After&quot;: &quot;60&quot;</text><text x="1134" y="898" class="n" xml:space="preserve">  },</text><text x="1134" y="915" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="1134" y="932" class="n" xml:space="preserve">    &quot;valid&quot;: true,</text><text x="1134" y="949" class="n" xml:space="preserve">    &quot;registration_id&quot;: &quot;...&quot;,</text><text x="1134" y="966" class="n" xml:space="preserve">    &quot;retry_after&quot;: 60,</text><text x="1134" y="983" class="n" xml:space="preserve">    &quot;message&quot;: &quot;...&quot;</text><text x="1134" y="1000" class="n" xml:space="preserve">  }</text><text x="1134" y="1017" class="n" xml:space="preserve">}</text><path d="M1060,791.5 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="440" y="1066" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="1091" fill="#2b2a26" text-anchor="start" class="t">Màn nhập OTP</text><text x="454" y="1105" fill="#857f71" text-anchor="start" class="s">giữ registration_id</text><path d="M565.0,214 V1066" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M935.0,809 V1090.5 H694" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="794.5" y="1082.5" class="lb">response</text><rect x="440" y="1151" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="1176" fill="#2b2a26" text-anchor="start" class="t">POST /app/xac-minh-otp</text><text x="454" y="1190" fill="#857f71" text-anchor="start" class="s">verifyOtp()</text><path d="M565.0,1115 V1147" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="120.64999999999998" y="1151" width="289.35" height="205" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="134.64999999999998" y="1173" class="nh" xml:space="preserve">▲ Request</text><text x="134.64999999999998" y="1190" class="n" xml:space="preserve">{</text><text x="134.64999999999998" y="1207" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="134.64999999999998" y="1224" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json&quot;,</text><text x="134.64999999999998" y="1241" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;1–4096&gt;&quot;</text><text x="134.64999999999998" y="1258" class="n" xml:space="preserve">  },</text><text x="134.64999999999998" y="1275" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="134.64999999999998" y="1292" class="n" xml:space="preserve">    &quot;registration_id&quot;: &quot;...&quot;,</text><text x="134.64999999999998" y="1309" class="n" xml:space="preserve">    &quot;code&quot;: &quot;&lt;mã OTP&gt;&quot;</text><text x="134.64999999999998" y="1326" class="n" xml:space="preserve">  }</text><text x="134.64999999999998" y="1343" class="n" xml:space="preserve">}</text><path d="M440,1175.5 H410.0" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="1236" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="1261" fill="#2b2a26" text-anchor="start" class="t">Nhận request</text><text x="824" y="1275" fill="#857f71" text-anchor="start" class="s">confirm_otp()</text><path d="M935.0,809 V1236" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M565.0,1200 V1260.5 H806" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="659.5" y="1252.5" class="lb">request</text><rect x="810" y="1321" width="250" height="35" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="1346" fill="#6b3f12" text-anchor="start" class="t">Phiên còn hạn?</text><path d="M935.0,1285 V1317" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="1120" y="1321.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="1346.0" fill="#8f2f1c" text-anchor="start" class="t">400, phiên đã hết hạn</text><path d="M1060,1338.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="1330.5" class="lb">Không</text><rect x="810" y="1392" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="1417" fill="#6b3f12" text-anchor="start" class="t">Còn lượt thử, mã còn hạn?</text><text x="824" y="1431" fill="#a07444" text-anchor="start" class="s">tối đa 5 lần</text><path d="M935.0,1356 V1388" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="1380" class="lb">Có</text><rect x="1120" y="1399.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="1424.0" fill="#8f2f1c" text-anchor="start" class="t">400, yêu cầu mã mới</text><path d="M1060,1416.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="1408.5" class="lb">Không</text><rect x="810" y="1477" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="1502" fill="#6b3f12" text-anchor="start" class="t">Mã OTP đúng?</text><text x="824" y="1516" fill="#a07444" text-anchor="start" class="s">matches_code()</text><path d="M935.0,1441 V1473" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="1465" class="lb">Có</text><rect x="1120" y="1484.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="1509.0" fill="#8f2f1c" text-anchor="start" class="t">400, mã OTP không đúng</text><path d="M1060,1501.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="1493.5" class="lb">Không</text><rect x="810" y="1562" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="1587" fill="#2b2a26" text-anchor="start" class="t">Ghi tài khoản</text><text x="824" y="1601" fill="#857f71" text-anchor="start" class="s">finish_registration()</text><path d="M935.0,1526 V1558" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="1550" class="lb">Có</text><rect x="1120" y="1562" width="389.1" height="239" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="1584" class="nh" xml:space="preserve">▼ Response</text><text x="1134" y="1601" class="n" xml:space="preserve">{</text><text x="1134" y="1618" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="1134" y="1635" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json; charset=utf-8&quot;,</text><text x="1134" y="1652" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;số byte&gt;&quot;</text><text x="1134" y="1669" class="n" xml:space="preserve">  },</text><text x="1134" y="1686" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="1134" y="1703" class="n" xml:space="preserve">    &quot;valid&quot;: true,</text><text x="1134" y="1720" class="n" xml:space="preserve">    &quot;verified&quot;: true,</text><text x="1134" y="1737" class="n" xml:space="preserve">    &quot;account_created&quot;: true,</text><text x="1134" y="1754" class="n" xml:space="preserve">    &quot;message&quot;: &quot;...&quot;</text><text x="1134" y="1771" class="n" xml:space="preserve">  }</text><text x="1134" y="1788" class="n" xml:space="preserve">}</text><path d="M1060,1586.5 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="440" y="1837" width="250" height="49" rx="10" fill="#ebf3e7" stroke="#93b886" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="1862" fill="#2f5a25" text-anchor="start" class="t">Báo tạo tài khoản xong</text><text x="454" y="1876" fill="#5f7f55" text-anchor="start" class="s">không tự cấp token</text><path d="M565.0,1200 V1837" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M935.0,1611 V1861.5 H694" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="794.5" y="1853.5" class="lb">response</text></svg></div></section>
+<section id="flow-1"><h2>B. Gửi lại OTP</h2><div class="flow" style="--w:1532px"><svg viewBox="0 0 1530 963" width="1530" role="img"><defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8f8a7c"/></marker><filter id="sh" x="-5%" y="-10%" width="110%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#3d3929" flood-opacity=".08"/></filter></defs><rect x="440" y="20" width="250" height="38" rx="10" fill="#c96442" stroke="#c96442" stroke-width="1.5" filter="url(#sh)"/><text x="565.0" y="44" fill="#fff" text-anchor="middle" class="t">App</text><rect x="810" y="20" width="250" height="38" rx="10" fill="#5f8a55" stroke="#5f8a55" stroke-width="1.5" filter="url(#sh)"/><text x="935.0" y="44" fill="#fff" text-anchor="middle" class="t">Server</text><rect x="440" y="94" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="119" fill="#2b2a26" text-anchor="start" class="t">Bấm gửi lại mã</text><text x="454" y="133" fill="#857f71" text-anchor="start" class="s">requestOtp()</text><path d="M565.0,58 V94" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><rect x="440" y="179" width="250" height="35" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="204" fill="#2b2a26" text-anchor="start" class="t">POST /app/gui-ma-otp</text><path d="M565.0,143 V175" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="120.64999999999998" y="179" width="289.35" height="188" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="134.64999999999998" y="201" class="nh" xml:space="preserve">▲ Request</text><text x="134.64999999999998" y="218" class="n" xml:space="preserve">{</text><text x="134.64999999999998" y="235" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="134.64999999999998" y="252" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json&quot;,</text><text x="134.64999999999998" y="269" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;1–4096&gt;&quot;</text><text x="134.64999999999998" y="286" class="n" xml:space="preserve">  },</text><text x="134.64999999999998" y="303" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="134.64999999999998" y="320" class="n" xml:space="preserve">    &quot;registration_id&quot;: &quot;...&quot;</text><text x="134.64999999999998" y="337" class="n" xml:space="preserve">  }</text><text x="134.64999999999998" y="354" class="n" xml:space="preserve">}</text><path d="M440,196.5 H410.0" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="250" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="275" fill="#2b2a26" text-anchor="start" class="t">Nhận request</text><text x="824" y="289" fill="#857f71" text-anchor="start" class="s">resend_otp()</text><path d="M935.0,58 V250" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M565.0,214 V274.5 H806" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="659.5" y="266.5" class="lb">request</text><rect x="810" y="335" width="250" height="35" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="360" fill="#6b3f12" text-anchor="start" class="t">Phiên còn, chưa xác minh?</text><path d="M935.0,299 V331" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="1120" y="335.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="360.0" fill="#8f2f1c" text-anchor="start" class="t">400 + message</text><path d="M1060,352.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="344.5" class="lb">Không</text><rect x="810" y="406" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="431" fill="#6b3f12" text-anchor="start" class="t">Hết thời gian chờ?</text><text x="824" y="445" fill="#a07444" text-anchor="start" class="s">60 giây/lần, 5 lần/giờ</text><path d="M935.0,370 V402" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="394" class="lb">Có</text><rect x="1120" y="413.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="438.0" fill="#8f2f1c" text-anchor="start" class="t">429 + retry_after</text><path d="M1060,430.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="422.5" class="lb">Không</text><rect x="810" y="491" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="516" fill="#6b3f12" text-anchor="start" class="t">Gửi email mã mới được?</text><text x="824" y="530" fill="#a07444" text-anchor="start" class="s">generate_code() / send_otp()</text><path d="M935.0,455 V487" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="479" class="lb">Có</text><rect x="1120" y="491.0" width="230" height="49" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="516.0" fill="#8f2f1c" text-anchor="start" class="t">429, lỗi SMTP</text><text x="1134" y="530.0" fill="#b0604c" text-anchor="start" class="s">kèm retry_after</text><path d="M1060,515.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="507.5" class="lb">Không</text><rect x="810" y="576" width="250" height="35" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="601" fill="#2b2a26" text-anchor="start" class="t">Lưu hash OTP mới</text><path d="M935.0,540 V572" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="564" class="lb">Có</text><rect x="1120" y="576" width="389.1" height="256" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="598" class="nh" xml:space="preserve">▼ Response</text><text x="1134" y="615" class="n" xml:space="preserve">{</text><text x="1134" y="632" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="1134" y="649" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json; charset=utf-8&quot;,</text><text x="1134" y="666" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;số byte&gt;&quot;,</text><text x="1134" y="683" class="n" xml:space="preserve">    &quot;Retry-After&quot;: &quot;60&quot;</text><text x="1134" y="700" class="n" xml:space="preserve">  },</text><text x="1134" y="717" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="1134" y="734" class="n" xml:space="preserve">    &quot;valid&quot;: true,</text><text x="1134" y="751" class="n" xml:space="preserve">    &quot;registration_id&quot;: &quot;...&quot;,</text><text x="1134" y="768" class="n" xml:space="preserve">    &quot;retry_after&quot;: 60,</text><text x="1134" y="785" class="n" xml:space="preserve">    &quot;message&quot;: &quot;...&quot;</text><text x="1134" y="802" class="n" xml:space="preserve">  }</text><text x="1134" y="819" class="n" xml:space="preserve">}</text><path d="M1060,593.5 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="440" y="868" width="250" height="35" rx="10" fill="#ebf3e7" stroke="#93b886" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="893" fill="#2f5a25" text-anchor="start" class="t">Đếm ngược retry_after</text><path d="M565.0,214 V868" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M935.0,611 V885.5 H694" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="794.5" y="877.5" class="lb">response</text></svg></div></section>
+<section id="notes"><h2>Nhánh lỗi và lưu ý</h2><p>Route đăng ký/OTP có giới hạn theo IP. Thông tin phiên đăng ký và OTP giữ trong RAM; khởi động lại server làm mất phiên chưa hoàn tất. Lỗi SMTP được phản hồi để app biết chưa gửi được mã.</p></section>
+<footer><a href="README.md">Bản Markdown</a></footer></main></body></html>

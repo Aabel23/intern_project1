@@ -1,235 +1,36 @@
 <!doctype html>
-<html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Luồng đăng ký máy FlexMix</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
-<style>
-  /* Bảng màu kem và cam đất theo phong cách Claude. */
-  :root {
-    --bg: #faf9f5; --fg: #141413; --muted: #6b6a63; --card: #ffffff;
-    --line: #e8e6dc; --accent: #c96442; --code-bg: #f0eee6; --warn: #a3542f;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.65 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  main { max-width: 820px; margin: 0 auto; padding: 48px 16px 72px; }
-  h1, h2, h3 {
-    font-family: "Source Serif 4", "Tiempos Text", Georgia, serif;
-    font-weight: 500; letter-spacing: -0.01em;
-  }
-  h1 { font-size: 2.2rem; margin: 0 0 10px; }
-  h2 {
-    font-size: 1.45rem; margin: 44px 0 12px; padding-top: 18px;
-    border-top: 1px solid var(--line); color: var(--accent);
-  }
-  h3 { font-size: 1.12rem; margin: 24px 0 8px; }
-  p.lead { color: var(--muted); margin-top: 0; }
-  code {
-    font: 0.9em ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
-  }
-  pre {
-    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
-    padding: 14px 16px; overflow-x: auto; line-height: 1.45;
-  }
-  pre code { background: none; padding: 0; }
-  .step {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 4px 18px 10px; margin: 14px 0;
-  }
-  .step h3 { margin-top: 14px; }
-  .num {
-    display: inline-block; min-width: 1.8em; text-align: center; margin-right: 6px;
-    background: var(--accent); color: var(--card); border-radius: 999px;
-    font-size: 0.85em; padding: 0 6px;
-  }
-  a { color: var(--accent); }
-  ul, ol { padding-left: 1.4em; }
-  li { margin: 3px 0; }
-  .note { color: var(--warn); }
-  .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.95em; margin: 10px 0; }
-  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
-  th { background: var(--code-bg); font-weight: 600; }
-</style>
-</head>
-<body>
-<main>
-<h1>Luồng đăng ký máy</h1>
-<p class="lead">Chủ quán lấy tên máy và product key từ máy pha, bằng một trong hai cách: quét tem QR
-dán trên máy, hoặc kết nối Bluetooth. App gửi hai thông tin đó cùng token đăng nhập lên server.
-Server cấp <code>machine_id</code> và ghi người gửi làm chủ máy (<code>owner</code>).</p>
-
-<h2>API và gói tin</h2>
-<p>Mọi gói là JSON gửi bằng <code>POST</code>, <code>Content-Type: application/json</code>. Token hết hạn thì server trả <code>login_required: true</code> và app quay về màn hình đăng nhập. Gói Bluetooth giữa app và máy là một dòng JSON kết thúc bằng <code>\n</code>, xem mục Bluetooth bên dưới.</p>
-<div class="table-wrap"><table>
-<tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr>
-<tr><td><code>POST</code></td><td><code>/app/dang-ky-may</code></td><td>App, sau khi quét tem QR hoặc nhận gói Bluetooth</td><td>type, machine_name, product_key, token</td><td>valid, registered, created, machine_id</td></tr>
-<tr><td><code>POST</code></td><td><code>/app/xac-minh-dang-ky-may</code></td><td>App (tùy chọn)</td><td>machine_id, product_key</td><td>valid, verified, machine_id</td></tr>
-</table></div>
-<h3>Đăng ký máy</h3>
-<pre><code>{"type": "pairing", "machine_name": "FlexMix-01", "product_key": "fm_...", "token": "..."}
-→ {"valid": true, "registered": true, "created": true, "machine_id": "fm_...", "message": "Đăng ký máy thành công"}</code></pre>
-<h3>Xác minh đăng ký</h3>
-<pre><code>{"machine_id": "fm_...", "product_key": "fm_..."}
-→ {"valid": true, "verified": true, "machine_id": "fm_...", "message": "Đã xác minh đăng ký máy"}</code></pre>
-
-<h2>Cách 1: Quét tem QR</h2>
-<div class="step">
-<h3><span class="num">1</span><a href="../../../machine_qr.py">machine_qr.py</a> (chạy trên máy tính, lúc in tem)</h3>
-<ol>
-  <li><code>build_payload(name, key)</code>: kiểm tra độ dài (tên 1–150, key 1–1024 ký tự), tạo JSON <code>{"type":"pairing","machine_name":...,"product_key":...}</code>.</li>
-  <li><code>main()</code>: tạo QR mức sửa lỗi M, lưu thành file PNG để in.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">2</span><a href="../../../app/flutter_app/lib/UI/dashboard/minitab/machines_tab.dart">machines_tab.dart</a>, hàm <code>_open()</code> (dòng 25)</h3>
-<p>Nút "Quét QR" gọi <code>_open(context, MachineQrPage(serverUrl, token))</code>: mở màn quét, chờ màn đó đóng, rồi gọi <code>controller.loadMyMachines()</code> để lấy lại danh sách máy.</p>
-</div>
-<div class="step">
-<h3><span class="num">3</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_qr.dart">machine_register_qr.dart</a>, hàm <code>_MachineQrPageState.detect()</code> (dòng 53)</h3>
-<p>Widget <code>MobileScanner</code> gọi hàm này mỗi khi camera đọc được mã.</p>
-<ol>
-  <li>Đang xử lý một mã khác thì bỏ qua.</li>
-  <li>Lấy mã QR đầu tiên có nội dung.</li>
-  <li><strong>Khóa ngay</strong> (<code>scanning = false</code>, <code>busy = true</code>) trước mọi lệnh <code>await</code>, để camera đọc một mã nhiều lần cũng chỉ gửi một request. Camera đóng lại.</li>
-  <li>Gọi <code>parseMachineQr(raw)</code>.</li>
-  <li>Loại <code>pairing</code> thì gọi <code>MachineApi.registerMachine(data)</code>; loại <code>share</code> thì sang luồng chia sẻ máy.</li>
-  <li>Hiện "Đăng ký máy thành công · ID: ..." hoặc thông báo lỗi. Nút "Quét lại" mở camera lại.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">4</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_qr.dart">machine_register_qr.dart</a>, hàm <code>parseMachineQr(raw)</code> (dòng 9)</h3>
-<ol>
-  <li>QR quá 4096 byte thì từ chối.</li>
-  <li>Giải mã JSON. <code>type</code> phải là <code>pairing</code> hoặc <code>share</code>.</li>
-  <li>Loại <code>pairing</code>: tên và key phải là chuỗi không rỗng, đúng giới hạn độ dài.</li>
-  <li>Chỉ trả đúng 3 trường cần dùng, bỏ qua mọi trường khác, ví dụ địa chỉ server nhúng trong QR.</li>
-</ol>
-</div>
-
-<h2>Cách 2: Bluetooth</h2>
-<div class="step">
-<h3><span class="num">5</span><a href="../../../machine/pairing/bluez_server.py">bluez_server.py</a>, hàm <code>run_server()</code> (chạy trên Raspberry Pi)</h3>
-<ol>
-  <li>Tìm adapter Bluetooth, bật nguồn, đặt tên hiển thị bằng tên máy (<code>FlexMix-...</code>).</li>
-  <li>Đăng ký <code>PairingAgent</code> kiểu <code>NoInputNoOutput</code>: ghép đôi không cần nhập mã, chỉ chấp nhận dịch vụ SPP.</li>
-  <li>Đăng ký profile SPP bắt buộc đã ghép đôi (<code>RequireAuthentication</code>), bật chế độ cho điện thoại tìm thấy trong 120 giây.</li>
-  <li>Mỗi kết nối mới, BlueZ gọi <code>PairingProfile.NewConnection()</code>; hàm này mở một luồng chạy <code>handle_connection()</code>.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">6</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, hàm <code>scan()</code> (dòng 28)</h3>
-<p>Gọi native qua kênh <code>flexmix/bluetooth_pairing</code>, lệnh <code>scan</code>, rồi hiện danh sách máy tìm được.</p>
-</div>
-<div class="step">
-<h3><span class="num">7</span><a href="../../../app/flutter_app/android/app/src/main/kotlin/com/example/simple_app/BluetoothPairing.kt">BluetoothPairing.kt</a>, hàm <code>scan()</code> và <code>startScan()</code></h3>
-<ol>
-  <li>Xin quyền Bluetooth (Android 12 trở lên) hoặc quyền vị trí (Android cũ hơn).</li>
-  <li>Quét 15 giây, chỉ giữ thiết bị có tên bắt đầu bằng <code>FlexMix-</code>.</li>
-  <li>Trả danh sách <code>{name, address}</code> về Dart.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">8</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, hàm <code>connect(device)</code> (dòng 57)</h3>
-<p>Người dùng chọn một máy; hàm gọi lệnh native <code>connect</code> với địa chỉ máy.</p>
-</div>
-<div class="step">
-<h3><span class="num">9</span><a href="../../../app/flutter_app/android/app/src/main/kotlin/com/example/simple_app/BluetoothPairing.kt">BluetoothPairing.kt</a>, hàm <code>connect()</code> (dòng 100)</h3>
-<ol>
-  <li>Chỉ cho kết nối tới máy vừa thấy trong lần quét.</li>
-  <li>Mở kết nối RFCOMM bảo mật; nếu chưa ghép đôi, Android tự hiện hộp thoại xác nhận.</li>
-  <li>Gửi <code>{"type":"identify"}</code>, chờ máy trả <code>{"type":"ready","ok":true}</code>.</li>
-  <li>Đọc gói <code>pairing</code> bằng <code>readMessage()</code> (mỗi gói một dòng, tối đa 4096 byte), kiểm tra tên và key.</li>
-  <li>Gửi <code>{"type":"ack","ok":true}</code>, trả gói về Dart. Toàn bộ tối đa 60 giây.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">10</span><a href="../../../machine/pairing/bluetooth_pairing.py">bluetooth_pairing.py</a>, hàm <code>handle_connection()</code> (phía máy)</h3>
-<ol>
-  <li><code>pair_bluetooth()</code>: chờ gói <code>identify</code>, trả <code>ready</code>.</li>
-  <li><code>send_bluetooth()</code>: gửi <code>{type: pairing, machine_name, product_key}</code> lấy từ <a href="../../../machine/config/machine_config.py">machine_config.py</a>, chờ <code>ack</code>.</li>
-  <li>Hết 30 giây không có dữ liệu thì đóng kết nối.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">11</span><a href="../../../app/flutter_app/lib/feature/device/machine_register_bluetooth.dart">machine_register_bluetooth.dart</a>, tiếp tục trong <code>connect()</code></h3>
-<p>Hiện tên máy và key vừa nhận, rồi gọi <code>MachineApi.registerMachine(answer)</code> giống hệt cách 1.</p>
-</div>
-
-<h2>Phần chung: gửi lên server</h2>
-<div class="step">
-<h3><span class="num">12</span><a href="../../../app/flutter_app/lib/UI/dashboard/machine_api.dart">machine_api.dart</a>, hàm <code>registerMachine(packet)</code> (dòng 21)</h3>
-<ol>
-  <li>Gửi <code>POST /app/dang-ky-may</code> với gói máy cộng thêm <code>token</code>.</li>
-  <li><code>_request()</code> (dòng 104) kiểm tra URL server, gửi JSON, chờ tối đa 25 giây. Mã HTTP lỗi thì lấy <code>message</code> của server làm thông báo.</li>
-  <li>Phản hồi phải có <code>valid: true</code> và <code>machine_id</code>, không thì báo lỗi.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">13</span><a href="../../main.py">server/main.py</a>, hàm <code>Handler.do_POST()</code></h3>
-<p>Tra <code>ROUTES</code>: <code>/app/dang-ky-may</code> ứng với <code>receive_register</code> của luồng đăng ký máy.</p>
-</div>
-<div class="step">
-<h3><span class="num">14</span><a href="machine_register_flow.py">machine_register_flow.py</a>, hàm <code>receive_register(data)</code> (dòng 11)</h3>
-<ol>
-  <li><code>verify_machine(data)</code>: tên và key là chuỗi hợp lệ.</li>
-  <li><code>user_from_request(data)</code> trong <a href="../user_login/session.py">session.py</a>: đổi token thành <code>user_id</code>. Không có thì báo "Phiên đăng nhập hết hạn".</li>
-  <li>Băm key bằng <code>sha256_hex()</code> (SHA-256, <code>server/lib/hashing.py</code>).</li>
-  <li><code>BEGIN IMMEDIATE</code> khóa ghi database, để hai lần quét cùng lúc không tạo hai máy.</li>
-  <li>Tìm máy theo mã băm key:
-    <ul>
-      <li>chưa có thì tạo <code>machine_id = "fm_" + uuid</code> và <code>INSERT INTO machines</code>;</li>
-      <li>đã có thì dùng lại <code>machine_id</code> cũ.</li>
-    </ul>
-  </li>
-  <li>Kiểm tra chủ máy trong <code>machine_managers</code>:
-    <ul>
-      <li>chưa có chủ thì ghi người gửi là <code>owner</code>;</li>
-      <li>chủ là người khác thì từ chối: "Máy đã thuộc tài khoản khác. Hãy nhờ chủ máy chia sẻ."</li>
-    </ul>
-  </li>
-  <li>Trả <code>{valid, created, machine_id, message}</code>.</li>
-</ol>
-</div>
-<div class="step">
-<h3><span class="num">15</span><a href="machine_register_verify.py">machine_register_verify.py</a>, hàm <code>verify_registration(data)</code> (dòng 24)</h3>
-<p>Route phụ <code>/app/xac-minh-dang-ky-may</code>: cho <code>machine_id</code> và key, trả về có khớp bản ghi đã lưu không. App hiện chưa gọi route này.</p>
-</div>
-
-<h2>Sơ đồ tóm tắt</h2>
-<pre><code>Cách 1 (QR)                              Cách 2 (Bluetooth)
-machine_qr.py → in tem                    bluez_server.run_server (Pi)
-machines_tab._open                        machine_register_bluetooth.scan
- └─ MachineQrPage.detect                    └─ BluetoothPairing.kt scan / connect
-     └─ parseMachineQr                           ⇄ bluetooth_pairing.handle_connection
-            │                                       (identify → ready → pairing → ack)
-            └──────────────┬──────────────────────┘
-                           ▼
-          MachineApi.registerMachine → POST /app/dang-ky-may {name, key, token}
-           main.Handler.do_POST
-            └─ machine_register_flow.receive_register
-                ├─ verify_machine
-                ├─ session.user_from_request        (token → user_id)
-                ├─ INSERT machines                  (nếu key mới)
-                └─ INSERT machine_managers owner    (nếu chưa có chủ)
-          ← {machine_id}
-machines_tab._open → controller.loadMyMachines</code></pre>
-
-<h2>Vài điểm cần biết</h2>
-<ul>
-  <li><strong>Server chỉ lưu mã băm của product key</strong>, không lưu key gốc.</li>
-  <li><strong>Quét lại cùng tem không tạo máy mới</strong>: cùng key luôn ra cùng <code>machine_id</code>.</li>
-  <li><strong>Người đầu tiên quét tem là chủ máy.</strong> Người khác muốn quản lý phải được chủ chia sẻ.</li>
-  <li class="note"><strong><code>machine_id</code> mới chưa được gửi xuống máy pha.</strong> Máy vẫn heartbeat bằng <code>MACHINE_ID</code> ghi cứng trong <code>machine_config.py</code>, nên trạng thái online của máy vừa đăng ký chưa khớp.</li>
-  <li class="note"><strong>Ai có product key là đăng ký được máy</strong> nếu máy chưa có chủ. Tem QR và file <code>machine_config.py</code> cần được giữ kín.</li>
-</ul>
-</main>
-</body>
-</html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng ký máy</title><style>
+:root{--bg:#faf9f5;--fg:#252520;--muted:#68685d;--line:#e6e3d9;--accent:#a64f32}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,"Segoe UI",sans-serif;overflow-x:hidden}
+main{max-width:1200px;margin:auto;padding:40px 24px 64px}h1{font-size:clamp(28px,5vw,42px);line-height:1.2}h2{margin-top:40px;color:var(--accent)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}nav a{padding:7px 15px;border:1px solid var(--line);border-radius:20px;color:var(--accent);text-decoration:none}nav a:hover{background:#f0e9df}
+p{margin:12px 0}code{font:0.9em/1.5 "Cascadia Code",Consolas,monospace;background:#f0eee6;padding:2px 5px;border-radius:4px}li{margin:7px 0}section{scroll-margin-top:20px}
+pre{overflow:auto;background:#f3f1ea;border-radius:8px;padding:14px}pre code{background:none;padding:0}
+footer{margin-top:40px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:14px}footer a{color:var(--accent)}
+.table-scroll{overflow-x:auto;margin:22px 0;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px #0000000a}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:12px 16px;text-align:left;vertical-align:middle;border-bottom:1px solid #eeebe3}
+thead th{font-size:12.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);background:#f5f3ec;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fbf8f2}
+td code{background:#f3f1ea;color:#3d3929;padding:2px 7px;border-radius:5px;font-size:13.5px}
+.m{display:inline-block;min-width:48px;text-align:center;font:600 12px/1 Consolas,monospace;padding:5px 8px;border-radius:6px}
+.m.post{background:#fbe9e1;color:#b4532f}.m.get{background:#e6f0e3;color:#3c7a2d}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted)}.legend span::before{content:"";display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:6px;vertical-align:-2px;border:1.5px solid var(--b);background:var(--c)}
+.flow{position:relative;left:50%;transform:translateX(-50%);width:min(var(--w),calc(100vw - 32px));overflow-x:auto;background:#fdfcf9;border:1px solid var(--line);border-radius:14px;margin:18px 0}
+.flow svg{display:block;width:100%;height:auto;min-width:1300px}
+.flow text{font-family:system-ui,"Segoe UI",-apple-system,sans-serif}
+.flow .t{font-size:14px;font-weight:600}.flow .s{font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px}
+.flow .n{font-family:"Cascadia Code",Consolas,monospace;font-size:11px;fill:#4a463c}.flow .nh{font-size:12.5px;font-weight:650;fill:#a64f32}
+.flow .lb{font-size:11.5px;font-weight:600;fill:#857f71}
+.flow-desc{color:var(--muted);margin-top:-4px}
+@media(max-width:600px){main{padding:24px 14px}}
+@media print{body{background:white}main{padding:0;max-width:none}nav{display:none}.flow{left:0;transform:none;width:auto;break-inside:avoid;overflow:visible}.flow svg{min-width:0}}
+</style></head><body><main><header><span class="eyebrow">TÀI LIỆU LUỒNG HOẠT ĐỘNG</span><h1>Đăng ký máy</h1><p>App lấy tên máy và product key bằng QR hoặc Bluetooth, rồi gửi một request đăng ký lên server. Người đăng ký đầu tiên trở thành chủ máy.</p></header>
+<nav aria-label="Mục lục"><a href="#api">API và gói tin</a><a href="#flow-0">A. Lấy gói thông tin máy</a><a href="#flow-1">B. Đăng ký trên server</a><a href="#notes">Lưu ý</a></nav>
+<section id="api"><h2>API và gói tin</h2><p>POST gửi JSON; GET dùng query. Các ví dụ thể hiện cấu trúc trường dữ liệu. Token thuộc app; product_key thuộc máy nếu API yêu cầu.</p><div class="table-scroll"><table><thead><tr><th>Phương thức</th><th>Route</th><th>Ai gọi</th><th>Gửi lên</th><th>Nhận về</th></tr></thead><tbody><tr><td><span class="m post">POST</span></td><td><code>/app/dang-ky-may</code></td><td>App</td><td><code>token</code>, <code>machine_name</code>, <code>product_key</code></td><td><code>valid</code>, <code>registered</code>, <code>created</code>, <code>machine_id</code>, <code>message</code></td></tr></tbody></table></div><div class="legend"><span style="--c:#c96442;--b:#c96442">App</span><span style="--c:#5f8a55;--b:#5f8a55">Server</span><span style="--c:#4f6f93;--b:#4f6f93">Máy</span><span style="--c:#ffffff;--b:#d6d0c2">Bước xử lý</span><span style="--c:#fdf1e3;--b:#e3ae74">Điểm quyết định</span><span style="--c:#ebf3e7;--b:#93b886">Kết quả</span><span style="--c:#fbeae5;--b:#dc8f7b">Nhánh lỗi</span><span style="--c:#f6f4ee;--b:#e3ded2">Chú thích: gói tin, hàm, dữ liệu</span></div></section>
+<section id="flow-0"><h2>A. Lấy gói thông tin máy</h2><p class="flow-desc">Giao tiếp cục bộ giữa app và máy, chưa gọi server.</p><div class="flow" style="--w:1532px"><svg viewBox="0 0 1530 543" width="1530" role="img"><defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8f8a7c"/></marker><filter id="sh" x="-5%" y="-10%" width="110%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#3d3929" flood-opacity=".08"/></filter></defs><rect x="440" y="20" width="250" height="38" rx="10" fill="#c96442" stroke="#c96442" stroke-width="1.5" filter="url(#sh)"/><text x="565.0" y="44" fill="#fff" text-anchor="middle" class="t">App</text><rect x="810" y="20" width="250" height="38" rx="10" fill="#4f6f93" stroke="#4f6f93" stroke-width="1.5" filter="url(#sh)"/><text x="935.0" y="44" fill="#fff" text-anchor="middle" class="t">Máy</text><rect x="440" y="94" width="250" height="35" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="119" fill="#2b2a26" text-anchor="start" class="t">Chọn QR hoặc Bluetooth</text><path d="M565.0,58 V94" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><rect x="440" y="165" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="190" fill="#2b2a26" text-anchor="start" class="t">Quét QR / kết nối BLE</text><text x="454" y="204" fill="#857f71" text-anchor="start" class="s">parseMachineQr() / connect()</text><path d="M565.0,129 V161" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="160.54999999999998" y="165" width="249.45000000000002" height="52" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="174.54999999999998" y="187" class="n" xml:space="preserve">• QR: đọc gói ngay, không cần máy</text><text x="174.54999999999998" y="204" class="n" xml:space="preserve">• BLE: scan() tìm máy gần đó</text><path d="M440,189.5 H410.0" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="250" width="250" height="63" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="275" fill="#2b2a26" text-anchor="start" class="t">Cung cấp gói pairing</text><text x="824" y="289" fill="#857f71" text-anchor="start" class="s">run_server()</text><text x="824" y="303" fill="#857f71" text-anchor="start" class="s">handle_connection()</text><path d="M935.0,58 V250" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M565.0,214 V281.5 H806" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="659.5" y="273.5" class="lb">BLE</text><rect x="1120" y="250" width="209.55" height="103" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="272" class="nh" xml:space="preserve">◆ Gói pairing (QR hoặc BLE)</text><text x="1134" y="289" class="n" xml:space="preserve">{</text><text x="1134" y="306" class="n" xml:space="preserve">  &quot;machine_name&quot;: &quot;...&quot;,</text><text x="1134" y="323" class="n" xml:space="preserve">  &quot;product_key&quot;: &quot;...&quot;</text><text x="1134" y="340" class="n" xml:space="preserve">}</text><path d="M1060,281.5 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="440" y="349" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="374" fill="#2b2a26" text-anchor="start" class="t">Đọc tên + product key</text><text x="454" y="388" fill="#857f71" text-anchor="start" class="s">parseMachineQr()</text><path d="M565.0,214 V349" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M935.0,313 V373.5 H694" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="794.5" y="365.5" class="lb">gói</text><rect x="140.60000000000002" y="349" width="269.4" height="52" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="154.60000000000002" y="371" class="n" xml:space="preserve">• QR chia sẻ quyền là loại gói khác,</text><text x="154.60000000000002" y="388" class="n" xml:space="preserve">  không dùng để đăng ký máy mới</text><path d="M440,373.5 H410.0" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="440" y="434" width="250" height="49" rx="10" fill="#ebf3e7" stroke="#93b886" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="459" fill="#2f5a25" text-anchor="start" class="t">Chuẩn bị đăng ký</text><text x="454" y="473" fill="#5f7f55" text-anchor="start" class="s">registerMachine()</text><path d="M565.0,398 V430" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/></svg></div></section>
+<section id="flow-1"><h2>B. Đăng ký trên server</h2><div class="flow" style="--w:1532px"><svg viewBox="0 0 1530 1125" width="1530" role="img"><defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8f8a7c"/></marker><filter id="sh" x="-5%" y="-10%" width="110%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#3d3929" flood-opacity=".08"/></filter></defs><rect x="440" y="20" width="250" height="38" rx="10" fill="#c96442" stroke="#c96442" stroke-width="1.5" filter="url(#sh)"/><text x="565.0" y="44" fill="#fff" text-anchor="middle" class="t">App</text><rect x="810" y="20" width="250" height="38" rx="10" fill="#5f8a55" stroke="#5f8a55" stroke-width="1.5" filter="url(#sh)"/><text x="935.0" y="44" fill="#fff" text-anchor="middle" class="t">Server</text><rect x="440" y="94" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="119" fill="#2b2a26" text-anchor="start" class="t">Gửi đăng ký</text><text x="454" y="133" fill="#857f71" text-anchor="start" class="s">registerMachine()</text><path d="M565.0,58 V94" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><rect x="440" y="179" width="250" height="35" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="204" fill="#2b2a26" text-anchor="start" class="t">POST /app/dang-ky-may</text><path d="M565.0,143 V175" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="120.64999999999998" y="179" width="289.35" height="222" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="134.64999999999998" y="201" class="nh" xml:space="preserve">▲ Request</text><text x="134.64999999999998" y="218" class="n" xml:space="preserve">{</text><text x="134.64999999999998" y="235" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="134.64999999999998" y="252" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json&quot;,</text><text x="134.64999999999998" y="269" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;1–4096&gt;&quot;</text><text x="134.64999999999998" y="286" class="n" xml:space="preserve">  },</text><text x="134.64999999999998" y="303" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="134.64999999999998" y="320" class="n" xml:space="preserve">    &quot;token&quot;: &quot;&lt;token&gt;&quot;,</text><text x="134.64999999999998" y="337" class="n" xml:space="preserve">    &quot;machine_name&quot;: &quot;&lt;1–150 ký tự&gt;&quot;,</text><text x="134.64999999999998" y="354" class="n" xml:space="preserve">    &quot;product_key&quot;: &quot;&lt;1–1024 ký tự&gt;&quot;</text><text x="134.64999999999998" y="371" class="n" xml:space="preserve">  }</text><text x="134.64999999999998" y="388" class="n" xml:space="preserve">}</text><path d="M440,196.5 H410.0" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="250" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="275" fill="#2b2a26" text-anchor="start" class="t">Nhận request</text><text x="824" y="289" fill="#857f71" text-anchor="start" class="s">receive_register()</text><path d="M935.0,58 V250" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M565.0,214 V274.5 H806" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="659.5" y="266.5" class="lb">request</text><rect x="810" y="335" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="360" fill="#6b3f12" text-anchor="start" class="t">Tên &amp; key hợp lệ?</text><text x="824" y="374" fill="#a07444" text-anchor="start" class="s">check_machine()</text><path d="M935.0,299 V331" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="1120" y="342.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="367.0" fill="#8f2f1c" text-anchor="start" class="t">400 + message</text><path d="M1060,359.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="351.5" class="lb">Không</text><rect x="810" y="420" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="445" fill="#6b3f12" text-anchor="start" class="t">Phiên hợp lệ?</text><text x="824" y="459" fill="#a07444" text-anchor="start" class="s">check_login()</text><path d="M935.0,384 V416" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="408" class="lb">Có</text><rect x="1120" y="420.0" width="230" height="49" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="445.0" fill="#8f2f1c" text-anchor="start" class="t">400, phiên hết hạn</text><text x="1134" y="459.0" fill="#b0604c" text-anchor="start" class="s">login_required=true</text><path d="M1060,444.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="436.5" class="lb">Không</text><rect x="810" y="505" width="250" height="64" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="530" fill="#2b2a26" text-anchor="start" class="t">BEGIN IMMEDIATE,</text><text x="824" y="545" fill="#2b2a26" text-anchor="start" class="t">tìm máy theo hash key</text><text x="824" y="559" fill="#857f71" text-anchor="start" class="s">find_id_by_key_hash()</text><path d="M935.0,469 V501" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="493" class="lb">Có</text><rect x="1120" y="505" width="149.7" height="52" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="527" class="n" xml:space="preserve">• Chưa có thì tạo:</text><text x="1134" y="544" class="n" xml:space="preserve">  add_machine()</text><path d="M1060,537.0 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="810" y="605" width="250" height="49" rx="10" fill="#fdf1e3" stroke="#e3ae74" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="630" fill="#6b3f12" text-anchor="start" class="t">Chủ là người khác?</text><text x="824" y="644" fill="#a07444" text-anchor="start" class="s">get_owner_id()</text><path d="M935.0,569 V601" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><rect x="1120" y="612.0" width="230" height="35" rx="10" fill="#fbeae5" stroke="#dc8f7b" stroke-width="1.5" filter="url(#sh)"/><text x="1134" y="637.0" fill="#8f2f1c" text-anchor="start" class="t">400, nhờ chủ chia sẻ</text><path d="M1060,629.5 H1116" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="1072.0" y="621.5" class="lb">Có</text><rect x="810" y="690" width="250" height="49" rx="10" fill="#ffffff" stroke="#d6d0c2" stroke-width="1.5" filter="url(#sh)"/><text x="824" y="715" fill="#2b2a26" text-anchor="start" class="t">Chưa có chủ → gán người gọi</text><text x="824" y="729" fill="#857f71" text-anchor="start" class="s">set_owner()</text><path d="M935.0,654 V686" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="943.0" y="678" class="lb">Không</text><rect x="1120" y="690" width="389.1" height="290" rx="12" fill="#f6f4ee" stroke="#e3ded2"/><text x="1134" y="712" class="nh" xml:space="preserve">▼ Response</text><text x="1134" y="729" class="n" xml:space="preserve">{</text><text x="1134" y="746" class="n" xml:space="preserve">  &quot;headers&quot;: {</text><text x="1134" y="763" class="n" xml:space="preserve">    &quot;Content-Type&quot;: &quot;application/json; charset=utf-8&quot;,</text><text x="1134" y="780" class="n" xml:space="preserve">    &quot;Content-Length&quot;: &quot;&lt;số byte&gt;&quot;</text><text x="1134" y="797" class="n" xml:space="preserve">  },</text><text x="1134" y="814" class="n" xml:space="preserve">  &quot;body&quot;: {</text><text x="1134" y="831" class="n" xml:space="preserve">    &quot;valid&quot;: true,</text><text x="1134" y="848" class="n" xml:space="preserve">    &quot;registered&quot;: true,</text><text x="1134" y="865" class="n" xml:space="preserve">    &quot;created&quot;: true | false,</text><text x="1134" y="882" class="n" xml:space="preserve">    &quot;machine_id&quot;: ...,</text><text x="1134" y="899" class="n" xml:space="preserve">    &quot;message&quot;: &quot;...&quot;</text><text x="1134" y="916" class="n" xml:space="preserve">  }</text><text x="1134" y="933" class="n" xml:space="preserve">}</text><text x="1134" y="950" class="n" xml:space="preserve"></text><text x="1134" y="967" class="n" xml:space="preserve">Cùng chủ gửi lại → cùng machine_id</text><path d="M1060,714.5 H1120" fill="none" stroke="#8f8a7c" stroke-width="1.2" stroke-dasharray="5 4"/><rect x="440" y="1016" width="250" height="49" rx="10" fill="#ebf3e7" stroke="#93b886" stroke-width="1.5" filter="url(#sh)"/><text x="454" y="1041" fill="#2f5a25" text-anchor="start" class="t">Về dashboard, tải lại máy</text><text x="454" y="1055" fill="#5f7f55" text-anchor="start" class="s">loadMyMachines()</text><path d="M565.0,214 V1016" stroke="#bdb7a8" stroke-width="1.5" stroke-dasharray="5 5" fill="none"/><path d="M935.0,739 V1040.5 H694" fill="none" stroke="#8f8a7c" stroke-width="1.8" marker-end="url(#ah)"/><text x="794.5" y="1032.5" class="lb">response</text></svg></div></section>
+<section id="notes"><h2>Nhánh lỗi và lưu ý</h2><p>Product key không được trả trong danh sách máy; database lưu hash key. Đăng ký máy không cần máy online nếu app đã có gói pairing. Nhánh lỗi trả valid=false/message hoặc login_required khi phiên hết hạn.</p></section>
+<section id="structure"><h2>Cấu trúc và transaction</h2><p><code>machine_register_main.py → handle(request)</code> nhận HTTP, chọn <code>machine_register_process.py → receive_register()</code>. Tác vụ kiểm dữ liệu trước phiên, chuẩn bị tên/hash và điều phối transaction.</p><p>Tên/key phải là chuỗi không trắng, tối đa 150/1024 ký tự. Tên được strip khi tạo; key được băm nguyên giá trị. Gửi lại cùng key giữ ID và tên hiện tại; type không bắt buộc.</p><p>SQL đọc nằm trong <code>server/database/machine/machine_read.py</code>; SQL tạo máy/gán chủ nằm trong <code>machine_write.py</code>. Các hàm database nhận cùng conn. <code>BEGIN IMMEDIATE</code> trước khi tìm máy; tạo máy và gán chủ cùng commit/rollback. Schema/index do <code>init_db.py</code> khởi tạo, giữ dữ liệu hiện có.</p><p>Response trả trên request POST ban đầu: thành công 200; lỗi dữ liệu/phiên/quyền 400; lỗi SQLite 503. Body tối đa 4096 byte. Không có request xác minh thứ hai hoặc lệnh gửi xuống máy.</p><p>Hiện chưa đối chiếu key với danh sách key nhà máy, chưa gán cửa hàng hoặc cấp credential.</p></section>
+<footer><a href="README.md">Bản Markdown</a></footer></main></body></html>

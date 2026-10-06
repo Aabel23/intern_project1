@@ -1,0 +1,13 @@
+127.0.0.1 - - [29/Sep/2026 11:53:35] "POST /app/dang-ky-may HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:35] "POST /app/dang-ky-may HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:35] "POST /app/dang-ky-may HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:36] "POST /app/dang-ky-may HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:36] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:36] "POST /app/dang-ky-may HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:36] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:36] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:36] "POST /app/xac-minh-dang-ky-may HTTP/1.1" 404 -
+----------------------------------------------------------------------
+Ran 4 tests in 2.366s
+
+OK

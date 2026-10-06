@@ -5,7 +5,7 @@ Chạy từ thư mục gốc `androidv0.1` trên Raspberry Pi OS:
 ```sh
 sudo apt install bluez python3-dbus python3-gi
 sudo systemctl start bluetooth
-python3 -m machine.pairing.bluetooth_pairing
+python3 -m machine.pairing.machine_bluetooth_pair
 ```
 
 Máy lấy `MACHINE_NAME` trong `machine/config/machine.env` làm tên Bluetooth và gửi `PRODUCT_KEY` trong cùng file (xem `machine/README.md`).
@@ -29,8 +29,8 @@ Timeout gửi/nhận là 30 giây; gói nhận tối đa 4096 byte.
 `pair_bluetooth()` xác nhận app sẵn sàng; BlueZ xử lý bond trước đó.
 Không gửi ID máy vì server cấp ID chính thức sau đăng ký; khi chạy relay, máy xưng danh bằng product key.
 
-Luồng chính nằm trong `bluetooth_pairing.py`, các callback bắt buộc của BlueZ
-nằm trong `bluez_server.py`. Module này chạy riêng, chưa nối vào `machine/main.py`
+Luồng chính nằm trong `machine_bluetooth_pair.py`, các callback bắt buộc của BlueZ
+nằm trong `machine_bluetooth_serve.py`. Module này chạy riêng, chưa nối vào `machine/main.py`
 hoặc đăng ký server.
 
 ## Thử bằng app Android
@@ -46,7 +46,7 @@ Quay lại sẽ hủy quét/kết nối đang chờ. Nếu Pi hết cửa sổ q
 khởi động lại module pairing trên Pi rồi bấm Quét lại trên app.
 
 ```sh
-python -m unittest machine.pairing.test_bluetooth_pairing -v
+python -m unittest tests.python.test_machine_bluetooth -v
 ```
 
 Test dùng socket thật trong máy tính để kiểm tra giao thức, không cần BlueZ.

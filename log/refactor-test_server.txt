@@ -1,0 +1,53 @@
+127.0.0.1 - - [29/Sep/2026 11:53:22] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:22] "POST /machine/heartbeat HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:22] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:22] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:22] "POST /app/nhan-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/go-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/may-cua-toi HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/nhan-kho HTTP/1.1" 401 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/nhan-kho HTTP/1.1" 403 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /machine/heartbeat HTTP/1.1" 403 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /machine/hoi-lenh HTTP/1.1" 403 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /app/nhan-kho HTTP/1.1" 503 -
+127.0.0.1 - - [29/Sep/2026 11:53:23] "POST /machine/heartbeat HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/nhan-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/dang-ky-nguoi-dung HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/gui-ma-otp HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/xac-minh-otp HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/dang-nhap HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/xac-minh-dang-nhap HTTP/1.1" 400 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/tao-ma-chia-se HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /app/may-cua-toi HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /machine/heartbeat HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "GET /machine/trang-thai?machine_id=fm_f21c9ea433fb4447a56a9314d04b0c12 HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:24] "POST /missing HTTP/1.1" 404 -
+127.0.0.1 - - [29/Sep/2026 11:53:25] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:25] "POST /machine/heartbeat HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:26] "POST /app/nap-kho HTTP/1.1" 502 -
+127.0.0.1 - - [29/Sep/2026 11:53:26] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:26] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:27] "POST /app/nhan-kho HTTP/1.1" 502 -
+127.0.0.1 - - [29/Sep/2026 11:53:27] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:27] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:27] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:27] "POST /app/nhan-kho HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:28] "POST /app/dang-ky-may HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:28] "POST /machine/heartbeat HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:28] "POST /machine/hoi-lenh HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:28] "POST /machine/tra-ket-qua HTTP/1.1" 200 -
+127.0.0.1 - - [29/Sep/2026 11:53:28] "POST /app/nhan-kho HTTP/1.1" 200 -
+----------------------------------------------------------------------
+Ran 7 tests in 7.253s
+
+OK
