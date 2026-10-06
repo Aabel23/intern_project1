@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thiết kế Cryptography Middleware cho FlexMix API</title>
+  <style>
+    :root{color-scheme:light;--bg:#f5f4ed;--surface:#faf9f5;--card:#fff;--ink:#1f1e1b;--muted:#59564f;--subtle:#79756c;--line:#e3e0d4;--accent:#a9502f;--accent-soft:#f6e2d8;--ui:#4a7baf;--ui-soft:#e5edf6;--device:#7d78ad;--device-soft:#eceaf4;--ok:#687f4d;--ok-soft:#e5ebdb;--warn:#8c6724;--warn-soft:#f5ebd2;--bad:#a33d2c;--bad-soft:#f6dbd2;--sans:"Segoe UI",Arial,sans-serif;--mono:Consolas,"Courier New",monospace}
+    @media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#262624;--surface:#2e2d2a;--card:#30302d;--ink:#f3f1ea;--muted:#c6c2b7;--subtle:#a29d91;--line:#494741;--accent:#ee9a7a;--accent-soft:#4a2f25;--ui:#8db2da;--ui-soft:#263444;--device:#b3aeda;--device-soft:#35334a;--ok:#a7be8a;--ok-soft:#303a27;--warn:#ddb467;--warn-soft:#443922;--bad:#ee8b73;--bad-soft:#4c2a23}}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans)}a{color:var(--accent)}a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}p{margin:0}p+p{margin-top:12px}code,pre{font-family:var(--mono)}code{font-size:.84em;background:var(--line);padding:.12em .32em;border-radius:4px;overflow-wrap:anywhere}pre{white-space:pre;overflow:auto;background:var(--surface);border:1px solid var(--line);padding:16px;border-radius:10px;font-size:13px;line-height:1.5}pre code{background:none;padding:0;font-size:inherit}ol,ul{padding-left:1.4em;margin:0}li+li{margin-top:7px}
+    .page{max-width:1400px;margin:auto;padding:24px clamp(16px,3vw,40px) 70px}.masthead{display:grid;gap:12px;padding-bottom:28px}.eyebrow,.section-no{font:700 12px/1.4 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}h1{font-size:clamp(27px,3vw,38px);line-height:1.2;margin:0}h2{font-size:clamp(23px,2.5vw,29px);line-height:1.25;margin:0}h3{font-size:19px;line-height:1.3;margin:0}.lead{max-width:80ch;color:var(--muted)}.callout{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:12px 16px}.callout.warn{border-color:var(--warn);background:var(--warn-soft)}.callout strong{color:var(--accent)}.callout.warn strong{color:var(--warn)}
+    .overview{display:grid;gap:14px;margin-bottom:35px}.overview h2{font-size:25px}.shell{border-top:1px solid var(--line);padding-top:28px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:40px;align-items:start}.toc{position:sticky;top:18px;max-height:calc(100vh - 36px);overflow:auto;display:grid;align-content:start;font:13px/1.5 var(--sans)}.toc strong{color:var(--subtle);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}.toc a{display:block;padding:6px 10px;border-left:2px solid var(--line);text-decoration:none;color:var(--muted)}.toc a:hover{color:var(--accent);border-color:var(--accent);background:var(--surface)}.doc{display:grid;gap:54px;min-width:0}.doc section{display:grid;gap:16px;scroll-margin-top:20px}.doc section>h2{color:var(--ink)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:9px}.scroll{overflow:auto;border:1px solid var(--line);border-radius:10px}.scroll table{min-width:680px}table{border-collapse:collapse;width:100%;background:var(--card);font-size:13.5px}th,td{border-bottom:1px solid var(--line);text-align:left;vertical-align:top;padding:9px 12px}th{background:var(--surface);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--subtle)}tr:last-child td{border-bottom:0}.small{font-size:14px;color:var(--muted)}footer{border-top:1px solid var(--line);padding-top:18px;color:var(--subtle);font-size:13px}
+    .diagram{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}.diagram>h3{font-size:20px}.diagram-scroll{overflow-x:auto}.diagram svg{display:block;max-width:none;height:auto;font-family:var(--sans)}.diagram figcaption{font-size:13.5px;color:var(--muted)}.diagram svg .ui{fill:var(--ui-soft);stroke:var(--ui)}.diagram svg .proc{fill:var(--accent-soft);stroke:var(--accent)}.diagram svg .device{fill:var(--device-soft);stroke:var(--device)}.diagram svg .store{fill:var(--card);stroke:var(--subtle)}.diagram svg .good{fill:var(--ok-soft);stroke:var(--ok)}.diagram svg .warn{fill:var(--warn-soft);stroke:var(--warn)}.diagram svg .bad{fill:var(--bad-soft);stroke:var(--bad)}.diagram svg .phase{fill:var(--warn-soft);stroke:var(--warn)}.diagram svg rect,.diagram svg polygon{stroke-width:1.4}.diagram svg .line{fill:none;stroke:var(--subtle);stroke-width:1.3}.diagram svg .edge{fill:none;stroke:var(--accent);stroke-width:1.8}.diagram svg .dash{stroke-dasharray:5 5}.diagram svg text{fill:var(--ink);font:13px var(--sans)}.diagram svg .head{font-size:15px;font-weight:700}.diagram svg .small{font-size:11.5px;fill:var(--muted)}.diagram svg .edge-label{font-size:12px;fill:var(--accent)}.diagram svg .phase-label{font-size:12px;font-weight:700;fill:var(--warn)}.diagram-tools{text-align:right}.diagram-tools button,.zoom-close{font:12px var(--sans);color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer}.diagram-tools button:hover,.zoom-close:hover{background:var(--accent-soft)}.zoom-dialog{width:min(98vw,1220px);max-width:none;max-height:96vh;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px}.zoom-dialog::backdrop{background:#000a}.zoom-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;font-weight:700}.zoom-body{overflow:auto;max-height:calc(96vh - 68px)}.zoom-body svg{display:block;max-width:none;height:auto}.zoom-body svg .ui{fill:var(--ui-soft);stroke:var(--ui)}.zoom-body svg .proc{fill:var(--accent-soft);stroke:var(--accent)}.zoom-body svg .device{fill:var(--device-soft);stroke:var(--device)}.zoom-body svg .store{fill:var(--card);stroke:var(--subtle)}.zoom-body svg .good{fill:var(--ok-soft);stroke:var(--ok)}.zoom-body svg .warn,.zoom-body svg .phase{fill:var(--warn-soft);stroke:var(--warn)}.zoom-body svg .bad{fill:var(--bad-soft);stroke:var(--bad)}.zoom-body svg rect,.zoom-body svg polygon{stroke-width:1.4}.zoom-body svg .line{fill:none;stroke:var(--subtle);stroke-width:1.3}.zoom-body svg .edge{fill:none;stroke:var(--accent);stroke-width:1.8}.zoom-body svg .dash{stroke-dasharray:5 5}.zoom-body svg text{fill:var(--ink);font:13px var(--sans)}.zoom-body svg .head{font-size:15px;font-weight:700}.zoom-body svg .small{font-size:11.5px;fill:var(--muted)}.zoom-body svg .edge-label{font-size:12px;fill:var(--accent)}.zoom-body svg .phase-label{font-size:12px;font-weight:700;fill:var(--warn)}
+    .diagram-grid{display:grid;grid-template-columns:1fr;gap:28px}.diagram-grid .diagram{padding:20px}.diagram-grid .diagram>h3{font-size:22px}.diagram-grid .diagram svg{margin-inline:auto}.diagram-grid .diagram svg text,.zoom-body svg.spaced text{font-size:15px}.diagram-grid .diagram svg .small,.zoom-body svg.spaced .small{font-size:12.5px}.diagram-grid .diagram svg .edge-label,.zoom-body svg.spaced .edge-label{font-size:13px}
+    @media(max-width:1050px){.shell{grid-template-columns:1fr}.toc{position:static;max-height:none;display:flex;gap:3px;flex-wrap:wrap}.toc strong{width:100%}.toc a{border:1px solid var(--line);border-radius:6px;padding:4px 8px}}
+    @media(max-width:700px){.grid,.diagram-grid{grid-template-columns:1fr}.diagram-scroll::before{content:"Kéo ngang để xem toàn bộ sơ đồ →";display:block;color:var(--subtle);font-size:12px;padding-bottom:6px}.page{padding-bottom:40px}}
+    @media print{body{background:white}.page{max-width:none;padding:0}.toc{display:none}.shell{display:block}.doc{gap:30px}.diagram,.card,.callout,tr{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="eyebrow">FlexMix · Tài liệu thiết kế · 06/10/2026</div>
+    <h1>Cryptography Middleware cho HTTP API</h1>
+    <p class="lead">Đề xuất giao thức mã hóa và xác thực giữa app Flutter và API server, kèm ranh giới tin cậy, hợp đồng gói tin và lộ trình tích hợp với code hiện tại.</p>
+    <div class="callout"><strong>Trạng thái:</strong> Tài liệu thiết kế để thẩm định; chưa phải tính năng đã triển khai hoặc chứng nhận tuân thủ ngân hàng. Mọi kết luận về mức bảo đảm cần threat model, kiểm thử độc lập và quy trình vận hành khóa.</div>
+  </header>
+
+  <section class="overview" id="overview">
+    <h2>1 · Bức tranh toàn cục</h2>
+    <figure class="diagram">
+      <div class="diagram-scroll"><svg viewBox="0 0 1120 450" width="1120" role="img" aria-label="Sơ đồ ranh giới mật mã đề xuất: app giữ khóa ký thiết bị và X25519 tạm; HTTPS TLS 1.3 tới server; middleware xác minh DPoP, giải mã AES-GCM, chống replay rồi mới gọi feature; SQLite giữ binding, Redis giữ replay; máy có giao thức riêng.">
+        <defs><marker id="crypto-ov-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+        <text class="phase-label" x="24" y="22">APP ANDROID</text><text class="phase-label" x="292" y="22">BIÊN HTTPS</text><text class="phase-label" x="560" y="22">SERVER PYTHON · MIỀN TIN CẬY</text><text class="phase-label" x="858" y="22">DỮ LIỆU / NGHIỆP VỤ</text>
+        <rect class="ui" x="20" y="38" width="235" height="274" rx="10"/><text class="head" x="137" y="65" text-anchor="middle">Flutter transport chung</text>
+        <rect class="store" x="38" y="85" width="199" height="66" rx="6"/><text x="137" y="111" text-anchor="middle">Khóa ký thiết bị</text><text class="small" x="137" y="131" text-anchor="middle">kiểm chứng hỗ trợ Keystore</text>
+        <rect class="store" x="38" y="168" width="199" height="66" rx="6"/><text x="137" y="194" text-anchor="middle">X25519 tạm → K_request</text><text class="small" x="137" y="214" text-anchor="middle">K_response riêng</text>
+        <text class="small" x="137" y="274" text-anchor="middle">feature gửi JSON nghiệp vụ</text>
+        <rect class="proc" x="288" y="82" width="220" height="187" rx="10"/><text class="head" x="398" y="112" text-anchor="middle">TLS 1.3</text><text x="398" y="145" text-anchor="middle">chứng chỉ + tên host</text><text x="398" y="177" text-anchor="middle">DPoP + token bound</text><text x="398" y="209" text-anchor="middle">envelope mã hóa</text><text class="small" x="398" y="244" text-anchor="middle">transport vẫn cần HTTPS</text>
+        <rect class="proc" x="542" y="38" width="278" height="274" rx="10"/><text class="head" x="681" y="65" text-anchor="middle">Crypto middleware đề xuất</text>
+        <rect class="store" x="562" y="88" width="238" height="46" rx="6"/><text x="681" y="116" text-anchor="middle">token · DPoP · key binding</text>
+        <rect class="store" x="562" y="150" width="238" height="46" rx="6"/><text x="681" y="178" text-anchor="middle">AES-GCM · Ed25519 · replay</text>
+        <rect class="store" x="562" y="212" width="238" height="46" rx="6"/><text x="681" y="240" text-anchor="middle">mã hóa response / lỗi</text>
+        <text class="small" x="681" y="289" text-anchor="middle">server nhìn thấy plaintext sau giải mã</text>
+        <rect class="store" x="854" y="38" width="242" height="274" rx="10"/><text class="head" x="975" y="65" text-anchor="middle">Dịch vụ và kho dữ liệu</text>
+        <rect class="store" x="874" y="85" width="202" height="50" rx="6"/><text x="975" y="114" text-anchor="middle">SQLite · phiên / public key</text>
+        <rect class="store" x="874" y="149" width="202" height="50" rx="6"/><text x="975" y="178" text-anchor="middle">Redis · replay jti</text>
+        <rect class="store" x="874" y="213" width="202" height="50" rx="6"/><text x="975" y="242" text-anchor="middle">module nghiệp vụ hiện tại</text>
+        <path class="edge" d="M255 175H282" marker-end="url(#crypto-ov-arrow)"/><path class="edge" d="M508 175H536" marker-end="url(#crypto-ov-arrow)"/><path class="edge" d="M820 175H848" marker-end="url(#crypto-ov-arrow)"/>
+        <rect class="device" x="20" y="345" width="1076" height="73" rx="9"/><text class="head" x="558" y="372" text-anchor="middle">Ranh giới khác: Raspberry Pi /machine/* và GET trạng thái</text><text class="small" x="558" y="397" text-anchor="middle">Cần profile và rollout riêng; không tự áp giao thức POST của app lên heartbeat, long-poll hoặc GET.</text>
+      </svg></div>
+      <figcaption>Đây là <strong>thiết kế đề xuất, chưa triển khai</strong>. Middleware bảo vệ app ↔ dịch vụ xử lý; HTTPS vẫn bắt buộc. Chữ ký, mã hóa và DPoP không thay thế kiểm quyền chủ máy/nhân viên trong module nghiệp vụ.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+  <nav class="toc" aria-label="Mục lục"><strong>Mục lục</strong>
+    <a href="#overview">1 · Tổng quan</a><a href="#assessment">2 · Đánh giá bản nháp</a><a href="#scope">3 · Phạm vi</a><a href="#profile">4 · Giao thức</a><a href="#flow">5 · Luồng xử lý</a><a href="#integration">6 · Tích hợp repo</a><a href="#operation">7 · Vận hành</a><a href="#acceptance">8 · Nghiệm thu</a><a href="#sources">9 · Nguồn</a>
+  </nav>
+  <main class="doc">
+
+  <section id="assessment">
+    <h2>2 · Đánh giá và điều chỉnh bản thiết kế ban đầu</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Ý tưởng ban đầu</th><th>Đánh giá / quyết định thiết kế</th></tr></thead>
+      <tbody>
+        <tr><td>“E2EE” khi server giải mã</td><td>Đây là mã hóa từ app đến <em>dịch vụ xử lý tin cậy</em>. Nếu gateway, proxy hoặc log giải mã được payload, không còn bảo mật đầu cuối tới dịch vụ đó. Server vẫn nhìn thấy plaintext để xử lý nghiệp vụ.</td></tr>
+        <tr><td>JWT + token đưa vào chữ ký gọi là DPoP</td><td><a href="https://www.rfc-editor.org/rfc/rfc9449.html">DPoP RFC 9449</a> là proof JWT riêng với <code>htm</code>, <code>htu</code>, <code>iat</code>, <code>jti</code>, <code>ath</code>; access token phải gắn với public key qua <code>cnf.jkt</code> hoặc bản ghi phiên tương đương. Ký chuỗi tự tạo có token không tự động thành DPoP.</td></tr>
+        <tr><td>Timestamp + Redis SETNX = idempotency</td><td>Chúng chống phát lại trong cửa sổ ngắn. Idempotency nghiệp vụ, nhất là thanh toán, cần khóa và kết quả bền vững trong cùng transaction nghiệp vụ; hết TTL 60 giây không được phép thực hiện lại lệnh.</td></tr>
+        <tr><td>ECDH lúc đăng nhập = PFS</td><td>Chỉ đạt bảo mật chuyển tiếp cho phiên cũ nếu cả hai phía dùng khóa ECDH tạm thời, xác thực transcript, xóa secret tạm thời và hủy khóa phiên sau vòng đời. Khóa phiên còn hoạt động hoặc bị sao lưu vẫn có thể giải mã lưu lượng phiên đó.</td></tr>
+        <tr><td>Ghi đè <code>res.json</code></td><td>Repo dùng Python <code>http.server</code>, không có Express <code>res.json</code>. Cần một lớp bao quanh đọc request và ghi response tại HTTP transport chung.</td></tr>
+        <tr><td>“Chống chối bỏ” tuyệt đối</td><td>Chữ ký chỉ chứng minh một khóa đã ký; ràng buộc khóa với người, thiết bị, thời điểm, chống chiếm thiết bị và lưu chứng cứ quyết định giá trị pháp lý. Không thể hứa “an toàn tuyệt đối”.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="scope">
+    <h2>3 · Phạm vi và ranh giới tin cậy</h2>
+    <div class="grid">
+      <div class="card"><h3>Mục tiêu bảo vệ</h3><p>Payload request/response bí mật và toàn vẹn; token bị đánh cắp riêng lẻ không dùng được; request cũ không chạy lại; mỗi yêu cầu được gắn với phiên, thiết bị và khóa ký.</p></div>
+      <div class="card"><h3>Giả định bắt buộc</h3><p>HTTPS với TLS 1.3 tại biên; app xác minh chứng chỉ và tên máy chủ; máy chủ thời gian được đồng bộ; CSPRNG và thư viện mật mã được kiểm định; khóa riêng app lưu bằng cơ chế bảo vệ của hệ điều hành.</p></div>
+      <div class="card"><h3>Ngoài phạm vi của middleware</h3><p>Thiết bị bị root hoặc malware điều khiển, server ứng dụng bị chiếm, lỗi phân quyền nghiệp vụ, metadata HTTP như IP, thời điểm và kích thước gần đúng. Attestation chỉ cung cấp tín hiệu rủi ro tại thời điểm kiểm tra; padding chỉ giảm một phần rò rỉ kích thước.</p></div>
+    </div>
+    <p>HTTPS là lớp bắt buộc ngay cả khi payload được mã hóa ở tầng ứng dụng. Không bật HTTP plaintext ngoài môi trường phát triển cách ly. TLS 1.3 cung cấp trao đổi khóa tạm thời cho kênh vận chuyển; mã hóa tầng ứng dụng chỉ có ý nghĩa bổ sung khi cần bảo vệ payload qua một số lớp trung gian hoặc cần bằng chứng gắn với khóa thiết bị. Xem <a href="https://www.rfc-editor.org/rfc/rfc8446.html">RFC 8446</a>.</p>
+  </section>
+
+  <section id="profile">
+    <h2>4 · Profile giao thức đề xuất: <code>flexmix-secure-v1</code></h2>
+    <p>Chọn một bộ thuật toán cố định cho v1 để tránh hạ cấp: <strong>Ed25519</strong> cho chữ ký, <strong>X25519 + HKDF-SHA-256</strong> cho thỏa thuận/derivation khóa, <strong>AES-256-GCM</strong> với nonce 96 bit và tag 128 bit cho dữ liệu. Có thể thay profile sau qua phiên bản mới và kiểm thử tương thích. Ed25519 và X25519 dùng <em>hai cặp khóa khác nhau</em>.</p>
+    <h3>4.1 · Đăng ký thiết bị và thiết lập phiên</h3>
+    <figure class="diagram">
+      <div class="diagram-scroll"><svg viewBox="0 0 1000 760" width="1000" role="img" aria-label="Sơ đồ khối thiết lập phiên: xác thực TLS, đăng ký public key Ed25519, tạo X25519 tạm ở hai phía, xác minh transcript có nhánh từ chối, HKDF sinh hai khóa, cấp token bound với khóa thiết bị.">
+        <defs><marker id="crypto-handshake-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+        <rect class="ui" x="370" y="20" width="260" height="52" rx="7"/><text class="head" x="500" y="51" text-anchor="middle">App đăng nhập qua TLS</text>
+        <path class="edge" d="M500 72V103" marker-end="url(#crypto-handshake-arrow)"/>
+        <polygon class="warn" points="500,110 630,160 500,210 370,160"/><text x="500" y="155" text-anchor="middle">TLS + danh tính</text><text x="500" y="173" text-anchor="middle">hợp lệ?</text>
+        <path class="edge" d="M630 160H790" marker-end="url(#crypto-handshake-arrow)"/><text class="edge-label" x="711" y="150" text-anchor="middle">Không</text>
+        <rect class="bad" x="795" y="134" width="180" height="52" rx="7"/><text x="885" y="164" text-anchor="middle">Từ chối thiết lập</text>
+        <path class="edge" d="M500 210V240" marker-end="url(#crypto-handshake-arrow)"/><text class="edge-label" x="525" y="230">Có</text>
+        <rect class="proc" x="340" y="245" width="320" height="58" rx="7"/><text x="500" y="270" text-anchor="middle">App đăng ký public key Ed25519</text><text class="small" x="500" y="289" text-anchor="middle">server lưu user/device/key ID, trạng thái thu hồi</text>
+        <path class="edge" d="M500 303V331H245V348" marker-end="url(#crypto-handshake-arrow)"/><path class="edge" d="M500 331H755V348" marker-end="url(#crypto-handshake-arrow)"/>
+        <rect class="ui" x="105" y="353" width="280" height="62" rx="7"/><text x="245" y="379" text-anchor="middle">App tạo X25519 tạm</text><text class="small" x="245" y="398" text-anchor="middle">gửi ephemeral public key</text>
+        <rect class="proc" x="615" y="353" width="280" height="62" rx="7"/><text x="755" y="379" text-anchor="middle">Server tạo X25519 tạm</text><text class="small" x="755" y="398" text-anchor="middle">ký transcript + trả public key</text>
+        <path class="edge" d="M245 415V443H500V456" marker-end="url(#crypto-handshake-arrow)"/><path class="edge" d="M755 415V443H500"/>
+        <polygon class="warn" points="500,463 640,513 500,563 360,513"/><text x="500" y="508" text-anchor="middle">App xác minh TLS +</text><text x="500" y="526" text-anchor="middle">chữ ký transcript?</text>
+        <path class="edge" d="M640 513H790" marker-end="url(#crypto-handshake-arrow)"/><text class="edge-label" x="715" y="502" text-anchor="middle">Sai</text>
+        <rect class="bad" x="795" y="487" width="180" height="52" rx="7"/><text x="885" y="518" text-anchor="middle">Hủy phiên</text>
+        <path class="edge" d="M500 563V593" marker-end="url(#crypto-handshake-arrow)"/><text class="edge-label" x="528" y="584">Đúng</text>
+        <rect class="proc" x="340" y="598" width="320" height="62" rx="7"/><text x="500" y="624" text-anchor="middle">Hai phía ECDH + HKDF</text><text class="small" x="500" y="644" text-anchor="middle">K_request ≠ K_response; xóa secret tạm</text>
+        <path class="edge" d="M500 660V689" marker-end="url(#crypto-handshake-arrow)"/>
+        <rect class="good" x="340" y="694" width="320" height="50" rx="7"/><text x="500" y="724" text-anchor="middle">Cấp token bound với khóa thiết bị</text>
+      </svg></div>
+      <figcaption>Đây là <strong>profile đề xuất</strong>. Ed25519 ký và X25519 thỏa thuận khóa dùng hai cặp khóa riêng. Bắt tay cần thư viện giao thức đáng tin cậy; không suy ra PFS chỉ từ ECDH.</figcaption>
+    </figure>
+    <ol>
+      <li>Sau khi xác thực người dùng qua TLS, app tạo khóa ký Ed25519 riêng cho thiết bị; đăng ký public key qua luồng xác thực. Server lưu <code>user_id</code>, <code>device_id</code>, <code>key_id</code>, public key, trạng thái thu hồi. Khóa riêng không đi lên server. Khi chốt profile Android, kiểm tra trên thiết bị mục tiêu khả năng tạo và dùng đúng thuật toán trong Android Keystore, mức bảo vệ phần cứng và khả năng attestation; không suy ra Ed25519 được bảo vệ bằng phần cứng chỉ vì API mật mã hỗ trợ Ed25519. Nếu profile Ed25519 không đáp ứng mức bảo vệ yêu cầu, chọn profile ký có phiên bản riêng được Keystore hỗ trợ (ví dụ ES256) và cập nhật đồng bộ DPoP, chữ ký payload, binding, test vector; không đổi thuật toán ngầm trong cùng profile.</li>
+      <li>App và server tạo mỗi bên một cặp X25519 <strong>tạm thời cho phiên</strong>. Server ký transcript bắt tay bằng khóa định danh server đã được app tin cậy qua quy trình cấp phát và xoay khóa; transcript gồm version, hai ephemeral public key, session ID, user/device/key ID và ngữ cảnh phiên. App xác minh chữ ký và TLS trước khi chấp nhận khóa.</li>
+      <li>Hai phía tính ECDH shared secret rồi HKDF với salt/context gắn transcript để sinh <code>K_request</code> và <code>K_response</code> 32 byte độc lập. Xóa ephemeral private key và shared secret sau derivation. Lưu key phiên đang hoạt động trong vùng bảo vệ, có TTL và giới hạn số lần mã hóa.</li>
+      <li>Server cấp access token ràng buộc với thumbprint của public key ký thiết bị. Profile này có thể dùng token mờ (opaque) và tra binding trong DB, hoặc JWT ký hợp lệ với <code>cnf.jkt</code>; không cần đổi sang JWT chỉ để dùng DPoP.</li>
+    </ol>
+    <p class="small">Bắt tay ECDH trên TLS phải được thiết kế và kiểm thử bằng thư viện giao thức đáng tin cậy; không ghép thông điệp tùy ý rồi tuyên bố có PFS. Nếu không có yêu cầu bảo mật payload sau TLS termination, TLS 1.3 + DPoP có thể là phiên bản triển khai đầu tiên.</p>
+    <h3>4.2 · Request được bảo vệ</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Thành phần</th><th>Định nghĩa và kiểm tra</th></tr></thead>
+      <tbody>
+        <tr><td><code>Authorization: DPoP &lt;token&gt;</code></td><td>Token access bound với public key của thiết bị; không đưa token vào body JSON.</td></tr>
+        <tr><td><code>DPoP: &lt;proof JWT&gt;</code></td><td>Header <code>typ=dpop+jwt</code>, <code>alg=EdDSA</code>, JWK công khai; claims <code>htm</code>, <code>htu</code>, <code>iat</code>, <code>jti</code>, <code>ath</code> theo RFC 9449. Server so khớp thumbprint với phiên; <code>jti</code> bằng request ID.</td></tr>
+        <tr><td><code>X-Request-ID</code>, <code>X-Timestamp</code></td><td>ID ngẫu nhiên tối thiểu 128 bit; thời gian UTC dạng Unix seconds. Ràng buộc các giá trị này trong AAD và chữ ký ứng dụng.</td></tr>
+        <tr><td><code>Content-Type</code></td><td><code>application/vnd.flexmix.secure+json</code>; server từ chối profile lạ, field thừa và header bảo mật lặp.</td></tr>
+        <tr><td>Body</td><td>JSON envelope gồm <code>v</code>, <code>sid</code>, <code>nonce</code>, <code>ciphertext</code>, <code>tag</code>; byte nhị phân mã hóa base64url không padding. Giới hạn kích thước trước parse và giải mã.</td></tr>
+      </tbody>
+    </table></div>
+    <pre><code>POST /app/cap-nhat-menu HTTP/1.1
+Authorization: DPoP &lt;opaque-access-token&gt;
+DPoP: &lt;signed-proof-jwt&gt;
+X-Request-ID: &lt;random-128-bit-base64url&gt;
+X-Timestamp: 1791264000
+Content-Type: application/vnd.flexmix.secure+json
+
+{"v":1,"sid":"&lt;session-id&gt;","nonce":"&lt;base64url-12-byte&gt;",
+ "ciphertext":"&lt;base64url&gt;","tag":"&lt;base64url-16-byte&gt;"}</code></pre>
+    <p>Plaintext trước mã hóa chứa <code>{"payload_b64":"...","signature_b64":"..."}</code>. <code>payload_b64</code> là byte UTF-8 JSON nghiệp vụ gốc; signature Ed25519 ký digest của <strong>byte gốc</strong> cùng metadata có phân định rõ. V1 chỉ cho POST không có query string trên route bảo vệ; GET và query được chuẩn hóa ở profile kế tiếp. Không ký chuỗi nối tự do <code>Method + URL + ...</code> vì có thể mơ hồ và khác nhau giữa Python/Dart.</p>
+    <pre><code>signed_fields = ["flexmix-secure-v1", "req", method, path,
+                 timestamp, request_id, session_id,
+                 base64url(SHA256(access_token)),
+                 base64url(SHA256(payload_bytes))]
+signing_input = UTF8(join(".", map(base64url_utf8, signed_fields)))
+signature = Ed25519.sign(device_private_key, signing_input)
+aad = signing_input_without_payload_digest  // cùng quy tắc mã hóa, nhãn "aad"
+{ciphertext, tag} = AES-256-GCM.encrypt(K_request, nonce, plaintext, aad)</code></pre>
+    <p class="small">Các thành phần <code>base64url_utf8</code> chỉ chứa chữ, số, <code>-</code>, <code>_</code>, nên dấu chấm phân tách không mơ hồ. AAD phải có nhãn miền riêng, cùng version, hướng, method, path, timestamp, request ID, session ID và hash token; không dùng lại byte chữ ký như AAD. Viết test vector byte chính xác cho Dart/Python trước khi triển khai.</p>
+    <h3>4.3 · Nonce, replay và idempotency</h3>
+    <div class="diagram-grid">
+      <figure class="diagram"><h3>Chống phát lại một request</h3><div class="diagram-scroll"><svg viewBox="0 0 900 870" width="900" role="img" aria-label="Sơ đồ khối chống replay: xác thực mật mã trước; sai thì từ chối không chiếm jti; đúng thì Redis SET NX; jti cũ hoặc Redis lỗi thì từ chối; jti mới vào nghiệp vụ."><defs><marker id="replay-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+        <rect class="ui" x="300" y="30" width="300" height="60" rx="7"/><text x="450" y="65" text-anchor="middle">Request ID + timestamp + DPoP</text><path class="edge" d="M450 90V142" marker-end="url(#replay-arrow)"/>
+        <rect class="proc" x="270" y="150" width="360" height="75" rx="7"/><text x="450" y="181" text-anchor="middle">Token · proof · GCM · Ed25519</text><text class="small" x="450" y="202" text-anchor="middle">xác minh trước khi ghi replay</text><path class="edge" d="M450 225V272" marker-end="url(#replay-arrow)"/>
+        <polygon class="warn" points="450,280 610,345 450,410 290,345"/><text x="450" y="350" text-anchor="middle">Hợp lệ?</text>
+        <path class="edge" d="M290 345H140V472" marker-end="url(#replay-arrow)"/><text class="edge-label" x="208" y="334">Không</text><rect class="bad" x="40" y="480" width="200" height="70" rx="7"/><text x="140" y="508" text-anchor="middle">Từ chối</text><text class="small" x="140" y="530" text-anchor="middle">không chiếm jti</text>
+        <path class="edge" d="M450 410V472" marker-end="url(#replay-arrow)"/><text class="edge-label" x="472" y="449">Có</text><rect class="store" x="300" y="480" width="300" height="65" rx="7"/><text x="450" y="518" text-anchor="middle">Redis SET NX theo jti</text><path class="edge" d="M450 545V582" marker-end="url(#replay-arrow)"/>
+        <polygon class="warn" points="450,590 610,650 450,710 290,650"/><text x="450" y="655" text-anchor="middle">jti mới?</text>
+        <path class="edge" d="M290 650H140V752" marker-end="url(#replay-arrow)"/><text class="edge-label" x="198" y="638">Cũ / Redis lỗi</text><rect class="bad" x="40" y="760" width="200" height="65" rx="7"/><text x="140" y="798" text-anchor="middle">Từ chối request</text>
+        <path class="edge" d="M610 650H760V752" marker-end="url(#replay-arrow)"/><text class="edge-label" x="686" y="638">Mới</text><rect class="good" x="660" y="760" width="200" height="65" rx="7"/><text x="760" y="798" text-anchor="middle">Vào nghiệp vụ</text>
+      </svg></div><figcaption>Replay cache dùng chung mọi replica; Redis lỗi thì route bảo vệ từ chối.</figcaption></figure>
+      <figure class="diagram"><h3>Retry hợp lệ của thao tác ghi</h3><div class="diagram-scroll"><svg viewBox="0 0 900 870" width="900" role="img" aria-label="Sơ đồ khối idempotency: tra khóa bền vững trong transaction; khóa chưa có thì thực hiện và lưu kết quả; đã có thì so hash payload, giống trả kết quả cũ, khác trả 409."><defs><marker id="idem-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+        <rect class="ui" x="300" y="30" width="300" height="60" rx="7"/><text x="450" y="65" text-anchor="middle">Retry + idempotency_key</text><path class="edge" d="M450 90V137" marker-end="url(#idem-arrow)"/>
+        <rect class="store" x="280" y="145" width="340" height="70" rx="7"/><text x="450" y="175" text-anchor="middle">Tra khóa bền vững</text><text class="small" x="450" y="196" text-anchor="middle">trong transaction nghiệp vụ</text><path class="edge" d="M450 215V252" marker-end="url(#idem-arrow)"/>
+        <polygon class="warn" points="450,260 610,320 450,380 290,320"/><text x="450" y="325" text-anchor="middle">Khóa đã có?</text>
+        <path class="edge" d="M290 320H150V442" marker-end="url(#idem-arrow)"/><text class="edge-label" x="215" y="308">Chưa</text><rect class="proc" x="40" y="450" width="220" height="75" rx="7"/><text x="150" y="481" text-anchor="middle">Thực hiện tác vụ</text><text class="small" x="150" y="503" text-anchor="middle">lưu kết quả cùng transaction</text>
+        <path class="edge" d="M450 380V457" marker-end="url(#idem-arrow)"/><text class="edge-label" x="472" y="420">Có</text><polygon class="warn" points="450,465 610,525 450,585 290,525"/><text x="450" y="520" text-anchor="middle">Hash payload</text><text x="450" y="539" text-anchor="middle">giống?</text>
+        <path class="edge" d="M150 525V672" marker-end="url(#idem-arrow)"/><rect class="good" x="40" y="680" width="220" height="65" rx="7"/><text x="150" y="718" text-anchor="middle">Trả kết quả mới</text>
+        <path class="edge" d="M450 585V672" marker-end="url(#idem-arrow)"/><text class="edge-label" x="472" y="634">Khác</text><rect class="bad" x="330" y="680" width="240" height="65" rx="7"/><text x="450" y="718" text-anchor="middle">HTTP 409</text>
+        <path class="edge" d="M610 525H770V672" marker-end="url(#idem-arrow)"/><text class="edge-label" x="686" y="513">Giống</text><rect class="good" x="660" y="680" width="220" height="65" rx="7"/><text x="770" y="718" text-anchor="middle">Trả kết quả cũ</text>
+        <text class="small" x="450" y="816" text-anchor="middle">Request ID chống replay khác khóa idempotency.</text>
+      </svg></div><figcaption>TTL ngắn của replay cache không thay thế bản ghi idempotency bền vững.</figcaption></figure>
+    </div>
+    <ul>
+      <li>Nonce AES-GCM tạo bằng CSPRNG, 96 bit, <strong>không được lặp với cùng key</strong>. Hai chiều dùng key khác nhau; xoay key trước 2<sup>20</sup> lần mã hóa mỗi chiều hoặc khi hết TTL, tùy điều kiện nào tới trước. Giới hạn này là chính sách v1 bảo thủ, phải xác nhận bằng phân tích lưu lượng thực tế.</li>
+      <li>Chấp nhận proof trong cửa sổ ví dụ ±60 giây nếu đồng hồ đồng bộ. Nếu đồng hồ di động lệch nhiều, dùng <code>DPoP-Nonce</code> do server phát theo RFC 9449; thông báo thời gian server và retry an toàn.</li>
+      <li>Chỉ sau khi xác thực token, proof, tag và chữ ký mới đánh dấu <code>jti</code> đã dùng bằng Redis <code>SET key value NX EX ttl</code>. Key có namespace theo token/key ID và hash request ID, TTL dài hơn toàn bộ khoảng proof có thể được nhận. Redis lỗi thì từ chối các route bảo vệ; không tự động cho qua.</li>
+      <li>Với thao tác ghi có hiệu ứng tài chính, lưu <code>idempotency_key</code>, hash payload, trạng thái và kết quả trong kho bền vững cùng transaction nghiệp vụ. Retry cùng khóa và cùng payload trả kết quả cũ; cùng khóa nhưng payload khác trả 409. Request ID chống replay <em>khác</em> khóa idempotency cho retry hợp lệ.</li>
+    </ul>
+    <h3>4.4 · Response và padding</h3>
+    <p>Server mã hóa <strong>cả thành công và lỗi sau xác thực</strong> bằng <code>K_response</code> và nonce mới. AAD response gắn version, nhãn <code>res</code>, method/path, request ID, session ID và HTTP status; app xác minh tag trước khi parse JSON. Lỗi xảy ra trước khi biết session key trả mã lỗi tối giản qua TLS, không phản chiếu token, proof hoặc chi tiết xác thực. Response có thể ký bằng khóa server khi cần chứng cứ hai chiều; AES-GCM một mình chỉ chứng minh bên giữ session key đã tạo dữ liệu.</p>
+    <p>Padding đặt <em>bên trong plaintext trước mã hóa</em> theo các bucket kích thước có giới hạn (ví dụ 256/512/1024 byte), ghi chiều dài payload thật trong phần được mã hóa. Giới hạn payload lớn, đo overhead và tránh nén trước mã hóa trên dữ liệu có lẫn secret do rủi ro rò rỉ độ dài. Padding không che metadata hoặc thời điểm request.</p>
+    <h3>4.5 · Xác nhận thao tác nhạy cảm</h3>
+    <figure class="diagram"><h3>Luồng bảo vệ thao tác nhạy cảm</h3><div class="diagram-scroll"><svg viewBox="0 0 1040 790" width="1040" role="img" aria-label="Sơ đồ khối: request qua HTTPS và middleware; route nhạy cảm nhận challenge gắn với thao tác; người dùng xác nhận trên app; server kiểm proof dùng một lần và quyền nghiệp vụ trước khi thực hiện và ghi audit; nhánh sai bị từ chối.">
+      <defs><marker id="sensitive-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+      <text class="phase-label" x="24" y="24">APP / NGƯỜI DÙNG</text><text class="phase-label" x="385" y="24">MIDDLEWARE + SERVER</text><text class="phase-label" x="805" y="24">NGHIỆP VỤ</text>
+      <rect class="ui" x="25" y="55" width="270" height="70" rx="8"/><text x="160" y="84" text-anchor="middle">Gửi thao tác qua HTTPS</text><text class="small" x="160" y="105" text-anchor="middle">token + DPoP + request ID mới</text>
+      <rect class="proc" x="380" y="55" width="330" height="70" rx="8"/><text x="545" y="84" text-anchor="middle">Kiểm token, chữ ký, replay</text><text class="small" x="545" y="105" text-anchor="middle">và giải mã request</text>
+      <path class="edge" d="M295 90H374" marker-end="url(#sensitive-arrow)"/><path class="edge" d="M545 125V155" marker-end="url(#sensitive-arrow)"/>
+      <polygon class="warn" points="545,160 700,210 545,260 390,210"/><text x="545" y="206" text-anchor="middle">Route nhạy cảm?</text>
+      <path class="edge" d="M700 210H910V341" marker-end="url(#sensitive-arrow)"/><text class="edge-label" x="748" y="199">Không</text>
+      <rect class="proc" x="380" y="292" width="330" height="72" rx="8"/><text x="545" y="318" text-anchor="middle">Tạo challenge dùng một lần</text><text class="small" x="545" y="341" text-anchor="middle">gắn người, máy, thao tác, hash tham số</text>
+      <path class="edge" d="M545 260V286" marker-end="url(#sensitive-arrow)"/><text class="edge-label" x="566" y="278">Có</text>
+      <rect class="ui" x="25" y="292" width="270" height="130" rx="8"/><text x="160" y="320" text-anchor="middle">Hiển thị nội dung xác nhận</text><text x="160" y="343" text-anchor="middle">Sinh trắc học / khóa màn hình</text><text class="small" x="160" y="369" text-anchor="middle">khóa riêng cho thao tác nhạy cảm</text><text class="small" x="160" y="390" text-anchor="middle">ký challenge sau xác thực</text>
+      <path class="edge" d="M374 328H301" marker-end="url(#sensitive-arrow)"/><path class="edge" d="M295 392H335V457H374" marker-end="url(#sensitive-arrow)"/>
+      <rect class="proc" x="380" y="430" width="330" height="72" rx="8"/><text x="545" y="456" text-anchor="middle">Kiểm proof và challenge</text><text class="small" x="545" y="479" text-anchor="middle">TTL · binding · hash · dùng một lần</text>
+      <path class="edge" d="M545 502V526" marker-end="url(#sensitive-arrow)"/>
+      <polygon class="warn" points="545,532 700,580 545,628 390,580"/><text x="545" y="576" text-anchor="middle">Xác nhận hợp lệ?</text>
+      <path class="edge" d="M390 580H305" marker-end="url(#sensitive-arrow)"/><text class="edge-label" x="342" y="570">Không</text><rect class="bad" x="25" y="548" width="270" height="65" rx="8"/><text x="160" y="586" text-anchor="middle">Từ chối · không thực hiện</text>
+      <path class="edge" d="M700 580H750V381H799" marker-end="url(#sensitive-arrow)"/><text class="edge-label" x="724" y="570">Có</text>
+      <rect class="good" x="805" y="347" width="210" height="68" rx="8"/><text x="910" y="375" text-anchor="middle">Kiểm quyền nghiệp vụ</text><text class="small" x="910" y="396" text-anchor="middle">chủ máy / nhân viên</text>
+      <path class="edge" d="M910 415V460" marker-end="url(#sensitive-arrow)"/>
+      <rect class="good" x="805" y="466" width="210" height="68" rx="8"/><text x="910" y="493" text-anchor="middle">Thực hiện thao tác</text><text class="small" x="910" y="515" text-anchor="middle">nếu còn quyền hợp lệ</text>
+      <path class="edge" d="M910 534V636H545V658" marker-end="url(#sensitive-arrow)"/>
+      <rect class="store" x="380" y="664" width="330" height="72" rx="8"/><text x="545" y="691" text-anchor="middle">Ghi audit và trả kết quả</text><text class="small" x="545" y="714" text-anchor="middle">không ghi token hoặc dữ liệu nhạy cảm thô</text>
+    </svg></div><figcaption>Request thường đi thẳng tới kiểm quyền nghiệp vụ. Request nhạy cảm phải có xác nhận riêng cho đúng nội dung thao tác; mọi lần gửi lại dùng request ID mới.</figcaption></figure>
+    <p>Routing gắn nhãn các thao tác cần xác nhận bổ sung, ví dụ chia sẻ hoặc gỡ máy, đổi quyền và đổi thông tin bảo mật. Sau middleware, feature vẫn kiểm quyền hiện hành và yêu cầu một xác nhận mới cho đúng thao tác; chữ ký DPoP chỉ chứng minh quyền dùng khóa thiết bị, không chứng minh người dùng vừa đồng ý.</p>
+    <ol>
+      <li>Server tạo challenge ngẫu nhiên dùng một lần, TTL ngắn, gắn với <code>user_id</code>, <code>device_id</code>, loại thao tác và hash của tham số đã chuẩn hóa. App hiển thị đúng nội dung cần xác nhận trước khi người dùng xác thực bằng sinh trắc học mạnh hoặc khóa màn hình; nếu dùng khóa Keystore yêu cầu xác thực cho từng lần ký, app ký challenge bằng khóa riêng dành cho thao tác nhạy cảm. Không dùng lại khóa DPoP tự động cho bước xác nhận này.</li>
+      <li>Server kiểm chữ ký, binding, thời hạn, hash tham số và trạng thái challenge; tiêu thụ challenge một cách nguyên tử trước khi chạy thao tác. Với thiết bị không hỗ trợ khóa xác thực mỗi lần dùng, chính sách fallback phải được định nghĩa riêng theo mức rủi ro, chẳng hạn xác thực lại với server; một cờ <code>biometric_ok</code> do app tự gửi không đủ làm bằng chứng.</li>
+      <li>Ghi audit cho kết quả xác nhận và thao tác: người dùng, thiết bị, key ID, loại thao tác, hash tham số, thời gian server và kết quả; tránh ghi secret hoặc dữ liệu nhạy cảm thô. Khóa dùng để xác nhận có vòng đời thu hồi riêng hoặc bị thu hồi cùng thiết bị.</li>
+    </ol>
+    <h3>4.6 · Tín hiệu toàn vẹn app và thiết bị</h3>
+    <figure class="diagram"><h3>Đăng ký khóa và đánh giá rủi ro thiết bị</h3><div class="diagram-scroll"><svg viewBox="0 0 1040 620" width="1040" role="img" aria-label="Sơ đồ khối: app thử tạo khóa ký trong Android Keystore; server kiểm chứng khả năng bảo vệ và lưu public key; Play Integrity là tín hiệu rủi ro tùy chọn; chính sách route quyết định tiếp tục, xác nhận mạnh hơn hoặc từ chối.">
+      <defs><marker id="device-risk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+      <text class="phase-label" x="25" y="24">ĐĂNG KÝ THIẾT BỊ</text><text class="phase-label" x="542" y="24">REQUEST CẦN ĐÁNH GIÁ RỦI RO</text>
+      <rect class="ui" x="25" y="56" width="290" height="72" rx="8"/><text x="170" y="84" text-anchor="middle">App tạo khóa ký</text><text class="small" x="170" y="106" text-anchor="middle">thử đúng thuật toán trên thiết bị</text>
+      <path class="edge" d="M170 128V158" marker-end="url(#device-risk-arrow)"/>
+      <rect class="proc" x="25" y="164" width="290" height="82" rx="8"/><text x="170" y="192" text-anchor="middle">Server kiểm attestation nếu có</text><text class="small" x="170" y="214" text-anchor="middle">challenge · chuỗi tin cậy · mức bảo vệ</text><text class="small" x="170" y="232" text-anchor="middle">và thuật toán thực tế</text>
+      <path class="edge" d="M170 246V274" marker-end="url(#device-risk-arrow)"/>
+      <polygon class="warn" points="170,280 310,330 170,380 30,330"/><text x="170" y="326" text-anchor="middle">Đạt chính sách</text><text x="170" y="345" text-anchor="middle">khóa thiết bị?</text>
+      <path class="edge" d="M310 330H393" marker-end="url(#device-risk-arrow)"/><text class="edge-label" x="343" y="320">Không</text><rect class="bad" x="400" y="296" width="175" height="68" rx="8"/><text x="487" y="324" text-anchor="middle">Không đăng ký</text><text class="small" x="487" y="345" text-anchor="middle">hoặc profile riêng</text>
+      <path class="edge" d="M170 380V410" marker-end="url(#device-risk-arrow)"/><text class="edge-label" x="191" y="401">Có</text>
+      <rect class="store" x="25" y="416" width="290" height="72" rx="8"/><text x="170" y="444" text-anchor="middle">Lưu public key + binding</text><text class="small" x="170" y="466" text-anchor="middle">user · device · key ID · thu hồi</text>
+      <rect class="ui" x="620" y="56" width="300" height="72" rx="8"/><text x="770" y="84" text-anchor="middle">Request đã qua DPoP</text><text class="small" x="770" y="106" text-anchor="middle">route rủi ro cao / đăng ký thiết bị</text>
+      <path class="edge" d="M770 128V158" marker-end="url(#device-risk-arrow)"/>
+      <rect class="proc" x="620" y="164" width="300" height="82" rx="8"/><text x="770" y="192" text-anchor="middle">Play Integrity nếu áp dụng</text><text class="small" x="770" y="214" text-anchor="middle">verdict mới, gắn challenge</text><text class="small" x="770" y="232" text-anchor="middle">và ngữ cảnh thao tác</text>
+      <path class="edge" d="M770 246V274" marker-end="url(#device-risk-arrow)"/>
+      <polygon class="warn" points="770,280 920,330 770,380 620,330"/><text x="770" y="326" text-anchor="middle">Chính sách rủi ro</text><text x="770" y="345" text-anchor="middle">theo route?</text>
+      <path class="edge" d="M620 330H584V414" marker-end="url(#device-risk-arrow)"/><text class="edge-label" x="585" y="319">Cho qua</text>
+      <rect class="good" x="455" y="420" width="220" height="68" rx="8"/><text x="565" y="448" text-anchor="middle">Tiếp tục kiểm quyền</text><text class="small" x="565" y="469" text-anchor="middle">và xử lý nghiệp vụ</text>
+      <path class="edge" d="M770 380V414" marker-end="url(#device-risk-arrow)"/><text class="edge-label" x="791" y="402">Tăng xác nhận</text>
+      <rect class="warn" x="690" y="420" width="230" height="68" rx="8"/><text x="805" y="448" text-anchor="middle">Xác nhận thêm</text><text class="small" x="805" y="469" text-anchor="middle">theo sơ đồ thao tác nhạy cảm</text>
+      <path class="edge" d="M920 330H959V414" marker-end="url(#device-risk-arrow)"/><text class="edge-label" x="930" y="320">Chặn</text>
+      <rect class="bad" x="925" y="420" width="100" height="68" rx="8"/><text x="975" y="459" text-anchor="middle">Từ chối</text>
+      <text class="small" x="520" y="566" text-anchor="middle">Play Integrity là tín hiệu rủi ro; quyền nghiệp vụ và khóa thiết bị vẫn được kiểm riêng.</text>
+    </svg></div><figcaption>Hai nhánh có vai trò khác nhau: khóa thiết bị chứng minh quyền giữ khóa; verdict toàn vẹn hỗ trợ quyết định rủi ro theo route.</figcaption></figure>
+    <p>Nếu phát hành qua Google Play, có thể kiểm tra Play Integrity tại đăng ký thiết bị và các thao tác rủi ro cao. App gắn <code>requestHash</code> hoặc nonce với challenge và ngữ cảnh thao tác; server xác minh verdict, đối chiếu giá trị ràng buộc và chỉ chấp nhận verdict còn mới. Lưu mức tin cậy và chính sách xử lý theo từng route: cho qua, yêu cầu xác nhận mạnh hơn hoặc từ chối. Không coi verdict là danh tính người dùng, quyền máy hoặc chứng cứ khóa Ed25519 nằm trong phần cứng; không lưu cache verdict để dùng lại cho thao tác khác. Thiết bị ngoài Google Play cần chính sách tương thích được quyết định trước khi bật bắt buộc.</p>
+  </section>
+
+  <section id="flow">
+    <h2>5 · Chuỗi xử lý tại server</h2>
+    <figure class="diagram"><h3>5.1 · Đường vào request bảo vệ</h3><div class="diagram-scroll"><svg viewBox="0 0 1000 1040" width="1000" role="img" aria-label="Sơ đồ khối server: HTTPS, giới hạn header và body, kiểm profile, token DPoP và thời gian, giải mã AES-GCM, kiểm Ed25519, ghi Redis SET NX, rồi mới parse JSON và gọi controller. Mỗi quyết định sai rẽ sang nhánh từ chối."><defs><marker id="request-flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+      <rect class="ui" x="355" y="18" width="290" height="50" rx="7"/><text class="head" x="500" y="49" text-anchor="middle">HTTPS edge · request tới server</text><path class="edge" d="M500 68V94" marker-end="url(#request-flow-arrow)"/>
+      <rect class="proc" x="335" y="100" width="330" height="58" rx="7"/><text x="500" y="125" text-anchor="middle">Route/profile · body/header limit</text><text class="small" x="500" y="145" text-anchor="middle">Content-Type · field/header lặp</text><path class="edge" d="M500 158V183" marker-end="url(#request-flow-arrow)"/>
+      <polygon class="warn" points="500,190 650,238 500,286 350,238"/><text x="500" y="233" text-anchor="middle">Profile + định dạng</text><text x="500" y="250" text-anchor="middle">hợp lệ?</text>
+      <path class="edge" d="M650 238H778" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="713" y="228">Không</text><rect class="bad" x="784" y="211" width="190" height="54" rx="7"/><text x="879" y="243" text-anchor="middle">Từ chối qua TLS</text>
+      <path class="edge" d="M500 286V312" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="521" y="302">Có</text>
+      <rect class="proc" x="335" y="318" width="330" height="58" rx="7"/><text x="500" y="343" text-anchor="middle">Access token · session · DPoP</text><text class="small" x="500" y="363" text-anchor="middle">alg, typ, htm, htu, ath, jkt, thời gian</text><path class="edge" d="M500 376V401" marker-end="url(#request-flow-arrow)"/>
+      <polygon class="warn" points="500,408 650,456 500,504 350,456"/><text x="500" y="451" text-anchor="middle">Token/proof/phiên</text><text x="500" y="468" text-anchor="middle">hợp lệ?</text>
+      <path class="edge" d="M650 456H778" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="713" y="446">Không</text><rect class="bad" x="784" y="429" width="190" height="54" rx="7"/><text x="879" y="461" text-anchor="middle">Từ chối xác thực</text>
+      <path class="edge" d="M500 504V530" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="521" y="520">Có</text>
+      <rect class="proc" x="335" y="536" width="330" height="58" rx="7"/><text x="500" y="561" text-anchor="middle">AES-GCM + AAD · chữ ký Ed25519</text><text class="small" x="500" y="581" text-anchor="middle">payload bytes + metadata; chưa ghi jti</text><path class="edge" d="M500 594V619" marker-end="url(#request-flow-arrow)"/>
+      <polygon class="warn" points="500,626 650,674 500,722 350,674"/><text x="500" y="669" text-anchor="middle">Tag + chữ ký</text><text x="500" y="686" text-anchor="middle">đúng?</text>
+      <path class="edge" d="M650 674H778" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="713" y="664">Sai</text><rect class="bad" x="784" y="647" width="190" height="54" rx="7"/><text x="879" y="679" text-anchor="middle">Từ chối mật mã</text>
+      <path class="edge" d="M500 722V744" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="521" y="739">Đúng</text>
+      <rect class="store" x="355" y="750" width="290" height="50" rx="7"/><text x="500" y="780" text-anchor="middle">Redis SET NX theo jti</text><path class="edge" d="M500 800V825" marker-end="url(#request-flow-arrow)"/>
+      <polygon class="warn" points="500,832 650,880 500,928 350,880"/><text x="500" y="885" text-anchor="middle">jti mới?</text>
+      <path class="edge" d="M650 880H778" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="706" y="870">Cũ / Redis lỗi</text><rect class="bad" x="784" y="853" width="190" height="54" rx="7"/><text x="879" y="885" text-anchor="middle">Từ chối replay</text>
+      <path class="edge" d="M500 928V952" marker-end="url(#request-flow-arrow)"/><text class="edge-label" x="521" y="946">Mới</text>
+      <rect class="good" x="335" y="958" width="330" height="64" rx="7"/><text x="500" y="984" text-anchor="middle">Parse JSON · schema · quyền</text><text class="small" x="500" y="1004" text-anchor="middle">idempotency bền vững → controller hiện tại</text>
+    </svg></div><figcaption>Giới hạn định dạng trước thao tác tốn tài nguyên. Chỉ sau xác thực token, tag và chữ ký mới ghi replay cache; các module vẫn kiểm quyền nghiệp vụ.</figcaption></figure>
+    <figure class="diagram"><h3>5.2 · Response và nhánh lỗi</h3><div class="diagram-scroll"><svg viewBox="0 0 1000 600" width="1000" role="img" aria-label="Sơ đồ khối response: nếu chưa biết session key thì trả lỗi tối giản qua TLS; nếu đã xác thực thì kết quả thành công hoặc lỗi nghiệp vụ được mã hóa bằng K_response, nonce mới và AAD có status; app kiểm tag trước parse JSON."><defs><marker id="response-flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+      <rect class="ui" x="365" y="20" width="270" height="50" rx="7"/><text x="500" y="51" text-anchor="middle">Server chuẩn bị response</text><path class="edge" d="M500 70V100" marker-end="url(#response-flow-arrow)"/>
+      <polygon class="warn" points="500,107 640,157 500,207 360,157"/><text x="500" y="152" text-anchor="middle">Đã biết session key</text><text x="500" y="170" text-anchor="middle">sau xác thực?</text>
+      <path class="edge" d="M640 157H780" marker-end="url(#response-flow-arrow)"/><text class="edge-label" x="705" y="147">Không</text><rect class="bad" x="786" y="128" width="190" height="58" rx="7"/><text x="881" y="153" text-anchor="middle">Lỗi tối giản qua TLS</text><text class="small" x="881" y="172" text-anchor="middle">không lộ proof/token</text>
+      <path class="edge" d="M500 207V236" marker-end="url(#response-flow-arrow)"/><text class="edge-label" x="522" y="226">Có</text>
+      <rect class="proc" x="345" y="242" width="310" height="60" rx="7"/><text x="500" y="267" text-anchor="middle">Kết quả hoặc lỗi nghiệp vụ</text><text class="small" x="500" y="287" text-anchor="middle">JSON + HTTP status từ controller</text><path class="edge" d="M500 302V330" marker-end="url(#response-flow-arrow)"/>
+      <rect class="proc" x="325" y="336" width="350" height="66" rx="7"/><text x="500" y="362" text-anchor="middle">AES-GCM: K_response + nonce mới</text><text class="small" x="500" y="383" text-anchor="middle">AAD gắn version, res, path, request ID, sid, status</text><path class="edge" d="M500 402V430" marker-end="url(#response-flow-arrow)"/>
+      <rect class="ui" x="345" y="436" width="310" height="52" rx="7"/><text x="500" y="466" text-anchor="middle">App kiểm tag trước parse JSON</text><path class="edge" d="M500 488V512" marker-end="url(#response-flow-arrow)"/>
+      <polygon class="warn" points="500,518 590,550 500,582 410,550"/><text x="500" y="555" text-anchor="middle">Tag đúng?</text>
+      <path class="edge" d="M410 550H260" marker-end="url(#response-flow-arrow)"/><text class="edge-label" x="329" y="540">Không</text><rect class="bad" x="70" y="525" width="184" height="50" rx="7"/><text x="162" y="555" text-anchor="middle">Bỏ response</text>
+      <path class="edge" d="M590 550H740" marker-end="url(#response-flow-arrow)"/><text class="edge-label" x="650" y="540">Có</text><rect class="good" x="746" y="525" width="184" height="50" rx="7"/><text x="838" y="555" text-anchor="middle">Đọc kết quả</text>
+    </svg></div><figcaption>Thành công và lỗi <em>sau xác thực</em> đều mã hóa. Không log plaintext, token hoặc chi tiết giải mã.</figcaption></figure>
+    <div class="callout warn"><strong>Thứ tự quan trọng:</strong> Kiểm tra định dạng và giới hạn kích thước trước thao tác tốn tài nguyên; chỉ ghi cache replay sau xác thực mật mã để request giả không chiếm ID hợp lệ. Có thể kiểm tồn tại replay trước để tối ưu, nhưng kết quả cuối vẫn phải được xác nhận atomically bằng <code>SET NX</code> sau xác thực.</div>
+    <p>Phân quyền theo chủ máy/nhân viên vẫn do flow hiện có kiểm tra. Middleware không suy ra quyền nghiệp vụ từ chữ ký hoặc token. Không log plaintext, token, khóa, signature hay lỗi giải mã chi tiết; log request ID, key ID, loại lỗi và thời gian với chính sách lưu giữ phù hợp.</p>
+  </section>
+
+  <section id="integration">
+    <h2>6 · Gắn với cấu trúc FlexMix hiện tại</h2>
+    <figure class="diagram"><h3>6.1 · Vị trí middleware trong repo</h3><div class="diagram-scroll"><svg viewBox="0 0 1000 640" width="1000" role="img" aria-label="Sơ đồ khối tích hợp: ServerClient của app gửi HTTPS vào http_server và http_json; routing quyết định route có bắt buộc secure profile; nhánh có qua middleware rồi service hiện tại; nhánh máy và GET cần hợp đồng riêng."><defs><marker id="integration-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+      <rect class="ui" x="345" y="20" width="310" height="64" rx="7"/><text x="500" y="45" text-anchor="middle">app/.../core/server_client.dart</text><text class="small" x="500" y="65" text-anchor="middle">DPoP · ký · mã hóa/giải mã tập trung</text><path class="edge" d="M500 84V115" marker-end="url(#integration-arrow)"/><text class="edge-label" x="525" y="107">HTTPS</text>
+      <rect class="proc" x="345" y="121" width="310" height="64" rx="7"/><text x="500" y="146" text-anchor="middle">server/lib/http/http_server.py</text><text class="small" x="500" y="166" text-anchor="middle">http_json.py đọc/ghi trong context</text><path class="edge" d="M500 185V216" marker-end="url(#integration-arrow)"/>
+      <polygon class="warn" points="500,223 650,278 500,333 350,278"/><text x="500" y="272" text-anchor="middle">routing.py: route</text><text x="500" y="290" text-anchor="middle">bắt buộc profile?</text>
+      <path class="edge" d="M650 278H750V326" marker-end="url(#integration-arrow)"/><text class="edge-label" x="698" y="267">Chưa</text>
+      <rect class="warn" x="758" y="332" width="220" height="80" rx="7"/><text x="868" y="357" text-anchor="middle">Giao thức riêng / rollout</text><text class="small" x="868" y="377" text-anchor="middle">/machine/* và GET trạng thái</text><text class="small" x="868" y="394" text-anchor="middle">không tự áp profile app POST</text>
+      <path class="edge" d="M500 333V362" marker-end="url(#integration-arrow)"/><text class="edge-label" x="521" y="352">Có</text>
+      <rect class="proc" x="335" y="368" width="330" height="84" rx="7"/><text x="500" y="393" text-anchor="middle">Crypto middleware tại HTTP chung</text><text class="small" x="500" y="413" text-anchor="middle">token/DPoP · GCM · Ed25519 · replay</text><text class="small" x="500" y="432" text-anchor="middle">bao cả response và nhánh lỗi</text><path class="edge" d="M500 452V484" marker-end="url(#integration-arrow)"/>
+      <rect class="good" x="335" y="490" width="330" height="72" rx="7"/><text x="500" y="517" text-anchor="middle">server/service/* → handle(request)</text><text class="small" x="500" y="538" text-anchor="middle">giữ kiểm quyền và nghiệp vụ hiện có</text>
+      <text class="small" x="500" y="605" text-anchor="middle">Bật profile theo route; route đã bật không được tự downgrade.</text>
+    </svg></div><figcaption>Đây là sơ đồ tích hợp <strong>dự kiến</strong>. Tài liệu chưa thay đổi mã nguồn vận hành.</figcaption></figure>
+    <div class="scroll"><table>
+      <thead><tr><th>Hiện trạng đã đọc</th><th>Điểm tích hợp dự kiến</th></tr></thead>
+      <tbody>
+        <tr><td><code>server/lib/http/http_server.py</code> duyệt các module bằng <code>handle(request)</code>.</td><td>Lớp bảo vệ đặt ở HTTP transport chung trước gọi module; giữ route và cửa vào module. Định nghĩa route nào bắt buộc profile ở cấu hình routing, không để từng feature tự giải mã.</td></tr>
+        <tr><td><code>server/lib/http/http_json.py</code> đọc/ghi JSON trực tiếp; mỗi feature gọi helper này.</td><td>Cần API đọc/ghi có context bảo mật hoặc wrapper request/response; không chỉ thay riêng <code>read_json</code> vì phải mã hóa mọi đường trả lỗi.</td></tr>
+        <tr><td><code>server/lib/security/user_session.py</code> phát token opaque 32 byte, lưu hash trong SQLite; token hiện nằm trong body.</td><td>Giữ token opaque nếu muốn, thêm binding key/session và chuyển token sang Authorization. Trong giai đoạn tương thích, adapter loại bỏ trường <code>token</code> khỏi payload đã giải mã rồi truyền danh tính vào flow theo hợp đồng đã chốt; cập nhật các bên gọi và test đồng thời.</td></tr>
+        <tr><td><code>app/flutter_app/lib/core/server_client.dart</code> là transport chung; hiện cho phép <code>http://</code>.</td><td>Đóng gói DPoP, mã hóa/giải mã tại transport; production chỉ chấp nhận HTTPS. Khóa riêng quản lý bằng secure storage/keystore phù hợp nền tảng; feature vẫn gửi JSON nghiệp vụ.</td></tr>
+        <tr><td>Máy dùng <code>machine/server_connection/*</code> và các route <code>/machine/*</code>; app có một GET <code>/machine/trang-thai</code>.</td><td>Thiết kế định danh khóa, bắt tay và rollout <em>riêng</em> cho máy. Không áp profile app POST lên heartbeat/long-poll hoặc GET trước khi định nghĩa hợp đồng của chúng.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Thứ tự triển khai: (1) HTTPS, kiểm quyền và định danh thiết bị, gồm kiểm chứng khả năng Keystore trên máy mục tiêu; (2) token binding/DPoP với replay cache, vòng đời token và thu hồi khóa; (3) xác nhận thao tác nhạy cảm và audit; (4) chỉ khi có yêu cầu bảo vệ payload sau TLS termination mới thêm handshake, AES-GCM hai chiều, chữ ký payload/response và padding; (5) bổ sung Play Integrity theo chính sách rủi ro nếu phát hành qua Google Play; (6) chuyển từng route sang bắt buộc profile và xóa đường cũ. Không chấp nhận downgrade tự động nếu route đã bật profile.</p>
+  </section>
+
+  <section id="operation">
+    <h2>7 · Quản trị khóa và vận hành</h2>
+    <ul>
+      <li>Khóa server định danh lưu trong KMS/HSM hoặc kho khóa có kiểm soát; có <code>key_id</code>, phiên bản, quy trình xoay khóa và thời gian overlap. Public key app có trạng thái thu hồi; đăng xuất, mất thiết bị, đổi mật khẩu hoặc nghi ngờ xâm nhập phải vô hiệu hóa phiên/khóa liên quan.</li>
+      <li>Nếu cần chứng cứ chống chối bỏ, lưu bản ghi kiểm toán chống sửa đổi gồm hash payload, signing input, chữ ký, public key/key ID, kết quả xác minh, danh tính đã xác thực và thời gian server nhận. Chứng cứ phải có chính sách lưu giữ, kiểm soát truy cập và quy trình xử lý khi khóa thiết bị bị chiếm; không lưu token hoặc payload nhạy cảm trong log thông thường.</li>
+      <li>Khóa phiên chỉ tồn tại trong TTL cần thiết, không ghi log hay sao lưu plaintext. Nếu cần lưu để phục hồi server, phải mã hóa bằng key wrapping và ghi rõ ảnh hưởng đến PFS; ưu tiên tạo phiên mới sau restart.</li>
+      <li>Redis replay là thành phần nhất quán dùng chung giữa mọi replica; không dùng cache cục bộ riêng lẻ. Giám sát tỉ lệ lỗi proof, tag, clock skew, replay, xoay khóa và độ trễ; không gộp lỗi xác thực vào thông tin trả client.</li>
+      <li>Access token có TTL ngắn, scope và audience tối thiểu; refresh token của app được ràng buộc với thiết bị hoặc xoay vòng và phát hiện reuse. Đăng xuất, mất máy, đổi mật khẩu và đổi quyền phải vô hiệu hóa token, phiên, khóa liên quan; server kiểm trạng thái thu hồi trên mỗi request bảo vệ.</li>
+      <li>Android Keystore và key attestation chỉ được coi là đạt yêu cầu khi kiểm chứng được chuỗi chứng chỉ, challenge, mức bảo vệ và thuật toán trên thiết bị thực. Khi khóa mất hoặc bị vô hiệu hóa, yêu cầu đăng ký lại qua luồng xác thực; không khôi phục khóa riêng từ backup ứng dụng.</li>
+      <li>Đánh giá “chuẩn ngân hàng/tài chính” theo tiêu chuẩn áp dụng cụ thể (ví dụ quy định tổ chức, PCI DSS/FIPS nếu có). Tài liệu này không tự chứng minh đạt một chứng nhận.</li>
+    </ul>
+  </section>
+
+  <section id="acceptance">
+    <h2>8 · Điều kiện nghiệm thu và kiểm thử</h2>
+    <ol>
+      <li>Test vector liên ngôn ngữ Dart/Python cho HKDF, ký Ed25519, DPoP, AAD, AES-GCM, base64url và response status; byte đầu vào/đầu ra phải khớp.</li>
+      <li>Kiểm thử thay đổi từng byte của token, method, path, timestamp, request ID, session ID, ciphertext, tag, payload, status; tất cả trường hợp liên quan phải bị từ chối trước controller.</li>
+      <li>Thử replay đồng thời qua nhiều server, Redis mất kết nối, clock skew, retry hợp lệ với idempotency key, crash ở ranh giới transaction và rotate/revoke key.</li>
+      <li>Kiểm thử giới hạn body/header, JSON malformed, header lặp, path do proxy sửa, thiết bị mất khóa, sai phiên; không rò plaintext/token trong log, crash report và response lỗi.</li>
+      <li>Thử challenge nhạy cảm hết hạn, tái sử dụng, đổi tham số, đổi người dùng/thiết bị và hai request đồng thời; thao tác chỉ chạy sau khi xác nhận hợp lệ và kiểm quyền thành công. Thử refresh token reuse, thu hồi giữa phiên và phạm vi quyền tối thiểu.</li>
+      <li>Trên các mẫu Android mục tiêu, xác minh thuật toán ký thực sự dùng được trong Keystore, mức bảo vệ phần cứng và attestation; thử thiếu Google Play, verdict cũ, sai <code>requestHash</code>, lỗi dịch vụ và chính sách fallback theo route.</li>
+      <li>Security review độc lập cho protocol và triển khai; chỉ bật bắt buộc sau khi migration app/server/machine liên quan hoàn tất và test hợp đồng cũ/mới cùng chạy.</li>
+    </ol>
+  </section>
+
+  <section id="sources">
+    <h2>9 · Tài liệu gốc tham khảo</h2>
+    <ul>
+      <li><a href="https://www.rfc-editor.org/rfc/rfc9449.html">RFC 9449 — OAuth 2.0 DPoP</a>: proof, token binding, replay, nonce.</li>
+      <li><a href="https://www.rfc-editor.org/rfc/rfc9421.html">RFC 9421 — HTTP Message Signatures</a> và <a href="https://www.rfc-editor.org/rfc/rfc9530.html">RFC 9530 — Digest Fields</a>: chuẩn thay thế nếu chuyển sang chữ ký HTTP chuẩn hóa ở phiên bản sau.</li>
+      <li><a href="https://www.rfc-editor.org/rfc/rfc7748.html">RFC 7748 — X25519</a>, <a href="https://www.rfc-editor.org/rfc/rfc5869.html">RFC 5869 — HKDF</a>, <a href="https://www.rfc-editor.org/rfc/rfc8032.html">RFC 8032 — Ed25519</a>.</li>
+      <li><a href="https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf">NIST SP 800-38D — GCM</a>: yêu cầu IV duy nhất, AAD và tag.</li>
+      <li><a href="https://www.rfc-editor.org/rfc/rfc8446.html">RFC 8446 — TLS 1.3</a>; <a href="https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html">OWASP Key Management Cheat Sheet</a>: nền tảng vận chuyển và vòng đời khóa.</li>
+      <li><a href="https://www.rfc-editor.org/rfc/rfc9700.html">RFC 9700 — OAuth 2.0 Security Best Current Practice</a>: token bound, scope/audience, refresh token rotation và giới hạn khi khóa bị chiếm.</li>
+      <li><a href="https://developer.android.com/privacy-and-security/keystore">Android Keystore</a>, <a href="https://developer.android.com/privacy-and-security/security-key-attestation">Android Key Attestation</a> và <a href="https://developer.android.com/identity/sign-in/biometric-auth">BiometricPrompt</a>: khả năng khóa thiết bị và xác thực mỗi lần dùng.</li>
+      <li><a href="https://developer.android.com/google/play/integrity/overview">Play Integrity API</a>: tín hiệu toàn vẹn app/thiết bị và ràng buộc verdict với yêu cầu.</li>
+    </ul>
+  </section>
+  <footer>FlexMix · Tài liệu thiết kế, chưa thay đổi mã nguồn vận hành.</footer>
+  </main>
+  </div>
+</div>
+<dialog class="zoom-dialog" id="diagram-zoom" aria-label="Sơ đồ phóng to"><div class="zoom-head"><span id="zoom-title"></span><button class="zoom-close" type="button" id="zoom-close">Đóng</button></div><div class="zoom-body" id="zoom-body"></div></dialog>
+<script>
+  const zoomDialog = document.getElementById('diagram-zoom');
+  const zoomBody = document.getElementById('zoom-body');
+  document.querySelectorAll('figure.diagram svg').forEach(svg => {
+    const figure = svg.closest('figure');
+    const tools = document.createElement('div');
+    tools.className = 'diagram-tools';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Phóng to';
+    button.addEventListener('click', () => {
+      document.getElementById('zoom-title').textContent = figure.querySelector('h3')?.textContent || 'Sơ đồ';
+      const copy = svg.cloneNode(true);
+      if (figure.closest('.diagram-grid')) copy.classList.add('spaced');
+      zoomBody.replaceChildren(copy);
+      zoomDialog.showModal();
+    });
+    tools.append(button);
+    figure.querySelector('.diagram-scroll').after(tools);
+  });
+  document.getElementById('zoom-close').addEventListener('click', () => zoomDialog.close());
+  zoomDialog.addEventListener('close', () => zoomBody.replaceChildren());
+</script>
+</body>
+</html>
