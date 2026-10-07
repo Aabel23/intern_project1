@@ -1,0 +1,27 @@
+{
+  "scope": "Analytic examples only; not benchmark, implementation proof or operational thresholds",
+  "iv_96_random": {
+    "per_key_encryptions": 1048576,
+    "per_key_union_bound_exact": "1048575/151115727451828646838272",
+    "per_key_union_bound_float": 6.938887286462328e-18,
+    "keys_example": 65536,
+    "fleet_union_bound_float": 4.547469172055951e-13
+  },
+  "ttl_counterexample": {
+    "first_receive_time": 0,
+    "signed_issued_time": 60,
+    "signed_expiry": 120,
+    "cache_deleted_at_if_TTL_60": 60,
+    "replay_at": 90,
+    "freshness_accepts": true
+  },
+  "base64url_lengths": {
+    "0": 0,
+    "1": 2,
+    "2": 3,
+    "3": 4,
+    "256": 342,
+    "4096": 5462
+  },
+  "bounds_caveat": "HPKE single-shot does not prove fresh context keys globally; AEAD security includes data/forgery budgets not modeled here"
+}

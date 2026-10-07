@@ -27,7 +27,13 @@ Khi thấy một lỗi, tìm cùng mẫu ở các module anh em (variant analysi
 
 ## Làm việc theo phase con
 
-Đọc đặc tả HTML phase con được lead giao và phase lớn chứa nó cùng TASK.md.
+Đọc đặc tả Markdown nội bộ phase con được lead giao và phase lớn chứa nó cùng TASK.md.
 Đối chiếu nghiên cứu/giả thuyết, input, yêu cầu, phân công, file/caller, phép kiểm
 và hợp đồng bàn giao trước làm. Bàn giao đúng vai, kèm output mới/exit code hoặc
 giới hạn chưa kiểm; không tự mở phase phụ thuộc hay nhận hoàn tất thay lead.
+
+## Review từng bước của plan
+
+Nhận ID bước, thiết kế đã chốt, tiêu chí, diff và bằng chứng từ coder/operator.
+Độc lập với agent coder; nêu ĐẠT/CHƯA ĐẠT và giới hạn kiểm. Có lỗi thì nêu chú thích
+ngắn cho trạng thái ✗ cùng cách kiểm lại; không tự sửa code hoặc tick HTML.

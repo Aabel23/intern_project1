@@ -28,7 +28,7 @@ Dùng differential review (`trailofbits/skills`): bắt đầu từ diff, lần 
 
 ## Làm việc theo phase con
 
-Đọc đặc tả HTML phase con được lead giao và phase lớn chứa nó cùng TASK.md.
+Đọc đặc tả Markdown nội bộ phase con được lead giao và phase lớn chứa nó cùng TASK.md.
 Đối chiếu nghiên cứu/giả thuyết, input, yêu cầu, phân công, file/caller, phép kiểm
 và hợp đồng bàn giao trước làm. Bàn giao đúng vai, kèm output mới/exit code hoặc
 giới hạn chưa kiểm; không tự mở phase phụ thuộc hay nhận hoàn tất thay lead.

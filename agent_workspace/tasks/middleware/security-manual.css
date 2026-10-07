@@ -1,0 +1,60 @@
+/* Bố cục từ FexMix_Munual.html, chỉ áp dụng cho trang bảo vệ gói tin. */
+.security-page .page{max-width:1440px;margin:0 auto;padding:20px clamp(16px,3vw,40px) 80px;display:grid;gap:20px}
+.security-page .manual-links{font:12.5px/1.5 var(--sans);padding-bottom:10px}
+.security-page .masthead{display:grid;gap:10px;align-items:end;border:0;padding:0}
+.security-page .masthead>div:first-child{display:grid;gap:4px}
+.security-page .masthead h1{font-size:clamp(24px,2.6vw,30px);letter-spacing:-.01em;margin:0}
+.security-page .lead{font-size:15.5px;line-height:1.5;max-width:70ch}
+.security-page .meta{font:12.5px/1.6 var(--sans);display:flex;flex-wrap:wrap;gap:4px 22px;color:var(--ink-3)}
+.security-page .meta b{color:var(--ink-2);font-weight:600}
+.security-page .overview{display:grid;gap:12px;scroll-margin-top:16px}
+.security-page .overview h2{font-size:24px}
+.security-page .overview figure.dg{padding:10px;border-radius:16px;background:var(--surface)}
+.security-page .shell{max-width:none;margin:0;padding:24px 0 0;display:grid;grid-template-columns:minmax(0,1fr);gap:48px;border-top:1px solid var(--line)}
+.security-page .toc{font:13px/1.5 var(--sans);display:block;padding:0;border:0}
+.security-page .toc .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:10px}
+.security-page .toc ol{list-style:none;padding:0;margin:0;display:grid;gap:2px;max-width:none}
+.security-page .toc li{margin:0}
+.security-page .toc a{display:block;color:var(--ink-2);text-decoration:none;padding:4px 10px;border-radius:6px;border-bottom:0;border-left:2px solid transparent}
+.security-page .toc a:hover{background:var(--surface-2);color:var(--ink);border-left-color:var(--accent)}
+.security-page .toc .sub a{padding-left:22px;font-size:12.5px}
+.security-page main{margin:0;min-width:0;display:grid;gap:60px}
+.security-page section{display:grid;gap:18px;scroll-margin-top:20px}
+.security-page .sec-head{display:grid;gap:4px}
+.security-page .sec-no{font:600 12px/1.5 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink)}
+.security-page .sec-head h2{font-size:clamp(23px,2.6vw,29px);margin:0}
+.security-page .prose{max-width:70ch}
+.security-page .comp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,26px);display:grid;gap:14px;scroll-margin-top:20px;min-width:0}
+.security-page .comp>header{display:grid;gap:4px;margin:0;padding:0;border:0}
+.security-page .comp h3{font-size:22px;margin:0}
+.security-page .comp .src{font:12.5px/1.5 var(--sans);color:var(--ink-3)}
+.security-page .comp h4{font:600 13px/1.5 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:4px 0 0}
+.security-page .comp p{margin:0;max-width:74ch}
+.security-page figure.dg{margin:0;border-radius:12px;padding:12px;gap:10px}
+.security-page .dg-head h3{font-size:18px}
+.security-page .dg-canvas svg{min-width:980px}
+.security-page .dg-hint{display:block}
+.security-page ol.steps{padding-left:1.4em;display:grid;gap:6px;max-width:80ch}
+.security-page ol.steps li::marker{color:var(--accent-ink);font:600 .85em var(--sans)}
+.security-page details{min-width:0}
+.security-page details>summary{font:600 13px/1.5 var(--sans);color:var(--ink-2);cursor:pointer;padding:10px 0}
+.security-page details[open]>summary{margin-bottom:10px}
+.security-page .evidence-body{display:grid;gap:12px}
+.security-page table{font-size:13.5px;line-height:1.5}
+@media(min-width:1000px){.security-page .masthead{grid-template-columns:minmax(0,1fr) auto;column-gap:40px}.security-page .meta{flex-direction:column;align-items:flex-end;text-align:right}}
+@media(min-width:1180px){.security-page .shell{grid-template-columns:220px minmax(0,1fr)}.security-page .toc{position:sticky;top:20px;align-self:start;max-height:calc(100vh - 40px);overflow:auto;padding-right:8px}}
+@media(max-width:1179px){.security-page .toc ol{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.security-page .shell{gap:28px}}
+@media print{.security-page .page{max-width:none;padding:0}.security-page .shell{display:block;padding-top:14px}.security-page .toc,.security-page .manual-links{display:none!important}.security-page main,.security-page section{display:block}.security-page .comp{display:block;margin:12px 0;padding:10px}.security-page .comp>header,.security-page .sec-head{margin-bottom:10px}.security-page .comp p,.security-page .comp h4{margin-bottom:8px}.security-page .dg-canvas svg{min-width:0;width:100%}.security-page .masthead{display:block}.security-page .meta{margin-top:8px}.security-page .sec-head{break-after:avoid}.security-page .comp{break-inside:auto}}
+
+/* Shortlist đã review; không dùng trạng thái lựa chọn localStorage. */
+.security-page .decision-jump{display:flex;flex-wrap:wrap;gap:8px;font-size:13px}
+.security-page .decision-jump a{padding:6px 9px;border:1px solid var(--line);border-radius:6px}
+.security-page .decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.security-page .decision-option{padding:16px;border:1px solid var(--line);border-radius:10px;min-width:0;overflow-wrap:anywhere}
+.security-page .decision-option h4{font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink);margin:0 0 10px}
+.security-page .decision-option dl{margin:12px 0 0;font-size:13px;line-height:1.6}
+.security-page .decision-option dt{font-weight:600;color:var(--ink-2);margin-top:8px}
+.security-page .decision-option dd{margin:0}
+.security-page .decision-condition{padding:12px;border-left:3px solid var(--accent);background:var(--surface-2)}
+@media(max-width:750px){.security-page .decision-grid{grid-template-columns:1fr}}
+@media print{.security-page .decision-grid{display:block}.security-page .decision-option{break-inside:avoid;margin:10px 0}.security-page .decision-jump{display:none}}

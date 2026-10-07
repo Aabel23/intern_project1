@@ -4,12 +4,12 @@
     {
       "id": "G0",
       "title": "Nền nghiên cứu và kiểm chứng",
-      "path": "phases/foundation/index.html",
+      "path": "internal/phases/foundation/index.md",
       "requires": [],
       "subphases": [
         {
           "id": "G0.1",
-          "path": "phases/foundation/contract-research.html",
+          "path": "internal/phases/foundation/contract-research.md",
           "requires": [],
           "tasks": [
             "B01"
@@ -19,7 +19,7 @@
         },
         {
           "id": "G0.2",
-          "path": "phases/foundation/fixture-repair.html",
+          "path": "internal/phases/foundation/fixture-repair.md",
           "requires": [
             "G0.1"
           ],
@@ -31,7 +31,7 @@
         },
         {
           "id": "G0.3",
-          "path": "phases/foundation/risk-scenarios.html",
+          "path": "internal/phases/foundation/risk-scenarios.md",
           "requires": [
             "G0.2"
           ],
@@ -43,7 +43,7 @@
         },
         {
           "id": "G0.4",
-          "path": "phases/foundation/environment-baseline.html",
+          "path": "internal/phases/foundation/environment-baseline.md",
           "requires": [
             "G0.3"
           ],
@@ -58,14 +58,14 @@
     {
       "id": "G1",
       "title": "Vòng đời request và quan sát an toàn",
-      "path": "phases/lifecycle/index.html",
+      "path": "internal/phases/lifecycle/index.md",
       "requires": [
         "G0"
       ],
       "subphases": [
         {
           "id": "G1.1",
-          "path": "phases/lifecycle/context-design.html",
+          "path": "internal/phases/lifecycle/context-design.md",
           "requires": [
             "G0.4"
           ],
@@ -78,7 +78,7 @@
         },
         {
           "id": "G1.2",
-          "path": "phases/lifecycle/response-boundary.html",
+          "path": "internal/phases/lifecycle/response-boundary.md",
           "requires": [
             "G1.1"
           ],
@@ -91,7 +91,7 @@
         },
         {
           "id": "G1.3",
-          "path": "phases/lifecycle/dispatch-correlation.html",
+          "path": "internal/phases/lifecycle/dispatch-correlation.md",
           "requires": [
             "G1.2"
           ],
@@ -104,7 +104,7 @@
         },
         {
           "id": "G1.4",
-          "path": "phases/lifecycle/safe-observability.html",
+          "path": "internal/phases/lifecycle/safe-observability.md",
           "requires": [
             "G1.3"
           ],
@@ -119,14 +119,14 @@
     {
       "id": "G2",
       "title": "Biên HTTP, body và tương thích client",
-      "path": "phases/http-boundary/index.html",
+      "path": "internal/phases/http-boundary/index.md",
       "requires": [
         "G1"
       ],
       "subphases": [
         {
           "id": "G2.1",
-          "path": "phases/http-boundary/framing-policy.html",
+          "path": "internal/phases/http-boundary/framing-policy.md",
           "requires": [
             "G1.4"
           ],
@@ -138,7 +138,7 @@
         },
         {
           "id": "G2.2",
-          "path": "phases/http-boundary/body-integrity.html",
+          "path": "internal/phases/http-boundary/body-integrity.md",
           "requires": [
             "G2.1"
           ],
@@ -150,7 +150,7 @@
         },
         {
           "id": "G2.3",
-          "path": "phases/http-boundary/read-deadline.html",
+          "path": "internal/phases/http-boundary/read-deadline.md",
           "requires": [
             "G2.2"
           ],
@@ -162,7 +162,7 @@
         },
         {
           "id": "G2.4",
-          "path": "phases/http-boundary/client-compatibility.html",
+          "path": "internal/phases/http-boundary/client-compatibility.md",
           "requires": [
             "G2.3"
           ],
@@ -177,14 +177,14 @@
     {
       "id": "G3",
       "title": "Sức chứa và tiến triển lệnh máy",
-      "path": "phases/capacity/index.html",
+      "path": "internal/phases/capacity/index.md",
       "requires": [
         "G2"
       ],
       "subphases": [
         {
           "id": "G3.1",
-          "path": "phases/capacity/ingress-bound.html",
+          "path": "internal/phases/capacity/ingress-bound.md",
           "requires": [
             "G2.4"
           ],
@@ -196,7 +196,7 @@
         },
         {
           "id": "G3.2",
-          "path": "phases/capacity/workload-lanes.html",
+          "path": "internal/phases/capacity/workload-lanes.md",
           "requires": [
             "G3.1"
           ],
@@ -208,7 +208,7 @@
         },
         {
           "id": "G3.3",
-          "path": "phases/capacity/queue-invariants.html",
+          "path": "internal/phases/capacity/queue-invariants.md",
           "requires": [
             "G3.2"
           ],
@@ -221,7 +221,7 @@
         },
         {
           "id": "G3.4",
-          "path": "phases/capacity/budgets-recovery.html",
+          "path": "internal/phases/capacity/budgets-recovery.md",
           "requires": [
             "G3.3"
           ],
@@ -239,14 +239,14 @@
     {
       "id": "G4",
       "title": "Danh tính, quyền và chính sách bảo vệ",
-      "path": "phases/identity/index.html",
+      "path": "internal/phases/identity/index.md",
       "requires": [
         "G3"
       ],
       "subphases": [
         {
           "id": "G4.1",
-          "path": "phases/identity/route-policy.html",
+          "path": "internal/phases/identity/route-policy.md",
           "requires": [
             "G3.4"
           ],
@@ -258,7 +258,7 @@
         },
         {
           "id": "G4.2",
-          "path": "phases/identity/session-revocation.html",
+          "path": "internal/phases/identity/session-revocation.md",
           "requires": [
             "G4.1"
           ],
@@ -270,7 +270,7 @@
         },
         {
           "id": "G4.3",
-          "path": "phases/identity/authorization-transaction.html",
+          "path": "internal/phases/identity/authorization-transaction.md",
           "requires": [
             "G4.2"
           ],
@@ -283,7 +283,7 @@
         },
         {
           "id": "G4.4",
-          "path": "phases/identity/limiter-threat-model.html",
+          "path": "internal/phases/identity/limiter-threat-model.md",
           "requires": [
             "G4.3"
           ],
@@ -299,14 +299,14 @@
     {
       "id": "G5",
       "title": "Nghiệm thu tích hợp, lỗi và tải",
-      "path": "phases/acceptance/index.html",
+      "path": "internal/phases/acceptance/index.md",
       "requires": [
         "G4"
       ],
       "subphases": [
         {
           "id": "G5.1",
-          "path": "phases/acceptance/contract-regression.html",
+          "path": "internal/phases/acceptance/contract-regression.md",
           "requires": [
             "G4.4"
           ],
@@ -318,7 +318,7 @@
         },
         {
           "id": "G5.2",
-          "path": "phases/acceptance/fault-concurrency.html",
+          "path": "internal/phases/acceptance/fault-concurrency.md",
           "requires": [
             "G5.1"
           ],
@@ -330,7 +330,7 @@
         },
         {
           "id": "G5.3",
-          "path": "phases/acceptance/load-measurement.html",
+          "path": "internal/phases/acceptance/load-measurement.md",
           "requires": [
             "G5.2"
           ],
@@ -343,7 +343,7 @@
         },
         {
           "id": "G5.4",
-          "path": "phases/acceptance/target-team-gate.html",
+          "path": "internal/phases/acceptance/target-team-gate.md",
           "requires": [
             "G5.3"
           ],
@@ -359,14 +359,14 @@
     {
       "id": "G6",
       "title": "Vận hành, rollout và phục hồi",
-      "path": "phases/operations/index.html",
+      "path": "internal/phases/operations/index.md",
       "requires": [
         "G5"
       ],
       "subphases": [
         {
           "id": "G6.1",
-          "path": "phases/operations/configuration-validation.html",
+          "path": "internal/phases/operations/configuration-validation.md",
           "requires": [
             "G5.4"
           ],
@@ -378,7 +378,7 @@
         },
         {
           "id": "G6.2",
-          "path": "phases/operations/shutdown-restart.html",
+          "path": "internal/phases/operations/shutdown-restart.md",
           "requires": [
             "G6.1"
           ],
@@ -390,7 +390,7 @@
         },
         {
           "id": "G6.3",
-          "path": "phases/operations/rollout-rollback.html",
+          "path": "internal/phases/operations/rollout-rollback.md",
           "requires": [
             "G6.2"
           ],
@@ -402,7 +402,7 @@
         },
         {
           "id": "G6.4",
-          "path": "phases/operations/network-runbooks.html",
+          "path": "internal/phases/operations/network-runbooks.md",
           "requires": [
             "G6.3"
           ],
@@ -418,14 +418,14 @@
     {
       "id": "G7",
       "title": "Mở rộng dài hạn theo bằng chứng",
-      "path": "phases/evolution/index.html",
+      "path": "internal/phases/evolution/index.md",
       "requires": [
         "G6"
       ],
       "subphases": [
         {
           "id": "G7.1",
-          "path": "phases/evolution/runtime-network.html",
+          "path": "internal/phases/evolution/runtime-network.md",
           "requires": [
             "G6.4"
           ],
@@ -437,7 +437,7 @@
         },
         {
           "id": "G7.2",
-          "path": "phases/evolution/device-credentials.html",
+          "path": "internal/phases/evolution/device-credentials.md",
           "requires": [
             "G6.4"
           ],
@@ -449,7 +449,7 @@
         },
         {
           "id": "G7.3",
-          "path": "phases/evolution/command-durability.html",
+          "path": "internal/phases/evolution/command-durability.md",
           "requires": [
             "G6.4"
           ],
@@ -462,7 +462,7 @@
         },
         {
           "id": "G7.4",
-          "path": "phases/evolution/shared-state-evolution.html",
+          "path": "internal/phases/evolution/shared-state-evolution.md",
           "requires": [
             "G6.4"
           ],

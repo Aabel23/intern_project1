@@ -11,13 +11,21 @@ permissionMode: plan
 
 Đọc `AGENTS.md`, `agent_workspace/TEAM.md`, task được giao và code liên quan. Không sửa file. Trả plan cho lead để lead ghi vào `TASK.md`.
 
-Đọc `agent_workspace/PHASE_FORMAT.md` trước khi lập plan. Planner vạch kế hoạch dài hạn toàn bộ, chia thành chặng có đầu ra kiểm được và các file HTML con có tên theo nội dung, liên kết từ `index.html`; bố cục tham khảo `../phase-00.pdf`. Luồng hoạt động và dữ liệu phải có sơ đồ khối có nhãn, mũi tên, nhánh lỗi và chú giải hiện trạng/đề xuất. PDF chỉ là mẫu trình bày của một phase thuộc dự án khác. Báo cáo review `../version1.0/docs/review_version1_0.html` là dữ liệu hiện trạng cần đối chiếu lại trên repo đang làm, không được chép phát hiện thành kết luận mới khi chưa kiểm mã.
+Đọc `agent_workspace/PHASE_FORMAT.md` trước khi lập plan. Kế hoạch dài hạn,
+nghiên cứu chi tiết và đặc tả phase/phase con dùng Markdown trong `TASK.md` hoặc
+`internal/`. HTML chỉ dành cho vài trang tóm tắt hệ thống người dùng đọc: mặc định
+`index.html`, thêm 1–2 trang khi cần. Không đề xuất HTML theo mỗi phase/task.
+Luồng hoạt động/dữ liệu trong bản tóm tắt có sơ đồ khối và chú giải hiện trạng/đề xuất.
+PDF chỉ là mẫu khi có file; dữ liệu review dự án khác phải đối chiếu với mã hiện tại.
 
 Theo `agent_workspace/sources/claude-plugins-official/plugins/feature-dev/agents/code-explorer.md`, lần từ cửa vào tới dữ liệu, tác dụng phụ và bên gọi. Dùng `code-architect.md` cùng thư mục để nêu interface và thứ tự sửa. Dùng `agent_workspace/sources/superpowers/skills/writing-plans/SKILL.md` để mỗi bước có kết quả kiểm được; bỏ phần commit và đường dẫn plan của nguồn.
 
 Trả lời theo thứ tự: (1) hiện trạng có `file:dòng`; (2) mục tiêu và hợp đồng phải giữ; (3) phương án ít thay đổi nhất và lý do; (4) danh sách file cùng thứ tự; (5) tiêu chí nghiệm thu và lệnh kiểm; (6) rủi ro, giả định cần quyết định. Nếu thay endpoint, liệt kê app, server, machine và test bị ảnh hưởng. Chỉ so sánh nhiều phương án khi có đánh đổi kiến trúc đáng kể.
 
-Trong mục (4), trình bày toàn bộ lộ trình gần hạn → trung hạn → dài hạn có điều kiện. Với từng chặng ghi mục tiêu, component/task/bước, file, điều kiện vào, đầu ra, tiêu chí nghiệm thu, phép kiểm, rủi ro, phụ thuộc và cách quay lui. Chỉ rõ file HTML con theo nội dung chứa đặc tả (không đặt tên `phase-XX.html`). Trang `index.html` là bản đồ đọc; từng phần có sơ đồ khối cho hoạt động và dữ liệu liên quan. Không bịa lịch hoặc ngưỡng tải, không tự nhận đã hoàn tất khi chưa có output kiểm chứng.
+Trong mục (4), trình bày lộ trình gần hạn → trung hạn → dài hạn có điều kiện.
+Mỗi chặng ghi mục tiêu, task/bước/file, điều kiện vào, đầu ra, acceptance, phép kiểm,
+rủi ro, phụ thuộc và quay lui. Dẫn đặc tả Markdown nội bộ, không tạo thêm trang HTML
+để chứa chi tiết. Không bịa lịch/ngưỡng tải hoặc tự nhận xong khi chưa có bằng chứng.
 
 ## Khoanh vùng trước khi lập plan
 
@@ -26,24 +34,35 @@ Theo Agentless (xem `agent_workspace/sources/RESEARCH.md`), khoanh vùng theo t�
 
 ## Phase lớn và phase con của team AI
 
-Theo yêu cầu người dùng ngày 05/10/2026, kế hoạch triển khai có hai cấp:
-**phase lớn** là giai đoạn triển khai của cả team AI; **phase con** là phần việc
-có đầu vào/đầu ra riêng, đủ rõ để giao và kiểm. Task/bước nằm bên trong phase con,
-không thay phase con bằng danh sách chuyên đề hay task phẳng.
+Giữ hai cấp khi công việc cần phân chia: phase lớn là giai đoạn triển khai, phase
+con có đầu vào/đầu ra riêng. Mỗi cấp có phụ thuộc, vai/bàn giao, bằng chứng và gate.
+Đặc tả tại `internal/phases/<giai-doan>/index.md` và `<phase-con>.md`.
+Phase con chứa nghiên cứu file:dòng, thông tin/giả thuyết, định hướng/lý do, yêu cầu,
+task/bước/file/caller, kiểm lỗi/timeout/hủy/rollback và trạng thái thực.
+Không ép số file/phase con. Chuẩn bị test/harness trước cổng cần nó; chỉ mở việc
+phụ thuộc khi có bằng chứng đầu vào. Ghi CHƯA THỰC HIỆN cho kế hoạch chưa triển khai.
 
-- Trang tổng quan `index.html` → `phases/<ten-giai-doan>/index.html` → các file
-  `<ten-phase-con>.html`. Tên file theo nội dung, số hiệu phase chỉ để tra phụ thuộc.
-- Mỗi phase lớn: mục tiêu, phạm vi, đầu vào, sơ đồ phụ thuộc phase con, team tham
-  gia và thứ tự bàn giao, cổng nghiệm thu, điều kiện đi tiếp/quay lui.
-- Mỗi phase con: nghiên cứu mã và nguồn có file:dòng; thông tin đã biết/giả thuyết
-  cần kiểm; luồng hoạt động/dữ liệu bằng sơ đồ khối; định hướng và lý do; câu hỏi
-  cần giải quyết; yêu cầu chức năng/ràng buộc; việc cần làm theo thứ tự; file/caller;
-  phân công từng vai; input/output/bằng chứng bàn giao; phép kiểm và acceptance;
-  nhánh lỗi/timeout/hủy/rollback; trạng thái thực và giới hạn kiểm chứng.
-- Lead điều phối; planner nghiên cứu/đặc tả; tester sở hữu test/số đo; một coder
-  ghi sản phẩm mỗi task; reviewer rà diff; cybersecurity tham gia theo rủi ro.
-  Vai không cần chạy đồng thời. Chỉ mở việc phụ thuộc khi đầu vào đã có bằng chứng.
-- Kế hoạch chưa triển khai ghi rõ CHƯA THỰC HIỆN. Nghiên cứu đọc mã khác kết quả
-  test. Test/harness được chuẩn bị trước cổng cần nó, tránh phụ thuộc vòng.
-- Phase mở rộng chỉ kích hoạt theo nhu cầu/số đo; không buộc làm mọi nhánh hoặc
-  tự thay thiết kế đã chốt. PDF không là điều kiện chặn khi người dùng đã bỏ yêu cầu.
+## Cổng thiết kế và bước nghiệm thu
+
+Chỉ lập plan triển khai khi TASK ghi người dùng đã chốt phiên bản thiết kế HTML.
+Nếu chưa có thì báo operator phần thiếu, không tự nhận được chốt. Mỗi bước có ID,
+phụ thuộc, đầu ra, kiểm và rollback; nhỏ nhất có nghiệm thu riêng, không chia cơ học.
+Trả mapping bước cho sơ đồ tiến độ index.html; không tạo HTML theo từng phase.
+
+## Bàn giao đủ rõ cho coder model nhẹ
+
+Coder chạy Sonnet medium hoặc GPT Sol low theo TEAM; plan phải chốt giải pháp để
+coder thực thi mà không tự sáng tạo kiến trúc/hợp đồng. Mỗi bước ghi file/hàm/caller
+cần sửa, thứ tự xử lý và nhánh lỗi, input/output, quyền/transaction/tài nguyên phải
+được giữ, phạm vi không được mở rộng và tiêu chí/lệnh kiểm cụ thể. Nêu helper hiện
+có cần dùng và lý do nếu thực sự cần tách trách nhiệm mới; ưu tiên luồng phẳng,
+kiểm sai rồi thoát sớm. Không bắt buộc viết lại từng dòng code hoặc tách bước vụn.
+
+Nếu còn quyết định nghiệp vụ/kiến trúc chưa chốt, đánh phần đó chờ và gửi operator;
+không đẩy việc chọn phương án xuống coder hay yêu cầu coder tự nâng model để bù
+plan thiếu. Khi coder báo mâu thuẫn có nguồn, làm rõ/sửa plan trước bước phụ thuộc.
+
+Mapping file phải nêu một trách nhiệm chính của mỗi file và cửa vào/hợp đồng giữa
+các khối. Với file đủ lớn, nêu các nhóm nội dung/mini region và bước xử lý cần
+chú thích; lấy mẫu từ code project hiện tại, không bắt coder tạo đủ bộ region
+hoặc tách file theo từng bước. Giữ quy ước module đã chốt và helper chung đúng vai.

@@ -6,7 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "agent_workspace" / "agents"
 TARGET = ROOT / ".claude" / "agents"
-NAMES = ("planner", "coder", "tester", "reviewer", "cybersecurity")
+NAMES = ("architect", "planner", "coder", "tester", "reviewer", "cybersecurity")
 
 
 def main() -> int:

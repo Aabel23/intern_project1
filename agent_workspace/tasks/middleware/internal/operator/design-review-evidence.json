@@ -1,0 +1,66 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "is_error": false,
+      "session_id": "9c28b4c3-df2f-4fd9-b705-bcd4f41064d7",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "duration_ms": 195845,
+      "requested_model": "opus",
+      "requested_effort": "medium",
+      "report": "design-review-r1.md"
+    },
+    {
+      "round": 2,
+      "is_error": false,
+      "session_id": "9c28b4c3-df2f-4fd9-b705-bcd4f41064d7",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "duration_ms": 179631,
+      "requested_model": "opus",
+      "requested_effort": "medium",
+      "report": "design-review-r2.md"
+    },
+    {
+      "round": 3,
+      "is_error": false,
+      "session_id": "9c28b4c3-df2f-4fd9-b705-bcd4f41064d7",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "duration_ms": 145447,
+      "requested_model": "opus",
+      "requested_effort": "medium",
+      "report": "design-review-r3.md"
+    },
+    {
+      "round": 4,
+      "is_error": false,
+      "session_id": "9c28b4c3-df2f-4fd9-b705-bcd4f41064d7",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "duration_ms": 78899,
+      "requested_model": "opus",
+      "requested_effort": "medium",
+      "report": "design-review-r4.md"
+    },
+    {
+      "round": 5,
+      "is_error": false,
+      "session_id": "9c28b4c3-df2f-4fd9-b705-bcd4f41064d7",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "duration_ms": 65084,
+      "requested_model": "opus",
+      "requested_effort": "medium",
+      "report": "design-review-r5.md"
+    }
+  ],
+  "final_design_sha256": "ca977298f5f61f14e1358a95feacfac8ab579157634d9279b5d6ed707e4af8aa",
+  "limitations": "Document review and analytic examples only; no production cryptography or formal verification."
+}

@@ -1,0 +1,3 @@
+Tôi chưa sửa file phương án. Công cụ đọc và sửa workspace đều dừng trước khi truy cập file với lỗi `mountinfo path is not absolute`; đường đọc thay thế cũng bị cơ chế phê duyệt tự động từ chối vì phiên này không cho phép phê duyệt. Vì vậy tôi chưa thể đọc `design.md`, `keys.md`, phản biện vòng 1 hoặc giữ nguyên lịch sử file một cách đáng tin cậy.
+
+Tôi đã đối chiếu sơ bộ tài liệu chính thức về [TLS trong Python](https://docs.python.org/3/library/ssl.html) và [cấu hình bảo mật mạng Android](https://developer.android.com/privacy-and-security/security-config), nhưng chưa dùng chúng để đưa ra bản chốt khi thiếu tài liệu repo. Cần khôi phục quyền truy cập workspace rồi chạy lại yêu cầu này.

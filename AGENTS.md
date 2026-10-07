@@ -1,22 +1,33 @@
 # Thiết kế đã chốt
 
-## Tài liệu bàn giao cho người dùng
+## Tài liệu người dùng và hồ sơ nội bộ
 
-- Báo cáo, nghiên cứu, kế hoạch và các tài liệu tạo để người dùng đọc phải viết
-  bằng HTML, theo mẫu và bố cục trong `agent_workspace/PHASE_FORMAT.md`.
-- Kế hoạch dài hạn nằm ở `agent_workspace/tasks/<tên-task>/index.html`, liên kết
-  các file HTML con có tên theo nội dung (`architecture.html`, `request-lifecycle.html`,
-  `data-model.html`, `roadmap.html`...). Không đặt tài liệu đọc theo tên `phase-00.html`.
-- Planner vạch lộ trình hai cấp: phase lớn là giai đoạn triển khai của cả team AI,
-  bên trong có phase con với nghiên cứu, thông tin, định hướng, việc cần làm và yêu cầu.
-  Mỗi cấp có phụ thuộc, phân công/bàn giao, bằng chứng và điều kiện nghiệm thu.
-  Trang đọc: `index.html` → `phases/<ten-giai-doan>/index.html` → HTML phase con.
-- Luồng hoạt động, luồng dữ liệu và quan hệ thành phần phải có sơ đồ khối có nhãn,
-  chiều mũi tên và chú giải hiện trạng/đề xuất; tham khảo PDF mẫu khi có file.
-  HTML mở trực tiếp và in được. Không bàn giao Markdown thay HTML.
-- Markdown như `TASK.md`, file vai và quy ước vẫn dùng cho hồ sơ vận hành nội bộ.
-- Khi thiếu file mẫu tham chiếu, ghi rõ giới hạn đối chiếu; không tự khẳng định
-  đã khớp mẫu chưa đọc được.
+- Người dùng chỉ cần vài file HTML theo `agent_workspace/PHASE_FORMAT.md`.
+  Giữ các trang tổng quan, kiến trúc và quyết định chính; không sinh HTML cho từng phase.
+- Trang kiến trúc phải có bản đồ feature thực tế từ service/app/máy và sơ đồ khối
+  từng luồng: cửa vào, dữ liệu, kiểm tra, kho lưu, tác động, kết quả và nhánh lỗi.
+  Chi tiết hệ thống người dùng cần duyệt đặt trong HTML, có mục lục và phần mở rộng.
+- Trạng thái hiện tại và đề xuất tách rõ; biểu đồ theo hai manual tham chiếu,
+  có nhãn/mũi tên/chú giải, Phóng to/Mã nguồn, mở offline và in được.
+- Kế hoạch hiển thị một sơ đồ tiến độ ngay trong trang tổng quan: ✓ đã qua review
+  và kiểm, ✗ lỗi/chưa đạt kèm chú thích, → đang làm, ○ chưa làm, ⏸ chờ/phụ thuộc.
+  Chi tiết điều phối, nghiên cứu, thảo luận và bằng chứng vẫn là Markdown nội bộ.
+- Không bịa kết quả, số đo hoặc tuyên bố đã đối chiếu mẫu chưa đọc được.
+
+## Quy trình đã thống nhất — 06/10/2026
+
+1. Người dùng nêu ý tưởng; operator giao hai architect độc lập đề xuất, phản biện
+   trực tiếp qua các lượt trao đổi, ghi phương án/đánh đổi và giải quyết vấn đề chặn.
+2. Operator hợp nhất thiết kế; dựng HTML chi tiết để người dùng sửa và chốt.
+   Hai agent đồng thuận không thay cho người dùng chốt thiết kế.
+3. Sau khi người dùng chốt, gọi planner chia phase nhỏ theo phụ thuộc và đầu ra
+   kiểm được; không tách cơ học tới mức tăng bàn giao vô ích. Operator review plan.
+4. Một coder làm từng bước của plan; một reviewer độc lập kiểm diff và bằng chứng.
+   Có lỗi thì sửa/kiểm lại trước khi mở bước phụ thuộc.
+5. Operator cập nhật sơ đồ plan ✓/✗ và chú thích ngay sau mỗi lượt; giữ lịch sử lỗi
+   và cách sửa trong Markdown. Chỉ hoàn tất khi điều kiện nghiệm thu có bằng chứng.
+
+Chi tiết vai, quyền và cổng bàn giao ở `agent_workspace/TEAM.md`.
 
 ## Quy ước kiến trúc
 

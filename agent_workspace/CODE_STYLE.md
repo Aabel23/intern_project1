@@ -15,6 +15,33 @@ Ví dụ chuẩn để đối chiếu:
 3. **Đơn giản hơn trừu tượng.** Không thêm class, factory, registry, lớp base hoặc config cho một chỗ dùng. Ba dòng lặp lại tốt hơn một helper sai chỗ.
 4. **Không đoán hợp đồng.** Tên trường gói tin, route, lệnh máy và dạng lỗi lấy từ code hiện có, không tự chuẩn hoá.
 
+### Luồng xử lý phẳng, bám plan
+
+- Thực thi đúng bước/tiêu chí đã giao; không thêm nghiệp vụ, fallback hoặc abstraction
+  ngoài plan. Plan thiếu quyết định thì báo operator, không tự đoán.
+- Ưu tiên guard và thoát sớm; sau `return`/`raise`/`continue` không bọc phần còn lại
+  bằng `else` thừa. Hạn chế `if/else` nhiều tầng; nhánh loại trừ nhau giữ dạng rõ nhất.
+- Giữ đúng vòng đời tài nguyên, transaction/khóa, quyền và thứ tự tác động khi làm
+  phẳng. Không chuyển nesting sang ternary/boolean khó đọc hay helper vụn.
+- Tinh gọn bằng bỏ cơ chế thừa trong phạm vi task; không bỏ kiểm hoặc ép ít dòng.
+
+### Khối chức năng và mini region trong file
+
+- Mỗi file giữ một trách nhiệm chức năng chính theo MODULE_PATTERN và plan;
+  nhiều hàm cùng trách nhiệm được ở chung. Không trộn tác vụ độc lập và không ép
+  một bước thành một file. Cửa vào/hợp đồng rõ, không import nội bộ feature khác.
+- Tham khảo `machine_menu_main.py` và `machine_menu_update.py` ở menu_sync hiện tại:
+  cửa vào điều phối; file tác vụ nhóm cấu hình, kiểm giá trị/gói và luồng chính.
+- Dùng chú thích tiếng Việt để chia các nhóm code liền nhau theo nhiệm vụ thật,
+  ví dụ `# Cấu hình riêng`, `# Nhóm 1: kiểm giá trị`, `# Nhóm 2: luồng chính`;
+  Dart dùng `//`. Chỉ tạo nhóm khi giúp đọc nội dung; không bắt buộc bộ region cố định.
+- Luồng nghiệp vụ có comment bước liên hệ plan; comment quan trọng giải thích
+  lý do/ràng buộc, điều kiện dừng, quyền, transaction và tác động. Helper chung
+  giữ docstring theo vai trò, không ép đánh số bước như luồng nghiệp vụ.
+- Không dùng region để che việc trộn trách nhiệm, không thêm comment/separator
+  cho từng dòng hoặc sửa hàng loạt ngoài task. Việc tách file mới phải nằm trong
+  plan và giữ ranh giới/hợp đồng đã chốt.
+
 ## 2. Python (server, machine, tests)
 
 ### Bố cục file
@@ -84,8 +111,12 @@ Ví dụ chuẩn để đối chiếu:
 Coder tự kiểm, reviewer kiểm lại. Mục nào không áp dụng thì ghi "không áp dụng".
 
 - [ ] Diff chỉ chứa thay đổi thuộc task; không format lại hoặc đổi tên ngoài phạm vi.
+- [ ] Bám tiêu chí của bước plan; luồng phẳng, không else thừa sau nhánh kết thúc,
+  không nesting/abstraction ngoài nhu cầu và không đổi vòng đời tài nguyên.
 - [ ] Tên file, route, hàm theo `MODULE_PATTERN.md` và mục 2–3 ở trên.
 - [ ] Không import chéo giữa tính năng; `server/lib` không import `server.service`.
+- [ ] File có một trách nhiệm chính; nhóm code/mini region hợp lý, comment nêu
+  ràng buộc quan trọng và khớp các bước plan, không tách vụn hoặc trộn tác vụ.
 - [ ] Kiểm phiên/quyền trước nội dung; đầu vào được kiểm kiểu và giới hạn.
 - [ ] Dạng lỗi và gói tin giữ đúng hợp đồng của module; bên gọi app/server/machine đã cập nhật nếu đổi.
 - [ ] SQL có tham số; ghi nhiều dòng trong transaction.

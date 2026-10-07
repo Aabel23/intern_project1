@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Cẩm nang thuật toán mã hóa — FlexMix</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="security-manual.css"><link rel="stylesheet" href="crypto-primer.css"><script src="diagrams.js" defer></script></head>
+<body class="security-page crypto-page"><div class="page"><nav class="manual-links" aria-label="Tài liệu hệ thống"><a href="index.html">Tổng quan</a><a href="architecture.html">Kiến trúc và luồng xử lý</a><a href="packet-security.html">Bảo vệ gói tin</a><a href="crypto-primer.html" aria-current="page">Cẩm nang mã hóa</a></nav>
+<header class="masthead"><div><p class="eyebrow">TÀI LIỆU THAM KHẢO · FLEXMIX</p><h1>Cẩm nang các thuật toán mã hóa trong kiến trúc</h1><p class="lead">Liệt kê từng thuật toán, chúng nằm ở đâu trên đường đi của gói tin, hoạt động ra sao, và một gói <code>abcd</code> đi qua mã hóa sẽ thành gì. Đọc xong có thể theo dõi trang Bảo vệ gói tin dễ hơn.</p></div>
+<div class="meta"><span><b>Nguồn:</b> thiết kế R5, keys.md, protocol.md, duplicates.md, FINDINGS, code server</span><span><b>Trình bày:</b> 07/10/2026</span><span><b>Ví dụ chạy thật:</b> Python 3.14 · cryptography 46.0.5</span></div></header>
+<div class="status-row" role="note" aria-label="Cách đọc nhãn trạng thái">
+<div class="status-card now"><b>Hiện trạng · đã có trong code</b>Băm mật khẩu, băm token, số ngẫu nhiên an toàn, vân tay request. Thẻ số 1 đến 5.</div>
+<div class="status-card plan"><b>Đề xuất R5 · chưa triển khai</b>HPKE, chữ ký ngoài, chống replay bền, ledger. Chưa có trong code, suite chưa chốt. Thẻ số 7 đến 18.</div>
+<div class="status-card demo"><b>Minh họa · không phải suite đã chốt</b>Mục 4 chạy thật bằng primitive tương đương với khóa giả công khai, không dùng làm test vector.</div></div>
+<section class="overview" id="cp-map-sec"><h2>1 · Bức tranh toàn cục</h2><p>Gói tin đi từ app qua server tới máy; mỗi khối ghi thuật toán dùng ở đó. Nhãn số đen trỏ tới thẻ ở mục 2.</p><figure class="dg" aria-labelledby="cp-map-h"><div class="dg-head"><h3 id="cp-map-h">Thuật toán nằm ở đâu trên đường đi của gói tin</h3><span class="state plan">Hiện trạng + đề xuất R5</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ok"></i>Hiện trạng trong code</li><li><i class="sw warn"></i>Đề xuất R5</li><li><i class="sw box"></i>Lớp nền (HTTPS)</li><li><i class="ln"></i>Chiều đi của dữ liệu</li></ul><div class="dg-canvas"><svg class="dgm wide" viewBox="0 0 1180 700" width="1180" height="700" role="img" aria-labelledby="cp-map-t cp-map-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-map-t">Các thuật toán trên đường đi của gói tin</title><desc id="cp-map-d">Ba vùng app, server, máy. Mỗi khối có nhãn số trỏ tới thẻ thuật toán ở mục 2. Khối viền liền là hiện trạng trong code, khối viền đứt là đề xuất R5 chưa triển khai.</desc><defs><marker id="cp-map-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="zn" x="20" y="60" width="340" height="625" rx="12"/><text class="zt" x="22" y="52">APP (FLUTTER)</text>
+<rect class="zn" x="400" y="60" width="370" height="625" rx="12"/><text class="zt" x="402" y="52">SERVER (PYTHON)</text>
+<rect class="zn" x="840" y="60" width="320" height="625" rx="12"/><text class="zt" x="842" y="52">MÁY TẠI QUÁN</text>
+<rect class="nd warn" x="40" y="100" width="300" height="52" rx="8"/>
+<text class="tt" x="190.0" y="123.0" text-anchor="middle">Manifest + root tin cậy</text><text class="ts" x="190.0" y="140.0" text-anchor="middle">verify khóa server, chống rollback</text>
+<rect class="pillbg" x="48" y="91" width="27" height="18" rx="9"/><text class="pilltx" x="62" y="103.5" text-anchor="middle">13</text>
+<rect class="nd warn" x="40" y="170" width="300" height="52" rx="8"/>
+<text class="tt" x="190.0" y="193.0" text-anchor="middle">Khung M + attempt_id</text><text class="ts" x="190.0" y="210.0" text-anchor="middle">Tuple(domain, route, attempt_id, hạn…)</text>
+<rect class="pillbg" x="48" y="161" width="47" height="18" rx="9"/><text class="pilltx" x="72" y="173.5" text-anchor="middle">14·17</text>
+<rect class="nd warn" x="40" y="240" width="300" height="52" rx="8"/>
+<text class="tt" x="190.0" y="263.0" text-anchor="middle">HPKE Seal: KEM → KDF → AEAD</text><text class="ts" x="190.0" y="280.0" text-anchor="middle">abcd → enc + ct (tag 16 byte)</text>
+<rect class="pillbg" x="48" y="231" width="67" height="18" rx="9"/><text class="pilltx" x="81" y="243.5" text-anchor="middle">7·8·9·10</text>
+<rect class="nd warn" x="40" y="310" width="300" height="52" rx="8"/>
+<text class="tt" x="190.0" y="333.0" text-anchor="middle">Chữ ký ngoài</text><text class="ts" x="190.0" y="350.0" text-anchor="middle">ký Tuple(domain, M, enc, ct)</text>
+<rect class="pillbg" x="48" y="301" width="27" height="18" rx="9"/><text class="pilltx" x="62" y="313.5" text-anchor="middle">12</text>
+<rect class="nd warn" x="40" y="380" width="300" height="52" rx="8"/>
+<text class="tt" x="190.0" y="403.0" text-anchor="middle">Envelope nhị phân → HTTPS</text><text class="ts" x="190.0" y="420.0" text-anchor="middle">version · LP(M) · LP(enc) · LP(ct) · LP(sig)</text>
+<rect class="pillbg" x="48" y="371" width="40" height="18" rx="9"/><text class="pilltx" x="68" y="383.5" text-anchor="middle">6·17</text>
+<path class="e" d="M190.0,152 L190.0,170" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M190.0,222 L190.0,240" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M190.0,292 L190.0,310" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M190.0,362 L190.0,380" marker-end="url(#cp-map-ah)"/>
+<rect class="nd warn" x="40" y="600" width="300" height="52" rx="8"/>
+<text class="tt" x="190.0" y="623.0" text-anchor="middle">Mở response bằng Export key</text><text class="ts" x="190.0" y="640.0" text-anchor="middle">kiểm binding attempt_id rồi mới dùng</text>
+<rect class="pillbg" x="48" y="591" width="47" height="18" rx="9"/><text class="pilltx" x="72" y="603.5" text-anchor="middle">11·10</text>
+<text class="tn" x="190.0" y="505" text-anchor="middle">(chờ response từ server)</text>
+<rect class="nd box" x="420" y="100" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="123.0" text-anchor="middle">Ranh giới HTTPS / proxy</text><text class="ts" x="585.0" y="140.0" text-anchor="middle">giới hạn khung, header, kích thước</text>
+<rect class="pillbg" x="428" y="91" width="21" height="18" rx="9"/><text class="pilltx" x="438" y="103.5" text-anchor="middle">6</text>
+<rect class="nd warn" x="420" y="170" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="193.0" text-anchor="middle">Verify chữ ký ngoài</text><text class="ts" x="585.0" y="210.0" text-anchor="middle">sai → từ chối trước khi giải mã</text>
+<rect class="pillbg" x="428" y="161" width="27" height="18" rx="9"/><text class="pilltx" x="442" y="173.5" text-anchor="middle">12</text>
+<rect class="nd warn" x="420" y="240" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="263.0" text-anchor="middle">HPKE Open: KEM → KDF → AEAD</text><text class="ts" x="585.0" y="280.0" text-anchor="middle">tag sai → từ chối</text>
+<rect class="pillbg" x="428" y="231" width="54" height="18" rx="9"/><text class="pilltx" x="455" y="243.5" text-anchor="middle">8·9·10</text>
+<rect class="nd warn" x="420" y="310" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="333.0" text-anchor="middle">Claim attempt_id + kiểm giờ</text><text class="ts" x="585.0" y="350.0" text-anchor="middle">UNIQUE bền; replay → từ chối</text>
+<rect class="pillbg" x="428" y="301" width="47" height="18" rx="9"/><text class="pilltx" x="452" y="313.5" text-anchor="middle">14·18</text>
+<rect class="nd ok" x="420" y="380" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="403.0" text-anchor="middle">Đăng nhập và phiên</text><text class="ts" x="585.0" y="420.0" text-anchor="middle">PBKDF2 · SHA-256(token) · compare_digest</text>
+<rect class="pillbg" x="428" y="371" width="60" height="18" rx="9"/><text class="pilltx" x="458" y="383.5" text-anchor="middle">1·2·3·5</text>
+<rect class="nd ok" x="420" y="450" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="473.0" text-anchor="middle">Nghiệp vụ hiện tại</text><text class="ts" x="585.0" y="490.0" text-anchor="middle">HMAC-SHA256 vân tay request (đăng ký)</text>
+<rect class="pillbg" x="428" y="441" width="21" height="18" rx="9"/><text class="pilltx" x="438" y="453.5" text-anchor="middle">4</text>
+<rect class="nd warn" x="420" y="520" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="543.0" text-anchor="middle">Ledger và witness</text><text class="ts" x="585.0" y="560.0" text-anchor="middle">SHA-256 chuỗi hash · HMAC witness</text>
+<rect class="pillbg" x="428" y="511" width="47" height="18" rx="9"/><text class="pilltx" x="452" y="523.5" text-anchor="middle">15·16</text>
+<path class="e" d="M585.0,152 L585.0,170" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M585.0,222 L585.0,240" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M585.0,292 L585.0,310" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M585.0,362 L585.0,380" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M585.0,432 L585.0,450" marker-end="url(#cp-map-ah)"/>
+<path class="e" d="M585.0,502 L585.0,520" marker-end="url(#cp-map-ah)"/>
+<rect class="nd warn" x="420" y="600" width="330" height="52" rx="8"/>
+<text class="tt" x="585.0" y="623.0" text-anchor="middle">Seal response (Export key)</text><text class="ts" x="585.0" y="640.0" text-anchor="middle">mỗi attempt tối đa một lần Seal</text>
+<rect class="pillbg" x="428" y="591" width="47" height="18" rx="9"/><text class="pilltx" x="452" y="603.5" text-anchor="middle">11·10</text>
+<path class="e" d="M585.0,572 L585.0,600" marker-end="url(#cp-map-ah)"/>
+<rect class="nd warn" x="860" y="170" width="280" height="52" rx="8"/>
+<text class="tt" x="1000.0" y="193.0" text-anchor="middle">Máy dùng cùng envelope</text><text class="ts" x="1000.0" y="210.0" text-anchor="middle">credential riêng · heartbeat/poll/result</text>
+<rect class="pillbg" x="868" y="161" width="40" height="18" rx="9"/><text class="pilltx" x="888" y="173.5" text-anchor="middle">7·12</text>
+<rect class="nd ok" x="860" y="270" width="280" height="52" rx="8"/>
+<text class="tt" x="1000.0" y="293.0" text-anchor="middle">Tra máy bằng product key</text><text class="ts" x="1000.0" y="310.0" text-anchor="middle">SHA-256(product_key) → ID máy</text>
+<rect class="pillbg" x="868" y="261" width="21" height="18" rx="9"/><text class="pilltx" x="878" y="273.5" text-anchor="middle">2</text>
+<rect class="nd warn" x="860" y="400" width="280" height="52" rx="8"/>
+<text class="tt" x="1000.0" y="423.0" text-anchor="middle">Ledger máy</text><text class="ts" x="1000.0" y="440.0" text-anchor="middle">chuỗi SHA-256 · claimed trước executor</text>
+<rect class="pillbg" x="868" y="391" width="27" height="18" rx="9"/><text class="pilltx" x="882" y="403.5" text-anchor="middle">16</text>
+<path class="e" d="M340,406 L380,406 L380,126 L420,126" marker-end="url(#cp-map-ah)"/>
+<text class="el" x="380" y="270" text-anchor="middle">request</text>
+<path class="e" d="M420,626 L340,626" marker-end="url(#cp-map-ah)"/>
+<text class="el" x="380" y="616" text-anchor="middle">response</text>
+<path class="e" d="M860,186 L790,186 L790,118 L750,118" marker-end="url(#cp-map-ah)"/>
+<text class="el" x="825" y="176" text-anchor="middle">máy gửi</text>
+<path class="e" d="M750,634 L820,634 L820,206 L860,206" marker-end="url(#cp-map-ah)"/>
+<text class="el" transform="rotate(-90 810 420)" x="810" y="420" text-anchor="middle">lệnh về máy</text></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Số trong nhãn đen là số thẻ ở mục 2. Đọc từ trái sang phải: app đóng gói, server mở và xử lý rồi seal response, máy dùng cùng mô hình. Khối viền liền đã có trong code; khối viền đứt là đề xuất chưa triển khai.</figcaption></figure></section>
+<div class="shell"><nav class="toc" aria-label="Mục lục"><div class="lbl">Mục lục</div><ol><li><a href="#cp-map-sec">1 · Bức tranh toàn cục</a></li><li><a href="#cp-catalog">2 · Danh mục thuật toán</a></li><li class=sub><a href="#cp-now">2.1 · Hiện trạng trong code</a></li><li class=sub><a href="#cp-plan">2.2 · Đề xuất R5</a></li><li class=sub><a href="#cp-skip">2.3 · Đã nhắc nhưng không chọn</a></li><li><a href="#cp-flows">3 · Luồng hoạt động</a></li><li class=sub><a href="#cp-flow-seal">3.1 · Đóng gói (seal)</a></li><li class=sub><a href="#cp-flow-open">3.2 · Mở gói và từ chối</a></li><li class=sub><a href="#cp-flow-mini">3.3 · Từng thuật toán</a></li><li><a href="#cp-example">4 · Ví dụ gói abcd</a></li><li class=sub><a href="#cp-ex-send">4.1 · Phía gửi</a></li><li class=sub><a href="#cp-ex-env">4.2 · Hình dạng gói</a></li><li class=sub><a href="#cp-ex-recv">4.3 · Phía nhận và sửa 1 byte</a></li><li class=sub><a href="#cp-ex-now">4.4 · abcd với băm hiện trạng</a></li><li class=sub><a href="#cp-ex-src">4.5 · Script và output</a></li><li><a href="#cp-know">5 · Kiến thức cần biết</a></li><li><a href="#cp-tips">6 · Gợi ý và việc còn mở</a></li><li><a href="#cp-sources">7 · Nguồn và giới hạn</a></li></ol></nav>
+<main>
+<section id="cp-catalog"><div class="sec-head"><span class="sec-no">Mục 2</span><h2>Danh mục thuật toán</h2></div>
+<p class="prose">18 thẻ, chia theo trạng thái. Mỗi thẻ có làm gì, dùng ở đâu, ví von, lưu ý và nguồn. Nơi nguồn ghi "chưa chốt" thì thẻ ghi đúng như vậy.</p>
+<h3 class="group-title" id="cp-now">2.1 · Hiện trạng trong code <span class="state now">đã triển khai</span></h3><div class="alg-grid"><article class="alg now" id="alg-1"><div class="alg-head"><span class="alg-no">1</span><h4>PBKDF2-HMAC-SHA256</h4></div><div class="alg-tags"><span class="grp">Băm mật khẩu</span><span class="state now">Hiện trạng</span></div><dl><dt>Làm gì</dt><dd>Biến mật khẩu và salt 16 byte thành digest 32 byte qua 200 000 vòng HMAC-SHA256. DB lưu chuỗi <code>pbkdf2_sha256$200000$salt$digest</code>.</dd><dt>Dùng ở đâu</dt><dd>Đăng ký, đăng nhập. Đăng nhập còn băm giả với <code>DUMMY_PASSWORD</code> cùng dạng khi không có tài khoản.</dd><dt>Ví von</dt><dd class="fun">Xay hạt tiêu 200 000 vòng: chậm có chủ đích, kẻ đoán mật khẩu cũng phải xay từng lần.</dd><dt>Lưu ý</dt><dd class="warnline">Salt ngẫu nhiên riêng mỗi mật khẩu. Khi đọc, số vòng chỉ chấp nhận trong khoảng 1 đến 1 000 000.</dd><dt>Nguồn</dt><dd><code>server/lib/security/user_password.py</code>, <code>user_login_process.py:17</code></dd></dl></article><article class="alg now" id="alg-2"><div class="alg-head"><span class="alg-no">2</span><h4>SHA-256</h4></div><div class="alg-tags"><span class="grp">Băm một chiều</span><span class="state now">Hiện trạng</span></div><dl><dt>Làm gì</dt><dd>Biến chuỗi bất kỳ thành 32 byte (64 ký tự hex). DB chỉ lưu giá trị băm, không lưu bản gốc.</dd><dt>Dùng ở đâu</dt><dd>Token phiên, product key máy, mã mời, OTP (băm của <code>registration_id:code</code>).</dd><dt>Ví von</dt><dd class="fun">Dấu vân tay: nhận ra được đúng người, không dựng lại người từ dấu vân tay.</dd><dt>Lưu ý</dt><dd class="warnline">Băm không phải mã hóa: không có khóa, không giải ngược được. Đổi 1 ký tự đầu vào thì đầu ra khác hoàn toàn (xem ví dụ mục 4.7).</dd><dt>Nguồn</dt><dd><code>data_hash.py:sha256_hex</code>, <code>user_session.py</code>, <code>machine_share_create.py</code>, <code>user_otp_generate.py:17</code></dd></dl></article><article class="alg now" id="alg-3"><div class="alg-head"><span class="alg-no">3</span><h4>Ngẫu nhiên an toàn (CSPRNG) và token phiên</h4></div><div class="alg-tags"><span class="grp">Sinh số ngẫu nhiên</span><span class="state now">Hiện trạng</span></div><dl><dt>Làm gì</dt><dd>Sinh chuỗi không đoán được bằng <code>secrets</code>: token phiên 32 byte, OTP, mã mời, registration_id.</dd><dt>Dùng ở đâu</dt><dd>Đăng nhập cấp token; server chỉ lưu SHA-256 của token, phiên hết hạn sau 30 ngày.</dd><dt>Ví von</dt><dd class="fun">Xúc xắc thật, không phải "đoán số theo quy luật".</dd><dt>Lưu ý</dt><dd class="warnline">Token chỉ đi app ↔ server, không là khóa ký hay khóa mã hóa, không đưa xuống máy.</dd><dt>Nguồn</dt><dd><code>user_session.py:create_session</code>, <code>config.py:TOKEN_BYTES=32</code>, thiết kế R5 §2</dd></dl></article><article class="alg now" id="alg-4"><div class="alg-head"><span class="alg-no">4</span><h4>HMAC-SHA256 dấu vân tay request</h4></div><div class="alg-tags"><span class="grp">Băm có khóa (MAC)</span><span class="state now">Hiện trạng</span></div><dl><dt>Làm gì</dt><dd>Băm JSON đã sắp xếp khóa bằng HMAC-SHA256 với khóa 32 byte ngẫu nhiên sinh lúc server chạy.</dd><dt>Dùng ở đâu</dt><dd>Đăng ký tài khoản: app thử lại cùng <code>request_id</code> thì phải gửi y hệt.</dd><dt>Ví von</dt><dd class="fun">Con dấu niêm phong có chìa riêng của server.</dd><dt>Lưu ý</dt><dd class="warnline">Khóa nằm trong RAM, mất khi restart: dấu vân tay chỉ so được trong một lần chạy.</dd><dt>Nguồn</dt><dd><code>data_hash.py:request_fingerprint</code>, <code>user_register_process.py:95</code></dd></dl></article><article class="alg now" id="alg-5"><div class="alg-head"><span class="alg-no">5</span><h4>So sánh hằng thời gian</h4></div><div class="alg-tags"><span class="grp">Kiểm bí mật</span><span class="state now">Hiện trạng</span></div><dl><dt>Làm gì</dt><dd><code>hmac.compare_digest</code> so hai giá trị bí mật mà thời gian chạy không lộ vị trí byte khác đầu tiên.</dd><dt>Dùng ở đâu</dt><dd>Đối chiếu digest mật khẩu và băm OTP.</dd><dt>Ví von</dt><dd class="fun">Kiểm đủ mọi ô rồi mới báo, không báo ngay ở ô sai đầu tiên.</dd><dt>Lưu ý</dt><dd class="warnline">Quy ước code: so bí mật bằng <code>compare_digest</code></dd><dt>Nguồn</dt><dd><code>user_password.py:matches_password</code>, <code>user_otp_validate.py:18</code>, CODE_STYLE §2</dd></dl></article><article class="alg base" id="alg-6"><div class="alg-head"><span class="alg-no">6</span><h4>TLS / HTTPS</h4></div><div class="alg-tags"><span class="grp">Lớp vận chuyển</span><span class="state base">Nền hạ tầng · chưa kiểm trong repo</span></div><dl><dt>Làm gì</dt><dd>Mã hóa kênh app ↔ server. R5 giữ HTTPS và thêm lớp mã hóa riêng ở bên trong.</dd><dt>Dùng ở đâu</dt><dd>Mọi request. Với proxy kết thúc TLS, envelope bên trong vẫn không đọc được (mô hình A1).</dd><dt>Ví von</dt><dd class="fun">Xe bọc thép chạy trên đường; envelope là két sắt đặt trong xe.</dd><dt>Lưu ý</dt><dd class="warnline">Cấu hình proxy thật (ví dụ Caddy) chưa được xác nhận trong repo; A1 mới là mô hình thiết kế.</dd><dt>Nguồn</dt><dd>thiết kế R5 §1, §2; <code>keys.md</code></dd></dl></article></div>
+<h3 class="group-title" id="cp-plan">2.2 · Đề xuất R5 <span class="state plan">chưa triển khai</span></h3><div class="alg-grid"><article class="alg plan" id="alg-7"><div class="alg-head"><span class="alg-no">7</span><h4>HPKE Base single-shot (RFC 9180)</h4></div><div class="alg-tags"><span class="grp">Mã hóa kết hợp</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Gói KEM + KDF + AEAD vào một lần gọi thư viện cho mỗi attempt, cho ra <code>enc</code> và <code>ct</code>.</dd><dt>Dùng ở đâu</dt><dd>Request app → server; máy dùng cùng mô hình envelope cho heartbeat, poll, result.</dd><dt>Ví von</dt><dd class="fun">Hộp thư có khe: ai cũng bỏ thư vào được bằng chìa công khai, chỉ chủ hộp mở được.</dd><dt>Lưu ý</dt><dd class="warnline">Base mode không chứng minh người gửi là ai, nên cần chữ ký ngoài (thẻ 12). Không tự viết, chỉ dùng thư viện có vector chuẩn. Suite chưa chốt.</dd><dt>Nguồn</dt><dd>thiết kế R5 §2, §7; RFC 9180</dd></dl></article><article class="alg plan" id="alg-8"><div class="alg-head"><span class="alg-no">8</span><h4>KEM: X25519 là ứng viên</h4></div><div class="alg-tags"><span class="grp">Trao đổi khóa</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Từ khóa tạm của người gửi và khóa công khai server tạo bí mật chung; <code>enc</code> đi kèm gói (32 byte nếu X25519).</dd><dt>Dùng ở đâu</dt><dd>Bước đầu trong HPKE seal và bước đầu khi server mở gói.</dd><dt>Ví von</dt><dd class="fun">Hai bên pha màu riêng với màu công khai ra cùng một màu; người ngoài nhìn không pha lại được.</dd><dt>Lưu ý</dt><dd class="warnline">Nguồn ghi: "Thuật toán KEM cụ thể chưa chốt; X25519 là ứng viên nghiên cứu". Lộ khóa riêng server thì không còn forward secrecy.</dd><dt>Nguồn</dt><dd><code>packet-security.html</code>, thiết kế R5 §1, §2 (RFC 9180 §9.7.4)</dd></dl></article><article class="alg plan" id="alg-9"><div class="alg-head"><span class="alg-no">9</span><h4>KDF: HKDF-SHA256 là ứng viên</h4></div><div class="alg-tags"><span class="grp">Dẫn khóa</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Từ bí mật chung và context <code>info</code> dẫn ra khóa AEAD và nonce, tách theo mục đích (domain separation).</dd><dt>Dùng ở đâu</dt><dd>Giữa KEM và AEAD trong HPKE; <code>info = Tuple(nhãn, M)</code>.</dd><dt>Ví von</dt><dd class="fun">Cái máy xay: một nắm hạt chung ra đúng loại bột cho từng việc.</dd><dt>Lưu ý</dt><dd class="warnline">Là ứng viên, chưa chốt. Không dùng cùng một dãy byte khóa cho mọi mục đích.</dd><dt>Nguồn</dt><dd><code>packet-security.html</code>, thiết kế R5 §2, §4; <code>keys.md</code></dd></dl></article><article class="alg plan" id="alg-10"><div class="alg-head"><span class="alg-no">10</span><h4>AEAD: AES-GCM hoặc ChaCha20-Poly1305</h4></div><div class="alg-tags"><span class="grp">Mã hóa + xác thực</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Mã hóa plaintext và gắn tag xác thực 16 byte. Sửa bất kỳ byte nào của ct hoặc AAD thì mở gói thất bại.</dd><dt>Dùng ở đâu</dt><dd>Inner request và response. AAD = <code>Tuple(nhãn, M)</code> để header gắn chặt với nội dung nhưng không bị mã hóa.</dd><dt>Ví von</dt><dd class="fun">Hộp có tem niêm phong: mở ra là biết có bị bóc.</dd><dt>Lưu ý</dt><dd class="warnline">Hai ứng viên sẽ so bằng prototype, chưa chốt. Nonce/IV không được lặp trên cùng khóa (RFC 5116).</dd><dt>Nguồn</dt><dd>thiết kế R5 §2, §9 (toán IV); <code>keys.md</code></dd></dl></article><article class="alg plan" id="alg-11"><div class="alg-head"><span class="alg-no">11</span><h4>HPKE Export cho response</h4></div><div class="alg-tags"><span class="grp">Dẫn khóa response</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Lấy khóa và nonce của response từ chính context HPKE của request, bằng hai nhãn riêng <code>flexmix-response-key-draft5</code> và <code>…-nonce-draft5</code>.</dd><dt>Dùng ở đâu</dt><dd>Response server → app; app mở rồi kiểm binding với attempt.</dd><dt>Ví von</dt><dd class="fun">Cùng chìa trong một cuộc trò chuyện, mỗi attempt chỉ dùng cho đúng một lời đáp.</dd><dt>Lưu ý</dt><dd class="warnline">Mỗi CID chỉ Seal tối đa một lần (CAS bền); không lưu hay dùng lại khóa response cho nhiều attempt.</dd><dt>Nguồn</dt><dd>thiết kế R5 §5; RFC 9180 §9.8</dd></dl></article><article class="alg plan" id="alg-12"><div class="alg-head"><span class="alg-no">12</span><h4>Chữ ký ngoài: Ed25519 hoặc ECDSA P-256</h4></div><div class="alg-tags"><span class="grp">Chữ ký số</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Credential của người gửi ký <code>Tuple(nhãn, M, enc, ct)</code>; server verify trước khi giải mã.</dd><dt>Dùng ở đâu</dt><dd>Mọi request đã enroll; máy có credential riêng. Bootstrap không có chữ ký (sig rỗng).</dd><dt>Ví von</dt><dd class="fun">Chữ ký trên mặt phong bì: biết ai gửi trước khi bóc.</dd><dt>Lưu ý</dt><dd class="warnline">Chưa chốt P-256 (r||s cố định, low-s) hay Ed25519; chỉ một thuật toán được allowlist theo key record, không tin <code>alg</code> tự khai. Khóa ký độc lập với khóa KEM.</dd><dt>Nguồn</dt><dd>thiết kế R5 §2, §3, §4</dd></dl></article><article class="alg plan" id="alg-13"><div class="alg-head"><span class="alg-no">13</span><h4>Manifest ký và root tin cậy</h4></div><div class="alg-tags"><span class="grp">Neo tin cậy</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Manifest liệt kê khóa server (kid, public key, hạn, trạng thái) do khóa root offline ký; app giữ public root từ APK.</dd><dt>Dùng ở đâu</dt><dd>App xác minh khóa server, nhờ vậy proxy không tráo được khóa.</dd><dt>Ví von</dt><dd class="fun">Danh bạ có con dấu công chứng đã in sẵn trong app.</dd><dt>Lưu ý</dt><dd class="warnline">Nguồn không nêu thuật toán ký của manifest/root. Sequence phải tăng dần để chống rollback; hết hạn hoặc clock không tin cậy thì chặn route.</dd><dt>Nguồn</dt><dd>thiết kế R5 §3</dd></dl></article><article class="alg plan" id="alg-14"><div class="alg-head"><span class="alg-no">14</span><h4>attempt_id, nonce và claim chống phát lại</h4></div><div class="alg-tags"><span class="grp">Chống replay</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Mỗi lần gửi mang <code>attempt_id</code> 16 byte CSPRNG cùng <code>issued_at</code>/<code>expires_at</code>; server claim <code>UNIQUE(audience, credential_kid, attempt_id)</code> bền trước mọi tác động.</dd><dt>Dùng ở đâu</dt><dd>Sau khi chữ ký và tag đã đúng, trước nghiệp vụ.</dd><dt>Ví von</dt><dd class="fun">Vé có số seri: soát một lần là gạch.</dd><dt>Lưu ý</dt><dd class="warnline">attempt_id không phải IV. Retry là attempt mới, giữ nguyên operation_id. Xác suất trùng ID 128-bit ≤ N(N−1)/2^129; UNIQUE bắt trường hợp trùng.</dd><dt>Nguồn</dt><dd>thiết kế R5 §6, §9; <code>duplicates.md</code></dd></dl></article><article class="alg plan" id="alg-15"><div class="alg-head"><span class="alg-no">15</span><h4>HMAC-SHA256 witness và ticket</h4></div><div class="alg-tags"><span class="grp">Băm có khóa (MAC)</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Witness = HMAC-SHA256 khóa riêng <code>kw</code> trên <code>Tuple(domain, audience, recovery_epoch, seq)</code> để peer chứng thực số thứ tự ledger. Ticket thao tác dùng khóa server chuyên dụng.</dd><dt>Dùng ở đâu</dt><dd>Phát hiện server bị restore lùi; ticket cấp trước thao tác ghi.</dd><dt>Ví von</dt><dd class="fun">Tem chống hàng giả do server đóng.</dd><dt>Lưu ý</dt><dd class="warnline">Thuật toán ticket nguồn ghi "MAC/sign", chưa nêu cụ thể. Witness chỉ cấp sau khi seq đã commit bền.</dd><dt>Nguồn</dt><dd>thiết kế R5 §7, §12</dd></dl></article><article class="alg plan" id="alg-16"><div class="alg-head"><span class="alg-no">16</span><h4>SHA-256 trong ledger</h4></div><div class="alg-tags"><span class="grp">Băm một chiều</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd><code>CID = SHA256(Tuple(M, enc))</code>; fingerprint thao tác = SHA256 của business bytes cố định; <code>head_n = SHA256(Tuple(domain, head_trước, entry))</code> nối thành chuỗi.</dd><dt>Dùng ở đâu</dt><dd>Nhận diện response, đối chiếu thao tác, ledger máy.</dd><dt>Ví von</dt><dd class="fun">Mỗi dòng sổ kèm dấu vân tay dòng trước: sửa một dòng cũ làm hỏng cả dây.</dd><dt>Lưu ý</dt><dd class="warnline">Không phải lớp mã hóa gói. Hash trần không chứng minh nguồn gửi; việc đó là của chữ ký.</dd><dt>Nguồn</dt><dd>thiết kế R5 §5, §7, §12; <code>packet-security.html</code></dd></dl></article><article class="alg plan" id="alg-17"><div class="alg-head"><span class="alg-no">17</span><h4>Mã hóa khung LP/Tuple và domain separation</h4></div><div class="alg-tags"><span class="grp">Kỹ thuật encoding</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd><code>LP(x) = uint32_be(độ dài) || x</code>; mọi trường bọc LP và có nhãn domain riêng cho info, AAD, chữ ký, để hai tập trường khác nhau không ra cùng byte.</dd><dt>Dùng ở đâu</dt><dd>Dựng M, info, AAD, chữ ký, envelope.</dd><dt>Ví von</dt><dd class="fun">Dán nhãn và đo chiều dài từng hộp trước khi xếp vào thùng.</dd><dt>Lưu ý</dt><dd class="warnline">Là bảng encoding thiết kế (draft5), chưa là wire contract production. Không base64 hai lớp, không nén input.</dd><dt>Nguồn</dt><dd>thiết kế R5 §4</dd></dl></article><article class="alg plan" id="alg-18"><div class="alg-head"><span class="alg-no">18</span><h4>NTS (RFC 8915): giờ có xác thực</h4></div><div class="alg-tags"><span class="grp">Nguồn thời gian</span><span class="state plan">Đề xuất R5</span></div><dl><dt>Làm gì</dt><dd>Giao thức đồng bộ giờ có xác thực, được nêu làm ví dụ cách xác minh giờ hệ điều hành sau mỗi lần boot.</dd><dt>Dùng ở đâu</dt><dd>Server mở trạng thái CLOCK_UNTRUSTED trước khi nhận gói đã Seal.</dd><dt>Ví von</dt><dd class="fun">Đồng hồ chuẩn có chữ ký thay vì hỏi hàng xóm.</dd><dt>Lưu ý</dt><dd class="warnline">Chỉ là ví dụ, không phải lựa chọn đã chốt: "một boolean NTS enabled không đủ". Gói không có route đồng bộ giờ.</dd><dt>Nguồn</dt><dd>thiết kế R5 §6, §12; <code>FINDINGS.md</code></dd></dl></article></div>
+<h3 class="group-title" id="cp-skip">2.3 · Đã nhắc nhưng không chọn</h3>
+<p class="prose">Các hướng này xuất hiện trong nguồn nhưng không phải thiết kế hiện hành; ghi lại để khỏi nhầm.</p>
+<div class="tbl"><table><thead><tr><th>Phương pháp</th><th>Trạng thái</th><th>Lý do / ghi chú</th><th>Nguồn</th></tr></thead><tbody><tr><td>Handshake X25519/HKDF tự ghép</td><td><b>Bỏ</b></td><td>Thay bằng HPKE Base + một chữ ký ngoài</td><td>thiết kế R5 §2</td></tr><tr><td>DPoP JWT (RFC 9449) cộng chữ ký payload bên trong</td><td><b>Bỏ</b></td><td>DPoP là proof HTTP/token, không tự bảo vệ toàn body/query</td><td>thiết kế R5 §2, nguồn</td></tr><tr><td>HPKE Auth mode</td><td><b>Không dùng làm chữ ký</b></td><td>Có KCI khi khóa recipient lộ (RFC 9180 §9.1.1); dùng chữ ký ngoài độc lập</td><td>thiết kế R5 §2</td></tr><tr><td>OHTTP (RFC 9458)</td><td><b>Chỉ tham khảo</b></td><td>Không tự nhận tuân thủ; response nonce ngẫu nhiên kiểu OHTTP là phương án đổi giao thức, cần người dùng chốt</td><td>thiết kế R5 §2; FINDINGS F04</td></tr><tr><td>HTTP Message Signatures (RFC 9421), Content-Digest (RFC 9530), JCS (RFC 8785)</td><td><b>Nghiên cứu cũ</b></td><td>Hướng trong backlog trước review R5, không nằm trong thiết kế hiện hành</td><td>protocol.md</td></tr><tr><td>AEAD phiên qua handshake chuẩn; HMAC chung thay chữ ký</td><td><b>Nghiên cứu cũ</b></td><td>Được so sánh trong backlog trước review; R5 chọn hướng HPKE + chữ ký</td><td>protocol.md, keys.md</td></tr></tbody></table></div></section>
+
+<section id="cp-flows"><div class="sec-head"><span class="sec-no">Mục 3</span><h2>Luồng hoạt động</h2></div>
+<p class="prose">Một sơ đồ chính cho đóng gói, một cho mở gói, rồi sơ đồ nhỏ cho từng thuật toán quan trọng. Mỗi khối đều theo dạng vào → xử lý → ra.</p>
+<article class="comp" id="cp-flow-seal"><header><h3>3.1 · Đóng gói một request (HPKE seal)</h3><div class="src">Thiết kế R5 §2, §4 · KEM → KDF → AEAD → chữ ký → envelope</div></header><figure class="dg" aria-labelledby="cp-seal-h"><div class="dg-head"><h3 id="cp-seal-h">Seal: từ abcd đến envelope</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw proc"></i>Bước mật mã</li><li><i class="sw box"></i>Dữ liệu vào/ra</li><li><i class="sw ok"></i>Kết quả</li></ul><div class="dg-canvas"><svg class="dgm wide" viewBox="0 0 900 676" width="900" height="676" role="img" aria-labelledby="cp-seal-t cp-seal-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-seal-t">Luồng đóng gói một request (HPKE seal)</title><desc id="cp-seal-d">Sáu bước từ nội dung rõ đến envelope. Mỗi bước có vào, xử lý và ra; ra của bước trước là vào của bước sau.</desc><defs><marker id="cp-seal-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><text class="zt" x="20" y="24" text-anchor="start">VÀO</text>
+<text class="zt" x="310" y="24" text-anchor="start">XỬ LÝ</text>
+<text class="zt" x="650" y="24" text-anchor="start">RA</text>
+<rect class="nd box" x="20" y="40" width="250" height="62" rx="8"/>
+<text class="tt" x="145.0" y="68.0" text-anchor="middle">Vào</text><text class="ts" x="145.0" y="85.0" text-anchor="middle">route · attempt_id · hạn · operation_id…</text>
+<rect class="nd proc" x="310" y="40" width="280" height="62" rx="8"/>
+<text class="tt" x="450.0" y="68.0" text-anchor="middle">0 · Dựng M</text><text class="ts" x="450.0" y="85.0" text-anchor="middle">Đóng khung metadata</text>
+<rect class="nd box" x="630" y="40" width="250" height="62" rx="8"/>
+<text class="tt" x="755.0" y="68.0" text-anchor="middle">Ra</text><text class="ts" x="755.0" y="85.0" text-anchor="middle">M (có độ dài từng trường)</text>
+<path class="e data" d="M270,71 L310,71" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M590,71 L630,71" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M450,102 L450,144" marker-end="url(#cp-seal-ah)"/>
+<rect class="nd box" x="20" y="144" width="250" height="62" rx="8"/>
+<text class="tt" x="145.0" y="172.0" text-anchor="middle">Vào</text><text class="ts" x="145.0" y="189.0" text-anchor="middle">khóa tạm người gửi + khóa công khai server</text>
+<rect class="nd proc" x="310" y="144" width="280" height="62" rx="8"/>
+<text class="tt" x="450.0" y="163.0" text-anchor="middle">1 · KEM</text><text class="ts" x="450.0" y="179.0" text-anchor="middle">Tạo bí mật chung</text><text class="ts" x="450.0" y="194.0" text-anchor="middle">X25519 (ứng viên)</text>
+<rect class="nd box" x="630" y="144" width="250" height="62" rx="8"/>
+<text class="tt" x="755.0" y="172.0" text-anchor="middle">Ra</text><text class="ts" x="755.0" y="189.0" text-anchor="middle">enc 32 B (gửi) · bí mật chung 32 B</text>
+<path class="e data" d="M270,175 L310,175" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M590,175 L630,175" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M450,206 L450,248" marker-end="url(#cp-seal-ah)"/>
+<rect class="nd box" x="20" y="248" width="250" height="62" rx="8"/>
+<text class="tt" x="145.0" y="276.0" text-anchor="middle">Vào</text><text class="ts" x="145.0" y="293.0" text-anchor="middle">bí mật chung + info = Tuple(nhãn, M)</text>
+<rect class="nd proc" x="310" y="248" width="280" height="62" rx="8"/>
+<text class="tt" x="450.0" y="267.0" text-anchor="middle">2 · KDF</text><text class="ts" x="450.0" y="283.0" text-anchor="middle">Dẫn khóa + nonce</text><text class="ts" x="450.0" y="298.0" text-anchor="middle">HKDF-SHA256 (ứng viên)</text>
+<rect class="nd box" x="630" y="248" width="250" height="62" rx="8"/>
+<text class="tt" x="755.0" y="276.0" text-anchor="middle">Ra</text><text class="ts" x="755.0" y="293.0" text-anchor="middle">khóa AEAD · nonce (không gửi)</text>
+<path class="e data" d="M270,279 L310,279" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M590,279 L630,279" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M450,310 L450,352" marker-end="url(#cp-seal-ah)"/>
+<rect class="nd box" x="20" y="352" width="250" height="62" rx="8"/>
+<text class="tt" x="145.0" y="380.0" text-anchor="middle">Vào</text><text class="ts" x="145.0" y="397.0" text-anchor="middle">khóa · nonce · AAD · plaintext</text>
+<rect class="nd proc" x="310" y="352" width="280" height="62" rx="8"/>
+<text class="tt" x="450.0" y="371.0" text-anchor="middle">3 · AEAD</text><text class="ts" x="450.0" y="387.0" text-anchor="middle">Mã hóa + gắn tag</text><text class="ts" x="450.0" y="402.0" text-anchor="middle">AES-GCM / ChaCha20 (chưa chốt)</text>
+<rect class="nd box" x="630" y="352" width="250" height="62" rx="8"/>
+<text class="tt" x="755.0" y="380.0" text-anchor="middle">Ra</text><text class="ts" x="755.0" y="397.0" text-anchor="middle">ct = bản mã + tag 16 B</text>
+<path class="e data" d="M270,383 L310,383" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M590,383 L630,383" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M450,414 L450,456" marker-end="url(#cp-seal-ah)"/>
+<rect class="nd box" x="20" y="456" width="250" height="62" rx="8"/>
+<text class="tt" x="145.0" y="484.0" text-anchor="middle">Vào</text><text class="ts" x="145.0" y="501.0" text-anchor="middle">khóa ký riêng + Tuple(nhãn, M, enc, ct)</text>
+<rect class="nd proc" x="310" y="456" width="280" height="62" rx="8"/>
+<text class="tt" x="450.0" y="475.0" text-anchor="middle">4 · Chữ ký ngoài</text><text class="ts" x="450.0" y="491.0" text-anchor="middle">Ký bằng khóa credential</text><text class="ts" x="450.0" y="506.0" text-anchor="middle">Ed25519 / P-256 (chưa chốt)</text>
+<rect class="nd box" x="630" y="456" width="250" height="62" rx="8"/>
+<text class="tt" x="755.0" y="484.0" text-anchor="middle">Ra</text><text class="ts" x="755.0" y="501.0" text-anchor="middle">sig (64 B nếu Ed25519)</text>
+<path class="e data" d="M270,487 L310,487" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M590,487 L630,487" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M450,518 L450,560" marker-end="url(#cp-seal-ah)"/>
+<rect class="nd box" x="20" y="560" width="250" height="62" rx="8"/>
+<text class="tt" x="145.0" y="588.0" text-anchor="middle">Vào</text><text class="ts" x="145.0" y="605.0" text-anchor="middle">version · M · enc · ct · sig</text>
+<rect class="nd ok" x="310" y="560" width="280" height="62" rx="8"/>
+<text class="tt" x="450.0" y="588.0" text-anchor="middle">5 · Envelope</text><text class="ts" x="450.0" y="605.0" text-anchor="middle">Ghép khung nhị phân</text>
+<rect class="nd box" x="630" y="560" width="250" height="62" rx="8"/>
+<text class="tt" x="755.0" y="588.0" text-anchor="middle">Ra</text><text class="ts" x="755.0" y="605.0" text-anchor="middle">khung gửi qua HTTPS</text>
+<path class="e data" d="M270,591 L310,591" marker-end="url(#cp-seal-ah)"/>
+<path class="e" d="M590,591 L630,591" marker-end="url(#cp-seal-ah)"/>
+<text class="tn" x="20" y="660" text-anchor="start">Bước 1–3 do thư viện HPKE thực hiện trong một lần gọi; bước 4 dùng khóa độc lập với khóa KEM.</text></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Thuật toán trong ngoặc là ứng viên, chưa chốt. Mỗi bước nhận đầu ra của bước trước; bí mật chung, khóa và nonce không được gửi đi.</figcaption></figure></article>
+<article class="comp" id="cp-flow-open"><header><h3>3.2 · Mở gói và các nhánh từ chối</h3><div class="src">Thiết kế R5 §5, §6 · verify → decap → AEAD open → claim</div></header><figure class="dg" aria-labelledby="cp-open-h"><div class="dg-head"><h3 id="cp-open-h">Open: kiểm lần lượt, sai ở đâu dừng ở đó</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw proc"></i>Xử lý</li><li><i class="sw dec"></i>Điểm kiểm</li><li><i class="sw ok"></i>Đi tiếp</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm wide" viewBox="0 0 900 800" width="900" height="800" role="img" aria-labelledby="cp-open-t cp-open-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-open-t">Luồng mở gói phía nhận và các nhánh từ chối</title><desc id="cp-open-d">Kiểm khung, chữ ký, tag AEAD, rồi claim attempt_id. Bất kỳ kiểm nào sai đều dừng và không tạo plaintext.</desc><defs><marker id="cp-open-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="150" y="20" width="300" height="52" rx="8"/>
+<text class="tt" x="300.0" y="43.0" text-anchor="middle">Nhận envelope qua HTTPS</text><text class="ts" x="300.0" y="60.0" text-anchor="middle">đã qua giới hạn header/body</text>
+<path class="e" d="M300,72 L300,100" marker-end="url(#cp-open-ah)"/>
+<polygon class="nd dec" points="300,100.0 430.0,150 300,200.0 170.0,150"/>
+<text class="dt" x="300" y="147" text-anchor="middle">Khung đủ và</text><text class="dt" x="300" y="163" text-anchor="middle">đúng giới hạn?</text>
+<rect class="pillbg" x="188.0" y="98.0" width="27" height="18" rx="9"/><text class="pilltx" x="202" y="110.5" text-anchor="middle">17</text>
+<path class="e" d="M300,200 L300,235" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="308" y="222" text-anchor="start">có</text>
+<polygon class="nd dec" points="300,235.0 430.0,285 300,335.0 170.0,285"/>
+<text class="dt" x="300" y="282" text-anchor="middle">Chữ ký ngoài</text><text class="dt" x="300" y="298" text-anchor="middle">đúng?</text>
+<rect class="pillbg" x="188.0" y="233.0" width="27" height="18" rx="9"/><text class="pilltx" x="202" y="245.5" text-anchor="middle">12</text>
+<path class="e" d="M300,335 L300,370" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="308" y="357" text-anchor="start">có</text>
+<rect class="nd proc" x="150" y="370" width="300" height="56" rx="8"/>
+<text class="tt" x="300.0" y="395.0" text-anchor="middle">KEM → KDF: dẫn khóa + nonce</text><text class="ts" x="300.0" y="412.0" text-anchor="middle">từ enc và khóa riêng server</text>
+<rect class="pillbg" x="158" y="361" width="34" height="18" rx="9"/><text class="pilltx" x="175" y="373.5" text-anchor="middle">8·9</text>
+<path class="e" d="M300,426 L300,455" marker-end="url(#cp-open-ah)"/>
+<polygon class="nd dec" points="300,455.0 430.0,505 300,555.0 170.0,505"/>
+<text class="dt" x="300" y="502" text-anchor="middle">Tag AEAD (AAD)</text><text class="dt" x="300" y="518" text-anchor="middle">khớp?</text>
+<rect class="pillbg" x="188.0" y="453.0" width="27" height="18" rx="9"/><text class="pilltx" x="202" y="465.5" text-anchor="middle">10</text>
+<path class="e" d="M300,555 L300,590" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="308" y="577" text-anchor="start">có</text>
+<polygon class="nd dec" points="300,590.0 430.0,640 300,690.0 170.0,640"/>
+<text class="dt" x="300" y="637" text-anchor="middle">attempt_id mới</text><text class="dt" x="300" y="653" text-anchor="middle">và còn hạn?</text>
+<rect class="pillbg" x="188.0" y="588.0" width="27" height="18" rx="9"/><text class="pilltx" x="202" y="600.5" text-anchor="middle">14</text>
+<path class="e" d="M300,690 L300,715" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="308" y="706" text-anchor="start">có</text>
+<rect class="nd ok" x="150" y="715" width="300" height="60" rx="8"/>
+<text class="tt" x="300.0" y="742.0" text-anchor="middle">Có plaintext</text><text class="ts" x="300.0" y="759.0" text-anchor="middle">→ kiểm phiên/quyền → nghiệp vụ</text>
+<rect class="nd bad" x="600" y="110" width="270" height="560" rx="8"/>
+<text class="tt" x="735.0" y="395.0" text-anchor="middle"></text>
+<text class="bt" x="735" y="150" text-anchor="middle">TỪ CHỐI</text>
+<text class="ts" x="735" y="185" text-anchor="middle">Không có plaintext.</text><text class="ts" x="735" y="205" text-anchor="middle">Trả lỗi vận chuyển tối giản,</text><text class="ts" x="735" y="225" text-anchor="middle">không phản chiếu nội dung.</text><text class="ts" x="735" y="260" text-anchor="middle">Không giải mã khi chữ ký sai;</text><text class="ts" x="735" y="280" text-anchor="middle">không dùng bản rõ khi tag sai;</text><text class="ts" x="735" y="300" text-anchor="middle">replay không chạy nghiệp vụ lần hai.</text>
+<path class="e" d="M430,150 L600,150" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="465" y="142" text-anchor="middle">khung sai</text>
+<path class="e" d="M430,285 L600,285" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="465" y="277" text-anchor="middle">chữ ký sai</text>
+<path class="e" d="M430,505 L600,505" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="465" y="497" text-anchor="middle">tag sai</text>
+<path class="e" d="M430,640 L600,640" marker-end="url(#cp-open-ah)"/>
+<text class="el" x="470" y="632" text-anchor="middle">đã claim / hết hạn</text></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Chữ ký được kiểm trước khi giải mã; tag AEAD được kiểm trước khi dùng plaintext; claim attempt_id xảy ra trước mọi tác động nghiệp vụ.</figcaption></figure></article>
+<article class="comp" id="cp-flow-mini"><header><h3>3.3 · Từng thuật toán quan trọng</h3><div class="src">Sơ đồ nhỏ vào → xử lý → ra</div></header><figure class="dg" aria-labelledby="cp-kem-h"><div class="dg-head"><h3 id="cp-kem-h">KEM: tạo bí mật chung</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ui"></i>Dữ liệu vào</li><li><i class="sw box"></i>Dữ liệu trung gian</li><li><i class="sw proc"></i>Thuật toán</li><li><i class="sw ok"></i>Kết quả</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm" viewBox="0 0 770 128" width="770" height="128" role="img" aria-labelledby="cp-kem-t cp-kem-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-kem-t">KEM: tạo bí mật chung</title><desc id="cp-kem-d">Khóa tạm của người gửi và khóa công khai của server cho ra bí mật chung và giá trị enc gửi đi.</desc><defs><marker id="cp-kem-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="290" y="31.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="61.0" text-anchor="middle">X25519 (ví dụ)</text><text class="ts" x="385.0" y="78.0" text-anchor="middle">trao đổi khóa</text>
+<rect class="pillbg" x="298" y="22.0" width="21" height="18" rx="9"/><text class="pilltx" x="308" y="34.5" text-anchor="middle">8</text>
+<rect class="nd ui" x="20" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="32.0" text-anchor="middle">Khóa riêng tạm</text><text class="ts" x="135.0" y="49.0" text-anchor="middle">người gửi, dùng một lần</text>
+<path class="e data" d="M250,35.0 L290,64.0" marker-end="url(#cp-kem-ah)"/>
+<rect class="nd ui" x="20" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="90.0" text-anchor="middle">Khóa công khai server</text><text class="ts" x="135.0" y="107.0" text-anchor="middle">lấy từ manifest đã ký</text>
+<path class="e data" d="M250,93.0 L290,64.0" marker-end="url(#cp-kem-ah)"/>
+<rect class="nd ok" x="520" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="32.0" text-anchor="middle">Bí mật chung 32 B</text><text class="ts" x="635.0" y="49.0" text-anchor="middle">giữ bí mật, không gửi</text>
+<path class="e" d="M480,64.0 L520,35.0" marker-end="url(#cp-kem-ah)"/>
+<rect class="nd ok" x="520" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="90.0" text-anchor="middle">enc 32 B</text><text class="ts" x="635.0" y="107.0" text-anchor="middle">khóa công khai tạm, gửi đi</text>
+<path class="e" d="M480,64.0 L520,93.0" marker-end="url(#cp-kem-ah)"/></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Ví dụ minh họa dùng X25519. enc đi cùng gói; bí mật chung thì không.</figcaption></figure><figure class="dg" aria-labelledby="cp-kdf-h"><div class="dg-head"><h3 id="cp-kdf-h">KDF: dẫn khóa và nonce</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ui"></i>Dữ liệu vào</li><li><i class="sw box"></i>Dữ liệu trung gian</li><li><i class="sw proc"></i>Thuật toán</li><li><i class="sw ok"></i>Kết quả</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm" viewBox="0 0 770 128" width="770" height="128" role="img" aria-labelledby="cp-kdf-t cp-kdf-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-kdf-t">KDF: dẫn khóa và nonce</title><desc id="cp-kdf-d">Bí mật chung cùng info có nhãn miền cho ra khóa AEAD và nonce.</desc><defs><marker id="cp-kdf-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="290" y="31.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="61.0" text-anchor="middle">HKDF-SHA256</text><text class="ts" x="385.0" y="78.0" text-anchor="middle">Extract rồi Expand</text>
+<rect class="pillbg" x="298" y="22.0" width="21" height="18" rx="9"/><text class="pilltx" x="308" y="34.5" text-anchor="middle">9</text>
+<rect class="nd box" x="20" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="32.0" text-anchor="middle">Bí mật chung 32 B</text><text class="ts" x="135.0" y="49.0" text-anchor="middle">từ bước KEM</text>
+<path class="e data" d="M250,35.0 L290,64.0" marker-end="url(#cp-kdf-ah)"/>
+<rect class="nd box" x="20" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="90.0" text-anchor="middle">info = Tuple(nhãn, M)</text><text class="ts" x="135.0" y="107.0" text-anchor="middle">tách theo mục đích</text>
+<path class="e data" d="M250,93.0 L290,64.0" marker-end="url(#cp-kdf-ah)"/>
+<rect class="nd ok" x="520" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="32.0" text-anchor="middle">Khóa AEAD</text><text class="ts" x="635.0" y="49.0" text-anchor="middle">32 B nếu AES-256</text>
+<path class="e" d="M480,64.0 L520,35.0" marker-end="url(#cp-kdf-ah)"/>
+<rect class="nd ok" x="520" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="90.0" text-anchor="middle">Nonce</text><text class="ts" x="635.0" y="107.0" text-anchor="middle">12 B nếu GCM</text>
+<path class="e" d="M480,64.0 L520,93.0" marker-end="url(#cp-kdf-ah)"/></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Nhãn trong info khiến cùng một bí mật chung cho ra khóa khác nhau theo mục đích.</figcaption></figure><figure class="dg" aria-labelledby="cp-aead-h"><div class="dg-head"><h3 id="cp-aead-h">AEAD: mã hóa kèm xác thực</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ui"></i>Dữ liệu vào</li><li><i class="sw box"></i>Dữ liệu trung gian</li><li><i class="sw proc"></i>Thuật toán</li><li><i class="sw ok"></i>Kết quả</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm" viewBox="0 0 770 186" width="770" height="186" role="img" aria-labelledby="cp-aead-t cp-aead-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-aead-t">AEAD: mã hóa kèm xác thực và nhánh mở lỗi</title><desc id="cp-aead-d">Khóa, nonce, AAD và plaintext cho ra bản mã cùng tag. Khi mở, sai tag thì từ chối.</desc><defs><marker id="cp-aead-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="290" y="60.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="90.0" text-anchor="middle">AEAD seal</text><text class="ts" x="385.0" y="107.0" text-anchor="middle">AES-GCM hoặc ChaCha20</text>
+<rect class="pillbg" x="298" y="51.0" width="27" height="18" rx="9"/><text class="pilltx" x="312" y="63.5" text-anchor="middle">10</text>
+<rect class="nd box" x="20" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="32.0" text-anchor="middle">Khóa + nonce</text><text class="ts" x="135.0" y="49.0" text-anchor="middle">nonce không lặp theo khóa</text>
+<path class="e data" d="M250,35.0 L290,93.0" marker-end="url(#cp-aead-ah)"/>
+<rect class="nd box" x="20" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="90.0" text-anchor="middle">AAD</text><text class="ts" x="135.0" y="107.0" text-anchor="middle">header, không mã hóa</text>
+<path class="e data" d="M250,93.0 L290,93.0" marker-end="url(#cp-aead-ah)"/>
+<rect class="nd ui" x="20" y="128.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="148.0" text-anchor="middle">Plaintext</text><text class="ts" x="135.0" y="165.0" text-anchor="middle">abcd (4 B)</text>
+<path class="e data" d="M250,151.0 L290,93.0" marker-end="url(#cp-aead-ah)"/>
+<rect class="nd ok" x="520" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="32.0" text-anchor="middle">Bản mã</text><text class="ts" x="635.0" y="49.0" text-anchor="middle">cùng độ dài plaintext</text>
+<path class="e" d="M480,93.0 L520,35.0" marker-end="url(#cp-aead-ah)"/>
+<rect class="nd ok" x="520" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="90.0" text-anchor="middle">Tag 16 B</text><text class="ts" x="635.0" y="107.0" text-anchor="middle">xác thực ct và AAD</text>
+<path class="e" d="M480,93.0 L520,93.0" marker-end="url(#cp-aead-ah)"/>
+<rect class="nd bad" x="520" y="128.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="148.0" text-anchor="middle">Mở: sai 1 byte ct/AAD</text><text class="ts" x="635.0" y="165.0" text-anchor="middle">→ lỗi tag, từ chối</text>
+<path class="e" d="M480,93.0 L520,151.0" marker-end="url(#cp-aead-ah)"/></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Nhánh dưới là lúc mở gói: sai 1 byte của bản mã hoặc AAD thì tag không khớp và gói bị từ chối.</figcaption></figure><figure class="dg" aria-labelledby="cp-sign-h"><div class="dg-head"><h3 id="cp-sign-h">Chữ ký ngoài: ký rồi verify</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ui"></i>Dữ liệu vào</li><li><i class="sw box"></i>Dữ liệu trung gian</li><li><i class="sw proc"></i>Thuật toán</li><li><i class="sw ok"></i>Kết quả</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm" viewBox="0 0 770 272" width="770" height="272" role="img" aria-labelledby="cp-sign-t cp-sign-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-sign-t">Chữ ký ngoài: ký và verify</title><desc id="cp-sign-d">Hàng trên người gửi ký; hàng dưới server verify trước khi giải mã.</desc><defs><marker id="cp-sign-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="290" y="31.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="61.0" text-anchor="middle">Ký (Ed25519 hoặc P-256)</text><text class="ts" x="385.0" y="78.0" text-anchor="middle">chưa chốt thuật toán</text>
+<rect class="pillbg" x="298" y="22.0" width="27" height="18" rx="9"/><text class="pilltx" x="312" y="34.5" text-anchor="middle">12</text>
+<rect class="nd ui" x="20" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="32.0" text-anchor="middle">Khóa ký riêng</text><text class="ts" x="135.0" y="49.0" text-anchor="middle">của credential</text>
+<path class="e data" d="M250,35.0 L290,64.0" marker-end="url(#cp-sign-ah)"/>
+<rect class="nd box" x="20" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="90.0" text-anchor="middle">Tuple(nhãn, M, enc, ct)</text><text class="ts" x="135.0" y="107.0" text-anchor="middle">byte chuẩn, không băm thêm</text>
+<path class="e data" d="M250,93.0 L290,64.0" marker-end="url(#cp-sign-ah)"/>
+<rect class="nd ok" x="520" y="41.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="61.0" text-anchor="middle">sig</text><text class="ts" x="635.0" y="78.0" text-anchor="middle">64 B nếu Ed25519</text>
+<path class="e" d="M480,64.0 L520,64.0" marker-end="url(#cp-sign-ah)"/>
+<text class="zt" x="20" y="146" text-anchor="start">Phía server:</text>
+<rect class="nd proc" x="290" y="175.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="205.0" text-anchor="middle">Verify</text><text class="ts" x="385.0" y="222.0" text-anchor="middle">trước khi decap</text>
+<rect class="pillbg" x="298" y="166.0" width="27" height="18" rx="9"/><text class="pilltx" x="312" y="178.5" text-anchor="middle">12</text>
+<rect class="nd box" x="20" y="156.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="176.0" text-anchor="middle">Khóa công khai</text><text class="ts" x="135.0" y="193.0" text-anchor="middle">theo key record, allowlist</text>
+<path class="e data" d="M250,179.0 L290,208.0" marker-end="url(#cp-sign-ah)"/>
+<rect class="nd box" x="20" y="214.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="234.0" text-anchor="middle">Tuple(...) + sig</text><text class="ts" x="135.0" y="251.0" text-anchor="middle">nhận được</text>
+<path class="e data" d="M250,237.0 L290,208.0" marker-end="url(#cp-sign-ah)"/>
+<rect class="nd ok" x="520" y="156.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="176.0" text-anchor="middle">Hợp lệ</text><text class="ts" x="635.0" y="193.0" text-anchor="middle">đi tiếp</text>
+<path class="e" d="M480,208.0 L520,179.0" marker-end="url(#cp-sign-ah)"/>
+<rect class="nd bad" x="520" y="214.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="234.0" text-anchor="middle">Sai</text><text class="ts" x="635.0" y="251.0" text-anchor="middle">từ chối</text>
+<path class="e" d="M480,208.0 L520,237.0" marker-end="url(#cp-sign-ah)"/></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Người gửi ký, server verify trước khi decap. Ký trực tiếp byte chuẩn, không băm thêm.</figcaption></figure><figure class="dg" aria-labelledby="cp-hash-h"><div class="dg-head"><h3 id="cp-hash-h">SHA-256 và PBKDF2</h3><span class="state now">Hiện trạng · đã có trong code</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ui"></i>Dữ liệu vào</li><li><i class="sw box"></i>Dữ liệu trung gian</li><li><i class="sw proc"></i>Thuật toán</li><li><i class="sw ok"></i>Kết quả</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm" viewBox="0 0 770 214" width="770" height="214" role="img" aria-labelledby="cp-hash-t cp-hash-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-hash-t">Băm: SHA-256 và PBKDF2</title><desc id="cp-hash-d">SHA-256 cho ra 32 byte một chiều; PBKDF2 lặp HMAC-SHA256 hai trăm nghìn vòng với salt.</desc><defs><marker id="cp-hash-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="290" y="2.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="32.0" text-anchor="middle">SHA-256</text><text class="ts" x="385.0" y="49.0" text-anchor="middle">một chiều</text>
+<rect class="pillbg" x="298" y="-7.0" width="21" height="18" rx="9"/><text class="pilltx" x="308" y="5.5" text-anchor="middle">2</text>
+<rect class="nd ui" x="20" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="32.0" text-anchor="middle">Chuỗi bất kỳ</text><text class="ts" x="135.0" y="49.0" text-anchor="middle">token, product key, mã mời</text>
+<path class="e data" d="M250,35.0 L290,35.0" marker-end="url(#cp-hash-ah)"/>
+<rect class="nd ok" x="520" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="32.0" text-anchor="middle">32 byte (64 hex)</text><text class="ts" x="635.0" y="49.0" text-anchor="middle">DB chỉ lưu giá trị này</text>
+<path class="e" d="M480,35.0 L520,35.0" marker-end="url(#cp-hash-ah)"/>
+<text class="zt" x="20" y="88" text-anchor="start">Mật khẩu:</text>
+<rect class="nd proc" x="290" y="117.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="147.0" text-anchor="middle">PBKDF2-HMAC-SHA256</text><text class="ts" x="385.0" y="164.0" text-anchor="middle">200 000 vòng</text>
+<rect class="pillbg" x="298" y="108.0" width="21" height="18" rx="9"/><text class="pilltx" x="308" y="120.5" text-anchor="middle">1</text>
+<rect class="nd ui" x="20" y="98.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="118.0" text-anchor="middle">Mật khẩu</text><text class="ts" x="135.0" y="135.0" text-anchor="middle">người dùng nhập</text>
+<path class="e data" d="M250,121.0 L290,150.0" marker-end="url(#cp-hash-ah)"/>
+<rect class="nd box" x="20" y="156.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="176.0" text-anchor="middle">Salt 16 B</text><text class="ts" x="135.0" y="193.0" text-anchor="middle">ngẫu nhiên mỗi mật khẩu</text>
+<path class="e data" d="M250,179.0 L290,150.0" marker-end="url(#cp-hash-ah)"/>
+<rect class="nd ok" x="520" y="127.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="147.0" text-anchor="middle">pbkdf2_sha256$…</text><text class="ts" x="635.0" y="164.0" text-anchor="middle">iter $ salt $ digest</text>
+<path class="e" d="M480,150.0 L520,150.0" marker-end="url(#cp-hash-ah)"/></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Hai cách băm đang chạy trong server: SHA-256 cho giá trị ngẫu nhiên dài, PBKDF2 cho mật khẩu.</figcaption></figure><figure class="dg" aria-labelledby="cp-replay-h"><div class="dg-head"><h3 id="cp-replay-h">Claim chống phát lại</h3><span class="state plan">Đề xuất R5 · chưa triển khai</span></div><ul class="dg-legend" aria-label="Chú giải"><li><i class="sw ui"></i>Dữ liệu vào</li><li><i class="sw box"></i>Dữ liệu trung gian</li><li><i class="sw proc"></i>Thuật toán</li><li><i class="sw ok"></i>Kết quả</li><li><i class="sw bad"></i>Từ chối</li></ul><div class="dg-canvas"><svg class="dgm" viewBox="0 0 770 128" width="770" height="128" role="img" aria-labelledby="cp-replay-t cp-replay-d" xmlns="http://www.w3.org/2000/svg"><title id="cp-replay-t">Chống phát lại bằng attempt_id</title><desc id="cp-replay-d">Claim bền attempt_id; trùng hoặc hết hạn thì từ chối.</desc><defs><marker id="cp-replay-ah" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a776d"/></marker></defs><rect class="nd proc" x="290" y="31.0" width="190" height="66" rx="8"/>
+<text class="tt" x="385.0" y="61.0" text-anchor="middle">Claim UNIQUE bền</text><text class="ts" x="385.0" y="78.0" text-anchor="middle">trước mọi tác động</text>
+<rect class="pillbg" x="298" y="22.0" width="27" height="18" rx="9"/><text class="pilltx" x="312" y="34.5" text-anchor="middle">14</text>
+<rect class="nd box" x="20" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="32.0" text-anchor="middle">attempt_id 16 B</text><text class="ts" x="135.0" y="49.0" text-anchor="middle">CSPRNG, mới mỗi attempt</text>
+<path class="e data" d="M250,35.0 L290,64.0" marker-end="url(#cp-replay-ah)"/>
+<rect class="nd box" x="20" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="135.0" y="90.0" text-anchor="middle">issued_at / expires_at</text><text class="ts" x="135.0" y="107.0" text-anchor="middle">server kiểm theo giờ tin cậy</text>
+<path class="e data" d="M250,93.0 L290,64.0" marker-end="url(#cp-replay-ah)"/>
+<rect class="nd ok" x="520" y="12.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="32.0" text-anchor="middle">Mới + còn hạn</text><text class="ts" x="635.0" y="49.0" text-anchor="middle">tiếp tục xử lý</text>
+<path class="e" d="M480,64.0 L520,35.0" marker-end="url(#cp-replay-ah)"/>
+<rect class="nd bad" x="520" y="70.0" width="230" height="46" rx="8"/>
+<text class="tt" x="635.0" y="90.0" text-anchor="middle">Đã có / hết hạn</text><text class="ts" x="635.0" y="107.0" text-anchor="middle">từ chối</text>
+<path class="e" d="M480,64.0 L520,93.0" marker-end="url(#cp-replay-ah)"/></svg></div><p class="dg-hint">↔ Vuốt ngang để xem hết sơ đồ.</p><figcaption>Hạn dùng được kiểm theo giờ của server; trùng attempt_id đã claim thì từ chối.</figcaption></figure></article></section>
+
+<section id="cp-example"><div class="sec-head"><span class="sec-no">Mục 4</span><h2>Ví dụ: gói tin abcd</h2></div>
+<div class="note"><b>Đọc kỹ trước khi dùng số liệu.</b> Mọi giá trị hex bên dưới do script chạy thật (mục 4.5). Script dùng primitive tương đương: X25519 + HKDF-SHA256 + AES-256-GCM + Ed25519. Khóa là <b>khóa giả công khai</b>, nhãn là <code>demo-*</code>, M rút gọn. Đây không phải HPKE RFC 9180 key schedule, không phải suite đã chốt và <b>không dùng làm test vector</b>. Khi dùng thật, khóa tạm ngẫu nhiên khiến mỗi lần ra byte khác.</div>
+<article class="comp" id="cp-ex-send"><header><h3>4.1 · Phía gửi: từ 4 byte ra envelope</h3><div class="src">Chạy bằng <code>cryptography</code> 46.0.5 · pill số = thẻ thuật toán</div></header>
+<h4>Nội dung</h4><div class="bytes-row"><span class="bc">a<small>61</small></span><span class="bc">b<small>62</small></span><span class="bc">c<small>63</small></span><span class="bc">d<small>64</small></span></div>
+<div class="ex-step" id="ex-0"><div class="ex-head"><span>Bước 0 · Nội dung và metadata M</span><span class="alg-no" title="Thẻ thuật toán 17">17</span><span class="len">M = 63 B</span></div><div class="io"><div><h5>Vào</h5><div class="kv"><div><span class="k">plaintext (4 byte)</span><code>abcd</code> → <span class='hex'>61 62 63 64</span></div><div><span class="k">trường M, mỗi trường bọc LP</span>domain <code>demo-packet-request</code> · version <code>0005</code> · route <code>DEMO_ROUTE</code> · attempt_id 16 byte</div></div></div><div><h5>Ra</h5><div class="kv"><div><span class="k">M (63 byte)</span><span class="hex">0000001364656d6f2d7061636b65742d726571756573740000000200050000000a44454d4f5f524f55544500000010000102030405060708090a0b0c0d0e0f</span></div><div><span class="k">attempt_id</span><span class="hex">000102030405060708090a0b0c0d0e0f</span></div></div></div></div></div><div class="ex-step" id="ex-1"><div class="ex-head"><span>Bước 1 · KEM: tạo bí mật chung</span><span class="alg-no" title="Thẻ thuật toán 8">8</span><span class="len">→ 32 B + 32 B</span></div><div class="io"><div><h5>Vào</h5><div class="kv"><div><span class="k">khóa riêng tạm của người gửi (giả)</span><code>DEMO-ephemeral-sender-key-00002_</code></div><div><span class="k">khóa công khai server (giả)</span><span class="hex">dfbdb20751f809331110161aee9030040b3a7dbaeac43a267217bf1308ab0442</span></div></div></div><div><h5>Ra</h5><div class="kv"><div><span class="k">enc = khóa công khai tạm, <b>gửi đi</b> (32 B)</span><span class="hex">6be209315faa877ce7b0ff10f981d156003531726c65b8bb28704f62bdd29765</span></div><div><span class="k">bí mật chung, <b>không gửi</b> (32 B)</span><span class="hex">19a0f60e99f8acb821402c6c2464a5358a96b5c742803a2beaef730d7e0d4740</span></div></div></div></div></div><div class="ex-step" id="ex-2"><div class="ex-head"><span>Bước 2 · KDF: dẫn khóa và nonce</span><span class="alg-no" title="Thẻ thuật toán 9">9</span><span class="len">→ 44 B</span></div><div class="io"><div><h5>Vào</h5><div class="kv"><div><span class="k">bí mật chung</span><span class="hex">19a0f60e99f8acb8…</span></div><div><span class="k">info</span><code>Tuple("demo-hpke-like-info", M)</code></div></div></div><div><h5>Ra</h5><div class="kv"><div><span class="k">khóa AEAD (32 B, không gửi)</span><span class="hex">a9c2539721314e77cc498fd5395fbdb17126c1af9bafa78adc64b0054e541bf6</span></div><div><span class="k">nonce (12 B, không gửi)</span><span class="hex">c55031ae3babfad34a1a1bad</span></div></div></div></div></div><div class="ex-step" id="ex-3"><div class="ex-head"><span>Bước 3 · AEAD: mã hóa abcd</span><span class="alg-no" title="Thẻ thuật toán 10">10</span><span class="len">4 B → 20 B</span></div><div class="io"><div><h5>Vào</h5><div class="kv"><div><span class="k">khóa + nonce</span>từ bước 2</div><div><span class="k">AAD (87 B)</span><code>Tuple("demo-aad-request", M)</code></div><div><span class="k">plaintext</span><code>abcd</code> (4 B)</div></div></div><div><h5>Ra</h5><div class="kv"><div><span class="k">bản mã (4 B)</span><span class="hex"><span class="f f-ct">01a7f25e</span></span></div><div><span class="k">tag (16 B)</span><span class="hex"><span class="f f-tag">952c03fd1a928a84e4fa8487c123eca1</span></span></div><div><span class="k">ct = bản mã + tag</span><b>20 byte</b> (4 + 16)</div></div></div></div></div><div class="ex-step" id="ex-4"><div class="ex-head"><span>Bước 4 · Chữ ký ngoài</span><span class="alg-no" title="Thẻ thuật toán 12">12</span><span class="len">→ 64 B</span></div><div class="io"><div><h5>Vào</h5><div class="kv"><div><span class="k">khóa ký giả</span><code>DEMO-credential-signing-key-0003</code></div><div><span class="k">khóa công khai</span><span class="hex">4e5acaae234299621c23171702d17d4de480ec3621b3509c12a1fa5198186cf6</span></div><div><span class="k">thông điệp ký</span><code>Tuple("demo-sig-request", M, enc, ct)</code></div></div></div><div><h5>Ra</h5><div class="kv"><div><span class="k">sig (64 B)</span><span class="hex"><span class="f f-sig">f1a3b7d0305209a3de731fcda0b69fc0e09aa88bf44afa3eba29c6401fa46a395bac532545c65adef5f3a404232e00317d530df1f6f0e35ba491e4e4482c4f00</span></span></div></div></div></div></div><div class="ex-step" id="ex-5"><div class="ex-head"><span>Bước 5 · Envelope gửi đi</span><span class="alg-no" title="Thẻ thuật toán 17">17</span><span class="len">197 B</span></div><div class="io"><div><h5>Vào</h5><div class="kv"><div><span class="k">ghép</span><code>version(2) ‖ LP(M) ‖ LP(enc) ‖ LP(ct) ‖ LP(sig)</code></div><div><span class="k">lớp ngoài</span>gửi qua HTTPS</div></div></div><div><h5>Ra</h5><div class="kv"><div><span class="k">envelope (197 byte)</span><span class="hex"><span class="f f-ver">0005</span><span class="f f-len">0000003f</span><span class="f f-m">0000001364656d6f2d7061636b65742d726571756573740000000200050000000a44454d4f5f524f55544500000010000102030405060708090a0b0c0d0e0f</span><span class="f f-len">00000020</span><span class="f f-enc">6be209315faa877ce7b0ff10f981d156003531726c65b8bb28704f62bdd29765</span><span class="f f-len">00000014</span><span class="f f-ct">01a7f25e</span><span class="f f-tag">952c03fd1a928a84e4fa8487c123eca1</span><span class="f f-len">00000040</span><span class="f f-sig">f1a3b7d0305209a3de731fcda0b69fc0e09aa88bf44afa3eba29c6401fa46a395bac532545c65adef5f3a404232e00317d530df1f6f0e35ba491e4e4482c4f00</span></span></div></div></div></div></div></article>
+<article class="comp" id="cp-ex-env"><header><h3>4.2 · Hình dạng gói trên dây</h3><div class="src">Envelope = version ‖ LP(M) ‖ LP(enc) ‖ LP(ct) ‖ LP(sig) · 197 byte</div></header>
+<div class="sizebar" role="img" aria-label="Tỉ lệ các phần của envelope 197 byte: version 2, tiền tố độ dài 16, M 63, enc 32, bản mã 4, tag 16, chữ ký 64"><span class="f f-ver" style="flex:2 0 2px;min-width:14px" title="version: 2 byte"></span><span class="f f-len" style="flex:16 0 16px;min-width:0px" title="4 × LP: 16 byte">4 × LP</span><span class="f f-m" style="flex:63 0 63px;min-width:0px" title="M: 63 byte">M</span><span class="f f-enc" style="flex:32 0 32px;min-width:0px" title="enc: 32 byte">enc</span><span class="f f-ct" style="flex:4 0 4px;min-width:14px" title="ct: 4 byte"></span><span class="f f-tag" style="flex:16 0 16px;min-width:0px" title="tag: 16 byte">tag</span><span class="f f-sig" style="flex:64 0 64px;min-width:0px" title="sig: 64 byte">sig</span></div><div class="tbl"><table><thead><tr><th>Phần</th><th>Byte</th><th>Ghi chú</th></tr></thead><tbody><tr><td><span class="f f-ver" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> version</td><td>2</td><td><code>0005</code> (draft5 minh họa)</td></tr><tr><td><span class="f f-len" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> 4 tiền tố độ dài LP</td><td>16</td><td>mỗi trường 4 byte</td></tr><tr><td><span class="f f-m" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> M</td><td>63</td><td>metadata, đi ở dạng rõ nhưng được chữ ký và AAD bảo vệ</td></tr><tr><td><span class="f f-enc" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> enc</td><td>32</td><td>khóa công khai tạm</td></tr><tr><td><span class="f f-ct" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> bản mã</td><td>4</td><td>abcd đã mã hóa</td></tr><tr><td><span class="f f-tag" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> tag AEAD</td><td>16</td><td>phần cộng thêm của AEAD</td></tr><tr><td><span class="f f-sig" style="display:inline-block;width:14px;height:14px;border:1px solid var(--line-2)"></span> chữ ký</td><td>64</td><td>Ed25519</td></tr><tr><td><b>Tổng</b></td><td><b>197</b></td><td>4 byte nội dung thành 197 byte trên dây; chi phí mật mã cố định = enc 32 + tag 16 + sig 64 = <b>112 byte</b>, khớp ước tính trong thiết kế R5 §9</td></tr></tbody></table></div></article>
+<article class="comp" id="cp-ex-recv"><header><h3>4.3 · Phía nhận, và sửa 1 byte</h3><div class="src">Server verify, giải mã và claim; các lần sau là thử nghiệm chạy thật</div></header>
+<div class="tbl"><table><thead><tr><th>Tình huống</th><th>Kết quả</th></tr></thead><tbody><tr><td>Gói nguyên vẹn, lần đầu</td><td><span class="res-ok">CHẤP NHẬN</span> · OK: abcd</td></tr><tr><td>Gửi lại đúng gói đó lần hai</td><td><span class="res-bad">TỪ CHỐI</span> · REJECT: replay, attempt_id đã claim</td></tr><tr><td>Đổi 1 byte của bản mã trong envelope (vị trí 109: <code>01</code> → <code>00</code>)</td><td><span class="res-bad">TỪ CHỐI</span> · REJECT: chữ ký sai (chặn TRƯỚC khi giải mã)</td></tr></tbody></table></div>
+<p>Chữ ký sai bị chặn trước cả khi giải mã. Nếu chỉ còn AEAD, sửa 1 byte vẫn khiến tag không khớp:</p>
+<div class="tbl"><table><thead><tr><th>Thử riêng từng lớp</th><th>Kết quả</th></tr></thead><tbody><tr><td>Chỉ AEAD, sửa 1 byte bản mã (bỏ chữ ký để thấy riêng AEAD)</td><td><span class="res-bad">TỪ CHỐI</span> · InvalidTag (tag AEAD không khớp)</td></tr><tr><td>Chỉ AEAD, đổi 1 byte trong AAD (<code>DEMO_ROUTE</code> → <code>DEMO_ROUTF</code>)</td><td><span class="res-bad">TỪ CHỐI</span> · InvalidTag (AAD khác: đổi 1 byte của route)</td></tr><tr><td>Chỉ AEAD, dùng khóa riêng của người khác</td><td><span class="res-bad">TỪ CHỐI</span> · InvalidTag (sai khóa riêng người nhận)</td></tr><tr><td>Chỉ chữ ký, sửa 1 byte bản mã</td><td><span class="res-bad">TỪ CHỐI</span> · InvalidSignature (Ed25519 verify)</td></tr></tbody></table></div></article>
+<article class="comp" id="cp-ex-now"><header><h3>4.4 · abcd với các phép băm đang chạy</h3><div class="src">Hiện trạng · <code>hashlib</code> / <code>hmac</code> · khóa và salt minh họa</div></header>
+<div class="tbl"><table><thead><tr><th>Phép tính</th><th>Kết quả</th></tr></thead><tbody>
+<tr><td>SHA-256(<code>abcd</code>)</td><td><span class="hex">88d4266fd4e6338d13b845fcf289579d209c897823b9217da3e161936f031589</span></td></tr>
+<tr><td>SHA-256(<code>abce</code>), chỉ đổi 1 ký tự</td><td><span class="hex">84e73dc50f2be9000ab2a87f8026c1f45e1fec954af502e9904031645b190d4f</span><br><span class="note-s">khác 126 trên 256 bit</span></td></tr>
+<tr><td>PBKDF2-HMAC-SHA256(<code>abcd</code>), salt <code>000102030405060708090a0b0c0d0e0f</code>, 200 000 vòng</td><td><span class="hex">baa378450ad2f9d1dabc1a22f3dc97e8fe1f015eee913c954eb3ecdb791c32bf</span><br><span class="note-s">server thật dùng salt ngẫu nhiên nên mỗi lần ra khác</span></td></tr>
+<tr><td>HMAC-SHA256(khóa <code>DEMO-hmac-key</code>, <code>abcd</code>)</td><td><span class="hex">6473e07b75e58dbc634f32d08d477baef829dab7aa7cfce5800a476830d378ef</span></td></tr></tbody></table></div></article>
+<article class="comp" id="cp-ex-src"><header><h3>4.5 · Script và output thật</h3><div class="src">Script chạy ngoài repo (thư mục tạm); dán nguyên văn để tái tạo</div></header>
+<details class="evidence"><summary>Output (JSON, chạy lần cuối)</summary><pre class="out">{
+ &quot;srv_pub&quot;: &quot;dfbdb20751f809331110161aee9030040b3a7dbaeac43a267217bf1308ab0442&quot;,
+ &quot;eph_pub&quot;: &quot;6be209315faa877ce7b0ff10f981d156003531726c65b8bb28704f62bdd29765&quot;,
+ &quot;sig_pub&quot;: &quot;4e5acaae234299621c23171702d17d4de480ec3621b3509c12a1fa5198186cf6&quot;,
+ &quot;plaintext_hex&quot;: &quot;61626364&quot;,
+ &quot;M&quot;: &quot;0000001364656d6f2d7061636b65742d726571756573740000000200050000000a44454d4f5f524f55544500000010000102030405060708090a0b0c0d0e0f&quot;,
+ &quot;M_len&quot;: 63,
+ &quot;attempt_id&quot;: &quot;000102030405060708090a0b0c0d0e0f&quot;,
+ &quot;enc&quot;: &quot;6be209315faa877ce7b0ff10f981d156003531726c65b8bb28704f62bdd29765&quot;,
+ &quot;shared&quot;: &quot;19a0f60e99f8acb821402c6c2464a5358a96b5c742803a2beaef730d7e0d4740&quot;,
+ &quot;key&quot;: &quot;a9c2539721314e77cc498fd5395fbdb17126c1af9bafa78adc64b0054e541bf6&quot;,
+ &quot;nonce&quot;: &quot;c55031ae3babfad34a1a1bad&quot;,
+ &quot;aad&quot;: &quot;0000001064656d6f2d6161642d726571756573740000003f0000001364656d6f2d7061636b65742d726571756573740000000200050000000a44454d4f5f524f55544500000010000102030405060708090a0b0c0d0e0f&quot;,
+ &quot;aad_len&quot;: 87,
+ &quot;ct_all&quot;: &quot;01a7f25e952c03fd1a928a84e4fa8487c123eca1&quot;,
+ &quot;ct_body&quot;: &quot;01a7f25e&quot;,
+ &quot;tag&quot;: &quot;952c03fd1a928a84e4fa8487c123eca1&quot;,
+ &quot;ct_len&quot;: 20,
+ &quot;sig&quot;: &quot;f1a3b7d0305209a3de731fcda0b69fc0e09aa88bf44afa3eba29c6401fa46a395bac532545c65adef5f3a404232e00317d530df1f6f0e35ba491e4e4482c4f00&quot;,
+ &quot;sig_len&quot;: 64,
+ &quot;env&quot;: &quot;00050000003f0000001364656d6f2d7061636b65742d726571756573740000000200050000000a44454d4f5f524f55544500000010000102030405060708090a0b0c0d0e0f000000206be209315faa877ce7b0ff10f981d156003531726c65b8bb28704f62bdd297650000001401a7f25e952c03fd1a928a84e4fa8487c123eca100000040f1a3b7d0305209a3de731fcda0b69fc0e09aa88bf44afa3eba29c6401fa46a395bac532545c65adef5f3a404232e00317d530df1f6f0e35ba491e4e4482c4f00&quot;,
+ &quot;env_len&quot;: 197,
+ &quot;rx_ok&quot;: &quot;OK: abcd&quot;,
+ &quot;rx_replay&quot;: &quot;REJECT: replay, attempt_id đã claim&quot;,
+ &quot;tamper_ct_index&quot;: 109,
+ &quot;rx_tamper_ct&quot;: &quot;REJECT: chữ ký sai (chặn TRƯỚC khi giải mã)&quot;,
+ &quot;aead_only_tamper&quot;: &quot;InvalidTag (tag AEAD không khớp)&quot;,
+ &quot;aead_bad_aad&quot;: &quot;InvalidTag (AAD khác: đổi 1 byte của route)&quot;,
+ &quot;wrong_key&quot;: &quot;InvalidTag (sai khóa riêng người nhận)&quot;,
+ &quot;sig_tamper&quot;: &quot;InvalidSignature&quot;,
+ &quot;sha256_abcd&quot;: &quot;88d4266fd4e6338d13b845fcf289579d209c897823b9217da3e161936f031589&quot;,
+ &quot;sha256_abce&quot;: &quot;84e73dc50f2be9000ab2a87f8026c1f45e1fec954af502e9904031645b190d4f&quot;,
+ &quot;sha256_bitdiff&quot;: 126,
+ &quot;pbkdf2_salt&quot;: &quot;000102030405060708090a0b0c0d0e0f&quot;,
+ &quot;pbkdf2&quot;: &quot;baa378450ad2f9d1dabc1a22f3dc97e8fe1f015eee913c954eb3ecdb791c32bf&quot;,
+ &quot;hmac_abcd&quot;: &quot;6473e07b75e58dbc634f32d08d477baef829dab7aa7cfce5800a476830d378ef&quot;,
+ &quot;deterministic&quot;: true
+}</pre></details>
+<details class="evidence"><summary>Mã nguồn script minh họa</summary><pre class="out">&quot;&quot;&quot;Minh họa gói abcd bằng primitive tương đương (X25519 + HKDF-SHA256 + AES-256-GCM + Ed25519 + SHA-256).
+Khóa giả công khai, KHÔNG phải suite đã chốt, KHÔNG phải test vector. In JSON để dựng trang.&quot;&quot;&quot;
+import hashlib, json, struct
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.exceptions import InvalidTag, InvalidSignature
+
+RAW = dict(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+def LP(x): return struct.pack(&quot;&gt;I&quot;, len(x)) + x
+def Tuple(*xs): return b&quot;&quot;.join(LP(x) for x in xs)
+def pub(k): return k.public_key().public_bytes(**RAW)
+
+# Khóa giả cố định (công khai trong trang này)
+srv = X25519PrivateKey.from_private_bytes(b&quot;DEMO-server-kem-private-key-0001&quot;[:32])
+eph = X25519PrivateKey.from_private_bytes(b&quot;DEMO-ephemeral-sender-key-00002&quot;[:32].ljust(32, b&quot;_&quot;))
+sig = Ed25519PrivateKey.from_private_bytes(b&quot;DEMO-credential-signing-key-0003&quot;[:32])
+
+plaintext = b&quot;abcd&quot;
+attempt_id = bytes(range(16))
+# M rút gọn so với bảng §4 (chỉ minh họa): domain, version, route, attempt_id
+M = Tuple(b&quot;demo-packet-request&quot;, struct.pack(&quot;&gt;H&quot;, 5), b&quot;DEMO_ROUTE&quot;, attempt_id)
+
+def derive(shared):
+    okm = HKDF(algorithm=hashes.SHA256(), length=44, salt=None,
+               info=Tuple(b&quot;demo-hpke-like-info&quot;, M)).derive(shared)
+    return okm[:32], okm[32:44]
+
+def seal(pt):
+    enc = pub(eph)
+    shared = eph.exchange(srv.public_key())
+    key, nonce = derive(shared)
+    aad = Tuple(b&quot;demo-aad-request&quot;, M)
+    ct = AESGCM(key).encrypt(nonce, pt, aad)
+    sigv = sig.sign(Tuple(b&quot;demo-sig-request&quot;, M, enc, ct))
+    env = struct.pack(&quot;&gt;H&quot;, 5) + LP(M) + LP(enc) + LP(ct) + LP(sigv)
+    return dict(enc=enc, shared=shared, key=key, nonce=nonce, aad=aad, ct=ct, sig=sigv, env=env)
+
+def open_(env, claimed):
+    ver = struct.unpack(&quot;&gt;H&quot;, env[:2])[0]; p = 2; parts = []
+    for _ in range(4):
+        n = struct.unpack(&quot;&gt;I&quot;, env[p:p+4])[0]; parts.append(env[p+4:p+4+n]); p += 4 + n
+    if p != len(env): return &quot;REJECT: dư byte cuối khung&quot;
+    M_, enc, ct, sg = parts
+    try:
+        sig.public_key().verify(sg, Tuple(b&quot;demo-sig-request&quot;, M_, enc, ct))
+    except InvalidSignature:
+        return &quot;REJECT: chữ ký sai (chặn TRƯỚC khi giải mã)&quot;
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+    shared = srv.exchange(X25519PublicKey.from_public_bytes(enc))
+    okm = HKDF(algorithm=hashes.SHA256(), length=44, salt=None, info=Tuple(b&quot;demo-hpke-like-info&quot;, M_)).derive(shared)
+    try:
+        pt = AESGCM(okm[:32]).decrypt(okm[32:], ct, Tuple(b&quot;demo-aad-request&quot;, M_))
+    except InvalidTag:
+        return &quot;REJECT: tag AEAD sai&quot;
+    aid = M_[-16:]
+    if aid in claimed: return &quot;REJECT: replay, attempt_id đã claim&quot;
+    claimed.add(aid)
+    return &quot;OK: &quot; + pt.decode()
+
+r = seal(plaintext)
+H = lambda b: b.hex()
+out = dict(
+    srv_pub=H(pub(srv)), eph_pub=H(pub(eph)), sig_pub=H(pub(sig)),
+    plaintext_hex=H(plaintext), M=H(M), M_len=len(M), attempt_id=H(attempt_id),
+    enc=H(r[&quot;enc&quot;]), shared=H(r[&quot;shared&quot;]), key=H(r[&quot;key&quot;]), nonce=H(r[&quot;nonce&quot;]),
+    aad=H(r[&quot;aad&quot;]), aad_len=len(r[&quot;aad&quot;]),
+    ct_all=H(r[&quot;ct&quot;]), ct_body=H(r[&quot;ct&quot;][:4]), tag=H(r[&quot;ct&quot;][4:]), ct_len=len(r[&quot;ct&quot;]),
+    sig=H(r[&quot;sig&quot;]), sig_len=len(r[&quot;sig&quot;]),
+    env=H(r[&quot;env&quot;]), env_len=len(r[&quot;env&quot;]),
+)
+# nhận
+claimed = set()
+out[&quot;rx_ok&quot;] = open_(r[&quot;env&quot;], claimed)
+out[&quot;rx_replay&quot;] = open_(r[&quot;env&quot;], claimed)
+# sửa 1 byte ciphertext
+e = bytearray(r[&quot;env&quot;]); idx = 2 + 4 + len(M) + 4 + 32 + 4  # byte đầu của ct
+e[idx] ^= 0x01
+out[&quot;tamper_ct_index&quot;] = idx
+out[&quot;rx_tamper_ct&quot;] = open_(bytes(e), set())
+# sửa 1 byte nhưng giả sử không có chữ ký (chỉ AEAD): kiểm tag
+key, nonce = r[&quot;key&quot;], r[&quot;nonce&quot;]
+bad = bytearray(r[&quot;ct&quot;]); bad[0] ^= 1
+try: AESGCM(key).decrypt(nonce, bytes(bad), r[&quot;aad&quot;]); out[&quot;aead_only_tamper&quot;] = &quot;OK?!&quot;
+except InvalidTag: out[&quot;aead_only_tamper&quot;] = &quot;InvalidTag (tag AEAD không khớp)&quot;
+# AAD sai (đổi route trong header)
+badaad = Tuple(b&quot;demo-aad-request&quot;, M.replace(b&quot;DEMO_ROUTE&quot;, b&quot;DEMO_ROUTF&quot;))
+try: AESGCM(key).decrypt(nonce, r[&quot;ct&quot;], badaad); out[&quot;aead_bad_aad&quot;] = &quot;OK?!&quot;
+except InvalidTag: out[&quot;aead_bad_aad&quot;] = &quot;InvalidTag (AAD khác: đổi 1 byte của route)&quot;
+# sai khóa người nhận
+wrong = X25519PrivateKey.from_private_bytes(b&quot;DEMO-wrong-server-key-000000009!&quot;[:32])
+sh2 = wrong.exchange(eph.public_key())
+okm2 = HKDF(algorithm=hashes.SHA256(), length=44, salt=None, info=Tuple(b&quot;demo-hpke-like-info&quot;, M)).derive(sh2)
+try: AESGCM(okm2[:32]).decrypt(okm2[32:], r[&quot;ct&quot;], r[&quot;aad&quot;]); out[&quot;wrong_key&quot;] = &quot;OK?!&quot;
+except InvalidTag: out[&quot;wrong_key&quot;] = &quot;InvalidTag (sai khóa riêng người nhận)&quot;
+# chữ ký sai
+try:
+    sig.public_key().verify(r[&quot;sig&quot;], Tuple(b&quot;demo-sig-request&quot;, M, r[&quot;enc&quot;], bytes([r[&quot;ct&quot;][0] ^ 1]) + r[&quot;ct&quot;][1:])); out[&quot;sig_tamper&quot;]=&quot;OK?!&quot;
+except InvalidSignature: out[&quot;sig_tamper&quot;] = &quot;InvalidSignature&quot;
+# hash
+out[&quot;sha256_abcd&quot;] = hashlib.sha256(b&quot;abcd&quot;).hexdigest()
+out[&quot;sha256_abce&quot;] = hashlib.sha256(b&quot;abce&quot;).hexdigest()
+bitdiff = bin(int(out[&quot;sha256_abcd&quot;],16) ^ int(out[&quot;sha256_abce&quot;],16)).count(&quot;1&quot;)
+out[&quot;sha256_bitdiff&quot;] = bitdiff
+salt = bytes(range(16))
+out[&quot;pbkdf2_salt&quot;] = H(salt)
+out[&quot;pbkdf2&quot;] = hashlib.pbkdf2_hmac(&quot;sha256&quot;, b&quot;abcd&quot;, salt, 200_000).hex()
+import hmac as _h
+out[&quot;hmac_abcd&quot;] = _h.new(b&quot;DEMO-hmac-key&quot;, b&quot;abcd&quot;, hashlib.sha256).hexdigest()
+# lặp lại 2 lần với cùng khóa: xác định (deterministic) — kiểm
+out[&quot;deterministic&quot;] = (seal(plaintext)[&quot;env&quot;] == r[&quot;env&quot;])
+print(json.dumps(out, indent=1, ensure_ascii=False))
+</pre></details></article></section>
+
+<section id="cp-know"><div class="sec-head"><span class="sec-no">Mục 5</span><h2>Kiến thức cần biết</h2></div><div class="know-grid"><div class="know "><h4>Mã hóa, băm, MAC, chữ ký là bốn việc khác nhau</h4><ul><li><b>Mã hóa</b>: giữ bí mật, có khóa, giải ngược được.</li><li><b>Băm</b>: nhận dạng, không khóa, không giải ngược.</li><li><b>MAC (HMAC)</b>: chứng minh toàn vẹn bằng khóa chung.</li><li><b>Chữ ký</b>: chứng minh ai gửi, khóa riêng ký, khóa công khai kiểm.</li></ul><div class="src">Nguồn: packet-security.html, keys.md</div></div><div class="know "><h4>Khóa công khai và khóa riêng</h4><ul><li>Khóa công khai được phát cho mọi người; khóa riêng không rời thiết bị giữ nó.</li><li>HPKE Base: ai có khóa công khai server cũng tạo được gói, nên cần thêm chữ ký để biết người gửi.</li></ul><div class="src">thiết kế R5 §2</div></div><div class="know "><h4>Nonce/IV không được lặp với cùng khóa</h4><ul><li>AEAD hỏng nghiêm trọng khi lặp nonce dưới một khóa (RFC 5116).</li><li>IV ngẫu nhiên 96-bit: q lần/khóa có xác suất trùng ≤ q(q−1)/2^97; q = 2^20 cho khoảng 6,94e-18 mỗi khóa.</li><li>Đó chỉ là cận va chạm, không phải toàn bộ độ an toàn AEAD.</li></ul><div class="src">thiết kế R5 §9 (toán có giả định)</div></div><div class="know "><h4>AAD: bảo vệ phần không mã hóa</h4><ul><li>AAD (header, route, attempt_id) đi ở dạng rõ nhưng gắn vào tag; đổi 1 byte là mở thất bại.</li><li>Nhờ vậy không thể chuyển gói sang route hoặc ngữ cảnh khác.</li></ul><div class="src">thiết kế R5 §4</div></div><div class="know "><h4>Mã hóa không làm gói "vô hình"</h4><ul><li>IP, thời điểm, kích thước và route HTTP ở nơi TLS kết thúc vẫn có thể bị thấy.</li><li>Plaintext ở UI, RAM, log, crash dump hoặc DB sau giải mã nằm ngoài lớp mã hóa đường truyền.</li></ul><div class="src">keys.md</div></div><div class="know "><h4>Giới hạn đã nêu trong thiết kế</h4><ul><li>Server nghiệp vụ vẫn giải mã được: hai chặng độc lập, không phải E2EE app ↔ máy.</li><li>Không hứa ẩn danh, chống chối bỏ, chống lượng tử hay forward secrecy khi khóa recipient lâu dài bị lộ.</li><li>Mọi bảo đảm phụ thuộc thư viện đúng, CSPRNG tốt, trust anchor đúng và endpoint chưa bị chiếm.</li></ul><div class="src">thiết kế R5 §1</div></div></div></section>
+<section id="cp-tips"><div class="sec-head"><span class="sec-no">Mục 6</span><h2>Gợi ý và việc còn mở</h2></div><div class="know-grid"><div class="know tip"><h4>Không tự chế crypto</h4><ul><li>Không tự viết KEM, KDF, AEAD hay handshake; dùng thư viện có vector chuẩn.</li><li>Thiếu thư viện đạt chuẩn thì dừng rollout, không tự hạ xuống plaintext hay gói không ký.</li></ul><div class="src">thiết kế R5 §2</div></div><div class="know tip"><h4>Thứ tự kiểm khi nhận</h4><ul><li>Giới hạn ingress → verify chữ ký → giải mã → claim attempt_id → quyền feature.</li><li>Gói chưa verify không được chiếm nonce và không được tạo tác động.</li></ul><div class="src">thiết kế R5 §6, §9</div></div><div class="know tip"><h4>Khi retry</h4><ul><li>Giữ nguyên operation_id, ticket và business bytes; tạo attempt, nonce, chữ ký, IV mới.</li><li>Serialize một lần, không decode rồi encode lại JSON để kiểm.</li></ul><div class="src">duplicates.md, protocol.md</div></div><div class="know tip"><h4>Lỗi và log</h4><ul><li>Lỗi trước xác thực chỉ trả lỗi vận chuyển tối giản, không phản chiếu nội dung.</li><li>Không log token, plaintext hay secret; so bí mật bằng <code>compare_digest</code>.</li></ul><div class="src">thiết kế R5 §5, §9; CODE_STYLE §2</div></div><div class="know todo"><h4>Còn phải chốt (chưa quyết trong nguồn)</h4><ul><li>Suite KEM / KDF / AEAD cụ thể và thư viện Dart/Python hỗ trợ RFC 9180 cùng Export.</li><li>Thuật toán ký: Ed25519 hay ECDSA P-256; thuật toán ký manifest và ticket.</li><li>Các tham số thời gian (Δ, L, σ) cần chốt bằng yêu cầu vận hành, không có số đo giả.</li></ul><div class="src">thiết kế R5 §2, §6</div></div><div class="know todo"><h4>Chưa kiểm chứng</h4><ul><li>Chưa chạy vector chuẩn RFC 9180, benchmark hay chứng minh hình thức.</li><li>Ví dụ abcd ở mục 4 chỉ minh họa khái niệm, không là bằng chứng cho suite sẽ dùng.</li></ul><div class="src">FINDINGS.md; footer packet-security.html</div></div></div></section>
+<section id="cp-sources"><div class="sec-head"><span class="sec-no">Mục 7</span><h2>Nguồn và giới hạn</h2></div>
+<ul class="ref"><li>Thiết kế chính: <a href="internal/packet-security/design.md">design.md</a> (R5, §1 đến §12), <a href="internal/packet-security/keys.md">keys.md</a>, <a href="internal/packet-security/protocol.md">protocol.md</a>, <a href="internal/packet-security/duplicates.md">duplicates.md</a>. Ba file sau là nghiên cứu trước review R5; chỉ lấy ý đối chiếu.</li>
+<li>Đối chiếu: <a href="packet-security.html">packet-security.html</a>, <a href="../../../doc/security-research/2026-10-07/FINDINGS.md">FINDINGS.md</a> (07/10/2026), <a href="../../../CRYPTOGRAPHY_MIDDLEWARE_DESIGN.html">CRYPTOGRAPHY_MIDDLEWARE_DESIGN.html</a>.</li>
+<li>Code hiện trạng: <code>server/lib/security/user_password.py</code>, <code>user_session.py</code>, <code>data_hash.py</code> và các nơi gọi đã ghi ở từng thẻ.</li></ul>
+<p class="note-s">Giới hạn: chưa chạy vector chuẩn RFC 9180, chưa benchmark, chưa có chứng minh hình thức. Trang chỉ giải thích khái niệm và hiện trạng; không là cam kết bảo mật.</p></section>
+<footer>Cẩm nang đi kèm thiết kế R5 đang qua review; mọi mục "đề xuất" là chưa triển khai. Không có cam kết bất khả xâm phạm.</footer>
+</main></div></div></body></html>

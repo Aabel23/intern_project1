@@ -1,95 +1,107 @@
-# Định dạng kế hoạch phase lớn / phase con của team AI
+# Tài liệu tóm tắt và kế hoạch nội bộ
 
+## Quy ước hiện hành — 06/10/2026
 
-## Phase lớn và phase con của team AI
+Người dùng chỉ cần vài file HTML để đọc tóm tắt hệ thống. Quy ước này thay
+hướng dẫn trước đây yêu cầu mỗi chuyên đề, phase lớn và phase con có trang HTML.
+Độ chi tiết của kế hoạch giữ trong Markdown, không quyết định số trang người dùng đọc.
 
-Theo yêu cầu người dùng ngày 05/10/2026, kế hoạch triển khai có hai cấp:
-**phase lớn** là giai đoạn triển khai của cả team AI; **phase con** là phần việc
-có đầu vào/đầu ra riêng, đủ rõ để giao và kiểm. Task/bước nằm bên trong phase con,
-không thay phase con bằng danh sách chuyên đề hay task phẳng.
+## HTML cho người dùng
 
-- Trang tổng quan `index.html` → `phases/<ten-giai-doan>/index.html` → các file
-  `<ten-phase-con>.html`. Tên file theo nội dung, số hiệu phase chỉ để tra phụ thuộc.
-- Mỗi phase lớn: mục tiêu, phạm vi, đầu vào, sơ đồ phụ thuộc phase con, team tham
-  gia và thứ tự bàn giao, cổng nghiệm thu, điều kiện đi tiếp/quay lui.
-- Mỗi phase con: nghiên cứu mã và nguồn có file:dòng; thông tin đã biết/giả thuyết
-  cần kiểm; luồng hoạt động/dữ liệu bằng sơ đồ khối; định hướng và lý do; câu hỏi
-  cần giải quyết; yêu cầu chức năng/ràng buộc; việc cần làm theo thứ tự; file/caller;
-  phân công từng vai; input/output/bằng chứng bàn giao; phép kiểm và acceptance;
-  nhánh lỗi/timeout/hủy/rollback; trạng thái thực và giới hạn kiểm chứng.
-- Lead điều phối; planner nghiên cứu/đặc tả; tester sở hữu test/số đo; một coder
-  ghi sản phẩm mỗi task; reviewer rà diff; cybersecurity tham gia theo rủi ro.
-  Vai không cần chạy đồng thời. Chỉ mở việc phụ thuộc khi đầu vào đã có bằng chứng.
-- Kế hoạch chưa triển khai ghi rõ CHƯA THỰC HIỆN. Nghiên cứu đọc mã khác kết quả
-  test. Test/harness được chuẩn bị trước cổng cần nó, tránh phụ thuộc vòng.
-- Phase mở rộng chỉ kích hoạt theo nhu cầu/số đo; không buộc làm mọi nhánh hoặc
-  tự thay thiết kế đã chốt. PDF không là điều kiện chặn khi người dùng đã bỏ yêu cầu.
+- Điểm vào: `tasks/<tên-task>/index.html`. Mặc định một trang; chỉ thêm 1–2 trang
+  theo nội dung khi tổng quan không đủ để hiểu kiến trúc/luồng hoặc quyết định chính.
+- Với middleware, bộ đọc gồm `index.html`, `architecture.html`, `packet-security.html`.
+- Viết tiếng Việt có dấu; ưu tiên “Bạn cần biết”, thành phần và luồng hoạt động/dữ
+  liệu, ranh giới trách nhiệm, đề xuất/hiện trạng và vấn đề cần chốt. Bỏ phần không áp dụng.
+- HTML kiến trúc bao phủ feature thực tế và từng luồng: cửa vào, dữ liệu, kiểm tra,
+  kho lưu, tác động, kết quả và nhánh lỗi/timeout. Dùng mục lục, neo và phần mở rộng
+  để giữ vài trang nhưng vẫn đủ chi tiết cho người dùng sửa thiết kế.
+- Trang index.html có sơ đồ tiến độ plan và trạng thái theo từng bước, kèm chú thích
+  lỗi. Hồ sơ phân công chi tiết, nguồn file:dòng dày đặc, ma trận test và nhật ký
+  bàn giao vẫn trong Markdown. Không tạo trang riêng theo mỗi phase/phase con/task.
+- Luồng hệ thống dùng sơ đồ khối SVG/HTML có nhãn, mũi tên, dữ liệu truyền và chú
+  giải hiện trạng/đề xuất. HTML mở offline, đọc trên màn nhỏ và in được.
+- Chỉ ghi kết quả đã có bằng chứng; nghiên cứu đọc mã khác kết quả test. Đề xuất
+  chưa thực hiện phải ghi rõ, không bịa lịch, số đo, ngưỡng tải hoặc trạng thái đạt.
+- `../phase-00.pdf` là mẫu trình bày khi có file. Nếu không có, ghi giới hạn đối chiếu;
+  không chép công nghệ hoặc số liệu của dự án khác. Review tham chiếu tại
+  `../version1.0/docs/review_version1_0.html` phải được đối chiếu với mã hiện tại.
 
-## Quy ước tài liệu người dùng đọc
+## Chuẩn chất lượng báo cáo — 07/10/2026
 
-Theo yêu cầu người dùng ngày 05/10/2026, mọi báo cáo, nghiên cứu, kế hoạch và
-tài liệu bàn giao để người dùng đọc phải là HTML, theo bố cục mẫu trong file này.
-Quy ước áp dụng cả nghiên cứu trước triển khai, không chỉ báo cáo phase có code.
-Markdown chỉ giữ cho hồ sơ vận hành nội bộ như TASK.md, hướng dẫn và file vai.
-Nếu file mẫu PDF chưa có trong môi trường, bám bố cục được mô tả dưới đây và
-ghi rõ chưa đối chiếu được hình thức với PDF; không tạo số liệu hoặc kết quả giả.
+Mọi báo cáo thiết kế HTML trong quy trình team lấy `FexMix_Munual.html` tại gốc
+repo làm mẫu chính về bố cục và cách dẫn dắt: tổng quan khối lớn trước → mục lục
+trái/nội dung phải → từng thành phần theo Làm gì, sơ đồ, nguồn, bước/tham số.
+`FlexMix_System_Manual.html` là mẫu bổ sung. Phải đọc mẫu trực tiếp trước khi dựng;
+không chỉ yêu cầu chung “giống manual” hoặc bắt đầu bằng pipeline kỹ thuật dài.
 
-## Hai file tham chiếu
+Khuôn thành phần, nguyên tắc diễn đạt và cổng chất lượng dùng chung nằm tại
+[Chuẩn báo cáo theo manual](agents/architect.md#chuẩn-báo-cáo-theo-manual).
+Operator/người dựng áp dụng; reviewer kiểm độc lập nội dung và bằng chứng render
+trên desktop, màn nhỏ, bản in cùng các điều khiển/offline trước khi giao. Architect
+chỉ bàn giao nội dung và đặc tả, không thay vai ghi file hoặc tự nhận đã kiểm UI.
+Báo cáo Markdown nội bộ giữ nghiên cứu/điều phối/bằng chứng; không bắt buộc dựng
+HTML riêng cho báo cáo nội bộ hoặc phase. Phạm vi thiếu phép kiểm phải ghi rõ.
 
-- `../phase-00.pdf` (tính từ gốc repo `androidv1.0`) là **mẫu cấu trúc và cách trình bày của một phase**: trang mở đầu, tóm tắt, số liệu, sơ đồ, phụ thuộc, từng component/task, phát hiện và câu hỏi. Nội dung trong PDF thuộc dự án khác; không chép công nghệ, số liệu hoặc kết luận của nó sang `androidv1.0`.
-- `../version1.0/docs/review_version1_0.html` là **đầu vào review hiện trạng của repo FlexMix version1.0**, không phải kế hoạch triển khai và không phải mẫu nội dung của mọi phase. Planner phải kiểm lại các phát hiện liên quan trên mã `androidv1.0` trước khi biến chúng thành việc phải làm.
+Ưu tiên nhiều sơ đồ nhỏ phân rã hệ thống → nhóm chức năng → luồng con → nhánh
+cần kiểm riêng, với neo cha/con và mapping khối tới mã, trách nhiệm, hợp đồng và
+phụ thuộc. Chia đủ để mỗi luồng đơn giản, chính xác và truy được chủ sở hữu dữ
+liệu/tác động; giữ vài trang HTML và không ép mỗi khối thành module/file. Chi tiết
+ở mục “Phân rã hệ thống thành các luồng con” trong chuẩn architect. Kết luận code
+sạch, ít chồng chéo hoặc dễ thay thế cần đối chiếu mã/caller và bằng chứng kiểm;
+sơ đồ thiết kế chỉ nêu mục tiêu và điều kiện nghiệm thu cho phần chưa triển khai.
 
-## Bộ tài liệu dài hạn
+## Tiêu chí sơ đồ trực quan
 
-Theo yêu cầu cập nhật của người dùng ngày 05/10/2026, planner phải vạch toàn bộ
-lộ trình dài hạn và chia thành file HTML con có tên theo nội dung. `index.html`
-là cửa đọc, có sơ đồ tổng thể và liên kết tới từng phần. Không dùng tên
-`phase-00.html` / `phase-XX.html` cho tài liệu bàn giao. Số chặng chỉ dùng trong
-lộ trình để biểu thị thứ tự, không thay tên nội dung.
+- Tham chiếu hình thức: `../FexMix_Munual.html` và `../FlexMix_System_Manual.html`,
+  cùng ảnh mẫu người dùng cung cấp. Chỉ mượn hình thức, không chép nghiệp vụ.
+- Nền giấy ấm/than chì theo chế độ sáng/tối; app xanh lam, xử lý cam san hô,
+  thiết bị tím, quyết định vàng, kết quả thành công xanh lá. Không chỉ dùng màu:
+  có nhãn và chú giải cho từng loại khối.
+- Xử lý dùng chữ nhật, quyết định dùng hình thoi, lưu trữ dùng hình trụ;
+  RAM có nét đứt và ghi rõ không bền. Mũi tên có chiều, nhánh quyết định có nhãn.
+- Mỗi sơ đồ ghi hiện trạng/đề xuất, nguồn đối chiếu và mô tả đọc được;
+  tránh chữ đè đường nối hoặc nhãn bị cắt. Tách tổng quan và luồng xử lý khi cần.
+- Có nút “Phóng to” và “Mã nguồn”, hoạt động offline; hỗ trợ Escape và trả focus.
+  SVG gốc đọc được khi tắt JavaScript. Trên điện thoại cho kéo ngang kèm gợi ý;
+  bản in giữ đủ sơ đồ và ẩn điều khiển. Kiểm bằng trình duyệt và bản in thực tế.
 
-Tùy phạm vi, tách tổng quan, kiến trúc, vòng đời request, mô hình/luồng dữ liệu,
-bảo mật, sức chứa/độ tin cậy, kiểm chứng, vận hành và lộ trình mở rộng. Không tạo
-file rỗng chỉ cho đủ nhóm. Mỗi file phải có nội dung đủ để lập task thực hiện.
+## Markdown cho agent
 
-Luồng hoạt động và dữ liệu trình bày bằng sơ đồ khối thực sự (SVG/HTML hoặc
-công cụ tương đương), có nhãn khối, mũi tên, dữ liệu truyền, nhánh lỗi và chú
-giải hiện trạng/đề xuất. Không dùng đoạn sơ đồ chữ trong code block thay hình.
-Sơ đồ mở offline và in rõ; dữ liệu nhạy cảm chỉ biểu thị tên trường, không dùng giá trị thật.
+- `TASK.md`: yêu cầu gốc, phạm vi, trạng thái, quyết định, mục lục kế hoạch nội bộ
+  và bằng chứng mới. Dùng `tasks/TEMPLATE.md`.
+- `internal/`: nghiên cứu, hợp đồng, thiết kế chi tiết, lộ trình và các phase.
+  Ví dụ `internal/phases/<giai-doan>/index.md` và `<phase-con>.md`.
+- Không bắt buộc số file hoặc số phase con; chỉ tách khi đủ trách nhiệm rõ ràng.
+- Kế hoạch hai cấp vẫn gồm phase lớn của team và phase con có đầu vào/đầu ra riêng.
+  Mỗi cấp ghi mục tiêu, phụ thuộc, phân công/bàn giao, bằng chứng, acceptance và
+  điều kiện đi tiếp/quay lui. Task/bước nằm trong phase con khi cần phân cấp.
+- Phase con ghi nghiên cứu/nguồn file:dòng, giả thuyết, định hướng/lý do, yêu cầu,
+  file/caller, thứ tự bước, nhánh lỗi/timeout/hủy, phép kiểm và đầu ra có thể kiểm.
+- Sơ đồ nội bộ có thể là Mermaid hoặc nguồn SVG trong Markdown; chỉ sơ đồ cần
+  người dùng hiểu mới đưa vào HTML tóm tắt. Không sinh HTML để lưu nguồn sơ đồ.
+- Theo quy trình người dùng đã chốt: hai architect phản biện → thiết kế HTML được
+  người dùng chốt → planner → một coder → reviewer độc lập → operator cập nhật ✓/✗.
+  Không lập plan triển khai trước cổng chốt thiết kế. Tester/security tham gia khi cần.
+- Test/harness phải có trước cổng cần nó; chỉ mở việc phụ thuộc khi đầu vào đã có
+  bằng chứng. Phase mở rộng chỉ kích hoạt theo yêu cầu hoặc số đo; không tự đổi
+  kiến trúc đã chốt. Thay API phải xét đồng thời server, app, máy và test.
+- Khi kiểm: ghi lệnh, môi trường, output/exit code, tiêu chí đạt/chưa đạt và giới
+  hạn. Với flow nhiều bước, giữ số mẫu/lỗi, timing từng khối và tổng flow, p50/p95,
+  log và so sánh trước/sau nếu có sửa trong hồ sơ nội bộ.
+- Khi có thay đổi đáng kể cho người dùng, cập nhật tóm tắt HTML tương ứng; không
+  xuất thêm HTML chỉ để phản chiếu mọi cập nhật của hồ sơ agent.
 
-Lộ trình phân biệt gần hạn, trung hạn và dài hạn có điều kiện; mỗi chặng có
-phụ thuộc, đầu ra, tiêu chí đi tiếp và cách quay lui. Không bịa lịch, tải hoặc
-ngân sách. Những nhánh đổi API/runtime/database phải ghi điều kiện kích hoạt
-và quyết định kiến trúc cần người dùng chốt trước khi triển khai.
+## Plan và sơ đồ theo dõi
 
-## Cách chia task
-
-Một task có một hoặc nhiều chặng đặt tên theo mục tiêu, theo thứ tự phụ thuộc. Mỗi chặng có kết quả kiểm được, đủ nhỏ để coder và tester thực hiện mà không phải đoán phạm vi. Số hiệu cổng nghiệm thu chỉ giúp tra phụ thuộc; không dùng làm tên tài liệu. Không chia chặng để đạt số lượng hoặc số trang.
-
-Planner đề xuất toàn bộ lộ trình trước khi bắt đầu code. Với mỗi chặng, ghi rõ:
-
-1. **Tên, mục tiêu và lý do đứng ở vị trí này.** Chặng nền giải quyết điều kiện hoặc rủi ro chặn việc sau khi thực sự cần.
-2. **Đầu vào, đầu ra, hợp đồng phải giữ.** Nêu người dùng/thiết bị nào tương tác, đường request hoặc dữ liệu đi qua những đâu, file liên quan có `file:dòng` cho hiện trạng.
-3. **Component → task → bước.** Mỗi task có kết quả quan sát được, file dự kiến sửa, thứ tự, phụ thuộc, người/thiết bị bị ảnh hưởng. Nêu nhánh lỗi, huỷ, timeout hoặc rollback khi liên quan.
-4. **Xong khi và phép kiểm.** Ghi tiêu chí dạng “điều kiện → kết quả”, lệnh test/quan sát và bằng chứng sẽ thu. Phân biệt test máy phát triển với kiểm trên Raspberry Pi hoặc thiết bị thật.
-5. **Rủi ro, giả định, quyết định cần chốt.** Mã phát hiện từ review phải được gán vào một phase/task cụ thể hoặc ghi rõ ngoài phạm vi kèm lý do. Không tự đánh dấu một giả định là sự thật.
-6. **Phụ thuộc / mở đường cho việc sau.** Chặng chỉ được coi là xong khi tiêu chí có bằng chứng; phần chưa kiểm ghi trạng thái và lý do, không báo đạt.
-
-## Tài liệu HTML theo nội dung
-
-Lead lưu `agent_workspace/tasks/<tên-task>/index.html` và các file con có tên
-theo nội dung. Bố cục tham khảo PDF; PDF không quyết định tên file hay ép mọi
-nghiên cứu thành một phase. Khi triển khai, cập nhật kết quả ngay trong tài liệu
-con liên quan và liên kết từ trang tổng quan.
-
-Mỗi file HTML có các phần sau, bỏ phần không áp dụng thay vì điền nội dung giả:
-
-1. Trang mở đầu: tên task/chuyên đề, ngày, trạng thái, quy mô thực tế và chú giải mức ưu tiên.
-2. “Bạn cần biết” và tóm tắt 30 giây: chuyên đề làm gì, kết quả mong đợi, rủi ro chính.
-3. Sơ đồ khối/luồng khi chúng giúp hiểu hệ thống; mỗi sơ đồ ghi nguồn và chỗ nào là suy luận.
-4. Bảng component/task, thứ tự thực hiện, phụ thuộc và file chính.
-5. Chi tiết từng task: làm gì, các bước, xong khi, đường lỗi, phép kiểm, phát hiện liên quan.
-6. Phát hiện còn mở, câu hỏi cần quyết định, việc ngoài code và rủi ro tiến độ (nếu có).
-7. Kết quả thực hiện: file đã đổi, lệnh kiểm, output/exit code, tiêu chí đạt/chưa đạt và giới hạn kiểm chứng. Khi mới lập kế hoạch, ghi “chưa thực hiện”, không viết như thể đã chạy.
-8. Số đo của tester cho luồng nhiều bước: tên flow và từng khối, số mẫu, p50/p95, lỗi, môi trường và đường dẫn log máy đọc được. Reviewer ghi khối nào chiếm thời gian, mức tin cậy của phép đo, giả thuyết và quyết định sửa hoặc chưa sửa. Nếu có sửa, báo cáo so sánh trước/sau trong cùng điều kiện và test hồi quy.
-
-Số đếm, trạng thái và phát hiện trong báo cáo phải lấy từ task và kết quả kiểm thực tế. Viết tiếng Việt có dấu, câu ngắn, giải thích thuật ngữ khó. Báo cáo HTML là hiện vật để người dùng đọc; `TASK.md` là hồ sơ vận hành cho team. Cập nhật cả hai khi kế hoạch hoặc chặng triển khai thay đổi/kết thúc.
+- Mỗi bước có ID ổn định, mục tiêu duy nhất, input/output, phụ thuộc, file/caller,
+  vai bàn giao, tiêu chí kiểm và cách quay lui. Chia nhỏ theo đầu ra nghiệm thu,
+  không ép mỗi file/hàm thành một phase. Kế hoạch phải phù hợp thiết kế đã chốt.
+- Plan nội bộ là nguồn các bước; operator cập nhật sơ đồ HTML tại index.html bằng
+  bằng chứng sau mỗi lượt. Dùng chữ/ký hiệu cùng màu: ○ chưa làm, → đang làm/review,
+  ✓ đạt, ✗ chưa đạt/lỗi kèm nguyên nhân và bước sửa, ⏸ chờ phụ thuộc hoặc chờ chốt.
+- ✓ cần reviewer và kiểm phù hợp đã đạt. Không biến checkbox tự tick hay dữ liệu
+  localStorage thành nghiệm thu; không tô xanh bước chưa chạy. Lỗi đã sửa giữ lịch
+  sử trong Markdown. Bước phụ thuộc không đi tiếp nếu bước trước chưa đạt.
+- Khi thiết kế đang chờ người dùng, chỉ hiện sơ đồ quy trình và các cổng chờ;
+  không tự dựng phase thực thi rồi báo đã chốt. Cập nhật thành plan cụ thể sau chốt.

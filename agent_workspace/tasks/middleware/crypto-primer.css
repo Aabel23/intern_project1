@@ -1,0 +1,113 @@
+/* Cẩm nang thuật toán mã hóa: chồng lên styles.css + security-manual.css, chỉ áp dụng cho .crypto-page. */
+
+/* Lỗi font đã biết: Liberation Serif trên Linux làm vỡ chữ Việt hai dấu; đặt Noto Serif trước Georgia. */
+:root{--serif:"Source Serif 4","Tiempos Text","Noto Serif",Georgia,"Times New Roman",serif}
+
+/* ---------- nhãn trạng thái và thẻ trạng thái ---------- */
+.crypto-page .state.demo{color:var(--ui);border-color:var(--ui);background:var(--ui-soft)}
+.crypto-page .state.base{color:var(--ink-2);border-color:var(--store);background:var(--surface-2)}
+.crypto-page .status-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.crypto-page .status-card{border:1px solid var(--line-2);border-left-width:5px;border-radius:10px;padding:10px 14px;font:14px/1.5 var(--sans);display:grid;gap:2px}
+.crypto-page .status-card b{font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.crypto-page .status-card.now{border-color:var(--ok);background:var(--ok-soft)}
+.crypto-page .status-card.plan{border-color:var(--amber);background:var(--amber-soft)}
+.crypto-page .status-card.demo{border-color:var(--ui);background:var(--ui-soft)}
+
+/* ---------- sơ đồ: pill số trỏ tới thẻ thuật toán, kích thước tối thiểu theo loại ---------- */
+.crypto-page .dg-canvas svg{min-width:680px}
+.crypto-page .dg-canvas svg.wide{min-width:980px}
+.crypto-page .sw.box{background:var(--card);border-color:var(--line-2)}
+.dgm .pillbg{fill:var(--ink)}
+.dgm .pilltx{fill:var(--bg);font-size:11px;font-weight:700}
+
+/* ---------- thẻ thuật toán ---------- */
+.crypto-page .alg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+.crypto-page .alg{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--line-2);border-radius:12px;padding:14px 16px;display:grid;gap:8px;align-content:start;min-width:0;scroll-margin-top:20px}
+.crypto-page .alg.now{border-top-color:var(--ok)}
+.crypto-page .alg.plan{border-top-color:var(--amber)}
+.crypto-page .alg.base{border-top-color:var(--store)}
+.crypto-page .alg-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.crypto-page .alg-head h4{font:600 17px/1.3 var(--serif);margin:0;letter-spacing:0;text-transform:none;color:var(--ink);flex:1 1 150px}
+.crypto-page .alg-no{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:99px;background:var(--ink);color:var(--bg);font:700 12px var(--sans)}
+.crypto-page .alg-tags{display:flex;flex-wrap:wrap;gap:6px}
+.crypto-page .grp{font:600 11px/1.6 var(--sans);padding:0 8px;border-radius:99px;border:1px solid var(--line-2);color:var(--ink-2);background:var(--surface-2);white-space:nowrap}
+.crypto-page .alg dl{display:grid;grid-template-columns:92px minmax(0,1fr);gap:5px 10px;margin:0;font:13.5px/1.5 var(--sans)}
+.crypto-page .alg dt{color:var(--ink-3);font-weight:600;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;padding-top:2px}
+.crypto-page .alg dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.crypto-page .alg dd.fun{font-style:italic;color:var(--ink-2)}
+.crypto-page .alg dd.warnline{color:var(--ink)}
+.crypto-page .alg dd code{font-size:.85em}
+.crypto-page .group-title{font:600 13px/1.5 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -4px;display:flex;align-items:center;gap:10px}
+.crypto-page .group-title .state{letter-spacing:.06em}
+
+/* ---------- bảng ---------- */
+.crypto-page .tbl{overflow-x:auto;max-width:100%}
+.crypto-page .tbl table{min-width:480px}
+.crypto-page td code,.crypto-page th code{overflow-wrap:anywhere}
+.crypto-page .res-ok{color:var(--ok);font-weight:600}
+.crypto-page .res-bad{color:var(--red);font-weight:600}
+
+/* ---------- ví dụ abcd ---------- */
+.crypto-page .bytes-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.crypto-page .bc{display:inline-flex;flex-direction:column;align-items:center;border:1.5px solid var(--proc);border-radius:8px;padding:3px 14px;background:var(--proc-soft);font:600 20px/1.2 var(--mono)}
+.crypto-page .bc small{font:600 12px var(--mono);color:var(--ink-2)}
+.crypto-page .arrow-txt{font:600 13px var(--sans);color:var(--ink-3)}
+.crypto-page .ex-step{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0;scroll-margin-top:20px}
+.crypto-page .ex-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);font:600 14.5px/1.4 var(--sans)}
+.crypto-page .ex-head .alg-no{height:24px;min-width:24px;font-size:11.5px}
+.crypto-page .ex-head .len{margin-left:auto;font:12px var(--mono);color:var(--ink-3)}
+.crypto-page .io{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.crypto-page .io>div{padding:10px 14px;display:grid;gap:6px;align-content:start;min-width:0}
+.crypto-page .io>div+div{border-left:1px solid var(--line)}
+.crypto-page .io h5{font:600 11.5px/1.4 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0}
+.crypto-page .kv{font:13px/1.5 var(--sans);margin:0;display:grid;gap:4px}
+.crypto-page .kv div{min-width:0}
+.crypto-page .kv span.k{display:block;color:var(--ink-3);font-size:11.5px}
+.crypto-page .hex{font:12px/1.55 var(--mono);overflow-wrap:anywhere;word-break:break-all;color:var(--ink)}
+.crypto-page .hex.hidden-tag{color:var(--ink-2)}
+.crypto-page .note-s{font:12.5px/1.5 var(--sans);color:var(--ink-3)}
+.crypto-page .f{padding:1px 2px;border-radius:3px}
+.crypto-page .f-ver{background:var(--surface-2);outline:1px solid var(--line-2)}
+.crypto-page .f-len{color:var(--ink-3)}
+.crypto-page .f-m{background:var(--ui-soft)}
+.crypto-page .f-enc{background:var(--hw-soft)}
+.crypto-page .f-ct{background:var(--proc-soft);font-weight:700}
+.crypto-page .f-tag{background:var(--amber-soft)}
+.crypto-page .f-sig{background:var(--ok-soft)}
+.crypto-page .sizebar{display:flex;min-height:38px;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;font:600 11px/1.2 var(--sans)}
+.crypto-page .sizebar>span{display:grid;place-items:center;padding:2px 3px;border-right:1px solid var(--surface);min-width:10px;text-align:center;overflow:hidden}
+.crypto-page .sizebar>span:last-child{border-right:0}
+.crypto-page .swatch{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--line-2);vertical-align:-2px}
+.crypto-page details.evidence{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 14px}
+.crypto-page pre.out{margin:0 0 12px;font:12px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all;color:var(--ink-2);background:var(--code-bg);padding:10px 12px;border-radius:8px;max-height:560px;overflow:auto}
+
+/* ---------- kiến thức, gợi ý ---------- */
+.crypto-page .know-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.crypto-page .know{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ui);border-radius:10px;padding:12px 14px;display:grid;gap:6px;align-content:start;font:14px/1.5 var(--sans)}
+.crypto-page .know h4{font:600 15px/1.35 var(--serif);margin:0;letter-spacing:0;text-transform:none;color:var(--ink)}
+.crypto-page .know ul{margin:0;padding-left:1.2em}
+.crypto-page .know.tip{border-left-color:var(--ok)}
+.crypto-page .know.todo{border-left-color:var(--amber)}
+.crypto-page .know .src{font-size:12px;color:var(--ink-3)}
+
+/* ---------- màn nhỏ ---------- */
+@media(max-width:700px){
+  .crypto-page .io{grid-template-columns:minmax(0,1fr)}
+  .crypto-page .io>div+div{border-left:0;border-top:1px solid var(--line)}
+  .crypto-page .alg dl{grid-template-columns:minmax(0,1fr);gap:0}
+  .crypto-page .alg dt{padding-top:6px}
+  .crypto-page .ex-head .len{margin-left:0}
+}
+
+@media print{
+  .crypto-page .alg,.crypto-page .ex-step,.crypto-page .know{break-inside:avoid}
+  .crypto-page .alg-grid,.crypto-page .know-grid{display:block}
+  .crypto-page .alg,.crypto-page .know{margin-bottom:10px}
+  .crypto-page .io{display:block}
+  .crypto-page pre.out{max-height:none}
+  .crypto-page .dg-canvas svg.wide,.crypto-page .dg-canvas svg{min-width:0}
+}
+
+/* Cột nội dung không được nới theo từ dài (tên file) ở màn nhỏ */
+.crypto-page main{grid-template-columns:minmax(0,1fr)}
+.crypto-page .ref a,.crypto-page .ref code,.crypto-page .note-s{overflow-wrap:anywhere}

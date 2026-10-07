@@ -14,19 +14,19 @@
 
 - Bộ kế hoạch đã tạo; code sản phẩm và test HTTP chưa sửa.
 - Planner đã rà soát read-only, lead tạo chi tiết/task/HTML/SVG.
-- Trang đọc: index.html; tên con theo nội dung, không phase00.
+- Trang đọc: index.html, architecture.html và packet-security.html; chi tiết agent ở internal/ bằng Markdown.
 - PDF chưa có, người dùng đã cho phép tiếp tục không phụ thuộc mẫu.
 
 ## Phase lớn và phân công task (chưa triển khai)
 
-- G0 — Nền nghiên cứu và kiểm chứng: B01, B02, B03, B04; phases/foundation/index.html.
-- G1 — Vòng đời request và quan sát an toàn: L01, D01, L02, L03, L04, D04, O01; phases/lifecycle/index.html.
-- G2 — Biên HTTP, body và tương thích client: H01, H02, H03, H04; phases/http-boundary/index.html.
-- G3 — Sức chứa và tiến triển lệnh máy: C01, C02, C03, D03, C04, C05, O02, O03; phases/capacity/index.html.
-- G4 — Danh tính, quyền và chính sách bảo vệ: S01, S02, D02, S04, S03, S05; phases/identity/index.html.
-- G5 — Nghiệm thu tích hợp, lỗi và tải: V01, V03, V02, O04, V04, V05; phases/acceptance/index.html.
-- G6 — Vận hành, rollout và phục hồi: P01, P02, P03, P04, P05; phases/operations/index.html.
-- G7 — Mở rộng dài hạn theo bằng chứng: E01, E02, E03, E04, E05, E06; phases/evolution/index.html.
+- G0 — Nền nghiên cứu và kiểm chứng: B01, B02, B03, B04; internal/phases/foundation/index.md.
+- G1 — Vòng đời request và quan sát an toàn: L01, D01, L02, L03, L04, D04, O01; internal/phases/lifecycle/index.md.
+- G2 — Biên HTTP, body và tương thích client: H01, H02, H03, H04; internal/phases/http-boundary/index.md.
+- G3 — Sức chứa và tiến triển lệnh máy: C01, C02, C03, D03, C04, C05, O02, O03; internal/phases/capacity/index.md.
+- G4 — Danh tính, quyền và chính sách bảo vệ: S01, S02, D02, S04, S03, S05; internal/phases/identity/index.md.
+- G5 — Nghiệm thu tích hợp, lỗi và tải: V01, V03, V02, O04, V04, V05; internal/phases/acceptance/index.md.
+- G6 — Vận hành, rollout và phục hồi: P01, P02, P03, P04, P05; internal/phases/operations/index.md.
+- G7 — Mở rộng dài hạn theo bằng chứng: E01, E02, E03, E04, E05, E06; internal/phases/evolution/index.md.
 
 ## Bằng chứng từ lượt nghiên cứu trước
 
@@ -34,20 +34,20 @@
 - 17 security test lỗi setUp LOGIN_STATES đã bỏ, một lỗi tick, một failure endpoint cũ.
 - Chưa benchmark và chưa kiểm Pi/Windows/Flutter hardware thật.
 
-## Tài liệu
+## Nghiên cứu nội bộ (đã chuyển từ HTML)
 
-- index.html — Kế hoạch phát triển middleware FlexMix
-- architecture.html — Kiến trúc và ranh giới trách nhiệm
-- baseline.html — Hiện trạng và nền kiểm chứng
-- request-lifecycle.html — Vòng đời request và biên HTTP
-- data-model.html — Luồng dữ liệu, trạng thái và transaction
-- capacity.html — Sức chứa, timeout và độ tin cậy
-- security.html — Danh tính, quyền và chính sách request
-- observability.html — Quan sát, số đo và chẩn đoán
-- verification.html — Ma trận kiểm thử và đo tải
-- operations.html — Vận hành, triển khai và phục hồi
-- expansion.html — Mở rộng dài hạn có điều kiện
-- roadmap.html — Lộ trình dài hạn và cổng nghiệm thu
+- internal/index.md — Kế hoạch phát triển middleware FlexMix
+- internal/architecture.md — Kiến trúc và ranh giới trách nhiệm
+- internal/baseline.md — Hiện trạng và nền kiểm chứng
+- internal/request-lifecycle.md — Vòng đời request và biên HTTP
+- internal/data-model.md — Luồng dữ liệu, trạng thái và transaction
+- internal/capacity.md — Sức chứa, timeout và độ tin cậy
+- internal/security.md — Danh tính, quyền và chính sách request
+- internal/observability.md — Quan sát, số đo và chẩn đoán
+- internal/verification.md — Ma trận kiểm thử và đo tải
+- internal/operations.md — Vận hành, triển khai và phục hồi
+- internal/expansion.md — Mở rộng dài hạn có điều kiện
+- internal/roadmap.md — Lộ trình dài hạn và cổng nghiệm thu
 
 ## Task registry
 
@@ -101,7 +101,7 @@
 ## Giới hạn và quyết định
 
 - Không lịch/threshold/framework/broker/schema giả. E* là nhánh có điều kiện.
-- Mỗi task có inputs/steps/files/acceptance/risk/output trong HTML; roadmap giữ dependencies/rollback.
+- Mỗi task có inputs/steps/files/acceptance/risk/output trong Markdown nội bộ; roadmap giữ dependencies/rollback.
 - Quy ước AGENTS/PHASE_FORMAT/planner/TEAM/README/TEMPLATE đổi theo tên ngữ nghĩa và sơ đồ khối.
 
 ## Kiểm bộ tài liệu đợt này
@@ -117,7 +117,7 @@
 > chi tiết hơn, mỗi phase sẽ là một giai ooanj triển khai của cả team AI, với mỗi giai đoạn đó thì chia thành các phase con để triển khai, trong đây chứa nghiên cứu chi tiết kèm thông tin và định hướng, việc cần làm, yêu cầu của phase
 
 - 8 phase lớn / 32 phase con / 46 task được chuyển vào phase con tương ứng.
-- Chuyên đề root là nghiên cứu tham chiếu; canonical implementation spec ở phases/.
+- Chuyên đề root là nghiên cứu tham chiếu; đặc tả triển khai ở internal/phases/.
 - Mỗi phase có nguồn/giả thuyết, direction, requirements, steps/files, roles/handoff, tests/gate/rollback.
 - Planner/security chỉ đọc mã để lập kế hoạch; chưa coder/tester triển khai sản phẩm.
 - Counter reset/late result cross-restart là giả thuyết code; yêu cầu regression và quyết định chặn rollout nếu tái hiện, không claim exploit đã chạy.
@@ -125,52 +125,52 @@
 
 ### G0 — Nền nghiên cứu và kiểm chứng
 
-- G0.1 Nghiên cứu hiện trạng và hợp đồng → phases/foundation/contract-research.html; tasks B01; CHƯA THỰC HIỆN.
-- G0.2 Khôi phục fixture và bộ hồi quy → phases/foundation/fixture-repair.html; tasks B02; CHƯA THỰC HIỆN.
-- G0.3 Tái hiện rủi ro trước sửa → phases/foundation/risk-scenarios.html; tasks B03; CHƯA THỰC HIỆN.
-- G0.4 Đo môi trường và dựng công cụ nền → phases/foundation/environment-baseline.html; tasks B04; CHƯA THỰC HIỆN.
+- G0.1 Nghiên cứu hiện trạng và hợp đồng → internal/phases/foundation/contract-research.md; tasks B01; CHƯA THỰC HIỆN.
+- G0.2 Khôi phục fixture và bộ hồi quy → internal/phases/foundation/fixture-repair.md; tasks B02; CHƯA THỰC HIỆN.
+- G0.3 Tái hiện rủi ro trước sửa → internal/phases/foundation/risk-scenarios.md; tasks B03; CHƯA THỰC HIỆN.
+- G0.4 Đo môi trường và dựng công cụ nền → internal/phases/foundation/environment-baseline.md; tasks B04; CHƯA THỰC HIỆN.
 ### G1 — Vòng đời request và quan sát an toàn
 
-- G1.1 Context và dữ liệu request → phases/lifecycle/context-design.html; tasks L01, D01; CHƯA THỰC HIỆN.
-- G1.2 Response state và biên lỗi → phases/lifecycle/response-boundary.html; tasks L02, L03; CHƯA THỰC HIỆN.
-- G1.3 Dispatch và liên hệ request–command → phases/lifecycle/dispatch-correlation.html; tasks L04, D04; CHƯA THỰC HIỆN.
-- G1.4 Event schema và kiểm mọi log sink → phases/lifecycle/safe-observability.html; tasks O01; CHƯA THỰC HIỆN.
+- G1.1 Context và dữ liệu request → internal/phases/lifecycle/context-design.md; tasks L01, D01; CHƯA THỰC HIỆN.
+- G1.2 Response state và biên lỗi → internal/phases/lifecycle/response-boundary.md; tasks L02, L03; CHƯA THỰC HIỆN.
+- G1.3 Dispatch và liên hệ request–command → internal/phases/lifecycle/dispatch-correlation.md; tasks L04, D04; CHƯA THỰC HIỆN.
+- G1.4 Event schema và kiểm mọi log sink → internal/phases/lifecycle/safe-observability.md; tasks O01; CHƯA THỰC HIỆN.
 ### G2 — Biên HTTP, body và tương thích client
 
-- G2.1 Nghiên cứu parser và chính sách framing → phases/http-boundary/framing-policy.html; tasks H01; CHƯA THỰC HIỆN.
-- G2.2 Đọc body đủ byte và parse một lần → phases/http-boundary/body-integrity.html; tasks H02; CHƯA THỰC HIỆN.
-- G2.3 Deadline đọc và early reject → phases/http-boundary/read-deadline.html; tasks H03; CHƯA THỰC HIỆN.
-- G2.4 Media type, lỗi và tương thích caller → phases/http-boundary/client-compatibility.html; tasks H04; CHƯA THỰC HIỆN.
+- G2.1 Nghiên cứu parser và chính sách framing → internal/phases/http-boundary/framing-policy.md; tasks H01; CHƯA THỰC HIỆN.
+- G2.2 Đọc body đủ byte và parse một lần → internal/phases/http-boundary/body-integrity.md; tasks H02; CHƯA THỰC HIỆN.
+- G2.3 Deadline đọc và early reject → internal/phases/http-boundary/read-deadline.md; tasks H03; CHƯA THỰC HIỆN.
+- G2.4 Media type, lỗi và tương thích caller → internal/phases/http-boundary/client-compatibility.md; tasks H04; CHƯA THỰC HIỆN.
 ### G3 — Sức chứa và tiến triển lệnh máy
 
-- G3.1 Giới hạn ingress trước tạo thread → phases/capacity/ingress-bound.html; tasks C01; CHƯA THỰC HIỆN.
-- G3.2 Phân nhóm công việc và headroom → phases/capacity/workload-lanes.html; tasks C02; CHƯA THỰC HIỆN.
-- G3.3 Queue, waiter và cleanup → phases/capacity/queue-invariants.html; tasks C03, D03; CHƯA THỰC HIỆN.
-- G3.4 Budgets, lỗi đồng thời và phục hồi → phases/capacity/budgets-recovery.html; tasks C04, C05, O02, O03; CHƯA THỰC HIỆN.
+- G3.1 Giới hạn ingress trước tạo thread → internal/phases/capacity/ingress-bound.md; tasks C01; CHƯA THỰC HIỆN.
+- G3.2 Phân nhóm công việc và headroom → internal/phases/capacity/workload-lanes.md; tasks C02; CHƯA THỰC HIỆN.
+- G3.3 Queue, waiter và cleanup → internal/phases/capacity/queue-invariants.md; tasks C03, D03; CHƯA THỰC HIỆN.
+- G3.4 Budgets, lỗi đồng thời và phục hồi → internal/phases/capacity/budgets-recovery.md; tasks C04, C05, O02, O03; CHƯA THỰC HIỆN.
 ### G4 — Danh tính, quyền và chính sách bảo vệ
 
-- G4.1 Route policy và thứ tự xác thực → phases/identity/route-policy.html; tasks S01; CHƯA THỰC HIỆN.
-- G4.2 Phiên, thu hồi và lựa chọn gom auth → phases/identity/session-revocation.html; tasks S02; CHƯA THỰC HIỆN.
-- G4.3 Quyền, transaction và privacy trạng thái → phases/identity/authorization-transaction.html; tasks D02, S04; CHƯA THỰC HIỆN.
-- G4.4 Limiter, NAT và threat model → phases/identity/limiter-threat-model.html; tasks S03, S05; CHƯA THỰC HIỆN.
+- G4.1 Route policy và thứ tự xác thực → internal/phases/identity/route-policy.md; tasks S01; CHƯA THỰC HIỆN.
+- G4.2 Phiên, thu hồi và lựa chọn gom auth → internal/phases/identity/session-revocation.md; tasks S02; CHƯA THỰC HIỆN.
+- G4.3 Quyền, transaction và privacy trạng thái → internal/phases/identity/authorization-transaction.md; tasks D02, S04; CHƯA THỰC HIỆN.
+- G4.4 Limiter, NAT và threat model → internal/phases/identity/limiter-threat-model.md; tasks S03, S05; CHƯA THỰC HIỆN.
 ### G5 — Nghiệm thu tích hợp, lỗi và tải
 
-- G5.1 Hợp đồng liên thành phần và hồi quy → phases/acceptance/contract-regression.html; tasks V01; CHƯA THỰC HIỆN.
-- G5.2 Fault injection và bất biến đồng thời → phases/acceptance/fault-concurrency.html; tasks V03; CHƯA THỰC HIỆN.
-- G5.3 Đo tải, số liệu stages và cảnh báo → phases/acceptance/load-measurement.html; tasks V02, O04; CHƯA THỰC HIỆN.
-- G5.4 Thiết bị mục tiêu và gate cả team → phases/acceptance/target-team-gate.html; tasks V04, V05; CHƯA THỰC HIỆN.
+- G5.1 Hợp đồng liên thành phần và hồi quy → internal/phases/acceptance/contract-regression.md; tasks V01; CHƯA THỰC HIỆN.
+- G5.2 Fault injection và bất biến đồng thời → internal/phases/acceptance/fault-concurrency.md; tasks V03; CHƯA THỰC HIỆN.
+- G5.3 Đo tải, số liệu stages và cảnh báo → internal/phases/acceptance/load-measurement.md; tasks V02, O04; CHƯA THỰC HIỆN.
+- G5.4 Thiết bị mục tiêu và gate cả team → internal/phases/acceptance/target-team-gate.md; tasks V04, V05; CHƯA THỰC HIỆN.
 ### G6 — Vận hành, rollout và phục hồi
 
-- G6.1 Cấu hình, boot và profile vận hành → phases/operations/configuration-validation.html; tasks P01; CHƯA THỰC HIỆN.
-- G6.2 Dừng server, restart và kết quả chưa chắc chắn → phases/operations/shutdown-restart.html; tasks P02; CHƯA THỰC HIỆN.
-- G6.3 Candidate, rollout và quay lui → phases/operations/rollout-rollback.html; tasks P03; CHƯA THỰC HIỆN.
-- G6.4 Topology, TLS và sổ vận hành → phases/operations/network-runbooks.html; tasks P04, P05; CHƯA THỰC HIỆN.
+- G6.1 Cấu hình, boot và profile vận hành → internal/phases/operations/configuration-validation.md; tasks P01; CHƯA THỰC HIỆN.
+- G6.2 Dừng server, restart và kết quả chưa chắc chắn → internal/phases/operations/shutdown-restart.md; tasks P02; CHƯA THỰC HIỆN.
+- G6.3 Candidate, rollout và quay lui → internal/phases/operations/rollout-rollback.md; tasks P03; CHƯA THỰC HIỆN.
+- G6.4 Topology, TLS và sổ vận hành → internal/phases/operations/network-runbooks.md; tasks P04, P05; CHƯA THỰC HIỆN.
 ### G7 — Mở rộng dài hạn theo bằng chứng
 
-- G7.1 Runtime HTTP và mạng triển khai → phases/evolution/runtime-network.html; tasks E01; CHƯA THỰC HIỆN.
-- G7.2 Vòng đời credential thiết bị → phases/evolution/device-credentials.html; tasks E02; CHƯA THỰC HIỆN.
-- G7.3 Command identity, idempotency và bền vững → phases/evolution/command-durability.html; tasks E03, E04; CHƯA THỰC HIỆN.
-- G7.4 Scale-out, database và version API → phases/evolution/shared-state-evolution.html; tasks E05, E06; CHƯA THỰC HIỆN.
+- G7.1 Runtime HTTP và mạng triển khai → internal/phases/evolution/runtime-network.md; tasks E01; CHƯA THỰC HIỆN.
+- G7.2 Vòng đời credential thiết bị → internal/phases/evolution/device-credentials.md; tasks E02; CHƯA THỰC HIỆN.
+- G7.3 Command identity, idempotency và bền vững → internal/phases/evolution/command-durability.md; tasks E03, E04; CHƯA THỰC HIỆN.
+- G7.4 Scale-out, database và version API → internal/phases/evolution/shared-state-evolution.md; tasks E05, E06; CHƯA THỰC HIỆN.
 
 ## Kiểm và review bộ phase hai cấp
 
@@ -182,3 +182,79 @@
 - Chrome headless đã render và kiểm ảnh trang tổng quan, phase lớn G1 và phase con G3.4; nguồn/quy tắc/requirements/luồng/team hiển thị rõ. Đã wrap nhãn sơ đồ dài để không tràn khối.
 
 - Planner recheck: các vòng C05/V02/V03 và P04/E01 đã sửa; ĐẠT trong phạm vi tính nhất quán kế hoạch. Không phải nghiệm thu middleware sản phẩm.
+
+## Phạm vi gói tin cập nhật 06/10/2026
+
+- Người dùng xác nhận middleware bảo vệ/mã hóa trước gửi và kiểm chứng trước nhận; bao gồm debounce, chống gửi trùng, chống phát lại.
+- Yêu cầu thêm mã hóa ứng dụng riêng bên cạnh HTTPS; dùng primitive chuẩn, không tự phát minh mật mã, không cam kết bất khả truy tuyệt đối.
+- Bộ nghiên cứu gói tin (nay là Markdown): internal/packet-security/index.md, protocol.md, keys.md, duplicates.md, roadmap.md trong cùng thư mục. Mã hóa hai chiều nằm trong pha chính P1–P3.
+- Kế hoạch HTTP/runtime trước đây giữ làm backlog hỗ trợ; không phải đặc tả chính của packet middleware.
+- Chỉ nghiên cứu/tài liệu; chưa chọn library/suite, chưa đổi wire contract hoặc product code.
+
+## Quy ước hiện hành — 06/10/2026
+
+> chỉ cần vài file html cho tôi đọc tóm tắt thôi, việc mô tả nội bộ cho agent dừng md nhé, hiện có nhiều file html rãi rác quá trong khi chỉ cần vài file thật sự mô tả hệ thống cho tôi
+
+- Mục này thay quy ước xuất HTML cho phase/phase con ở các lượt trước. Các mục kiểm cũ là lịch sử, không phải kết quả mới.
+- Trang đọc hiện hành: `index.html` (tổng quan), `architecture.html` (kiến trúc và luồng dữ liệu), `packet-security.html` (bảo vệ gói tin).
+- Đặc tả nội bộ: [internal/index.md](internal/index.md), [nghiên cứu gói tin](internal/packet-security/index.md), [lộ trình gói tin](internal/packet-security/roadmap.md), `internal/phases/`.
+- Giữ đủ nội dung nghiên cứu, requirements, phân công, phụ thuộc, gates và bằng chứng; không phát sinh HTML theo mỗi task/phase.
+- Các tài liệu này mô tả hiện trạng/đề xuất; mã sản phẩm và test không đổi.
+
+## Phân vai cập nhật — Claude Opus medium
+
+- Yêu cầu: Claude Opus medium làm planner/coder; Codex review plan, đưa feedback và trao đổi đến hoàn tất.
+- CLI đã xác nhận hỗ trợ `--model opus --effort medium`; Claude Code 2.1.285 đăng nhập sẵn.
+- Người dùng chọn triển khai một phase cụ thể; đang chờ mã/tên phase. Chưa khởi chạy Claude hoặc giao coder sửa sản phẩm khi chưa xác định phạm vi.
+- Thứ tự: planner → Codex review/feedback → planner sửa → coder theo plan đạt → Codex review/kiểm → cập nhật hồ sơ.
+
+## Kiểm sắp xếp tài liệu — 06/10/2026
+
+- Middleware từ 57 trang nguồn thành 3 HTML tóm tắt; 57 Markdown nội bộ giữ nghiên cứu, phase, bằng chứng và nguồn sơ đồ. Báo cáo cài C++ được chuyển sang setup.md.
+- Checker đường dẫn/fragments/manifest và XML SVG: 3 trang đọc, 4 sơ đồ, 477 liên kết local; không lỗi, exit 0 trước lượt chỉnh nhãn/luồng mobile cuối.
+- Chrome headless render desktop/mobile, kiểm ảnh; chỉnh sơ đồ dọc cho màn nhỏ và caption phân biệt hiện trạng/đề xuất.
+- Đồng bộ planner sang .claude/agents; sync_agents.py --check đạt. Chỉ kiểm tài liệu, không chạy lại test sản phẩm.
+
+- Kiểm cuối sau chỉnh mobile/caption: đường dẫn, anchors, SVG và manifest đạt (477 local links); git diff --check đạt.
+
+## Chỉ đạo mới — tạm dừng triển khai, review thiết kế
+
+- Operator tự phân việc; bỏ trạng thái chờ người dùng chọn phase.
+- Tạm dừng giao coder/P0 theo yêu cầu mới. Lệnh planner cũ đã dừng, chưa có kết quả bàn giao. Không sửa code sản phẩm.
+- Baseline operator đã chạy trước lúc đổi hướng: `python3 -m unittest tests.python.test_server_modules tests.python.test_server tests.python.test_server_security tests.python.test_app_boundaries`: 29 tests / 6.746s / 1 failure / 18 errors / exit 1; lỗi fixture LOGIN_STATES và route cũ vẫn tồn tại. Không coi đây là latency hoặc chứng minh security.
+- Giao Claude Opus medium phản biện thiết kế read-only; Codex sửa tài liệu, rồi yêu cầu review lại. Tất cả feedback và bằng chứng trong Markdown.
+- Mục tiêu review là không còn lỗi thiết kế chặn trong threat model xác định; không tuyên bố tối ưu toàn cục hay bất khả xâm phạm tuyệt đối. Chưa có formal verification hoặc triển khai crypto.
+
+## Review thiết kế R1 và cải tiến R2
+
+- Claude CLI chạy với `--model opus --effort medium`; response xác nhận model `claude-opus-5-5`, is_error=false.
+- R1: [báo cáo Claude](internal/operator/design-review-r1.md), read-only, không thử tấn công.
+- Codex kiểm lại RFC 9180/9449/9458 và NIST SP 800-38D; [design.md](internal/packet-security/design.md) là nguồn quyết định hiện hành.
+- Bản HTML root cũ chuyển thành cửa đọc về bộ tóm tắt; toàn bộ nội dung cũ được giữ ở [legacy-design.md](internal/packet-security/legacy-design.md). Không xóa nghiên cứu hay code người dùng.
+- Chưa nghiệm thu thiết kế; gửi Claude R2 sau khi sửa B1–B5/H1–H4 và mô hình định lượng. Coder sản phẩm vẫn tạm dừng.
+
+## Kết quả review 5 vòng — 06/10/2026
+
+- R1–R5 chạy Claude `--model opus --effort medium`, response model `claude-opus-5-5`, is_error=false; cùng session để giữ feedback.
+- Reports: [R1](internal/operator/design-review-r1.md), [R2](internal/operator/design-review-r2.md), [R3](internal/operator/design-review-r3.md), [R4](internal/operator/design-review-r4.md), [R5](internal/operator/design-review-r5.md). File:dòng ở reports thuộc bản được review tại thời điểm đó.
+- Feedback Codex R1–R4 và [proof sketches](internal/operator/security-obligations.md), [math evidence](internal/operator/design-math-evidence.json) giữ nội bộ. Không coi sketch hay phép tính là formal verification.
+- R5: không tìm thấy blocker kiến trúc mới trong phạm vi review; production gates chưa đạt. Bổ sung O1–O3 về committed witness/frontier và uint64/base64 JSON encoding theo yêu cầu reviewer; không đổi cơ chế ngoài các nghĩa vụ đó.
+- Thiết kế chính: [design.md](internal/packet-security/design.md), draft5 chưa là wire contract production. Tóm tắt cập nhật tại packet-security.html và index.html.
+- Không sửa code sản phẩm, không giao coder tiếp sau yêu cầu tạm dừng; không chạy crypto vectors/prototype/hardware/fault tests/benchmark. Baseline unittest trước đổi hướng đã ghi riêng.
+- Những gì còn chưa chứng minh: composition security, optimal Pareto/latency, trusted time Android/máy, persistence/flush và rollback domain thật. Không báo tuyệt đối an toàn hoặc exactly-once vật lý.
+
+## Trau chuốt sơ đồ theo manual — 06/10/2026
+
+- Theo yêu cầu mới, giao Claude Opus medium coder tài liệu, Codex review và gửi feedback.
+- Thay bốn sơ đồ ở architecture.html/packet-security.html bằng SVG offline theo hai manual root: màu theo vai, diamond quyết định, cylinder dữ liệu, nhánh có nhãn và nguồn/chú giải hiện trạng/đề xuất.
+- styles.css có sáng/tối/điện thoại/in; diagrams.js cung cấp Phóng to, Mã nguồn, Escape và trả focus. Không tăng số HTML đọc.
+- Claude sửa feedback về domain encoding, Tuple, hạn retry và clock/CAS; Codex sửa bản in và nhãn nhánh đi tiếp. Tiêu chí lâu dài cập nhật PHASE_FORMAT.md.
+- [Review](internal/operator/visual-review.md), [browser evidence](internal/operator/visual-browser-check.json). Chrome/Playwright: 4 sơ đồ, 8 nút, không JS error/tràn trang mobile, ID clone không trùng; SVG vẫn hiển thị khi tắt JS. 29 link local hợp lệ, git diff --check pass.
+- Không sửa code sản phẩm, canonical design hoặc hai manual; middleware product coder vẫn tạm dừng. Kiểm UI không thay thế security vectors/fault tests hay production gates.
+
+## Nghiên cứu lựa chọn — hai GPT Sol high, 07/10/2026
+
+- Người dùng yêu cầu tiếp tục researcher/critic bằng GPT Sol high. Đã gọi hai agent độc lập, đọc repo/nguồn chính thức và trao đổi trực tiếp; operator hợp nhất 28 lựa chọn cho D1–D6,D8.
+- [Hồ sơ](internal/operator/decision-options-2026-10-07.md), [trao đổi](internal/operator/decision-debate/debate-sol-high-2026-10-07.md). Verdict nội dung không còn blocker logic shortlist; chưa production gate.
+- Bảng chọn nằm ngay tại packet-security.html#security-decisions; tiến độ cổng chọn thiết kế cập nhật index.html. Chưa đổi design.md, chưa planner/coder sản phẩm.
+- Loại Date header thường/Cloudflare Tunnel khỏi shortlist; rollout chỉ toàn profile theo phạm vi deployment; D1-D/D2-C cần đổi design nếu chọn.

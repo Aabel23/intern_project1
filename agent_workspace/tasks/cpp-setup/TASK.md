@@ -7,3 +7,5 @@ Status: complete.
 - Temporary program compile and stdin/stdout verification passed (12 + 30 = 42).
 - GDB breakpoint at main passed.
 - Configuration JSON parsed successfully; VS Code keyboard interaction not checked.
+
+- Chi tiết kiểm và giới hạn được giữ tại [setup.md](setup.md); không xuất HTML riêng cho hồ sơ cài môi trường.

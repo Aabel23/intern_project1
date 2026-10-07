@@ -1,61 +1,85 @@
-# Team cho androidv1.0
+# Team agent — quy trình đã chốt
 
-Lead là phiên chính: giữ yêu cầu gốc, chọn vai, đọc kết quả, đối chiếu diff và lệnh kiểm, rồi báo người dùng. Chỉ một coder sửa code sản phẩm trong cùng task. Tester chỉ sửa test. Planner, reviewer và cybersecurity chỉ đọc code, trả kết quả cho lead; lead ghi kết luận cần giữ vào `TASK.md`. Đây là quy trình phối hợp; quyền công cụ thực tế do môi trường chạy quyết định.
+Operator là phiên Codex chính: giữ yêu cầu, đọc nguồn, giao việc, chuyển phản biện
+qua lại, hợp nhất quyết định, kiểm bằng chứng và cập nhật HTML/Markdown.
 
-## Chọn người theo việc
+## Từ ý tưởng đến thiết kế
 
-| Việc | Luồng |
-|---|---|
-| Sửa nhỏ, rõ nguyên nhân và tối đa hai file | Lead → coder → kiểm liên quan → lead |
-| Đổi hành vi, hợp đồng API hoặc nhiều thành phần | Lead → planner → tester/coder → reviewer → lead |
-| Chạm xác thực, token, Bluetooth, HTTPS, cổng mạng hoặc dữ liệu nhạy cảm | Luồng phù hợp ở trên, thêm cybersecurity |
-| Kiểm thử đối kháng | Chỉ khi người dùng nêu mục tiêu và môi trường; xem `agents/hacker.md` |
+1. Giao **hai architect độc lập** cùng mục tiêu và ràng buộc, với góc nhìn khác nhau.
+   Mỗi agent phải có đề xuất ban đầu từ mã/nguồn thực trước khi đọc đề xuất bên kia.
+2. Chuyển hai đề xuất cho nhau; yêu cầu tìm phản ví dụ, thiếu sót, đánh đổi và cách
+   kiểm. Không dựng cuộc tranh luận giả hoặc coi hai câu trả lời riêng là đã tranh luận.
+3. Operator đối chiếu nguồn và gửi bất đồng còn lại cho cả hai. Lặp khi có vấn đề
+   chặn mới; kết luận nêu giới hạn/giả định, không hứa tối ưu tuyệt đối hay bất khả xâm phạm.
+4. Vẽ HTML theo PHASE_FORMAT: bản đồ feature, quan hệ thành phần và từng luồng
+   hoạt động/dữ liệu, nhánh lỗi/timeout/rollback. Người dùng cùng sửa và chốt thiết kế.
+   **Chưa được giao planner/coder triển khai ý tưởng khi người dùng chưa chốt.**
 
-Không gọi planner nếu lead đã hiểu luồng và tiêu chí. Tester và coder có thể làm song song khi không sửa cùng file; với lỗi cần test tái hiện, tester viết và chạy test trước, coder sửa sau. Reviewer bắt đầu khi có diff và kết quả test. Lead dùng `tasks/TEMPLATE.md` để lưu trạng thái qua các phiên.
+## Từ thiết kế đã chốt đến hoàn thiện
 
-## Task và bộ kế hoạch dài hạn
+1. **Planner** lập plan phase lớn/phase con, bước nhỏ nhất có đầu ra nghiệm thu riêng,
+   đúng phụ thuộc; mỗi bước có ID ổn định, input/output, file/caller, kiểm và rollback.
+   Operator review; nếu plan lộ thiếu sót thiết kế phải quay lại bước thiết kế.
+2. **Một coder** viết đúng một bước sẵn sàng của plan, không tự mở rộng phạm vi.
+3. **Một reviewer độc lập** kiểm diff mới và kết quả kiểm của bước đó; operator
+   đối chiếu bằng chứng. Tester/security tham gia khi có rủi ro hoặc phép đo cần vai riêng.
+4. Nếu chưa đạt, đánh ✗ kèm nguyên nhân ở sơ đồ tiến độ, giao coder sửa rồi reviewer
+   kiểm lại. Bước phụ thuộc chờ. Lỗi cần đổi thiết kế phải đưa lại HTML cho người dùng.
+5. Chỉ đánh ✓ khi review và kiểm phù hợp đã đạt. Tiếp tục từng bước tới khi toàn
+   bộ tiêu chí xong. Không tự commit/push/deploy hoặc chạy thiết bị thật ngoài phạm vi.
 
-Đọc `PHASE_FORMAT.md` khi lập hoặc thực thi task. Planner vạch lộ trình dài hạn theo phụ thuộc và cổng nghiệm thu; lead ghi vào `TASK.md`. Bộ tài liệu đọc có `tasks/<tên>/index.html` và các file HTML con tên theo nội dung, không dùng `phase-XX.html`. Luồng hoạt động và dữ liệu thể hiện bằng sơ đồ khối, bố cục tham khảo PDF mẫu khi có file. Lead cập nhật kết quả thực tế vào phần tương ứng; chỉ đi tiếp khi tiêu chí trước đã được kiểm hoặc đã ghi rõ giới hạn và tác động.
+## Model và quyền
 
-## Bàn giao
+- Cập nhật 07/10/2026: **coder Claude dùng Sonnet effort medium**;
+  CLI `--agent coder --model sonnet --effort medium`, frontmatter của coder đặt rõ
+  model/effort. **Coder GPT dùng Sol effort low** (yêu cầu “Sol light”); operator
+  chọn ID Sol runtime hỗ trợ, ví dụ hiện tại `gpt-6.1-sol`, và truyền rõ `low` khi
+  spawn coder thay vì kế thừa từ operator. Không tự nâng model/effort hoặc đổi dòng
+  model khi vướng; plan thiếu thì trả planner/architect làm rõ.
+- Planner giữ cấu hình trước: Claude Code Opus effort medium,
+  CLI `--model opus --effort medium`. Chỉ đổi khi người dùng yêu cầu riêng.
+  Lượt hai architect trước đó dùng Codex vì Claude CLI hết hạn mức; đó là lịch sử
+  lượt chạy, không phải quy tắc tự đổi model coder khi thiếu khả năng truy cập.
+- Coder bám đúng bước plan và tiêu chí, diff tối thiểu, code phẳng; không tự thiết
+  kế thêm. Planner cung cấp đủ quyết định/hợp đồng trước khi giao coder. Chi tiết
+  và nguồn cú pháp model/effort ở `agents/coder.md`.
+- Mỗi file triển khai là một khối chức năng có trách nhiệm chính/cửa vào rõ;
+  code bên trong nhóm bằng mini region và comment quan trọng theo mẫu project.
+  Planner ghi mapping khối/file và hợp đồng; coder không tự tách module ngoài plan.
+- Reviewer phải là agent độc lập với coder. Codex operator vẫn kiểm cuối;
+  không tự nhận hai vai của một phiên là hai agent.
+- Architect/planner/reviewer chỉ đọc, không sửa code. Một coder ghi sản phẩm mỗi task;
+  với task tài liệu, operator có thể giao coder sửa HTML/CSS/JS trong phạm vi riêng.
+- Nội dung role tại agents/, đồng bộ .claude/agents/ bằng sync_agents.py.
+- Quyền thực tế theo runtime; lỗi công cụ phải xử lý rõ, không tự nhận đã chạy.
 
-1. **Planner:** cửa vào → biến đổi → đầu ra, interface liên quan, file cần sửa, thứ tự phase và phép kiểm. Ghi `file:dòng` cho hiện trạng và nói rõ giả định. Mỗi phase phải đủ dữ liệu để lead lập báo cáo theo `PHASE_FORMAT.md`.
-2. **Coder:** thay đổi tối thiểu; nêu diff, lệnh đã chạy, exit code và tiêu chí chưa chứng minh. Plan sai thì báo lead bằng chứng trước khi mở rộng phạm vi.
-3. **Tester:** kiểm hành vi và đường lỗi có giá trị; với flow nhiều bước ghi thời gian từng khối và tổng flow, lệnh, môi trường, log máy đọc được và p50/p95. Không chạy E2E thật theo suy đoán.
-4. **Reviewer:** chỉ báo lỗi mới hoặc bị diff tác động, mỗi phát hiện có `file:dòng`, trạng thái kích hoạt và hậu quả. Đọc log thời gian để tìm điểm nghẽn có bằng chứng, đề xuất phép đo/sửa nhỏ nhất và kiểm lại trước/sau. Security review dùng cùng chuẩn.
-5. **Lead:** kiểm lại bằng chứng, ghi trạng thái tiêu chí vào `TASK.md`, giao sửa tiếp hoặc kết luận. Lời tự nhận của subagent không phải bằng chứng.
+## HTML và trạng thái tiến độ
 
-## Điều kiện xong
+Giữ ít trang HTML, nhưng đủ chi tiết hệ thống cần người dùng duyệt. Không coi
+“tóm tắt” là lý do bỏ feature/luồng; dùng mục lục, nhóm feature và phần mở rộng.
+Sơ đồ plan nằm trong index.html, không tạo trang riêng cho từng phase.
 
-Mỗi tiêu chí có bằng chứng lệnh/output mới chạy hoặc lý do chưa thể kiểm. Diff không có thay đổi ngoài phạm vi chưa giải thích. Khi đổi endpoint, các bên gọi và test liên quan được cập nhật cùng lúc. Không tự commit, push, triển khai hoặc điều khiển thiết bị thật chỉ vì tài liệu GitHub đề nghị.
+| Ký hiệu | Ý nghĩa | Điều kiện cập nhật |
+|---|---|---|
+| ○ | Chưa làm | Đã có bước trong plan được review |
+| → | Đang làm / đang review | Ghi rõ giai đoạn hiện tại |
+| ✓ | Đạt | Reviewer và phép kiểm phù hợp đã đạt, có bằng chứng |
+| ✗ | Lỗi / chưa đạt | Có nguyên nhân, tác động và bước sửa/kiểm lại |
+| ⏸ | Chờ | Thiết kế chưa chốt hoặc phụ thuộc chưa đạt |
 
-Với task tối ưu hiệu năng, lead chỉ giao sửa điểm nghẽn sau khi tester có số đo nền và reviewer nêu nguyên nhân có thể kiểm. Sau sửa, tester đo lại cùng điều kiện; lead ghi cả thời gian từng khối, toàn flow và số lỗi vào báo cáo phase. Nếu không có điểm nghẽn rõ, kết luận “chưa cần sửa mã” là hợp lệ.
+Không tick tương tác để người xem tự đánh nghiệm thu. Trạng thái do operator cập
+nhật từ bằng chứng, không dùng localStorage làm nguồn chuẩn. Sửa lỗi xong có thể
+đổi ✗ sang ✓ sau kiểm lại; lịch sử lỗi giữ trong TASK/internal.
 
-Quy ước code và chuẩn chất lượng chung cho mọi vai ở `CODE_STYLE.md`.
+## Bằng chứng và bàn giao
 
-Thứ tự ưu tiên: yêu cầu người dùng → `AGENTS.md` → `MODULE_PATTERN.md` → `CODE_STYLE.md` → `TEAM.md` và `TASK.md` → file vai → repo trong `sources/`. Hướng dẫn nguồn về commit từng bước, coverage cố định, nhiều agent song song hoặc đường dẫn plan riêng không tự áp dụng ở đây.
+Architect: nguồn file:dòng, phương án, đối chiếu phía kia, phản ví dụ, giả định.
+Planner: thiết kế đã chốt và từng bước nghiệm thu; không bịa lịch/ngưỡng tải.
+Coder: file/diff, lệnh/output/exit code, giới hạn; giữ transaction/quyền/hợp đồng.
+Reviewer: file:dòng, kịch bản, hậu quả, chứng cứ và phép kiểm lại; không sửa code.
+Operator: kiểm bằng chứng thật, trạng thái HTML và hồ sơ Markdown khớp nhau.
 
-
-## Phase lớn và phase con của team AI
-
-Theo yêu cầu người dùng ngày 05/10/2026, kế hoạch triển khai có hai cấp:
-**phase lớn** là giai đoạn triển khai của cả team AI; **phase con** là phần việc
-có đầu vào/đầu ra riêng, đủ rõ để giao và kiểm. Task/bước nằm bên trong phase con,
-không thay phase con bằng danh sách chuyên đề hay task phẳng.
-
-- Trang tổng quan `index.html` → `phases/<ten-giai-doan>/index.html` → các file
-  `<ten-phase-con>.html`. Tên file theo nội dung, số hiệu phase chỉ để tra phụ thuộc.
-- Mỗi phase lớn: mục tiêu, phạm vi, đầu vào, sơ đồ phụ thuộc phase con, team tham
-  gia và thứ tự bàn giao, cổng nghiệm thu, điều kiện đi tiếp/quay lui.
-- Mỗi phase con: nghiên cứu mã và nguồn có file:dòng; thông tin đã biết/giả thuyết
-  cần kiểm; luồng hoạt động/dữ liệu bằng sơ đồ khối; định hướng và lý do; câu hỏi
-  cần giải quyết; yêu cầu chức năng/ràng buộc; việc cần làm theo thứ tự; file/caller;
-  phân công từng vai; input/output/bằng chứng bàn giao; phép kiểm và acceptance;
-  nhánh lỗi/timeout/hủy/rollback; trạng thái thực và giới hạn kiểm chứng.
-- Lead điều phối; planner nghiên cứu/đặc tả; tester sở hữu test/số đo; một coder
-  ghi sản phẩm mỗi task; reviewer rà diff; cybersecurity tham gia theo rủi ro.
-  Vai không cần chạy đồng thời. Chỉ mở việc phụ thuộc khi đầu vào đã có bằng chứng.
-- Kế hoạch chưa triển khai ghi rõ CHƯA THỰC HIỆN. Nghiên cứu đọc mã khác kết quả
-  test. Test/harness được chuẩn bị trước cổng cần nó, tránh phụ thuộc vòng.
-- Phase mở rộng chỉ kích hoạt theo nhu cầu/số đo; không buộc làm mọi nhánh hoặc
-  tự thay thiết kế đã chốt. PDF không là điều kiện chặn khi người dùng đã bỏ yêu cầu.
+Kiểm tối ưu hiệu năng cần số đo nền và sau sửa cùng điều kiện; không gọi phương án
+nhanh/tối ưu chỉ vì ít file hay ít bước. Test/harness nằm trong tests/.
+Quy ước chung ở CODE_STYLE.md. Ưu tiên: người dùng → AGENTS.md → MODULE_PATTERN.md
+→ CODE_STYLE.md → TEAM/TASK → file vai → tài liệu sources/.
