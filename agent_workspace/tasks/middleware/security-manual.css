@@ -58,3 +58,54 @@
 .security-page .decision-condition{padding:12px;border-left:3px solid var(--accent);background:var(--surface-2)}
 @media(max-width:750px){.security-page .decision-grid{grid-template-columns:1fr}}
 @media print{.security-page .decision-grid{display:block}.security-page .decision-option{break-inside:avoid;margin:10px 0}.security-page .decision-jump{display:none}}
+
+.security-page .crypto-table-wrap{overflow-x:auto;max-width:100%}
+.security-page .crypto-table-wrap table{width:100%;min-width:640px}
+.security-page .crypto-table-wrap td{vertical-align:top;overflow-wrap:anywhere}
+@media print{.security-page .crypto-table-wrap{overflow:visible}.security-page .crypto-table-wrap table{min-width:0;font-size:11px}.security-page .crypto-table-wrap tr{break-inside:avoid}}
+
+/* Mục quyết định gọn: bảng tóm tắt + bảng so sánh mỗi câu. */
+.security-page .answer-line code{display:inline-block;padding:8px 12px;font-size:13.5px;border-radius:8px;overflow-wrap:anywhere}
+.security-page .tag{display:inline-block;font:600 11px/1.6 var(--sans);padding:1px 7px;border-radius:999px;white-space:nowrap;vertical-align:1px}
+.security-page .tag-pick{background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok)}
+.security-page .tag-change{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber)}
+.security-page .gpt-note{display:block;font:12px/1.5 var(--sans);color:var(--ink-3)}
+.security-page .summary-table td,.security-page .opt-table td,.security-page .opt-table th{vertical-align:top}
+.security-page .summary-table tr.grp th{background:var(--surface-2);font:600 11.5px/1.5 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);text-align:left}
+.security-page .summary-table a{color:var(--ink);text-decoration:none}
+.security-page .summary-table a:hover{color:var(--accent-ink);text-decoration:underline}
+.security-page .facts{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:84ch}
+.security-page .grp-title{font:600 12px/1.5 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin:18px 0 -6px;padding-top:14px;border-top:1px solid var(--line)}
+.security-page .decision-card>header{display:flex;align-items:baseline;gap:10px}
+.security-page .dec-id{font:700 13px/1 var(--mono);color:var(--accent-ink);background:var(--accent-soft);padding:5px 7px;border-radius:6px}
+.security-page .pick-box{border:1px solid var(--ok);background:var(--ok-soft);border-radius:10px;padding:12px 16px;display:grid;gap:6px}
+.security-page .pick-box p{max-width:84ch}
+.security-page .gpt-line{font:12.5px/1.5 var(--sans);color:var(--ink-3)}
+.security-page .opt-table{min-width:760px}
+.security-page .opt-table th[scope=row]{font-weight:600;text-align:left;width:22%}
+.security-page .opt-table td:nth-child(2){width:34%}
+.security-page .opt-table td:nth-child(4){white-space:nowrap}
+.security-page .opt-table tr.is-pick>*{background:var(--ok-soft)}
+.security-page .opt-id{font:600 12px var(--mono);color:var(--ink-3);margin-right:4px}
+.security-page ul.pros{margin:0;padding-left:1.2em;display:grid;gap:6px;font-size:14px}
+@media(max-width:750px){
+ .security-page .opt-table,.security-page .summary-table{min-width:0}
+ .security-page .opt-table thead,.security-page .summary-table thead{display:none}
+ .security-page .opt-table tr,.security-page .summary-table tr{display:block;border-bottom:1px solid var(--line);padding:8px 0}
+ .security-page .opt-table th[scope=row],.security-page .opt-table td,.security-page .summary-table td,.security-page .summary-table th{display:block;width:auto;border:0;padding:3px 12px}
+ .security-page .opt-table td::before,.security-page .summary-table td::before{content:attr(data-label);display:block;font:600 11px/1.5 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+ .security-page .opt-table td:nth-child(4){white-space:normal}
+}
+@media print{.security-page .summary-wrap,.security-page .opt-table{break-inside:auto}.security-page .opt-table{min-width:0}.security-page details>*{display:block}}
+.security-page .opt-table tbody th,.security-page .summary-table tbody td{font:600 13.5px/1.5 var(--sans);letter-spacing:0;text-transform:none;color:var(--ink)}
+.security-page .summary-table tbody td{font-weight:400}
+@media(max-width:750px){
+ .security-page .crypto-table-wrap table.opt-table,.security-page .crypto-table-wrap table.summary-table{min-width:0;width:100%}
+ .security-page .crypto-table-wrap table.opt-table td,.security-page .crypto-table-wrap table.opt-table th,.security-page .crypto-table-wrap table.summary-table td{width:auto!important;overflow-wrap:anywhere;white-space:normal}
+ .security-page .tag{white-space:normal}
+}
+
+/* D6: bảng gate ưu tiên cột bằng chứng. */
+.security-page #decision-d6 .d6-gates th[scope=row]{width:20%}
+.security-page #decision-d6 .d6-gates td:nth-child(2){width:60%}
+.security-page #decision-d6 .d6-gates td:nth-child(3){width:20%}

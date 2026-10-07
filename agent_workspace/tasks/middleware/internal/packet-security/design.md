@@ -1,8 +1,33 @@
-# Thiết kế chính — bảo vệ gói tin, bản review R5
+# Thiết kế chính — bảo vệ gói tin, bản review R5 + quyết định 07/10/2026
 
-Ngày 06/10/2026. **ĐỀ XUẤT, chưa triển khai**. Tài liệu này là nguồn quyết định
-chính thay phần giao thức trong bản HTML gốc và các shortlist nghiên cứu trước.
-Không thay code, route, schema hoặc quy ước module trong đợt review.
+Ngày 06/10/2026; **người dùng chốt 11 quyết định D/C ngày 07/10/2026**. Chưa triển khai.
+Tài liệu này là nguồn quyết định chính thay phần giao thức trong bản HTML gốc và
+các shortlist nghiên cứu. Không thay code, route, schema hoặc quy ước module khi chưa có plan.
+
+## 0. Quyết định đã chốt — 07/10/2026
+
+Người dùng chốt bộ `D1-B, C2-B, C4-B, C1-A, C3-A, D2-C, D3-B, D4-B, D5-A, D6-A, D8-C`
+sau đối chiếu hệ thống ([system-fit](../operator/system-fit-2026-10-07.md)). Các mục
+bên dưới đã sửa theo bộ này; phương án bị loại và so sánh chỉ còn ở hồ sơ nghiên cứu
+([D](../operator/decision-options-2026-10-07.md), [C](../operator/crypto-options-2026-10-07.md)).
+Chốt thiết kế **không** là bằng chứng thư viện build được, vector đạt hay số đo đã có.
+
+| Mã | Thiết kế đã chốt | Mục chịu ảnh hưởng |
+| --- | --- | --- |
+| D1-B | Root ký manifest là file khóa mã hóa passphrase trên **máy ký air-gapped**; backup ở hai nơi; manifest đã ký chuyển qua phương tiện kiểm soát | §3 |
+| C2-B | **ECDSA P-256/SHA-256 cho cả root, app và máy**, mỗi vai key riêng; wire r‖s 64 byte, low-s | §2, §3 |
+| C4-B | Khóa ký app bắt buộc Android Keystore mức **TEE trở lên** đã kiểm, không đạt thì từ chối enroll; máy/server giữ key file riêng quyền 0600 | §3 |
+| C1-A | HPKE suite **DHKEM(X25519, HKDF-SHA256) 0x0020 / HKDF-SHA256 0x0001 / AES-128-GCM 0x0001**; enc 32, key 16, nonce 12, tag 16 byte | §2, §4 |
+| C3-A | App: **Bouncy Castle HPKE qua Kotlin MethodChannel**; server và Pi: **PyHPKE** (kéo `cryptography`). Dart không tự làm crypto | §2 |
+| D2-C | App kiểm OS clock bằng **thời gian do server ký** qua kênh time riêng ngoài packet profile; khóa ký thời gian nằm trong trust package cài cùng APK | §6 |
+| D3-B | Máy được **provision lúc lắp**: sinh cặp khóa, admin đăng ký public key; chủ nhận claim code niêm phong; app yêu cầu máy ký nonce khi claim | §3 |
+| D4-B | **Recovery code** một lần cấp lúc enroll, lưu hash, rate limit, thu hồi/báo credential cũ; đường admin đối soát là nền | §3 |
+| D5-A | **Server Python tự kết thúc TLS** bằng `ssl` stdlib, không proxy; cert tự cấp được pin trong `network_security_config` | §1, §9 |
+| D6-A | **Chuyển toàn profile một đợt qua bảo trì** cho deployment thử nghiệm hiện tại | §13 |
+| D8-C | **Bỏ GET `/machine/trang-thai`**; `online`/`last_seen` trả trong `USER_MACHINE_LIST` | §4 |
+
+Hai chỗ đổi design R5 đã được người dùng chấp nhận khi chốt: C3-A thay câu fallback
+FFI ở §2; D2-C thêm kênh time có chữ ký server ở §6.
 
 ## 1. Mục tiêu và phạm vi bảo đảm
 
@@ -18,8 +43,9 @@ không phải E2EE app↔máy mà server không đọc được. Không bổ sun
 | A2: tài khoản hợp lệ | Có token và khóa của chính mình, gửi input độc hại/concurrent/flood | Không được suy ra quyền máy khác; quota/validation và quyền vẫn bắt buộc ở feature |
 | A3: endpoint/control plane | Đọc private key/RAM server hoặc app/máy, thay APK/root trust, restore state bí mật, chiếm người quản trị phát hành | Ngoài bảo đảm nội dung/nguồn gửi; cần containment, revoke và recovery; không tuyên bố bất khả xâm phạm |
 
-A1 là **mô hình thiết kế**, chưa khẳng định Caddy thực tế tách quyền với server.
-Phép kiểm giá trị của E: proxy test kết thúc TLS chỉ thấy envelope, không đọc được
+A1 là **mô hình thiết kế**. Theo D5-A không có proxy vận hành: server Python tự
+kết thúc TLS, nên mọi bên kết thúc TLS khác (proxy kiểm thử, middlebox trên LAN,
+cert pin bị bỏ qua) được coi là A1. Phép kiểm giá trị của E: proxy test kết thúc TLS chỉ thấy envelope, không đọc được
 mật khẩu/token/menu inner và không thay gateway key bằng key tự tạo. Nếu proxy có
 quyền root trên server thì A1 trở thành A3; E không che plaintext khỏi người đó.
 
@@ -50,22 +76,35 @@ endpoint chưa bị chiếm, durable storage đúng và policy hiện hành.
 - Không Redis/replica bắt buộc. Replay/idempotency dùng SQLite durable trong
   kiến trúc một process hiện tại. Không dùng replay RAM chỉ vì đã dùng HPKE.
 
-**Chưa chốt suite/dependency production.** Gate lựa chọn là: thư viện Dart/Python
-hỗ trợ RFC 9180 single-shot + Export và vector chuẩn, độ bảo vệ khóa ký trên thiết bị,
-negative tests và benchmark. Candidate X25519/HKDF-SHA256/AEAD-128-bit-tag có
-`enc=32 byte`, `tag=16 byte`; AES-GCM và ChaCha20-Poly1305 được so bằng prototype.
-Khóa ký P-256 (fixed-width r||s, low-s) hoặc Ed25519 nằm trong profile version riêng;
-chỉ một thuật toán được allowlist theo key record, không chọn `alg` tự khai.
+**Suite và dependency đã chốt (C1-A, C2-B, C3-A).** HPKE dùng một profile cố định
+DHKEM(X25519, HKDF-SHA256) `0x0020`, KDF HKDF-SHA256 `0x0001`, AEAD AES-128-GCM
+`0x0001`: `enc=32`, key 16, nonce 12, `tag=16` byte. Chữ ký ngoài, chữ ký manifest
+và chữ ký máy đều là ECDSA P-256/SHA-256: ký canonical bytes qua API hash đúng một
+lần (không prehash thêm), wire r‖s 64 byte fixed-width, low-s; reject DER, high-s,
+trailing bytes. Khóa KEM recipient của server tách hẳn khóa ký. Chỉ một thuật toán
+được allowlist theo key record, không chọn `alg` tự khai.
+
+Thư viện: app gọi **Bouncy Castle** (`bcprov-jdk18on`, HPKE context có AAD/Export)
+trong Kotlin qua **MethodChannel**, cùng cầu với signer Android Keystore; Dart chỉ
+chuyển bytes, không tự làm crypto. Server và Pi dùng **PyHPKE** (kéo `cryptography`)
+cho context/AAD/Export, `cryptography` cho ECDSA. Đây là dependency bên thứ ba đầu
+tiên của server, phải pin version/hash. Câu fallback FFI của R5 được thay: MethodChannel
+tới thư viện chuẩn là đường chính; nếu BC hoặc PyHPKE không đạt vector chuẩn, liên
+thông đúng byte hoặc Export đúng RFC 9180 thì **dừng rollout** và quay lại người dùng
+chọn stack khác, không tự ghép HPKE từ primitive và không tự đổi nền tảng.
 Không tự hạ cấp sang plaintext/unsigned khi thiếu thư viện hoặc secure storage.
-Phương án B đã chọn: nếu không có dependency HPKE/Export đạt gate trên Dart,
-không triển khai crypto profile; nghiên cứu binding FFI tới thư viện chuẩn được
-review/pinned như một prototype riêng. Nếu cả binding không đạt thì dừng rollout,
-không tự ghép HPKE từ primitive và không tự đổi nền tảng/kiến trúc sản phẩm.
+PyHPKE upstream chưa có audit độc lập; gate §10 bù bằng vector chuẩn và negative tests.
 
 ## 3. Trust anchor, enrollment và rotation
 
 - APK/image máy chứa public root ký manifest được cài qua kênh phát hành đáng tin.
   Private root ký manifest ở môi trường quản trị riêng, không tại proxy/server online.
+  **D1-B:** root P-256 sinh và giữ trên **một máy ký air-gapped** (không nối mạng),
+  file khóa mã hóa bằng passphrase, backup mã hóa ở hai nơi tách biệt. Manifest chưa
+  ký và đã ký chuyển qua phương tiện được kiểm soát; máy ký không nhận code/file
+  chạy được từ phương tiện đó. File khóa có thể bị sao chép nếu máy/backup bị lộ:
+  đó là rủi ro được chấp nhận so với token phần cứng. APK release phải có keystore
+  phát hành riêng (hiện còn ký debug key), tách khỏi root packet.
 - Manifest ký canonical bytes gồm deployment/audience, manifest_sequence monotonic,
   version/profile/suite, **recovery_epoch**, key ID, HPKE public key server, mục đích, trạng thái active/
   retiring/revoked, validity và policy version. Key ID không được tái sử dụng.
@@ -91,19 +130,34 @@ không tự ghép HPKE từ primitive và không tự đổi nền tảng/kiến
 - Thời hạn key epoch **không tự chứng minh** cửa sổ lộ ciphertext ≤ epoch: key
   có thể đã bị exfiltrate và giữ lại. Xóa secret cũ chỉ giảm phơi nhiễm nếu việc
   xóa/backup/đối thủ thực sự thỏa mô hình. Không gọi rotation là PFS.
+- **C4-B:** khóa ký app là ECDSA P-256 non-exportable trong Android Keystore; enroll
+  chỉ nhận khi KeyInfo/attestation cho mức **TEE hoặc StrongBox**; mức software thì
+  từ chối enroll, không hạ cấp. Server và máy giữ private key trong file riêng, owner
+  dịch vụ, quyền 0600, backup có kiểm soát; không TPM bắt buộc (Pi 5 không có sẵn).
+  Rooted OS hoặc clone thẻ SD máy nằm ngoài bảo đảm.
 - App enroll credential qua authenticated session + server challenge bound public
   key + proof-of-possession. Thay key phải có credential cũ hoặc recovery mạnh,
   không chỉ token bearer vừa đăng nhập; recovery báo/thu hồi credential cũ.
   Không auto rebind chỉ bằng mật khẩu/OTP: thay credential không có key cũ cần
   admin/owner đối soát bằng kênh đã provision độc lập (recovery code một lần, lưu
   hash server và rate limit) hoặc trusted administrative reprovisioning. Nếu không
-  có yếu tố/kênh này thì không cấp quyền machine write cho credential mới. Mất cả
+  có yếu tố/kênh này thì không cấp quyền machine write cho credential mới.
+  **D4-B:** đường mặc định là recovery code ngẫu nhiên entropy cao, cấp một lần lúc
+  enroll, người dùng giữ ngoài điện thoại; server chỉ lưu hash, rate limit, dùng xong
+  vô hiệu; khôi phục thu hồi và thông báo credential cũ. Mất cả code và key thì qua
+  admin đối soát ngoài kênh; đường admin luôn tồn tại. Mất cả
   recovery code/key không được giải quyết bằng bỏ verify. Thông báo credential cũ
   là bằng chứng hỗ trợ, không là yếu tố duy nhất. Pending operation giữ unknown
   sau re-enroll; không tự đổi ID/ticket rồi gọi lại.
 - Máy enroll bằng provisioning/owner confirmation tin cậy và proof-of-possession,
   không cho người chỉ có product-key/QR công khai thay credential máy. Product key
   là mã nhận biết/khởi tạo, không là bằng chứng máy đã enroll trong protected mode.
+  **D3-B:** lúc lắp/cài máy (nối tiếp bước sinh product key và in tem QR), máy sinh
+  cặp khóa P-256 và nhóm vận hành đăng ký public key + physical ID qua công cụ admin.
+  Chủ nhận claim code niêm phong; khi claim, app đã enroll gửi code và yêu cầu máy
+  ký nonce do server cấp để chứng minh máy thật giữ khóa. Claim code dùng một lần, rate
+  limit. Dây chuyền provision và code phải được bảo vệ; máy cũ cần re-provision.
+  `machine/config/create_env.py` hiện chỉ còn `.pyc`, cần khôi phục mã nguồn trước khi sửa.
 - Trạng thái credential/session/revoke được kiểm sau verify và trước claim/commit.
   Cache chỉ dùng với invalidation/version rõ; mặc định đọc authoritative record.
 
@@ -169,14 +223,13 @@ bị từ chối trước verify. Không gzip/nén input; giới hạn cả ciph
   so với `M`; mismatch thì reject. Route ID chỉ là protocol label, không thêm registry
   module động hay rename constants. Proxy rewrite chỉ hợp lệ khi deployment map
   tĩnh một-một đã kiểm; cấu hình chưa rõ thì reject, không tin X-Forwarded-* tùy ý.
-- Query mặc định rỗng cho tất cả POST constants hiện tại. GET status hiện có chỉ
-  cho query `machine_id=<decimal positive canonical>` đúng một field; không dấu +,
-  leading zero, percent-encoding tương đương, duplicate key hoặc field khác. Profile
-  phải inventory caller thực trước rollout; khác hợp đồng hiện hành phải sửa các bên.
-- Với GET `/machine/trang-thai`, body rỗng không là cửa bỏ crypto. Trước khi rollout
-  chọn mapping transport compatible cho GET (envelope trong header có hard bound
-  hoặc chuyển caller sang request được bảo vệ cùng cập nhật contract/tests).
-  **GET chưa có wire adapter đạt thì chặn rollout profile**, không miễn bảo vệ.
+- Query rỗng cho mọi route protected; profile không có wire adapter cho GET.
+- **D8-C:** bỏ GET `/machine/trang-thai` (không token, mỗi máy một request). Danh
+  sách máy `USER_MACHINE_LIST` trả thêm `online` và `last_seen` cho từng máy, sau
+  kiểm phiên/quyền như hiện tại; dashboard bỏ vòng gọi status và refresh bằng tải
+  lại danh sách. Đây là thay hợp đồng: server, app, test và e2e đổi cùng lúc; route
+  GET chỉ gỡ sau khi inventory xác nhận không còn caller. Sau mốc chuyển, request tới
+  route đã bỏ bị reject, không có ngoại lệ plaintext.
 
 ## 5. Response: đúng context, một lần seal
 
@@ -242,6 +295,20 @@ persist max_now_seen và kiểm clock authority trong cùng transaction, không 
 High-water trong backup không chống restore: recovery_epoch và recovery procedure
 ở mục ledger là nguồn riêng. **Không có route time-sync trong packet profile.** Client/máy dùng OS clock có
 nguồn tin cậy không do A0/A1 điều khiển; sai clock phải sửa ở tầng OS/provisioning.
+
+**D2-C — kênh thời gian có chữ ký server.** Server và Pi đồng bộ OS clock bằng chrony
+NTS đã kiểm. App kiểm OS clock qua một endpoint time **riêng, ngoài packet profile**:
+app gửi nonce CSPRNG, server trả `Tuple(domain "flexmix-time-draft5", audience, nonce,
+uint64_be(server_time), uint64_be(uncertainty))` ký bằng **khóa ký thời gian** P-256
+riêng purpose. Public key này nằm trong trust package cài cùng APK, không lấy từ
+manifest (manifest cần giờ đúng mới kiểm được hạn). App đo RTT bằng elapsed
+realtime, chấp nhận nếu nonce khớp và RTT không vượt bound; khoảng tin cậy là
+`[server_time − uncertainty, server_time + uncertainty + RTT]`. OS clock nằm ngoài
+khoảng thì fail closed mọi route Seal và hướng dẫn người dùng sửa giờ OS; app không
+tự đặt OS clock và không chỉnh offset nội bộ để bỏ qua kiểm. Kênh time không miễn
+freshness cho route nào, không cấp quyền, không đổi key validity. Đây là một nguồn:
+server bị chiếm (A3) có thể ký giờ sai — nằm ngoài bảo đảm như §1. A0/A1 chỉ có thể
+trì hoãn/chặn (DoS), không giả được giờ. Bound RTT, uncertainty và chu kỳ kiểm phải đo.
 Transport error clock-skew không ciphertext chỉ là diagnostic không tin cậy: proxy
 có thể gây DoS nhưng không được app dùng nó để tự chỉnh thời gian/key validity.
 Không miễn freshness cho bootstrap để sửa clock. Freeze bound của manifest phụ thuộc
@@ -408,8 +475,8 @@ Bootstrap có quota riêng và **cũng** chịu bucket toàn pool trước claim
 bootstrap quota dùng ingress provenance từ trusted topology; không tin IP/header
 client tự khai. Reserved capacity cho heartbeat/result/established credentials
 không cho flood bootstrap chiếm hết worker. Global anonymous bootstrap availability
-vẫn có thể bị DoS; không hứa chống chặn login bởi đối thủ A0/A1. Thiếu proxy topology
-là gate cho provenance policy, không lấy IP giả làm căn cứ khóa tài khoản. Không dùng attacker-chosen key ID để fetch URL/file tùy ý.
+vẫn có thể bị DoS; không hứa chống chặn login bởi đối thủ A0/A1. Theo D5-A, provenance
+là địa chỉ socket peer tại server TLS Python; không tin X-Forwarded-*. Topology đổi (thêm proxy theo D5-B khi ra Internet) là gate cho provenance policy, không lấy IP giả làm căn cứ khóa tài khoản. Không dùng attacker-chosen key ID để fetch URL/file tùy ý.
 Nonce/operation store full/unavailable → mọi route cần claim/Seal fail closed; unknown vẫn giữ.
 Không log secret, inner token/payload hoặc plaintext error; metrics label không có
 attempt/principal ID vô hạn làm cardinality DoS. Bounded sink không giữ request thread
@@ -457,10 +524,15 @@ Không gọi giải pháp tốt nhất chỉ từ tên thuật toán; prototype 
 - Replay concurrent/durable/expiry/clock rollback/backup restore/full store có test.
 - Ledger crash points, token rotation, revoke race, quyền đổi, machine lost result,
   command identity qua restart và unknown recovery kiểm được; không claim exactly-once.
-- GET/heartbeat/poll/result/auth/bootstrap đều có wire adapter; route compatibility
-  cập nhật app/server/machine/tests đồng thời. Lib không import feature/service.
-- Không triển khai cho tới khi GET, operation retention, recovery/trust rotation và
-  suite selection có vector/spec cụ thể. Các mục còn mở là implementation gates,
+- Heartbeat/poll/result/auth/bootstrap đều có wire adapter; GET status đã gỡ theo
+  D8-C cùng caller; route compatibility cập nhật app/server/machine/tests đồng thời.
+  Lib không import feature/service.
+- Suite đã chốt (C1-A/C2-B/C3-A) nhưng chưa có vector chạy: BC và PyHPKE phải đạt
+  official vectors RFC 9180 cho suite 0x0020/0x0001/0x0001 và liên thông đúng byte
+  trước khi coder dùng. Kênh time D2-C, enrollment D3-B, recovery D4-B và TLS D5-A
+  cần spec/test riêng.
+- Không triển khai cho tới khi operation retention, recovery/trust rotation và
+  wire production version có vector/spec cụ thể. Các mục còn mở là implementation gates,
   không được che bằng verdict design review đạt hoặc đổi nhãn thành ngoài phạm vi.
 
 ## Nguồn và giới hạn
@@ -554,8 +626,9 @@ telemetry; không báo rollback từ response order. Server xử lý chỉ witne
 lệ theo quy tắc trên. Epoch mới chuyển pending cũ sang reconciliation.
 
 OS clock Android/máy **không mặc định đáng tin**: không coi SNTP/NITZ hay API đọc
-system time là bằng chứng A0/A1 không chỉnh được. Gate deployment phải chứng minh
-nguồn thời gian thật độc lập; nếu không thì profile hiện tại không được production.
+system time là bằng chứng A0/A1 không chỉnh được. App kiểm bằng kênh time có chữ ký
+server (D2-C, §6); server/Pi dùng chrony NTS. Gate deployment phải chứng minh hai
+nguồn này hoạt động; nếu không thì profile hiện tại không được production.
 Không thêm cơ chế “reset tuổi manifest khi tải lại” bằng elapsed time: A1 có thể
 phát lại manifest cũ nhiều lần, nên cách đó không tự chứng minh expiry/freeze bound.
 Suspend-inclusive elapsed chỉ phục vụ local outstanding request deadline, không
@@ -578,3 +651,27 @@ Tests bổ sung (đặc tả, chưa chạy):
 Sources thêm: [SQLite synchronous](https://www.sqlite.org/pragma.html#pragma_synchronous),
 [RFC 8915 NTS](https://www.rfc-editor.org/info/rfc8915/). Những cấu hình này là yêu
 cầu mới của thiết kế, chưa là cấu hình/khả năng đã xác nhận của deployment hiện tại.
+
+## 13. Chuyển hệ thống sang profile bảo vệ (D6-A)
+
+Người dùng xác nhận ngày 07/10/2026: hệ thống **chưa phục vụ người dùng thật**. Chuyển
+toàn bộ app–server–máy của một deployment/audience trong **một đợt có điều phối qua
+bảo trì**; không canary, không blue/green, không giữ song song giao thức cũ. Luồng
+chi tiết, bảng hiện trạng mã, gate và nhánh lỗi ở
+[d6-rollout](../operator/d6-rollout-2026-10-07.md); tóm tắt bắt buộc:
+
+1. Kiểm kê app/máy, artifact/hash, trust/profile/schema; diễn tập với simulator hoặc máy riêng.
+2. Bảo trì: chặn **mọi** producer tạo lệnh (kể cả đọc menu/kho đang tạo command) và
+   mọi đường trao lệnh cho máy, kể cả long-poll đã vào; không chỉ đóng ingress.
+3. Nhận nốt result trong khoảng drain có kiểm soát; `da_nhan=true`, timeout hoặc queue
+   rỗng không chứng minh không tác động. Lệnh đã lấy/mất kết quả giữ unknown để đối soát.
+4. Đóng legacy, cài app/image máy/server cùng profile, cấp trust/credential theo
+   D1–D4, xác nhận recovery_epoch; boot ở trạng thái khóa tới khi kiểm xong.
+5. Đạt đủ gate D6-G1…G7 thì mở toàn profile; máy chưa đối soát/offline giữ cách ly.
+
+Sau mốc chuyển, mọi route còn tồn tại (auth/bootstrap, API app, heartbeat/poll/result)
+đi qua lớp bảo vệ; client cũ bị chặn trước nghiệp vụ, không fallback plaintext. Bản
+protected đầu tiên lỗi thì giữ bảo trì và sửa tiến — chấp nhận dừng toàn deployment
+thử nghiệm tới khi sửa xong. Rollback mã sau này chỉ sang bản protected tương thích
+state/epoch hiện hành; restore DB/disk là recovery theo §7/§12. Nếu có người dùng thật
+trước lúc thực hiện, phải xem lại D6.

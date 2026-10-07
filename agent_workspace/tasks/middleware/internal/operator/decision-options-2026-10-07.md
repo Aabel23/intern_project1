@@ -1,5 +1,9 @@
 # Phương án cho các quyết định mở D1–D6, D8 — 07/10/2026
 
+> **Đã chốt 07/10/2026:** người dùng chọn `D1-B, C2-B, C4-B, C1-A, C3-A, D2-C, D3-B, D4-B, D5-A, D6-A, D8-C`; thiết kế hiện hành ở [design.md §0](../packet-security/design.md). Hồ sơ dưới đây là nghiên cứu lưu trữ, gồm cả phương án bị loại.
+
+> Bản ghi tranh luận từ log phiên: [transcript](decision-debate/transcript-sol-high-2026-10-07.md) — 77/86 tin nhắn bị runtime Codex mã hóa, không đọc được. Bản nghiên cứu dưới đây là hợp nhất; transcript giữ cả phương án ban đầu và phản biện.
+
 ## Bản lựa chọn đã phản biện — GPT Sol high, 07/10/2026
 
 Hai agent `gpt-6-sol`, effort `high`: researcher và critic đọc độc lập rồi trao đổi trực tiếp. Không còn lỗi chặn logic shortlist trong phạm vi review; **người dùng chưa chọn, thiết kế chưa đổi**. Chưa prototype, đo hoặc nghiệm thu production. Lượt GPT cũ lỗi sandbox được giữ bên dưới, không coi là đã đọc/review.

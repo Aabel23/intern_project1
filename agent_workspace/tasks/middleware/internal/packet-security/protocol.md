@@ -1,5 +1,7 @@
 > Cập nhật review 06/10/2026: [design.md](design.md) là nguồn quyết định hiện hành. Nội dung bên dưới là nghiên cứu/backlog trước review; không dùng các lựa chọn cũ trái design.md để triển khai.
 
+
+> Cập nhật nghiên cứu 07/10/2026: xem [thuật toán, key và tham số C1–C5](../operator/crypto-options-2026-10-07.md). `design.md` là nguồn hiện hành; nội dung cũ dưới đây không thay quyết định R5. Người dùng đã chốt bộ D/C ngày 07/10/2026, xem design.md §0.
 > Hồ sơ nội bộ cho agent. Chuyển từ tài liệu HTML ngày 06/10/2026; nội dung và bằng chứng cũ được giữ, chưa kiểm lại sản phẩm. Sơ đồ gốc giữ dưới dạng mã SVG trong khối XML.
 
 MIDDLEWARE BẢO VỆ GÓI TIN

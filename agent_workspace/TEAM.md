@@ -73,6 +73,14 @@ nhật từ bằng chứng, không dùng localStorage làm nguồn chuẩn. Sử
 
 ## Bằng chứng và bàn giao
 
+Khi các agent trao đổi/phản biện, lưu transcript nguyên văn có thứ tự thời gian,
+vai gửi/nhận và nguồn log ngay sau mỗi lượt; Markdown hợp nhất không thay transcript.
+Giữ tin nhắn gửi và kết luận, tránh chép trùng bản nhận; ghi rõ phần log không có
+hoặc không thuộc phạm vi xuất. Không dựng lại lời agent từ trí nhớ.
+Runtime Codex mã hóa nội dung tin nhắn giữa agent trong log (`gAAAA…`); khi dùng Codex,
+yêu cầu mỗi agent ghi bản rõ tin nhắn/kết luận vào file hoặc final answer, và kiểm
+transcript đọc được trước khi gọi là nguyên văn.
+
 Architect: nguồn file:dòng, phương án, đối chiếu phía kia, phản ví dụ, giả định.
 Planner: thiết kế đã chốt và từng bước nghiệm thu; không bịa lịch/ngưỡng tải.
 Coder: file/diff, lệnh/output/exit code, giới hạn; giữ transaction/quyền/hợp đồng.

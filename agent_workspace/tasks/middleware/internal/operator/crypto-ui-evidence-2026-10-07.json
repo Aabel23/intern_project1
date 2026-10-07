@@ -1,0 +1,36 @@
+{
+  "crypto_articles": 4,
+  "crypto_options": 16,
+  "total_options": 44,
+  "tables": 4,
+  "desktop": {
+    "width": 1440,
+    "document_width": 1440
+  },
+  "mobile": {
+    "width": 390,
+    "document_width": 390
+  },
+  "keys": {
+    "width": 1440,
+    "document_width": 1440
+  },
+  "buttons": [
+    "Phóng to",
+    "Mã nguồn",
+    "Phóng to",
+    "Mã nguồn",
+    "Phóng to",
+    "Mã nguồn",
+    "Phóng to",
+    "Mã nguồn",
+    "Phóng to",
+    "Mã nguồn"
+  ],
+  "js_errors": [],
+  "offline_nojs_options": 44,
+  "zoom_visible": true,
+  "zoom_escape_focus": true,
+  "source_visible": true,
+  "source_escape_focus": true
+}

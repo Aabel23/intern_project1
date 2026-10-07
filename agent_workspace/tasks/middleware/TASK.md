@@ -258,3 +258,38 @@
 - [Hồ sơ](internal/operator/decision-options-2026-10-07.md), [trao đổi](internal/operator/decision-debate/debate-sol-high-2026-10-07.md). Verdict nội dung không còn blocker logic shortlist; chưa production gate.
 - Bảng chọn nằm ngay tại packet-security.html#security-decisions; tiến độ cổng chọn thiết kế cập nhật index.html. Chưa đổi design.md, chưa planner/coder sản phẩm.
 - Loại Date header thường/Cloudflare Tunnel khỏi shortlist; rollout chỉ toàn profile theo phạm vi deployment; D1-D/D2-C cần đổi design nếu chọn.
+
+## Mở rộng nghiên cứu thuật toán/key/tham số — 07/10/2026
+
+- Hai GPT Sol high tiếp tục đọc độc lập và phản biện trực tiếp; operator hợp nhất C1–C4 (16 lựa chọn) và C5 key map/tham số cố định, dynamic bounds/lifecycle.
+- [Nghiên cứu](internal/operator/crypto-options-2026-10-07.md), [tranh luận](internal/operator/decision-debate/crypto-debate-sol-high-2026-10-07.md). Bảng nằm ngay packet-security.html#crypto-decisions, không thêm trang HTML.
+- Khuyến nghị có điều kiện; C3-A/B cần user mở fallback FFI sang MethodChannel; app Ed software khác hardware signer. Chưa design chốt, chưa code/prototype/vectors/benchmark.
+
+- Review cuối C1–C5: critic kiểm bản ghi sau sửa ngoại lệ D1-D và Ed/TEE, không còn blocker; desktop/mobile và bản in bảng khóa kiểm vùng lấy mẫu đạt. Browser offline/no-JS/Zoom/Source/Escape/focus, local link/ID và parity16option đạt; [evidence](internal/operator/crypto-ui-evidence-2026-10-07.json). Chỉ review tài liệu, chưa kiểm sản phẩm/mật mã.
+
+## Khôi phục transcript — 07/10/2026
+
+- Lượt trước chỉ lưu tóm lược, chưa lưu transcript nguyên văn; operator nhận thiếu sót và khôi phục từ ba session logs thực.
+- [Transcript](internal/operator/decision-debate/transcript-sol-high-2026-10-07.md): 86 bản ghi giao việc/tin nhắn/kết luận của root/researcher/critic. JSONL kèm raw event, source file:dòng/record hash; metadata ghi snapshot hash và phạm vi. Script đối chiếu raw event/message với nguồn đạt.
+- Giữ bản tóm lược D/C, bổ sung liên kết transcript; TEAM bổ sung lưu nguyên văn sau mỗi lượt để không lặp thiếu sót. Không sửa thiết kế hay code sản phẩm.
+
+## Đối chiếu hệ thống và dựng lại mục quyết định — 07/10/2026
+
+- Operator (Claude) đối chiếu 11 quyết định D/C với mã hiện tại: [system-fit](internal/operator/system-fit-2026-10-07.md). Đề xuất khác GPT ở D1 (B), D2 (C, đổi design), D5 (A), C2 (B), C3 (A, đổi design); còn lại trùng. Chưa qua critic độc lập, chưa prototype/đo.
+- packet-security.html: Mục 3 thay 44 thẻ bằng bảng tóm tắt + một bảng so sánh mỗi câu (cột "Với hệ thống hiện tại"), ưu/nhược gom vào phần mở rộng; C5 thành Mục 4 "Khóa và tham số". Sửa chữ D3-A "BLE" → Bluetooth Classic RFCOMM. Đã xem render desktop 1440 và mobile 390; chưa kiểm bản in.
+- Phát hiện phụ: `machine/config/create_env.py` chỉ còn `.pyc`, thiếu mã nguồn dù README dùng nó.
+
+## D6 — Codex dừng giữa chừng, operator Claude tiếp tục — 07/10/2026
+
+- Codex (gpt-6.1-sol) nghiên cứu D6 với hai architect, hỏi user: hệ thống chưa phục vụ người dùng thật. Kết luận đề xuất D6-A; thêm [d6-rollout](internal/operator/d6-rollout-2026-10-07.md), phần decision-d6 trong packet-security.html, checker `tests/tools/check_middleware_d6_docs.py`. Phiên dừng 05:14 UTC do hết quota, lượt critic cuối lỗi.
+- ✗ Transcript: nội dung tin nhắn agent trong log Codex bị mã hóa (`gAAAA…`) cả hai phía; D6 33/33 và lượt D/C 77/86 bản ghi không đọc được. Đã đính chính các nhãn "nguyên văn" và thêm quy tắc vào TEAM.md.
+- ✓ QA tài liệu D6 chạy lại exit 0. ⏸ Review độc lập bản cuối chưa có (architect bị từ chối quyền đọc mã). D6-A chưa được người dùng chốt.
+
+## Người dùng chốt 11 quyết định và gộp vào thiết kế — 07/10/2026
+
+- Người dùng cho phép đọc mã để review D6 và chốt cả bộ `D1-B, C2-B, C4-B, C1-A, C3-A, D2-C, D3-B, D4-B, D5-A, D6-A, D8-C`, yêu cầu gộp vào thiết kế và bỏ phần so sánh/đề xuất.
+- ✓ [design.md](internal/packet-security/design.md): thêm §0 bảng quyết định; sửa §1 (TLS không proxy), §2 (suite X25519/AES-128-GCM, ECDSA P-256, BC qua MethodChannel + PyHPKE thay câu fallback FFI), §3 (root air-gapped, Keystore TEE, provision máy + claim code, recovery code), §4 (bỏ GET status, online/last_seen trong list), §6 (kênh time server ký), §9, §10 gate; thêm §13 chuyển hệ thống D6-A.
+- ✓ packet-security.html Mục 3 thành "Thiết kế đã chốt": bảng tóm tắt + một thẻ mỗi quyết định; bỏ bảng so sánh, ưu/nhược, "đề xuất"/"GPT đề xuất"; D6 giữ sơ đồ, gate và nhánh lỗi. Mục 4 đổi sang giá trị đã chọn, bỏ bảng tổ hợp. index.html: ✓ chốt → ○ planner.
+- ✗→✓ Review D6: architect Claude lượt 2 dừng do hết hạn mức API, không có verdict. Operator tự đối chiếu mã: heartbeat không trả lệnh (machine_link_process.py:28–35), bootstrap không chữ ký là R5 §3, trích dẫn còn lại khớp; đã ghi rõ chấp nhận dừng toàn deployment khi bản đầu lỗi và sửa đường dẫn. Đây không thay review độc lập.
+- ✓ `tests/tools/check_middleware_d6_docs.py` exit 0 sau sửa (74 link, desktop/mobile không tràn, 4 dialog, in, offline/no-JS). Đã xem ảnh Mục 3 desktop 1440/mobile 390.
+- Chưa có: review độc lập design.md sau gộp, vector/prototype/đo. Bước tiếp: planner chia phase.

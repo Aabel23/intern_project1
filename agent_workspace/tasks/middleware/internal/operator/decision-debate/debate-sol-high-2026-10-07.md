@@ -57,3 +57,7 @@ HTML đã dựng sẽ được critic kiểm riêng, không suy từ verdict n�
 ## Kiểm bản hợp nhất D1–D6,D8
 
 Critic đã đọc bản ghi JSON/Markdown/HTML: 7 × 4 option khớp ID/tên, không blocker nội dung; operator sửa nhãn nguồn D1 §3 và D2 §6. Chrome headless qua Playwright mở file://: 28 option, desktop 1440/scrollWidth1440 và mobile390/scrollWidth390, xuất PDF A4 thành công. Operator xem ảnh mobile. Ảnh/PDF tại /tmp là bằng chứng tạm; không thay kiểm mật mã. Lượt screenshot CLI đầu cho ảnh trống nên không dùng làm bằng chứng hiển thị; đã render lại qua Playwright.
+
+## Bản ghi trao đổi từ log phiên
+
+Bản này vẫn là tóm lược. Bản ghi 86 tin nhắn của lượt D và C nằm tại [transcript](transcript-sol-high-2026-10-07.md), kèm JSONL và hash; 77 bản ghi là nội dung bị runtime Codex mã hóa, không đọc được. Đã đối chiếu thứ tự/hash 86 bản ghi từ ba log thread; không dựng lại lời agent từ bản tóm tắt.
