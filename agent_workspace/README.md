@@ -15,5 +15,9 @@ chỉ thêm 1–2 trang theo nội dung khi cần. Middleware hiện có tổng 
 và bảo vệ gói tin; trang kiến trúc phải đủ feature/luồng và index có sơ đồ tiến độ.
 Nghiên cứu chi tiết, kế hoạch phase lớn/phase con, phân công và bằng
 chứng giữ bằng Markdown trong `TASK.md` và `internal/`; xem `PHASE_FORMAT.md`.
+Tranh luận giữa agent chạy bằng `python agent_workspace/debate.py <đề_bài.md> -o <kết_quả.md>`:
+chỉ giữ kết quả cuối, lượt trao đổi không được lưu. Kết quả và báo cáo agent ghi vào vault
+`~/.secondbrain/projects/internproj/project1_app/archive/`, không ghi vào repo (TEAM.md, mục Bằng chứng).
+Ngữ cảnh và tiến trình dự án: `~/.secondbrain/projects/internproj/project1_app.md`.
 
 `agents/` là nguồn chỉnh sửa duy nhất; `.claude/agents/` là bản sinh tại máy và được Git bỏ qua. `agents/hacker.md` không được đăng ký tự động. Hai repo tham khảo, commit và cách clone lại được ghi ở `sources/README.md`; bản clone cũng được Git bỏ qua.

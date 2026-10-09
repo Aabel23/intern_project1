@@ -1,7 +1,7 @@
 """Cửa vào menu_sync: nhận POST, đọc JSON, chọn luồng và trả response.
 
-POST /app/nhan-menu: {token, machine_id, menu_version}
-POST /app/cap-nhat-menu: {token, machine_id, menu_version, thay_doi}
+POST /app/machine/menu/get: {token, machine_id, menu_version}
+POST /app/machine/menu/update: {token, machine_id, menu_version, thay_doi}
 """
 
 from server.config.routing import MACHINE_MENU_GET, MACHINE_MENU_UPDATE

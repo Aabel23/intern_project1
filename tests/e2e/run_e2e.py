@@ -154,13 +154,13 @@ def cleanup_data(run):
 # ---------- server, build ----------
 
 def machine_online(machine_id):
-    with urlopen(f"{LOCAL_SERVER}/machine/trang-thai?machine_id={machine_id}", timeout=5) as response:
+    with urlopen(f"{LOCAL_SERVER}/app/machine/status/get?machine_id={machine_id}", timeout=5) as response:
         return json.loads(response.read())["online"]
 
 
 def server_running():
     try:
-        with urlopen(f"{LOCAL_SERVER}/machine/trang-thai?machine_id=e2e", timeout=2):
+        with urlopen(f"{LOCAL_SERVER}/app/machine/status/get?machine_id=e2e", timeout=2):
             return True
     except OSError:
         return False
@@ -278,7 +278,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     phone.wait("Bơm 1", 10)
     ok(t, "menu + bật món + kho")
 
-    t = step("E4 Nạp kho qua /app/nap-kho: nạp đầy một bình, rồi nạp tất cả")
+    t = step("E4 Nạp kho qua /app/machine/ingredient/refill: nạp đầy một bình, rồi nạp tất cả")
     row = phone.wait("0 / 1500 g", 10)
     buttons = [node for node in phone.nodes() if node.label == "Nạp đầy"]
     phone.tap(min(buttons, key=lambda node: abs(node.y - row.y)))

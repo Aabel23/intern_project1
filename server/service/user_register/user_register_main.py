@@ -1,8 +1,8 @@
 """HTTP của đăng ký tài khoản: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
 
-    POST /app/dang-ky-nguoi-dung  {request_id, full_name, username, password, email}
-    POST /app/gui-ma-otp          {registration_id}          gửi lại OTP
-    POST /app/xac-minh-otp        {registration_id, code}    xác minh OTP, tạo tài khoản
+    POST /app/user/account/register  {request_id, full_name, username, password, email}
+    POST /app/user/otp/send    {registration_id}        gửi lại OTP
+    POST /app/user/otp/verify  {registration_id, code}  xác minh OTP, tạo tài khoản
 
 Chưa cần token nên giới hạn request theo IP (spam OTP).
 """

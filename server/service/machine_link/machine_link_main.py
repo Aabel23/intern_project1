@@ -1,8 +1,8 @@
 """HTTP phía máy: chỉ máy gọi các route này, xưng danh bằng product key.
 
-    POST /machine/heartbeat    {product_key}                  mỗi 5 giây, báo còn sống
-    POST /machine/hoi-lenh     {product_key}                  long-poll lấy lệnh {id, instruction, data}
-    POST /machine/tra-ket-qua  {product_key, id, ket_qua}     gửi kết quả lệnh
+    POST /machine/heartbeat/send  {product_key}               mỗi 5 giây, báo còn sống
+    POST /machine/command/poll    {product_key}               long-poll lấy lệnh {id, instruction, data}
+    POST /machine/result/send     {product_key, id, ket_qua}  gửi kết quả lệnh
 
 Module khác gửi lệnh xuống máy bằng machine_transport.send(), không qua file này.
 """

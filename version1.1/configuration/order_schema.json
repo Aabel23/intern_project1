@@ -1,0 +1,66 @@
+{
+  "protocol_version": "1.3",
+  "sku": 2,
+  "drink_id": 2,
+  "instruction_count": 6,
+  "instructions": [
+    {
+      "pair": 1,
+      "ingredient_id": 7,
+      "ingredient_name": "Sugar",
+      "type_code": "01",
+      "type": "percentage",
+      "value": 25.0
+    },
+    {
+      "pair": 2,
+      "ingredient_id": 8,
+      "ingredient_name": "Milk",
+      "type_code": "02",
+      "type": "boolean",
+      "value": true
+    },
+    {
+      "pair": 3,
+      "ingredient_id": 10,
+      "ingredient_name": "Chocolate",
+      "type_code": "02",
+      "type": "boolean",
+      "value": true
+    },
+    {
+      "pair": 4,
+      "ingredient_id": 11,
+      "ingredient_name": "Strawberry",
+      "type_code": "02",
+      "type": "boolean",
+      "value": true
+    },
+    {
+      "pair": 5,
+      "ingredient_id": 12,
+      "ingredient_name": "Ice",
+      "type_code": "02",
+      "type": "boolean",
+      "value": true
+    },
+    {
+      "pair": 6,
+      "ingredient_id": 13,
+      "ingredient_name": "Pearls",
+      "type_code": "02",
+      "type": "boolean",
+      "value": true
+    }
+  ],
+  "options": {
+    "sugar": 25.0,
+    "milk": true,
+    "cream": false,
+    "chocolate": true,
+    "strawberry": true,
+    "ice": true,
+    "pearls": true
+  },
+  "qr": "00020607010250080200011002000111020001120200011302000153685"
+}

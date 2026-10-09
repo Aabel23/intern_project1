@@ -11,6 +11,7 @@ qua lại, hợp nhất quyết định, kiểm bằng chứng và cập nhật 
    kiểm. Không dựng cuộc tranh luận giả hoặc coi hai câu trả lời riêng là đã tranh luận.
 3. Operator đối chiếu nguồn và gửi bất đồng còn lại cho cả hai. Lặp khi có vấn đề
    chặn mới; kết luận nêu giới hạn/giả định, không hứa tối ưu tuyệt đối hay bất khả xâm phạm.
+   Chỉ giữ kết quả cuối, xóa lượt trao đổi (mục Bằng chứng và bàn giao; `debate.py`).
 4. Vẽ HTML theo PHASE_FORMAT: bản đồ feature, quan hệ thành phần và từng luồng
    hoạt động/dữ liệu, nhánh lỗi/timeout/rollback. Người dùng cùng sửa và chốt thiết kế.
    **Chưa được giao planner/coder triển khai ý tưởng khi người dùng chưa chốt.**
@@ -73,13 +74,20 @@ nhật từ bằng chứng, không dùng localStorage làm nguồn chuẩn. Sử
 
 ## Bằng chứng và bàn giao
 
-Khi các agent trao đổi/phản biện, lưu transcript nguyên văn có thứ tự thời gian,
-vai gửi/nhận và nguồn log ngay sau mỗi lượt; Markdown hợp nhất không thay transcript.
-Giữ tin nhắn gửi và kết luận, tránh chép trùng bản nhận; ghi rõ phần log không có
-hoặc không thuộc phạm vi xuất. Không dựng lại lời agent từ trí nhớ.
-Runtime Codex mã hóa nội dung tin nhắn giữa agent trong log (`gAAAA…`); khi dùng Codex,
-yêu cầu mỗi agent ghi bản rõ tin nhắn/kết luận vào file hoặc final answer, và kiểm
-transcript đọc được trước khi gọi là nguyên văn.
+Tranh luận/phản biện giữa agent chỉ trả **kết quả cuối** (người dùng chốt 09/10/2026).
+Không lưu transcript, lượt trao đổi, critique từng vòng, handoff hay log chạy của
+cuộc tranh luận; xong là xóa. Chạy bằng `python agent_workspace/debate.py <đề_bài.md>
+-o <kết_quả.md>`: lượt trao đổi chỉ nằm trong RAM, CLI chạy không lưu phiên, thư mục
+tạm bị xóa kể cả khi lỗi. Operator điều phối tay thì cũng chỉ ghi kết quả cuối và xóa
+mọi file nháp/trao đổi ngay sau đó. Kết quả cuối theo mẫu `RESULT` trong `debate.py`:
+câu hỏi, kết luận, lý do kèm nguồn, phương án đã loại, bất đồng còn lại/điều cần
+người dùng chốt, giả định và phép kiểm chưa làm.
+
+Nơi lưu: kết quả tranh luận và báo cáo lượt chạy/test ghi vào vault
+`~/.secondbrain/projects/internproj/project1_app/archive/` (một file kết quả cho một
+cuộc tranh luận, thêm một dòng vào `archive/README.md`), không để trong repo. Kết luận
+ngắn và trạng thái mới ghi vào `STATUS.md` cùng thư mục vault. Repo chỉ giữ spec/plan
+(`TASK.md`, `internal/`) và HTML cho người dùng.
 
 Architect: nguồn file:dòng, phương án, đối chiếu phía kia, phản ví dụ, giả định.
 Planner: thiết kế đã chốt và từng bước nghiệm thu; không bịa lịch/ngưỡng tải.

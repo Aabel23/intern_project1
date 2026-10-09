@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fresh Drinks — POS</title>
+<link rel="stylesheet" href="drinks-pos.css" />
+</head>
+<body>
+<div class="app" id="app">
+  <!-- ================= LEFT ================= -->
+  <div class="left">
+
+    <!-- The screen says what it is before it says how it is doing. The brand
+         is on the left where reading starts; the machine status is a quiet
+         cluster on the right, because none of it is for the customer and all
+         of it matters to whoever is behind the counter. -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg>
+        </span>
+        <span class="brand-txt">
+          <span class="brand-name">Fresh Drinks</span>
+          <span class="brand-sub">Pick a drink · we pour it fresh</span>
+        </span>
+      </div>
+
+      <span class="spacer"></span>
+
+      <div class="statusbar">
+        <span class="chip"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span> <span id="today">—</span></span>
+
+        <span class="chip clocknow"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span> <span id="clockNow">--:--</span></span>
+
+        <!-- How old the menu snapshot is. The page is static, so stock only
+             changes when store_gui/sync_menu.py is re-run; this is what makes
+             a stale menu visible instead of silently wrong. -->
+        <span class="chip syncchip" id="syncChip" title="Rebuild with: python3 -m store_gui.sync_menu">
+          <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></span> <span id="syncAge">menu: not loaded</span>
+        </span>
+
+        <span class="open"><span class="dot"></span> Open Order</span>
+      </div>
+    </header>
+
+    <!-- Shown while order/handoff.json exists, i.e. while the machine is
+         holding an order. A second drink cannot start until that one ends,
+         and without this the screen gave no sign of it: a scanned label
+         just did nothing. -->
+    <div class="busybar" id="busybar">
+      <span class="bb-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L14 14l2.4-2.4a2 2 0 0 0 .6-1.4V6M7 22v-4.2a2 2 0 0 1 .6-1.4L10 14 7.6 11.6A2 2 0 0 1 7 10.2V6"/></svg></span>
+      <span class="bb-text" id="busytext"></span>
+      <button type="button" class="bb-go" id="busygo">Xem màn hình pha chế</button>
+    </div>
+
+    <!-- THE DECK
+         Search and categories are one question asked two ways, so they ride
+         together, and they stick to the top of the scroller: on a menu four
+         screens long the way to filter used to scroll off and never come
+         back. .stuck is toggled from drinks-pos.js once it is actually
+         holding position, which is when it earns its hairline. -->
+    <div class="deck" id="deck">
+      <div class="search">
+        <span class="mag"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+        <input id="search" placeholder="Search for your favourite drink" />
+      </div>
+
+      <div class="cats-wrap">
+        <div class="cats" id="cats"></div>
+        <div class="catslider" id="catsTrack"><div class="thumb" id="catsThumb"></div></div>
+      </div>
+    </div>
+
+    <!-- THE TWO STRIPS
+         Both are the same object with different contents: the drinks the
+         shop PICKED (featured) and the ones that actually sold
+         (bestseller). Empty here on purpose -- contents, headings and the
+         order they stack in are all generated into menu-data.js by
+         store_gui/sync_menu.py from what the admin console was told, and
+         drinks-pos.js fills them in and moves them.
+
+         Only the cards inside are rebuilt. Each strip and its dots are
+         static so their drag handlers bind once; rebuilding the scroller
+         on every keystroke would drop the listeners with it.
+
+         Neither carries `show`, so a shop with nothing in a strip leaves
+         no gap where it would have been. -->
+    <section class="featured" id="featured" aria-labelledby="ftitle">
+      <div class="fhead">
+        <span class="fmark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9Z"/></svg></span>
+        <h2 class="ftitle" id="ftitle">&mdash;</h2>
+      </div>
+      <div class="fstrip" id="fstrip"></div>
+      <div class="fdots" id="fdots" role="tablist" aria-label="Trang món nổi bật"></div>
+    </section>
+
+    <section class="featured best" id="bestseller" aria-labelledby="btitle">
+      <div class="fhead">
+        <span class="fmark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M7 3h10v4a5 5 0 0 1-10 0Z"/><path d="M7 5H4.5v1A3.5 3.5 0 0 0 8 9.5"/><path d="M17 5h2.5v1A3.5 3.5 0 0 1 16 9.5"/><path d="M12 12v4M9 20h6M10 16h4l.6 4H9.4Z"/></svg></span>
+        <h2 class="ftitle" id="btitle">&mdash;</h2>
+        <!-- The window, on the screen. "Bán chạy" with no period attached
+             is a claim a customer cannot check and the shop cannot
+             defend -- over what, since opening? -->
+        <span class="fnote" id="bnote"></span>
+      </div>
+      <div class="fstrip" id="bstrip"></div>
+      <div class="fdots" id="bdots" role="tablist" aria-label="Trang bán chạy"></div>
+    </section>
+
+    <!-- Says the menu is its own thing, not the continuation of whatever
+         strip sits above it. Only shown while a strip is: with none there
+         is nothing to be told apart from. -->
+    <div class="gridhead" id="gridhead">
+      <h2>Tất cả món</h2>
+      <span class="gcount" id="gcount"></span>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- Page dots for the menu column, in place of the browser's scrollbar.
+       Built by drinks-pos.js from how many screenfuls the menu actually is,
+       and hidden entirely when it all fits. -->
+  <div class="scrolldots" id="scrolldots" role="tablist" aria-label="Menu pages"></div>
+
+  <!-- Way back to the bill while the panel is hidden. The bill lives inside
+       the panel, so without this a customer who dismissed it would have no
+       route to the drink they already added. Hidden whenever the bill is
+       empty or the panel is open. -->
+  <button class="billfab" id="billfab" type="button">
+    <span class="bf-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+    <!-- No count beside it: the machine pours one cup, so the number was
+         always 1 and said nothing. -->
+    <span class="bf-txt">Your Order</span>
+    <span class="bf-amt" id="bfTotal">$0.00</span>
+  </button>
+
+  <!-- ================= RIGHT ================= -->
+  <div class="right" id="right">
+    <div class="rhead">
+      <button class="rclose" id="rclose" type="button" aria-label="Close panel" title="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div class="t"><span class="doc"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h4"/></svg></span> <span id="rtitle">Item Details</span></div>
+      <div class="sub" id="rsub">Select an item from the menu to view its options</div>
+    </div>
+
+    <div class="detail" id="detail">
+      <div class="empty">
+        <div class="big"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg></div>
+        <p>No item selected yet. Tap any item on the left to customise it and add it to the bill.</p>
+      </div>
+    </div>
+
+    <div class="addbar" id="addbar" style="display:none">
+      <!-- The label switches to "Update Bill" once this drink is already in
+           the bill, so re-pressing it reads as an edit, not a duplicate. -->
+      <button class="addbtn" id="addbtn"><span id="addlabel"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg> Add to Bill</span> · <span id="addprice">$0.00</span></button>
+    </div>
+
+    <!-- The "Final Bill" strip and its drop-down used to sit here, saying the
+         drink and the total a second time under a panel that had just said
+         both. The machine pours one cup, so there is one drink and the total
+         IS its price -- the panel in bill mode is that one place now. -->
+  </div>
+</div>
+
+<!-- START-THE-DRINK MODAL
+     The QR symbol that used to fill this box was only ever a preview: the
+     code that buys a drink is allocated by the Print button below, so the
+     one on screen belonged to nothing and could not be scanned. Drawing it
+     also cost a network round trip every time the modal opened, and made
+     the customer wait on "Building code..." before they could press
+     anything. What they actually need to check before committing is the
+     drink -- so that is what the box holds now. -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <!-- Dismiss moved to the corner so the one wide button is the action
+         you actually came here for. -->
+    <button class="modal-x" id="qrclose" aria-label="Close" title="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <h3>Start this drink</h3>
+    <div class="msub" id="qrorderid">Order #005</div>
+    <div class="qrhero">
+      <div class="qrpic" id="qrpic"></div>
+      <div class="qrname" id="qrname">—</div>
+      <div class="qrspec" id="qrspec"></div>
+    </div>
+    <div class="mtotal" id="qrtotal">$0.00</div>
+    <button class="printbtn" id="qrprint">
+      <span id="qrprintLabel"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9V3h12v6"/><path d="M6 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg> Print QR</span>
+    </button>
+    <!-- For a broken scanner or a printer out of paper: hand this order to
+         the machine directly. It still allocates a real single-use ticket,
+         so the order is recorded exactly as a scanned one would be — the
+         only thing skipped is the paper and the beam. -->
+    <button class="startbtn" id="qrstart">
+      <span id="qrstartLabel"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5 19 12 7 19.5Z"/></svg> Start on the machine (no scan)</span>
+    </button>
+    <p class="printnote" id="qrprintNote" hidden></p>
+  </div>
+</div>
+
+<!-- REFUSED SCAN
+     Raised by order/run_flow.py when a scanned code cannot become a drink:
+     a QR already used, one that expired, one from another machine. The
+     customer is standing at this screen with the label in their hand, so
+     this is the only place the reason can reach them.
+
+     The sentence in #scanmsg comes from the machine and is in Vietnamese;
+     the frame around it matches the rest of this page. -->
+<div class="overlay alertoverlay" id="scanoverlay">
+  <div class="modal alertmodal" role="alertdialog" aria-live="assertive"
+       aria-labelledby="scantitle" aria-describedby="scanmsg">
+    <div class="alerticon" id="scanicon"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 3.9 1.8 18.1A2 2 0 0 0 3.5 21h17a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+    <h3 id="scantitle">This QR code cannot be used</h3>
+    <p class="alertmsg" id="scanmsg"></p>
+    <p class="alertsub" id="scansub">Please place a new order on this screen.</p>
+    <button class="alertbtn" id="scanok">
+      Got it <span class="alertcount" id="scancount"></span>
+    </button>
+  </div>
+</div>
+
+<!-- SOMEONE SCANNED WHILE THIS SCREEN HAS AN ORDER ON IT
+     A scan starts the machine and hands this browser over to the bartender
+     screen. If a customer is part-way through choosing a drink here, that
+     jump would throw their unfinished order away without warning — so it
+     asks first. -->
+<div class="overlay alertoverlay" id="confirmoverlay">
+  <div class="modal alertmodal confirmmodal" role="alertdialog"
+       aria-labelledby="confirmtitle" aria-describedby="confirmmsg">
+    <div class="alerticon warn"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 3.9 1.8 18.1A2 2 0 0 0 3.5 21h17a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+    <h3 id="confirmtitle">The machine is starting a drink</h3>
+    <p class="alertmsg" id="confirmmsg"></p>
+    <p class="alertsub">Your unfinished order on this screen will be cleared.</p>
+    <div class="confirmbtns">
+      <button class="alertbtn" id="confirmgo">Discard it &amp; watch the machine</button>
+      <button class="alertbtn ghost" id="confirmstay">Stay on this screen</button>
+    </div>
+  </div>
+</div>
+
+<!-- SWAPPING THE DRINK ALREADY IN THE BILL
+     The machine pours one cup at a time, so a second drink can only take
+     the first one's place. This used to be the browser's own confirm()
+     box: pinned to the top of the window, in the system font, with OK and
+     Cancel that say nothing about which drink survives. -->
+<div class="overlay alertoverlay" id="replaceoverlay">
+  <div class="modal alertmodal confirmmodal replacemodal" role="alertdialog"
+       aria-labelledby="replacetitle" aria-describedby="replacemsg">
+    <div class="alerticon warn"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 3 4 7l4 4"/><path d="M4 7h15.5"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4.5"/></svg></div>
+    <h3 id="replacetitle">One drink at a time</h3>
+    <p class="alertmsg" id="replacemsg">The machine makes one drink at a time.</p>
+
+    <!-- The two drinks side by side. The names alone, in a sentence, made
+         the customer work out which one they were about to lose. -->
+    <div class="swaprow">
+      <div class="swapcard out">
+        <div class="swapemoji" id="replaceOutEmoji">&#127864;</div>
+        <div class="swapname" id="replaceOutName">—</div>
+        <div class="swaplbl">Removed</div>
+      </div>
+      <div class="swaparrow" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="swapcard in">
+        <div class="swapemoji" id="replaceInEmoji">&#127864;</div>
+        <div class="swapname" id="replaceInName">—</div>
+        <div class="swaplbl">Kept</div>
+      </div>
+    </div>
+
+    <div class="confirmbtns">
+      <button class="alertbtn" id="replaceyes">Replace it</button>
+      <button class="alertbtn ghost" id="replaceno">Keep what I have</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generated from the database by:  python3 -m store_gui.sync_menu
+     Must load before drinks-pos.js, which reads window.MENU_DATA. -->
+<script src="menu-data.js"></script>
+<script src="drinks-pos.js"></script>
+</body>
+</html>

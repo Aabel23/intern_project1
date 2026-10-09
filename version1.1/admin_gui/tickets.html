@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Vé QR</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="tickets">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Vé QR</h1>
+        <div class="sub">Mỗi vé là một ly đã đặt — bảng order_ticket</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+    </div>
+
+    <div class="card">
+      <div class="cbody filterbar">
+        <div class="daterange">
+          <label class="datefield"><span>Từ ngày</span><input type="date" id="fromDate" /></label>
+          <label class="datefield"><span>Đến ngày</span><input type="date" id="toDate" /></label>
+        </div>
+        <div class="presets" id="presets">
+          <button class="pill" data-preset="today">Hôm nay</button>
+          <button class="pill" data-preset="7">7 ngày</button>
+          <button class="pill" data-preset="30">30 ngày</button>
+          <button class="pill" data-preset="month">Tháng này</button>
+        </div>
+        <div class="spacer"></div>
+        <label class="datefield">
+          <span>Trạng thái</span>
+          <select id="statusFilter"><option value="">Tất cả</option></select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Shown only when this page was opened from a fault row. -->
+    <div class="linkbanner" id="linkBanner" hidden>
+      <span class="lb-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13.5a4 4 0 0 0 5.7.4l3-3a4 4 0 0 0-5.7-5.7l-1.7 1.7"/><path d="M14 10.5a4 4 0 0 0-5.7-.4l-3 3a4 4 0 0 0 5.7 5.7l1.7-1.7"/></svg></span>
+      <span id="linkBannerText"></span>
+      <a class="btn ghost compact" href="tickets.html">Xem toàn bộ vé</a>
+    </div>
+
+    <div class="card">
+      <div class="chead">
+        <h2>Danh sách vé</h2>
+        <span class="cnote" id="countNote">—</span>
+      </div>
+      <div class="cbody">
+        <div class="tablewrap">
+          <table class="tbl" id="ticketTable">
+            <thead>
+              <tr>
+                <th>Số vé</th><th>Món</th><th>Giá</th><th>Trạng thái</th>
+                <th>Tạo lúc</th><th>Quét lúc</th><th>Xong lúc</th>
+                <th>Ghi chú</th><th>Sự cố</th><th>In lại</th><th>Đổi trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="ticketBody"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="emptyNote" hidden>Không có vé nào trong khoảng này.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Confirming a status change. It rewrites a sales record, so it asks --
+     and it says which record and which direction, because "Bạn có chắc?"
+     on its own is a question nobody can answer. -->
+<div class="overlay" id="confirmModal">
+  <div class="modal-card confirm-card">
+    <h3 id="confirmTitle">Đổi trạng thái vé</h3>
+    <div class="msub" id="confirmSub"></div>
+    <div class="modal-acts">
+      <button class="btn ghost" id="confirmNo">Hủy</button>
+      <button class="btn" id="confirmYes">Đổi trạng thái</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="tickets.js"></script>
+</body>
+</html>

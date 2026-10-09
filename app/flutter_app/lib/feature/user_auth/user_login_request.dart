@@ -4,8 +4,8 @@ import 'dart:math';
 
 import 'package:simple_app/core/http_json.dart';
 
-// Đăng nhập hai bước: gửi username/password tới /app/dang-nhap, rồi hỏi
-// kết quả xác minh của server tại /app/xac-minh-dang-nhap.
+// Đăng nhập hai bước: gửi username/password tới /app/user/session/login, rồi hỏi
+// kết quả xác minh của server tại /app/user/session/verify.
 Future<Map<String, dynamic>> requestLogin(
   String serverUrl, {
   required String username,
@@ -22,7 +22,7 @@ Future<Map<String, dynamic>> requestLogin(
     'password': password,
   });
   if (sent['valid'] == false) return sent;
-  return postJson(serverUrl, Routes.userLoginVerify, {
+  return postJson(serverUrl, Routes.userSessionVerify, {
     'request_id': requestId,
     if (sent['login_id'] is String) 'login_id': sent['login_id'] as String,
   });

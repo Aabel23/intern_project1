@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Thùng rác</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="bin">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Thùng rác</h1>
+        <div class="sub">Món đã xóa khỏi menu — khôi phục lại hoặc xóa hẳn</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+      <button class="btn ghost" id="reloadBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg> Tải lại</button>
+    </div>
+
+    <!-- What a binned drink still is, said once at the top so the two
+         buttons below do not each need explaining. -->
+    <div class="card">
+      <div class="cbody binnote">
+        <span class="binnote-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/><path d="M5.5 6l1 13.2A2 2 0 0 0 8.5 21h7a2 2 0 0 0 2-1.8L18.5 6"/><path d="M10 11v5M14 11v5"/></svg></span>
+        <div>
+          Món trong thùng rác <b>không hiện trên màn hình bán</b> và máy
+          <b>không pha</b> được. Công thức vẫn được giữ nguyên, nên khôi phục
+          là lấy lại đầy đủ. Lịch sử bán hàng luôn được giữ — kể cả khi xóa hẳn.
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="chd">
+        <div>
+          <h2>Món đã xóa</h2>
+          <div class="csub" id="binSub">—</div>
+        </div>
+      </div>
+      <div class="cbody">
+        <div class="orderlist" id="binList"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="bin.js"></script>
+</body>
+</html>

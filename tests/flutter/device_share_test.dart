@@ -27,16 +27,16 @@ void main() {
         final body = jsonDecode(await utf8.decoder.bind(request).join());
         bodies.putIfAbsent(request.uri.path, () => []).add(body);
         final reply = switch (request.uri.path) {
-          '/app/tao-ma-chia-se' => {
+          '/app/machine/share/create' => {
             'valid': true,
             'code': 'c' * 32,
             'expires_in': 300,
           },
-          '/app/nhan-vien-may' => {'valid': true, 'staff': staff},
-          '/app/thu-hoi-quyen' => {'valid': true},
+          '/app/machine/staff/list' => {'valid': true, 'staff': staff},
+          '/app/machine/staff/revoke' => {'valid': true},
           _ => {'valid': false, 'message': 'sai đường dẫn'},
         };
-        if (request.uri.path == '/app/thu-hoi-quyen') staff = [];
+        if (request.uri.path == '/app/machine/staff/revoke') staff = [];
         request.response.headers.contentType = ContentType.json;
         request.response.write(jsonEncode(reply));
         await request.response.close();
@@ -62,7 +62,7 @@ void main() {
         );
         await pumpUntil(find.byType(QrImageView));
         await pumpUntil(find.text('Nhân viên Một'));
-        expect(bodies['/app/tao-ma-chia-se'], [
+        expect(bodies['/app/machine/share/create'], [
           {'machine_id': 'fm_test', 'token': 'owner-token'},
         ]);
         expect(find.byType(QrImageView), findsOneWidget);
@@ -75,7 +75,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
         await tester.tap(find.text('Thu hồi'));
         await pumpUntil(find.text('Chưa giao máy cho nhân viên nào.'));
-        expect(bodies['/app/thu-hoi-quyen'], [
+        expect(bodies['/app/machine/staff/revoke'], [
           {'machine_id': 'fm_test', 'user_id': 7, 'token': 'owner-token'},
         ]);
         expect(find.text('Nhân viên Một'), findsNothing);

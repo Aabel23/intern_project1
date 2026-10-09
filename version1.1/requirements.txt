@@ -1,0 +1,18 @@
+# Thư viện bắt buộc để chạy máy pha chế.
+#   ./.venv/bin/pip install -r requirements.txt
+#
+# Xem docs/SETUP_NEW_MACHINE.md để biết vai trò từng gói.
+
+# --- phần cứng ---
+gpiozero                 # điều khiển bơm, đọc cân
+lgpio                    # backend GPIO mà gpiozero dùng trên Pi/Ubuntu 24.04
+pyserial                 # đọc máy quét mã USB
+smbus2                   # đọc bảng nút MCP23017 qua I2C
+
+# --- cơ sở dữ liệu ---
+mysql-connector-python
+
+# --- giao thức QR (qrproto, protocol v1.4) ---
+cryptography             # AES-256-GCM: mã hoá và xác thực payload
+qrcode                   # vẽ ảnh mã QR
+pillow                   # qrcode cần để xuất PNG cho máy in nhãn

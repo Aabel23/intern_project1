@@ -8,14 +8,14 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/dang-nhap | App | username, password | valid, token, message |
-| POST | /app/dang-xuat | App | token | valid, message |
+| POST | /app/user/session/login | App | username, password | valid, token, message |
+| POST | /app/user/session/logout | App | token | valid, message |
 
 ## A. Đăng nhập
 
 ### 1. App gửi tài khoản lên server
 
-POST `/app/dang-nhap`, gói `{username, password}`.
+POST `/app/user/session/login`, gói `{username, password}`.
 
 Hàm tham gia:
 
@@ -45,7 +45,7 @@ Hàm tham gia:
 
 ### 1. App yêu cầu đăng xuất
 
-POST `/app/dang-xuat` với `{token}`. Server xóa phiên tương ứng rồi trả `{valid: true, message}`. App xóa token đã lưu và về màn đăng nhập.
+POST `/app/user/session/logout` với `{token}`. Server xóa phiên tương ứng rồi trả `{valid: true, message}`. App xóa token đã lưu và về màn đăng nhập.
 
 Hàm tham gia:
 

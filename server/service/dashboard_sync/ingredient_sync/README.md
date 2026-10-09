@@ -8,16 +8,16 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/nhan-kho | App | token, machine_id, version (mặc định 0) | status, version; ingredients khi status=ok |
-| POST | /app/nap-kho | App | token, machine_id, target, value | kết quả nạp từ máy, có thể kèm warning |
-| POST | /machine/hoi-lenh | Máy | product_key | lenh hoặc null |
-| POST | /machine/tra-ket-qua | Máy | product_key, id, ket_qua | da_nhan: true |
+| POST | /app/machine/ingredient/get | App | token, machine_id, version (mặc định 0) | status, version; ingredients khi status=ok |
+| POST | /app/machine/ingredient/refill | App | token, machine_id, target, value | kết quả nạp từ máy, có thể kèm warning |
+| POST | /machine/command/poll | Máy | product_key | lenh hoặc null |
+| POST | /machine/result/send | Máy | product_key, id, ket_qua | da_nhan: true |
 
 ## A. Lấy kho
 
 ### 1. App yêu cầu dữ liệu kho
 
-POST `/app/nhan-kho` với `{token, machine_id, version: 0}`. App đã có kho thì gửi version đang giữ.
+POST `/app/machine/ingredient/get` với `{token, machine_id, version: 0}`. App đã có kho thì gửi version đang giữ.
 
 Hàm tham gia:
 
@@ -26,7 +26,7 @@ Hàm tham gia:
 
 ### 2. Server kiểm và giao lệnh
 
-Server kiểm phiên/quyền và version, đặt lệnh `{instruction: "nhan_kho", data: {version}}`. Máy POST `/machine/hoi-lenh` với `{product_key}` để lấy lệnh trong response.
+Server kiểm phiên/quyền và version, đặt lệnh `{instruction: "nhan_kho", data: {version}}`. Máy POST `/machine/command/poll` với `{product_key}` để lấy lệnh trong response.
 
 Hàm tham gia:
 
@@ -35,7 +35,7 @@ Hàm tham gia:
 
 ### 3. Máy đọc kho và trả kết quả
 
-Phiên bản khớp thì `{status: "up_to_date", version}`; khác thì `{status: "ok", version, ingredients}`. Máy POST `/machine/tra-ket-qua` với `{product_key, id, ket_qua}`.
+Phiên bản khớp thì `{status: "up_to_date", version}`; khác thì `{status: "ok", version, ingredients}`. Máy POST `/machine/result/send` với `{product_key, id, ket_qua}`.
 
 Hàm tham gia:
 
@@ -55,7 +55,7 @@ Hàm tham gia:
 
 ### 1. App gửi yêu cầu nạp
 
-POST `/app/nap-kho` với `{token, machine_id, target, value}`. target là ID nguyên liệu hoặc "all"; value là "full" hoặc số gram. target="all" chỉ chấp nhận value="full".
+POST `/app/machine/ingredient/refill` với `{token, machine_id, target, value}`. target là ID nguyên liệu hoặc "all"; value là "full" hoặc số gram. target="all" chỉ chấp nhận value="full".
 
 Hàm tham gia:
 
@@ -64,7 +64,7 @@ Hàm tham gia:
 
 ### 2. Server giao lệnh; máy nạp dữ liệu
 
-Máy nhận `{instruction: "nap_kho", data: {target, value}}` qua `/machine/hoi-lenh`, kiểm tham số và cập nhật kho. Sau đó dựng lại menu màn bán hàng.
+Máy nhận `{instruction: "nap_kho", data: {target, value}}` qua `/machine/command/poll`, kiểm tham số và cập nhật kho. Sau đó dựng lại menu màn bán hàng.
 
 Hàm tham gia:
 
@@ -73,7 +73,7 @@ Hàm tham gia:
 
 ### 3. Máy trả kết quả; app tải kho mới
 
-Máy gửi `{product_key, id, ket_qua}` lên `/machine/tra-ket-qua`. Server trả kết quả cho request nạp ban đầu; app tải lại kho. Nếu dựng menu thất bại sau khi đã ghi kho, kết quả có warning; dữ liệu nạp đã được ghi.
+Máy gửi `{product_key, id, ket_qua}` lên `/machine/result/send`. Server trả kết quả cho request nạp ban đầu; app tải lại kho. Nếu dựng menu thất bại sau khi đã ghi kho, kết quả có warning; dữ liệu nạp đã được ghi.
 
 Hàm tham gia:
 

@@ -1,0 +1,7 @@
+# Chỉ cần khi phát triển, KHÔNG cần trên máy bán hàng.
+#   ./.venv/bin/pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+pytest                   # chạy bộ test: python3 -m pytest qrproto/tests/
+openpyxl                 # sinh tài liệu Excel trong docs/ và qrproto/tests/

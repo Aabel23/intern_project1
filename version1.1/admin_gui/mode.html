@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Chế độ Vận hành</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="mode">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Chế độ Vận hành</h1>
+        <div class="sub">Chọn cách hệ thống xử lý đơn khi khách bấm “Place Order”</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+    </div>
+
+    <div class="card">
+      <div class="chd">
+        <div>
+          <h2>Chọn 1 chế độ</h2>
+          <div class="csub">Chỉ 1 chế độ hoạt động tại một thời điểm · trạng thái được lưu lại</div>
+        </div>
+      </div>
+      <div class="cbody">
+        <div class="opgrid">
+          <div class="optoggle">
+            <div class="opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 0 1 0-4h.2A1.6 1.6 0 0 0 4.3 7.4l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1Z"/></svg></div>
+            <div class="opt-txt"><div class="opt-name">Chạy thẳng, không quét</div><div class="opt-sub">Hiện nút “Start on the machine (no scan)” — gửi đơn thẳng xuống máy</div></div>
+            <label class="switch"><input type="checkbox" id="tgStart"><span class="slider"></span></label>
+          </div>
+          <div class="optoggle">
+            <div class="opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></div>
+            <div class="opt-txt"><div class="opt-name">In mã QR</div><div class="opt-sub">Hiện nút “Print QR” — in nhãn dán lên ly để quét</div></div>
+            <label class="switch"><input type="checkbox" id="tgQR"><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <div class="csub" style="margin:18px 0 8px;font-weight:700;color:var(--ink)">Hoặc chọn nhanh 1 preset:</div>
+        <div class="modes" id="modes"></div>
+
+        <div class="optoggle warn" style="margin-top:18px">
+          <div class="opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 3h6"/><path d="M10 3v5.2a2 2 0 0 1-.3 1L5.4 17a2 2 0 0 0 1.7 3h9.8a2 2 0 0 0 1.7-3l-4.3-7.8a2 2 0 0 1-.3-1V3"/><path d="M7.2 14h9.6"/></svg></div>
+          <div class="opt-txt"><div class="opt-name">Chế độ chạy thử (Dry-run)</div><div class="opt-sub">Mô phỏng toàn bộ luồng, KHÔNG chạy bơm thật — dùng để demo / huấn luyện</div></div>
+          <label class="switch"><input type="checkbox" id="tgDry"><span class="slider"></span></label>
+        </div>
+
+        <div class="mode-note">
+          <span style="font-size:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg></span>
+          <div>
+            Hai công tắc trên quyết định <b>màn hình bán hàng hiện nút nào</b> sau khi khách đặt đơn.
+            Tắt một cái là ẩn nút đó; <b>không tắt được cả hai</b> — màn bán hàng sẽ không còn nút nào để bấm.
+            Trạng thái lưu trên <b>máy chủ</b> (<code>configuration/order_mode.json</code>), nên đổi ở đây là
+            màn POS đổi theo, kể cả khi nó chạy trên tablet khác. Thay đổi có hiệu lực từ
+            <b>đơn kế tiếp</b>. Mở <a href="../store_gui/drinks-pos.html" target="_blank" rel="noopener"><b>màn POS</b></a> để thử.
+            <br><br>
+            <b>Chạy thử (Dry-run) bên dưới hiện CHƯA có tác dụng.</b> Dry-run thật là cờ
+            <code>--dry-run</code> truyền cho <code>run_flow</code> lúc khởi động dịch vụ, đổi được
+            thì phải restart <code>flexmix-backend</code>. Công tắc này mới chỉ ghi vào trình duyệt.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="mode.js"></script>
+</body>
+</html>

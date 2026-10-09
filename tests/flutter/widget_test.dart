@@ -11,7 +11,7 @@ import 'package:simple_app/feature/machine_ingredient/machine_ingredient_sync.da
 import 'package:simple_app/feature/user_auth/ui/auth_page.dart';
 import 'package:simple_app/feature/dashboard/ui/machine_qr_page.dart';
 
-// Kho máy giả, cùng dạng máy trả qua /app/nhan-kho.
+// Kho máy giả, cùng dạng máy trả qua /app/machine/ingredient/get.
 const _kho = {
   'status': 'ok',
   'version': 7,
@@ -56,7 +56,7 @@ final _menuPacket = base64Encode(
   ),
 );
 
-// /app/nhan-kho giả: app gửi đúng version đang có thì up_to_date, khác thì cả danh sách.
+// /app/machine/ingredient/get giả: app gửi đúng version đang có thì up_to_date, khác thì cả danh sách.
 Object _replyKho(Map<String, dynamic> body) =>
     body['version'] == _kho['version']
     ? {'status': 'up_to_date', 'version': _kho['version']}
@@ -67,7 +67,7 @@ Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   server.listen((request) async {
     Object? reply;
-    if (request.uri.path == '/machine/trang-thai') {
+    if (request.uri.path == '/app/machine/status/get') {
       reply = {
         'machine_id': request.uri.queryParameters['machine_id'],
         'online': true,
@@ -76,16 +76,16 @@ Future<HttpServer> _fakeServer(List<Map<String, dynamic>> received) async {
     } else {
       final body = jsonDecode(await utf8.decoder.bind(request).join());
       received.add(body as Map<String, dynamic>);
-      reply = request.uri.path == '/app/may-cua-toi'
+      reply = request.uri.path == '/app/user/machine/list'
           ? {
               'valid': true,
               'machines': [
                 {'machine_id': 'MAY-TEST', 'name': 'MAY-TEST', 'role': 'owner'},
               ],
             }
-          : request.uri.path == '/app/nhan-menu'
+          : request.uri.path == '/app/machine/menu/get'
           ? {'status': 'ok', 'menu_version': 42, 'packet': _menuPacket}
-          : request.uri.path == '/app/nhan-kho'
+          : request.uri.path == '/app/machine/ingredient/get'
           ? _replyKho(body)
           : {'ok': true};
     }

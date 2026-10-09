@@ -1,6 +1,6 @@
 """HTTP của đăng ký máy: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
 
-    POST /app/dang-ky-may  {token, machine_name, product_key, type?}   quét tem QR / nhận gói Bluetooth
+    POST /app/user/machine/register  {token, machine_name, product_key, type?}  quét tem QR / nhận gói Bluetooth
 """
 
 # Routing tập trung và HTTP dùng chung

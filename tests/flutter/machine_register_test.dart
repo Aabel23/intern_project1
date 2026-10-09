@@ -16,7 +16,7 @@ void main() {
     };
     final received = server.first.then((request) async {
       expect(request.method, 'POST');
-      expect(request.uri.path, '/app/dang-ky-may');
+      expect(request.uri.path, '/app/user/machine/register');
       final body = await utf8.decoder.bind(request).join();
       expect(jsonDecode(body), packet);
       request.response.headers.contentType = ContentType.json;

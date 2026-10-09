@@ -1,0 +1,50 @@
+-- ============================================================
+-- 0001 — MỐC GỐC. FILE NÀY CỐ Ý KHÔNG LÀM GÌ.
+-- ============================================================
+--
+-- VÌ SAO MỘT MIGRATION RỖNG
+--     Bộ chạy migration có đúng một nhiệm vụ: áp những file chưa được áp,
+--     và nó biết cái nào chưa áp bằng cách đọc bảng schema_migration.
+--
+--     Nhưng những cỗ máy đang chạy hôm nay ĐÃ CÓ ĐỦ schema rồi — mười ba
+--     migration cũ đã chạy bằng tay suốt mấy tháng, từ trước khi cuốn sổ
+--     này tồn tại. Nên lần đầu bật hệ thống lên có một mâu thuẫn:
+--
+--         sổ nói:      "chưa áp gì cả"
+--         database nói: "tôi đã có đủ mười ba thay đổi"
+--
+--     File này dàn xếp mâu thuẫn đó. Nó không đổi một thứ gì trong
+--     database. Nhưng dòng nó ghi vào sổ thì nói: "mọi thay đổi tính tới
+--     đây đã được áp bằng tay, trước khi cuốn sổ này tồn tại."
+--
+--     Nó là một CỘT MỐC, không phải một thay đổi.
+--
+-- MỐC NÀY CHÍNH XÁC LÀ GÌ
+--     Schema tại tag v1.0.0 của repo máy: mười bốn bảng như database.sql
+--     mô tả, cộng kết quả của bốn hàm migrate_*() trong db_core.py.
+--
+-- VÌ SAO KHÔNG ĐÁNH SỐ LẠI MƯỜI BA FILE CŨ THÀNH 0001–0013
+--     Hai lý do.
+--
+--     Một: chúng không cần thiết để dựng một máy mới. database.sql đã
+--     chứa đủ kết quả của chúng — đó là lý do cài máy mới chỉ cần
+--     `python3 -m database.main update`, không ai chạy mười ba file kia.
+--
+--     Hai: áp lại chúng hôm nay sẽ ghi vào sổ ngày hôm nay, trong khi
+--     thật ra chúng đã chạy từ tháng Tám. Một cuốn sổ ghi sai ngày ngay ở
+--     dòng đầu là cuốn sổ không đáng tin ở dòng thứ một trăm.
+--
+--     Mười ba file đó vẫn nằm nguyên trong database/ và KHÔNG được xoá —
+--     ba thông báo lỗi lúc chạy còn trỏ vào chúng, bốn comment trong mã
+--     còn trỏ vào chúng, và chúng chứa lời giải thích VÌ SAO mà
+--     database.sql không có. Xem database/MIGRATIONS.md.
+--
+-- HAI CỖ MÁY, CÙNG MỘT KẾT QUẢ
+--     Máy đang bán:  database đã đủ → áp 0001 (không làm gì) → sổ: 0001
+--     Máy clone mới: database.sql tạo đủ → áp 0001 (không làm gì) → sổ: 0001
+--
+--     Hai máy kết thúc giống hệt nhau. Đó chính là điều cần đạt: "0001"
+--     phải có cùng một nghĩa trên mọi máy trong đội.
+--
+-- TỪ 0002 TRỞ ĐI MỚI CÓ NỘI DUNG THẬT.
+-- ============================================================

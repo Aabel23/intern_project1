@@ -1,0 +1,1992 @@
+/* ============================================================================
+   FRESH DRINKS — STORE SCREEN
+   ============================================================================
+
+   WHAT THIS SHEET IS
+       A self-service kiosk on a Raspberry Pi. A customer walks up, stands at
+       arm's length, and taps with a finger. Everything below is sized for a
+       standing body and a bare fingertip, and coloured for something you
+       drink rather than something you administer.
+
+   WHAT THE REDESIGN CHANGED
+       The previous sheet was correct and plain: system font, flat white
+       cards, a row of 190px-tall category boxes above the fold, and a menu
+       where the photograph, the name, the tag and the price all carried the
+       same weight. It read as a form that happened to contain drinks.
+
+       This one leads with the photograph. Cards are image-first with the
+       price floated on the picture; categories collapsed from boxes into a
+       pill rail, which handed roughly 120px of the first screen back to the
+       menu; the search and the pills ride together in a deck that sticks to
+       the top of the scroller so the way to filter never leaves the screen;
+       and the drawer opens on a full-bleed hero instead of a thumbnail.
+
+   THE DOM CONTRACT IS UNCHANGED
+       drinks-pos.js builds most of this markup and toggles state by class
+       name. Every selector it depends on still exists here with the same
+       name: show, on, gone, stale, side-open, bill-view, dragging, rescan,
+       active, selected, out, off, read. Nothing was renamed.
+
+   OFFLINE ON PURPOSE
+       The two typefaces are files in store_gui/fonts/, served by serve.py
+       off the same disk as this sheet. No @import, no font CDN, no remote
+       asset: the Pi may have no route to the internet, and a webfont that
+       fails to load would leave the menu in a fallback nobody designed.
+
+   CHEAP ON A PI
+       No backdrop-filter anywhere, and no blur that has to be recomputed
+       while something moves underneath it. The page's warmth is two radial
+       gradients painted once on the body. Motion is transform and opacity
+       only -- never width, height, or box-shadow -- so a slide costs the
+       compositor and not the layout engine.
+   ============================================================================ */
+
+/* ------------------------------------------------------------------ TYPE ---
+   Bricolage Grotesque carries the voice: drink names, prices, headings. It
+   is a grotesque with a slight optical warp that keeps a menu from reading
+   like a spreadsheet. Work Sans carries everything that has to be read
+   rather than looked at.
+
+   Both were chosen for one hard requirement besides looks: the machine
+   speaks Vietnamese to this screen -- "Xem màn hình pha chế", and every
+   refusal message the runner sends -- so a face without the Vietnamese
+   diacritics would drop the tone marks out of half the sentences on the
+   page. These two carry the full set; most of the alternatives did not.
+
+   Only the weights that exist as files are declared. Asking for 500 or 600
+   from a family that ships 400 and 700 gets a synthesised, smeared bold on
+   some engines -- so this sheet uses 400 and 700 and nothing between. */
+@font-face{
+  font-family:"Bricolage Grotesque";
+  src:url("fonts/BricolageGrotesque-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Bricolage Grotesque";
+  src:url("fonts/BricolageGrotesque-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Work Sans";
+  src:url("fonts/WorkSans-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Work Sans";
+  src:url("fonts/WorkSans-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+
+/* ---------------------------------------------------------------- TOKENS ---
+   Three layers, in the order they resolve: raw values, then the semantic
+   names the rules below actually use, then the few component-level names
+   worth pinning. Only this block carries hex codes -- a rule further down
+   that wants a colour asks for it by role, so re-theming happens here and
+   only here. */
+:root{
+  /* -- palette ------------------------------------------------------------
+     Warm the whole way through, including the ink: the greys are browned
+     rather than blued, so nothing on the page reads as chrome. */
+  --cream:#FDF7F0;      /* page ground */
+  --cream-2:#F7EDE2;    /* sunken wash: thumbnails, quiet panels */
+  --cream-3:#F1E2D2;    /* pressed / hairline-adjacent fills */
+  --surface:#FFFFFF;    /* every card and panel */
+
+  --ink:#241A15;        /* body ink -- 16:1 on the ground */
+  --ink-2:#6B5750;      /* secondary ink -- 6.4:1 */
+  --muted:#7E6A62;      /* placeholders and quiet labels -- 4.8:1, still AA */
+  --ink-3:#9A867C;      /* decorative only: rules, dormant dots, big glyphs */
+
+  --line:#EFE0D2;       /* hairline on the warm ground */
+  --line-2:#E6D5C5;     /* the same, one step firmer */
+
+  --brand:#E4571F;      /* the mark: active states, accents */
+  --brand-deep:#B93E10; /* the fill under white button text -- 5.6:1 */
+  --brand-wash:#FFF0E7; /* the tint behind a chosen option */
+  --amber:#F59E0B;      /* the second half of every brand gradient */
+
+  --ok:#166534;         /* "Open Order" -- 6.7:1 on the ground. Same green as
+                           the bartender screen's --sage-deep; one green
+                           across both screens beats two. */
+  --ok-tint:#E7F6EC;
+  --warn:#B45309;       /* the machine is busy; a misread label */
+  --warn-tint:#FDF1DF;
+  --warn-line:#F2DCB4;
+  --danger:#B91C1C;     /* a refused code */
+  --danger-tint:#FDECEA;
+
+  /* CONFIRM -- every "yes, do it" button in a popup, in one place.
+     Requested red, and the same value the bartender screen's --confirm
+     holds, so the two screens answer a customer the same way. White on it
+     is 6.5:1. */
+  --confirm:#B91C1C;
+
+  --info:#1D4ED8;       /* the customer's own words -- not the brand */
+  --info-tint:#EFF4FF;
+
+  /* -- contrast notes ------------------------------------------------------
+     White on --brand is 3.7:1 -- large text only, and this sheet never sets
+     it under 18px. White on --brand-deep is 5.6:1, so that is the fill under
+     every button label. --muted is the floor for anything that is words:
+     4.8:1 on the ground. --ink-3 is under AA on purpose and never carries a
+     sentence. */
+
+  /* -- semantic ------------------------------------------------------------ */
+  --bg:var(--cream);
+  --panel:var(--surface);
+  --focus:var(--brand-deep);
+
+  /* Kept under their old names so any rule or inline fallback that still
+     asks for --blue resolves to the new brand instead of a stale hex. */
+  --blue:var(--brand);
+  --blue-soft:var(--brand-wash);
+  --green:var(--ok);
+  --green-soft:var(--ok-tint);
+  --orange:var(--brand);
+  --amber-soft:var(--warn-tint);
+  --line-cool:var(--line-2);
+
+  /* -- type ----------------------------------------------------------------
+     A standing customer is roughly twice as far from this screen as a person
+     at a laptop, so the base is 17px rather than 13.5 and the scale is built
+     from it. clamp() lets a small panel screen step down without any of it
+     falling below a readable size. */
+  --font:"Work Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
+         "Noto Sans",sans-serif;
+  --font-display:"Bricolage Grotesque","Work Sans",ui-sans-serif,system-ui,
+         "Segoe UI",Roboto,sans-serif;
+  --t-2xs:clamp(11px,.85vw,12px);
+  --t-xs:clamp(12.5px,1vw,13.5px);
+  --t-sm:clamp(14px,1.15vw,15px);
+  --t-base:clamp(15.5px,1.25vw,17px);
+  --t-md:clamp(17px,1.5vw,19.5px);
+  --t-lg:clamp(21px,1.9vw,24px);
+  --t-xl:clamp(26px,2.5vw,32px);
+  --t-2xl:clamp(32px,3.2vw,42px);
+
+  /* -- space ---------------------------------------------------------------
+     A 4px grid. Density dial at 6/10: standard, not dashboard-tight -- a
+     finger needs the gaps as much as the eye does. */
+  --s-1:4px;  --s-2:8px;  --s-3:12px; --s-4:16px;
+  --s-5:20px; --s-6:24px; --s-7:28px; --s-8:32px;
+  --s-10:40px; --s-12:48px;
+
+  /* The gutters of the scrolling menu column, pulled out as variables
+     because the sticky deck has to cancel them exactly to span the full
+     width -- two numbers that must agree, declared once. */
+  --pad-l:var(--s-6);
+  --pad-r:56px;         /* room for the page dots down the right edge */
+
+  /* -- touch ---------------------------------------------------------------
+     44pt is the iOS minimum and 48dp the Android one; WCAG 2.2 AA asks for
+     24 CSS px on the web. This screen is a finger-only device with no
+     pointer at all, so it takes the largest of the three as its floor and
+     never goes under it. Adjacent targets keep an 8px gap. */
+  --tap:48px;
+
+  /* Radii run large. A 24px corner on a 250px card is the difference
+     between a tile and an object you could pick up. */
+  --r-1:12px; --r-2:16px; --r-3:22px; --r-4:28px; --r-5:34px;
+  --radius:var(--r-2);
+
+  /* Shadows are warm -- a neutral grey shadow on a cream ground looks like
+     dirt. Two layers each: a tight one that seats the object and a wide one
+     that lifts it. */
+  --sh-1:0 1px 2px rgba(74,42,22,.05), 0 4px 14px rgba(74,42,22,.055);
+  --sh-2:0 2px 6px rgba(74,42,22,.07), 0 16px 34px rgba(74,42,22,.10);
+  --sh-3:0 8px 20px rgba(74,42,22,.10), 0 40px 80px rgba(74,42,22,.20);
+  /* Under the brand buttons only: a coloured lift that makes the primary
+     action read as the lit thing on the page. */
+  --sh-brand:0 4px 12px rgba(185,62,16,.22), 0 14px 30px rgba(185,62,16,.20);
+  --shadow:var(--sh-1);
+  --shadow-lift:var(--sh-2);
+
+  --ease:cubic-bezier(.22,.68,.32,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* The one gradient the brand uses, declared once so every primary surface
+     on the page is lit from the same angle. */
+  --grad-brand:linear-gradient(135deg,var(--brand) 0%,var(--brand-deep) 62%);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow-x:clip}
+body{
+  font-family:var(--font);
+  font-size:var(--t-base);
+  color:var(--ink);
+  background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+  /* A kiosk has no text to select and no page to drag. Both gestures only
+     ever fired here by accident, mid-tap.
+
+     user-select is the one that mattered: a press on a drink's name and a
+     pull was read as "select this text", so the menu came up highlighted
+     in blue and stayed put instead of scrolling. The rails and the strips
+     each turned it off for themselves; the page it all sits on never did. */
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+/* The two places there IS text to select: what the customer typed. Anything
+   they can put words into, they can also correct. */
+input,textarea{user-select:text;-webkit-user-select:text}
+
+/* The warmth in the corners. Two radial washes painted once on a fixed
+   layer: they never move, never repaint, and cost the compositor nothing
+   while the menu scrolls over them. This is what a backdrop-filter would
+   have been asked to fake, at a fraction of the price. */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(900px 620px at 8% -8%, rgba(245,158,11,.16), transparent 62%),
+    radial-gradient(760px 560px at 104% 12%, rgba(228,87,31,.13), transparent 60%),
+    var(--bg);
+}
+
+/* Numbers line up in columns wherever they are compared. */
+.price,.item .price,.hero .hp,.mtotal,.ordertotal,#addprice,#bfTotal,
+.topbar .clocknow,.size{font-variant-numeric:tabular-nums}
+
+/* ---------------------------------------------------------------- FOCUS ---
+   One ring, declared once, for every control on the page. The old sheet set
+   outline:0 on the search field and the notes box and put nothing back, so
+   those two were unreachable to anyone navigating by keyboard -- which
+   includes the staff tablet and any assistive switch device. :focus-visible
+   keeps it off a finger tap and on for a key. */
+button:focus-visible,input:focus-visible,textarea:focus-visible,
+.cat:focus-visible,.item:focus-visible,.size:focus-visible,
+.topping:focus-visible,.dot:focus-visible{
+  outline:3px solid var(--focus);
+  outline-offset:3px;
+  border-radius:var(--r-1);
+}
+
+/* ------------------------------------------------------------------ APP ---
+   One track. The detail panel is an overlay, not a column, so the menu keeps
+   the full width whether the panel is open or shut and nothing here reflows
+   when it slides. */
+.app{
+  display:grid;grid-template-columns:1fr;
+  height:100vh;max-width:1680px;margin:0 auto;
+  position:relative;
+}
+
+/* A soft shade under the open drawer, so it reads as floating above the menu
+   rather than pasted beside it. pointer-events:none is the whole reason it
+   can exist: tapping a different drink while the drawer is open is a
+   feature, and a real scrim would have taken that away. */
+.app::after{
+  content:"";position:fixed;inset:0;z-index:28;pointer-events:none;
+  background:linear-gradient(to left, rgba(74,42,22,.20), transparent 46%);
+  opacity:0;transition:opacity .34s var(--ease);
+}
+.app.side-open::after{opacity:1}
+
+/* ----------------------------------------------------------------- LEFT ---
+   The native scrollbar is hidden and the page dots on the right stand in for
+   it. Room is left on the right so a wide card cannot slide under them. */
+.left{
+  padding:var(--s-6) var(--pad-r) var(--s-8) var(--pad-l);
+  overflow-y:auto;scroll-behavior:smooth;
+  scrollbar-width:none;-ms-overflow-style:none;
+  /* A finger flick on a kiosk should coast and stop, not rubber-band into
+     the browser's own overscroll. */
+  overscroll-behavior:contain;
+}
+.left::-webkit-scrollbar{display:none}
+/* While the column is being pulled by hand -- see drinks-pos.js. The smooth
+   above is for the page dots, which jump a screenful; under a drag it would
+   animate towards each scrollTop instead of setting it, and the menu would
+   trail the hand by a whole animation. */
+.left.dragging{scroll-behavior:auto;cursor:grabbing}
+
+/* --------------------------------------------------------------- TOPBAR ---
+   Brand on the left, machine status on the right. The previous sheet opened
+   on a line of status chips and nothing else -- the screen never said what
+   it was. It scrolls away with the menu; the deck below it is the part that
+   stays. */
+.topbar{
+  display:flex;align-items:center;gap:var(--s-5);
+  margin-bottom:var(--s-6);
+}
+.topbar .spacer{flex:1}
+
+.brand{display:flex;align-items:center;gap:var(--s-4);min-width:0}
+/* The mark. A cup, drawn rather than borrowed from an emoji font: an emoji
+   is a picture whose size, colour and style are decided by whichever font
+   the OS shipped, and it cannot take currentColor. */
+.brand-mark{
+  width:56px;height:56px;flex:none;border-radius:var(--r-3);
+  display:grid;place-items:center;color:#fff;
+  background:var(--grad-brand);
+  box-shadow:var(--sh-brand);
+}
+.brand-mark svg{display:block}
+.brand-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand-name{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-lg);line-height:1.05;letter-spacing:-.03em;color:var(--ink);
+}
+.brand-sub{font-size:var(--t-xs);color:var(--muted);line-height:1.3}
+
+/* The status cluster. Deliberately quiet: none of it is for the customer,
+   and all of it matters to whoever is standing behind the counter. */
+.statusbar{display:flex;align-items:center;gap:var(--s-2);flex-wrap:wrap;justify-content:flex-end}
+.topbar .chip{
+  display:inline-flex;align-items:center;gap:var(--s-2);
+  padding:9px var(--s-4);border-radius:999px;
+  background:var(--surface);border:1px solid var(--line);
+  color:var(--ink-2);font-size:var(--t-xs);font-weight:400;
+  box-shadow:var(--sh-1);white-space:nowrap;
+}
+.topbar .chip .ic{display:inline-grid;place-items:center;color:var(--ink-3)}
+.topbar .ic svg,.billfab svg,.search .mag svg,.rhead .doc svg,
+.busybar .bb-ico svg,.modal svg,.cat .icon svg,.empty svg,
+.item .pick svg,.brand-mark svg{display:block}
+/* The clock is the one number in this row worth reading from a distance. */
+.topbar .chip.clocknow{
+  font-family:var(--font-display);font-weight:700;font-size:var(--t-sm);
+  color:var(--ink);letter-spacing:-.01em;
+}
+/* The menu-freshness chip. Normal while the snapshot is recent; amber once
+   it is old enough that stock on screen may no longer be true. */
+.topbar .syncchip{transition:background .2s,color .2s,border-color .2s}
+.topbar .syncchip.stale{
+  background:var(--warn-tint);color:#7A4D00;font-weight:700;
+  border-color:var(--warn-line);
+}
+.topbar .syncchip.stale .ic{color:#7A4D00}
+.topbar .open{
+  display:inline-flex;align-items:center;gap:var(--s-2);
+  padding:9px var(--s-4);border-radius:999px;
+  background:var(--ok-tint);color:var(--ok);
+  font-size:var(--t-xs);font-weight:700;white-space:nowrap;
+}
+.topbar .open .dot{
+  width:8px;height:8px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 0 3px rgba(22,101,52,.16);
+}
+
+/* ------------------------------------------------ THE MACHINE IS BUSY ---
+   Amber, not red: nothing is broken. The machine is doing exactly what it
+   was asked to, and the only thing wrong is that this screen used to say
+   nothing about it while a scanned label quietly did nothing.
+
+   Collapses to nothing when there is no order, rather than reserving the
+   space -- an empty strip above the menu on every idle screen would be a
+   permanent cost for an occasional message. */
+.busybar{
+  display:none;align-items:center;gap:var(--s-4);
+  margin-bottom:var(--s-5);padding:var(--s-4) var(--s-5);
+  background:var(--warn-tint);border:1px solid var(--warn-line);
+  border-radius:var(--r-3);color:#7A4D00;
+  font-size:var(--t-sm);font-weight:700;line-height:1.45;
+  box-shadow:var(--sh-1);
+}
+.busybar.show{display:flex}
+.busybar .bb-ico{
+  flex:none;width:40px;height:40px;border-radius:var(--r-1);
+  display:inline-grid;place-items:center;
+  background:rgba(180,83,9,.12);color:var(--warn);
+}
+.busybar .bb-text{flex:1;min-width:0;font-weight:400;color:#6B4405}
+.busybar .bb-go{
+  flex:none;border:0;border-radius:999px;
+  min-height:var(--tap);padding:0 var(--s-6);
+  background:var(--warn);color:#fff;
+  font-family:inherit;font-size:var(--t-sm);font-weight:700;cursor:pointer;
+  transition:filter .15s,transform .08s;
+}
+.busybar .bb-go:hover{filter:brightness(1.07)}
+.busybar .bb-go:active{transform:translateY(1px)}
+
+/* Poured, and the machine is only tidying up behind it. Amber says "you
+   cannot do this yet", which is right while a drink is pouring and wrong
+   the moment it is finished -- it made a normal ending look like a fault
+   to the customer who had just picked the drink up. Same box, calm
+   colours; the button is hidden from script, there being nothing left to
+   go and see. */
+.busybar[data-state="done"]{
+  background:var(--ok-tint);border-color:#C9E7D4;color:#14532D;
+}
+.busybar[data-state="done"] .bb-text{color:#1B5E3A}
+.busybar[data-state="done"] .bb-ico{
+  background:rgba(22,101,52,.12);color:var(--ok);
+}
+
+/* ------------------------------------------------------------ THE DECK ---
+   Search and categories, together, stuck to the top of the scroller.
+
+   Together because they are one question -- "show me fewer drinks" -- asked
+   two ways, and the old sheet had them in separate slabs with the category
+   row alone eating 190px of the first screen. Stuck because on a menu four
+   screens long the way to filter used to scroll off and never come back.
+
+   The negative margins cancel .left's gutters exactly so the deck spans the
+   full width of the scroller: without them the cards would slide past in the
+   strips either side of it. */
+.deck{
+  position:sticky;top:0;z-index:20;
+  margin:0 calc(-1 * var(--pad-r)) var(--s-6) calc(-1 * var(--pad-l));
+  padding:var(--s-2) var(--pad-r) var(--s-4) var(--pad-l);
+  /* Transparent at rest, on purpose: the page ground is a pair of radial
+     washes on a fixed layer, and a deck filled with the flat --cream those
+     washes sit on drew a visible rectangle across them. With nothing behind
+     it to hide there is nothing to fill. */
+  background:transparent;
+  border-bottom:1px solid transparent;
+  transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+/* Once the menu is actually running underneath it, it has to become opaque
+   -- and at that point the hairline and the shadow are what say the cards
+   are passing behind a bar rather than fading into one. The class is
+   toggled from drinks-pos.js on the scroller. */
+.deck.stuck{
+  background-color:var(--bg);
+  border-bottom-color:var(--line);
+  box-shadow:0 10px 26px -20px rgba(74,42,22,.55);
+}
+
+/* --------------------------------------------------------------- SEARCH ---
+   A kiosk keyboard is the on-screen one, so the field is tall enough to hit
+   first time and the text in it is full size -- this is the one control on
+   the page a customer types into. */
+.search{
+  display:flex;align-items:center;gap:var(--s-4);background:var(--surface);
+  border:1.5px solid var(--line);
+  border-radius:999px;padding:0 var(--s-6);min-height:60px;
+  box-shadow:var(--sh-1);margin-bottom:var(--s-4);
+  transition:border-color .18s,box-shadow .18s;
+}
+.search:focus-within{border-color:var(--brand);box-shadow:var(--sh-2)}
+.search input{
+  border:0;outline:0;flex:1;font-family:inherit;font-size:var(--t-base);
+  background:transparent;color:var(--ink);min-height:56px;
+}
+.search input::placeholder{color:var(--muted)}
+.search .mag{color:var(--muted);display:inline-grid;place-items:center;flex:none}
+
+/* ----------------------------------------------------------- CATEGORIES ---
+   Pills, not cards. Six 190px-tall boxes with an emoji in a circle is a
+   filter dressed as the main event; this row says the same thing in a third
+   of the height and hands the difference to the menu.
+
+   Still drag-scrolled, with its own slider underneath rather than the
+   browser's -- there is no pointer on this device to hit a scrollbar with. */
+.cats-wrap{margin-bottom:0}
+.cats{
+  display:flex;gap:var(--s-3);overflow-x:auto;padding:2px 0 var(--s-1);
+  cursor:grab;user-select:none;scrollbar-width:none;-ms-overflow-style:none;
+}
+.cats::-webkit-scrollbar{display:none}
+.cats.dragging{cursor:grabbing}
+.cat{
+  flex:none;display:flex;align-items:center;gap:var(--s-3);
+  min-height:var(--tap);padding:var(--s-2) var(--s-5) var(--s-2) var(--s-2);
+  border-radius:999px;background:var(--surface);
+  border:1.5px solid var(--line);
+  box-shadow:var(--sh-1);cursor:pointer;
+  transition:transform .15s var(--ease),border-color .15s,background .15s,color .15s;
+}
+.cat:hover{transform:translateY(-1px);border-color:var(--line-2)}
+.cat:active{transform:translateY(0) scale(.985)}
+.cat .icon{
+  width:38px;height:38px;flex:none;border-radius:50%;
+  background:var(--cream-2);color:var(--brand-deep);
+  display:grid;place-items:center;
+  transition:background .15s,color .15s;
+}
+.cat .name{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-sm);letter-spacing:-.015em;white-space:nowrap;
+}
+/* The count rides as a small counter beside the name rather than under it --
+   it is a footnote to the label, not a second line of the label. */
+.cat .count{
+  font-size:var(--t-2xs);font-weight:700;color:var(--muted);
+  background:var(--cream-2);border-radius:999px;padding:3px 9px;
+  white-space:nowrap;transition:background .15s,color .15s;
+}
+/* The chosen category is a filled pill, not a tinted one: it is the single
+   piece of state that explains everything in the grid below it. */
+.cat.active{
+  background:var(--grad-brand);border-color:transparent;color:#fff;
+  box-shadow:var(--sh-brand);
+}
+.cat.active .icon{background:rgba(255,255,255,.22);color:#fff}
+.cat.active .count{background:rgba(255,255,255,.22);color:#fff}
+
+.catslider{
+  width:100%;height:4px;background:var(--line);border-radius:999px;
+  position:relative;margin-top:var(--s-3);
+}
+.catslider .thumb{
+  position:absolute;top:0;left:0;height:4px;background:var(--brand);
+  border-radius:999px;cursor:grab;
+}
+.catslider .thumb:active{cursor:grabbing}
+
+/* ------------------------------------------------------------- FEATURED ---
+   The drinks the shop is pushing, as one horizontal row above the menu or
+   below it. Which drinks, whether it is drawn and where, all come from the
+   admin console through menu-data.js; this sheet only knows how it looks.
+
+   WHY A ROW AND NOT MORE OF THE GRID
+       The grid is the menu: everything, in a shape built for comparing.
+       A recommendation that used the same shape would just be four more
+       menu cards with a title over them, and on a screen this size the
+       eye reads it as the top of the list rather than as a separate
+       statement. A row that runs off the right edge is a different
+       object, and it costs the fold one card's height instead of a
+       whole row of them.
+
+   WHY IT SCROLLS INSIDE ITSELF
+       At most six cards, and a narrow kiosk fits three. The overflow has
+       to live in this strip -- never on the page, which must not scroll
+       sideways at all. That is what overflow-x on .fstrip buys, and why
+       .featured itself is clipped: the negative margins below run the
+       cards out to the gutters and would otherwise widen the column.
+
+   HIDDEN IS THE DEFAULT
+       No .show and there is no section at all -- no heading, no gap. A
+       shop with nothing featured gets the plain menu back. */
+/* THE TRAY
+   The strip used to sit on the page ground with the menu starting
+   straight underneath, and it read as the menu's first row rather than as
+   a recommendation about it -- five cards, then five more cards, in the
+   same light on the same background.
+
+   So it gets a surface of its own. --cream-2 is this sheet's "sunken
+   wash", one step under the ground, which is what makes the white cards
+   on it stand up. The deck above deliberately stays transparent for the
+   opposite reason: it wants to disappear into the page, and this wants to
+   be visibly a different object on it.
+
+   overflow:hidden so the radius actually clips the cards scrolling out to
+   the right edge. Without it they run past the rounded corner and the
+   tray stops looking like a tray at exactly the moment it is used. */
+.featured{
+  display:none;
+  margin-bottom:var(--s-7);
+  padding:var(--s-6) var(--s-6) var(--s-5);
+  background:var(--cream-2);
+  border:1px solid var(--line);
+  border-radius:var(--r-4);
+  overflow:hidden;
+}
+/* A CSS animation rather than a transition, because there is nothing to
+   transition FROM: the section goes from display:none straight into the
+   layout, and a transition on a box that did not exist last frame does
+   not run. An animation on a newly displayed element does.
+
+   Only the arrival is softened. Leaving is instant on purpose -- the
+   strip goes when a customer types a search or picks a category, and at
+   that moment they are waiting on the RESULT; making them watch the
+   recommendation they just dismissed fade out first is the animation
+   getting in the way of the answer. Exit faster than enter. */
+.featured.show{display:block;animation:featured-in .26s var(--ease) both}
+@keyframes featured-in{
+  from{opacity:0;transform:translateY(-6px)}
+  to{opacity:1;transform:none}
+}
+
+/* The strip is one thing, so its heading sits tight above the cards and
+   the mark leads it. Not a "See all": everything in this row is also in
+   the menu directly underneath, and a link to it would be a link to the
+   same screen. */
+.fhead{
+  display:flex;align-items:center;gap:var(--s-3);
+  margin:0 0 var(--s-5);
+}
+.fmark{
+  width:34px;height:34px;border-radius:50%;flex:none;
+  display:grid;place-items:center;
+  background:var(--brand-wash);color:var(--brand-deep);
+}
+.fmark svg{display:block;width:19px;height:19px}
+.ftitle{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-lg);line-height:1.15;letter-spacing:-.03em;
+  color:var(--ink);margin:0;min-width:0;
+  /* Operator-typed text. One line on a kiosk, and an over-long heading
+     is cut rather than allowed to push the cards down the screen. */
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* The period the ranking covers, beside the heading rather than under it.
+   "Bán chạy nhất" on its own is a claim a customer cannot check and the
+   shop cannot defend -- best over what, since opening? -- and this is the
+   one word that makes it true. Quiet, because it is a qualifier and not
+   the point. */
+.fnote{
+  flex:none;font-size:var(--t-xs);color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:4px 11px;
+}
+
+/* THE BESTSELLER TRAY
+   The same tray, one hue over. Both strips are recommendations and must
+   read as the same KIND of thing, so nothing about the shape changes --
+   but two identical trays stacked would read as one block split by an
+   accident, so the second takes the cream a step deeper. The cards on it
+   are still white, which is what keeps them the object in both. */
+.featured.best{background:var(--cream-3)}
+.featured.best .fmark{background:var(--surface);color:var(--brand-deep)}
+
+/* ================= THE FIVE ARRANGEMENTS =================
+   Set per module in the admin console.
+
+   The first three run sideways and share one scroller; the last two
+   stack. What separates them is not how the same object is arranged --
+   that was the mistake the retired grid/spotlight/list made, three
+   stackings of one bordered card with a white caption bar, which on the
+   shop floor read as the menu drawn twice. Each of these is a different
+   object.
+
+   All five are cost:low. Nothing here blurs, layers or animates on
+   scroll: this runs on a Raspberry Pi. */
+
+/* ---- the shared sideways scroller ----
+   Carousel, cinematic and bubble all run off the right edge, so they all
+   want the same drag, the same clipping and the same page dots. */
+.fstrip.lay-carousel,
+.fstrip.lay-cinematic,
+.fstrip.lay-bubble{
+  display:flex;gap:var(--s-5);
+  overflow-x:auto;overflow-y:hidden;
+  /* No scroll-snap: it fought the drag handlers in drinks-pos.js, which
+     set scrollLeft on every pointermove, and a mandatory snapport
+     re-snapped each write to the nearest edge. */
+  overscroll-behavior-x:contain;
+  user-select:none;-webkit-user-select:none;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;-ms-overflow-style:none;
+  /* Out to the tray's padding and back in by the same amount, so the
+     first item lines up with the heading while the row still runs to the
+     tray's rounded edge. */
+  margin:0 calc(-1 * var(--s-6));
+  padding:var(--s-2) var(--s-6) var(--s-4);
+  cursor:grab;
+}
+.fstrip.dragging{cursor:grabbing}
+.fstrip::-webkit-scrollbar{display:none}
+.fstrip.lay-carousel > *,
+.fstrip.lay-cinematic > *,
+.fstrip.lay-bubble > *{flex:0 0 auto}
+
+/* Page dots belong to the three that scroll. The other two stack, so a
+   control for scrolling sideways would be a control that does nothing. */
+.fstrip.lay-board ~ .fdots,
+.fstrip.lay-chart ~ .fdots{display:none}
+
+/* ---- CAROUSEL: menu cards ---- */
+.fstrip.lay-carousel .fitem{width:clamp(206px,20vw,264px)}
+
+/* ---- CINEMATIC: the photo IS the tile ----
+   No border, no white shelf. A card spent a third of its height on a
+   caption bar under the picture; here the name and the price sit ON the
+   picture behind a scrim and that third goes back to the drink.
+
+   The tile is portrait because a glass is: at 3/4 a drink fills the
+   frame instead of floating in a letterbox. */
+.ctile{
+  position:relative;width:clamp(196px,19vw,248px);aspect-ratio:3/4;
+  border-radius:var(--r-4);overflow:hidden;cursor:pointer;
+  background:linear-gradient(155deg,var(--cream-2),var(--cream-3));
+  display:grid;place-items:center;font-size:64px;
+  box-shadow:var(--sh-1);
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease);
+}
+.ctile:hover{transform:translateY(-4px);box-shadow:var(--sh-2)}
+.ctile:active{transform:translateY(-1px) scale(.985)}
+.ctile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+           display:block;-webkit-user-drag:none;user-drag:none;pointer-events:none}
+/* Deeper and taller than the card's scrim, because here it is carrying
+   two lines of white text rather than one price chip. */
+.ctile::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:62%;
+  background:linear-gradient(to top,
+      rgba(28,18,13,.86) 0%,rgba(28,18,13,.52) 45%,transparent 100%);
+  pointer-events:none;
+}
+.ctile .cmeta{
+  position:absolute;left:var(--s-5);right:var(--s-5);bottom:var(--s-5);
+  z-index:2;display:flex;flex-direction:column;gap:2px;min-width:0;
+}
+.ctile .cname{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-base);line-height:1.2;letter-spacing:-.02em;color:#fff;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.ctile .cprice{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-base);letter-spacing:-.02em;color:#fff;
+  text-shadow:0 1px 10px rgba(28,18,13,.5);
+}
+/* On the picture, so it needs its own ground rather than the cream one
+   the card's plus sits on. */
+.ctile .pick{
+  position:absolute;right:var(--s-4);bottom:var(--s-4);z-index:3;
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.94);color:var(--brand-deep);
+}
+.ctile:hover .pick{background:#fff}
+
+/* ---- BUBBLE: round photo, words underneath ----
+   Claymorphism -- the design database's secondary style for food
+   service. The thick light rim and the two shadows, one outside and one
+   inside the lip, are what make the circle read as an object sitting on
+   the tray rather than a hole cut through it.
+
+   The shortest arrangement of the five, because nothing is boxed. */
+.bub{
+  width:clamp(124px,13.5vw,164px);
+  display:flex;flex-direction:column;align-items:center;gap:var(--s-2);
+  cursor:pointer;text-align:center;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.bub:hover{transform:translateY(-5px)}
+.bub:active{transform:translateY(-1px) scale(.97)}
+.bub .bimg{
+  position:relative;width:100%;aspect-ratio:1/1;border-radius:50%;
+  /* NOT overflow:hidden. The badge hangs off the bottom of the circle,
+     and a round clip cut it into a sliver up the left-hand side -- the
+     rank was there the whole time, shaved to three pixels. The photo
+     carries its own round corner instead, which is the only thing that
+     needed clipping. */
+  overflow:visible;display:grid;place-items:center;font-size:46px;
+  border:4px solid var(--surface);
+  background:linear-gradient(155deg,var(--cream-2),var(--cream-3));
+  box-shadow:0 10px 22px -8px rgba(74,42,22,.35),
+             inset 0 -6px 14px -6px rgba(74,42,22,.30);
+}
+.bub .bimg img{width:100%;height:100%;object-fit:cover;display:block;
+               border-radius:50%;
+               -webkit-user-drag:none;user-drag:none;pointer-events:none}
+.bub .bname{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-sm);line-height:1.25;letter-spacing:-.02em;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.bub .bprice{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.02em;color:var(--brand-deep);
+}
+/* A wide "NỔI BẬT" ribbon across a 150px circle would cover the drink,
+   and the tray's heading has already said it. On a bubble the badge
+   keeps only its mark -- or, on the bán-chạy strip, its number. */
+.bub .bimg .fribbon{
+  top:auto;left:50%;bottom:-6px;transform:translateX(-50%);
+  padding:5px 9px;box-shadow:0 2px 8px rgba(74,42,22,.22);
+  border:2px solid var(--surface);
+}
+.bub .bimg .fribbon > span{display:none}
+.bub .bimg .fribbon.rank{padding:4px 11px}
+
+/* ---- BOARD: a wall menu ----
+   No card, no tile, no photograph doing the work -- the NAME does, in
+   display type, with leaders running to the price. Editorial Grid plus
+   Exaggerated Minimalism.
+
+   It is also the only arrangement that still reads properly when a drink
+   has no photograph at all, which on this menu is most of them. */
+/* COLUMNS
+   A line is as wide as the tray, so at one column a board row is a name
+   at one end, a price at the other and a hand's width of nothing
+   between. Two closes that gap and halves the height. Set per module in
+   the admin console; --cols is written by drinks-pos.js. */
+.fstrip.lay-board{
+  display:grid;grid-template-columns:repeat(var(--cols,1),1fr);
+  column-gap:var(--s-12);padding:var(--s-2) 0 0;
+}
+.fstrip.lay-board .bline{
+  border-radius: var(--r-3);
+  padding: var(--s-2) var(--s-4);
+}
+.bline{
+  display:flex;align-items:center;gap:var(--s-4);
+  padding:var(--s-3) var(--s-2);min-height:var(--tap);
+  border-bottom:1px solid var(--line);cursor:pointer;
+  transition:background .16s;
+}
+.bline:last-child{border-bottom:0}
+.bline:hover{background:rgba(255,255,255,.5)}
+.bline .bdot{
+  flex:none;width:85px;height:85px;border-radius:50%;overflow:hidden;
+  display:grid;place-items:center;font-size:24px;
+  background:linear-gradient(155deg,var(--cream-2),var(--cream-3));
+}
+.bline .bdot img{width:100%;height:100%;object-fit:cover;display:block;
+                 -webkit-user-drag:none;user-drag:none;pointer-events:none}
+.bline .btitle{
+  flex:none;max-width:56%;
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.025em;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* The leaders. A dotted rule rather than a row of periods, so it stays
+   one pixel weight at any zoom and never wraps. */
+.bline .bleader{
+  flex:1;min-width:var(--s-5);
+  border-bottom:2px dotted var(--line-2);
+}
+.bline .bprice{
+  flex:none;font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.02em;color:var(--ink);
+}
+.bline .pick{
+  flex:none;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--cream-2);color:var(--brand-deep);
+}
+.bline:hover .pick{background:var(--brand-wash)}
+
+/* ---- CHART: the rank is the ground ----
+   Exaggerated Minimalism: the numeral set enormous and pale, with the
+   photograph standing over it. The position is the content of this
+   arrangement, so it is the biggest thing in the row -- and pale, so it
+   is scenery and not something to read one digit at a time.
+
+   Bestseller only. See FEATURED_STYLES in store_gui/sync_menu.py. */
+.fstrip.lay-chart{
+  display:grid;grid-template-columns:repeat(var(--cols,1),1fr);
+  gap:var(--s-2) var(--s-8);padding:var(--s-2) 0 0;
+}
+.chrow{
+  display:flex;align-items:center;gap:var(--s-4);
+  padding:var(--s-2) var(--s-4) var(--s-2) 0;
+  border-radius:var(--r-3);cursor:pointer;transition:background .16s;
+}
+.chrow:hover{background:rgba(255,255,255,.55)}
+.chnum{
+  flex:none;width:clamp(40px,calc(6vw / var(--cols,1)),84px);
+  text-align:center;
+  font-family:var(--font-display);font-weight:700;
+  /* Divided by the column count. At two columns a row is half as wide,
+     and a numeral sized for the full width would leave the drink's name
+     nowhere to go -- the figure would have eaten the row it is only
+     supposed to be the ground of. */
+  font-size:clamp(38px,calc(6.5vw / var(--cols,1)),88px);
+  line-height:.86;letter-spacing:-.06em;
+  /* The brand at low alpha, NOT a cream. It was --cream-3, which is
+     exactly the colour of the bán-chạy tray it sits on, so the numerals
+     were invisible -- the whole design of this arrangement, painted the
+     same colour as its own background. An alpha tint reads on either
+     tray and on the page ground behind them. */
+  color:rgba(185,62,16,.26);
+  /* The photo steps onto it. Without the overlap the numeral is a column
+     of its own and the row reads as a table; with it, the drink is
+     standing on its position.
+
+     Divided by the column count along with the numeral itself. At a
+     fixed 20px the overlap ate half a two-column figure, which had
+     already shrunk to 40px -- the ranks came out looking clipped rather
+     than stood on. */
+  margin-right:calc(-1 * var(--s-5) / var(--cols,1));
+}
+.chimg{
+  position:relative;z-index:1;flex:none;
+  width:clamp(60px,7vw,84px);aspect-ratio:1/1;
+  border-radius:var(--r-2);overflow:hidden;
+  display:grid;place-items:center;font-size:32px;
+  background:linear-gradient(155deg,var(--cream-2),var(--cream-3));
+  box-shadow:var(--sh-1);
+}
+.chimg img{width:100%;height:100%;object-fit:cover;display:block;
+           -webkit-user-drag:none;user-drag:none;pointer-events:none}
+.chtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.chname{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.025em;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* The evidence. A chart without its figures is a list somebody ordered
+   by hand -- which is exactly what the old "Bestseller" category was. */
+.chsold{font-size:var(--t-xs);color:var(--ink-2)}
+.chprice{
+  flex:none;font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.02em;color:var(--ink);
+}
+.chrow .pick{
+  flex:none;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--cream-2);color:var(--brand-deep);
+}
+.chrow:hover .pick{background:var(--brand-wash)}
+
+/* THE PAGE DOTS
+   The menu column's control, turned on its side. Same 10px dots, same
+   16px gaps, same stretch-into-a-pill for the current one -- the only
+   thing that changes is which axis the pill grows along, because the row
+   it describes runs the other way.
+
+   ONE CONTROL, TWO AXES, ON PURPOSE
+       This started as a thin track with a draggable thumb, which was a
+       second kind of scrollbar on a screen that already had one. Two
+       controls that mean the same thing and look nothing alike is two
+       things for a customer to work out in the same eyeful.
+
+   Needed at all because every scrollbar on this page is hidden: without
+   the dots, a strip whose last card is clipped at the tray edge reads as
+   a card that got cut off rather than a row that keeps going. */
+.fdots{
+  display:none;justify-content:center;align-items:center;gap:var(--s-4);
+  /* Centred under the row and only as wide as the dots need. A full-width
+     bar would be a second rule across the tray. */
+  width:max-content;max-width:100%;margin:0 auto;
+  padding:var(--s-2) var(--s-4);border-radius:999px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:var(--sh-1);
+}
+/* Shown only when the strip really is wider than the tray -- one dot for a
+   single page would be a control that does nothing. */
+.fdots.show{display:flex}
+.fdots .dot{
+  position:relative;flex:none;
+  width:10px;height:10px;padding:0;border:0;border-radius:50%;
+  background:var(--line-2);cursor:pointer;
+  transition:width .22s var(--ease),background .22s ease;
+}
+/* The tap area, which is not the dot -- the same trade the column's dots
+   make. Mirrored: there the pitch is vertical so the box is 34 wide and
+   26 tall; here the dots sit in a row, so it is 26 wide and 34 tall. */
+.fdots .dot::after{
+  content:"";position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);width:26px;height:34px;
+}
+.fdots .dot:hover{background:var(--ink-3)}
+/* The current page stretches into a pill rather than just changing colour,
+   so which one is active survives a glance from arm's length. */
+.fdots .dot.on{width:26px;border-radius:999px;background:var(--brand)}
+
+/* THE MENU'S OWN HEADING
+   Without it the grid under the tray is just "more cards", and the tray
+   has to carry the whole job of saying the two are different things. It
+   is quieter than the strip's heading on purpose: the menu is the page,
+   and a label on the page should not compete with the one thing on it
+   that is being pointed at. */
+.gridhead{display:none;align-items:baseline;gap:var(--s-3);margin:0 0 var(--s-5)}
+.gridhead.show{display:flex}
+.gridhead h2{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);line-height:1.2;letter-spacing:-.025em;
+  color:var(--ink-2);margin:0;
+}
+.gridhead .gcount{font-size:var(--t-xs);color:var(--muted)}
+
+/* A featured card IS a menu card -- .item carries the photograph, the
+   scrim, the price and the press state, and a second set of rules for
+   the same object is how two cards of the same drink end up looking
+   subtly different. What changes here is only what a row needs that a
+   grid cell does not: a width, since a flex row will not give it one. */
+/* The card sizes itself from its container in three of the four
+   arrangements; only the carousel has to be told a width, because a flex
+   row will not give it one. */
+.fitem{min-width:0}
+/* THE OTHER HALF OF WHY THE STRIP COULD NOT BE DRAGGED BY A CARD
+   An <img> is natively draggable. Pressing on a drink photo and moving
+   started the browser's own drag-and-drop -- which fires pointercancel,
+   so our drag ended on the first pixel of movement and the strip stayed
+   put. Dragging the gap BETWEEN cards worked, which is what made it look
+   like the cards themselves were stuck.
+
+   The category rail never hit this: it is drawn SVG and text, no images.
+
+   pointer-events:none rather than only -webkit-user-drag, because the
+   two engines disagree about the latter. The click still lands: the
+   handler is on the card, and the photo is not what is being clicked. */
+.fitem .thumb img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
+/* The photo is the reason this card is bigger than its neighbours in the
+   menu; 4:5 gives it the extra height without making the row so tall
+   that the first menu row is pushed off the screen. */
+.fitem .thumb{aspect-ratio:4/5}
+
+/* WHY THE CARD SAYS "NỔI BẬT" ON IT
+   Out of the strip -- in the menu below, where the same drink also
+   appears -- nothing marks it, and that is right: it is the same drink at
+   the same price. Inside the strip the badge is what stops the row
+   reading as "the first four drinks". It replaces the category chip
+   rather than joining it: the category is on the same drink's card in the
+   grid, and two chips in one corner is the corner lost.
+
+   It carries the word as well as the star. A shape alone in a corner is
+   decoration; a customer should not have to know what an outline star
+   means on a drinks machine. */
+.fitem .fribbon,
+.ctile .fribbon,
+.bub .fribbon{
+  position:absolute;top:var(--s-3);left:var(--s-3);z-index:2;
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--brand-deep);background:rgba(255,255,255,.94);
+  border-radius:999px;padding:5px 11px 5px 8px;
+}
+.fitem .fribbon svg,
+.ctile .fribbon svg,
+.bub .fribbon svg{display:block;width:14px;height:14px}
+
+/* THE RANK BADGE
+   The bán-chạy strip is ORDERED, and a badge that only said "bán chạy"
+   on every card would be throwing that away -- the whole content of that
+   row is which one is first. Solid rather than the featured strip's
+   white chip, so the two strips are told apart by their badges at a
+   glance and not only by their headings. */
+.fitem .fribbon.rank,
+.ctile .fribbon.rank,
+.bub .fribbon.rank{
+  padding:5px 12px;
+  font-family:var(--font-display);font-size:var(--t-sm);letter-spacing:0;
+  color:#fff;background:var(--brand-deep);
+}
+
+/* The strip is at most six cards and a wide kiosk shows five of them, so
+   on the widest screens the row can end up shorter than the column with
+   dead space to its right. Letting the cards grow there would make them
+   a different size on different machines; leaving the gap is the honest
+   version, and the row stays left-aligned with the menu under it. */
+@media (max-width:900px){
+  .fstrip.lay-carousel .fitem{width:clamp(178px,44vw,206px)}
+  .ctile{width:clamp(168px,42vw,196px)}
+  .bub{width:clamp(108px,26vw,124px)}
+  .bline .btitle{max-width:46%}
+  .fhead{margin-bottom:var(--s-4)}
+}
+
+/* ---- THE CHOSEN DRINK, IN EVERY ARRANGEMENT ----
+   A carousel card carries .item as well as .fitem, so it already gets the
+   menu tile's brand ring for free. The other four are built out of
+   different parts and each has to be told in its own terms -- but all of
+   them in the one brand colour, so which card the open drawer belongs to
+   reads the same wherever on the page the customer's eye is.
+
+   The cinematic tile is ringed with a box-shadow rather than a border or
+   ::after: it is overflow:hidden and its ::after is already the scrim the
+   name and price sit on. */
+.ctile.selected{box-shadow:0 0 0 3px var(--brand),var(--sh-2)}
+.ctile.selected .pick{background:var(--grad-brand);color:#fff}
+
+/* The bubble has no box to ring, so the rim that makes it an object is
+   what changes colour -- the same thickness, so nothing shifts. */
+.bub.selected .bimg{border-color:var(--brand)}
+.bub.selected .bname{color:var(--brand-deep)}
+
+/* The two rows are lines on a list, so they take the tint a chosen option
+   takes everywhere else on this page rather than a ring around a card. */
+.bline.selected{background:var(--brand-wash)}
+.bline.selected .pick{background:var(--grad-brand);color:#fff}
+.chrow.selected{background:var(--brand-wash)}
+.chrow.selected .pick{background:var(--grad-brand);color:#fff}
+
+/* ----------------------------------------------------------------- GRID ---
+   Fluid tracks, not a fixed four: with the panel hidden the row fits five
+   cards instead of stretching four into slabs. */
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));
+  /* Rows further apart than columns, and both wider than the padding inside
+     a card. At 20px the gutter was exactly the card's own inner padding, so
+     a drink's name sat as far from its own edge as from the next card's --
+     which is the arrangement that made the menu read as one sheet of
+     pictures rather than a row of separate things. Down the page the
+     relationship is different again: what meets across a row gap is a
+     caption shelf and the next photograph, and that needs more air than
+     photograph-to-photograph does. */
+  gap:var(--s-8) var(--s-7);margin-bottom:var(--s-8);
+  align-content:start;
+  transition:height .3s ease;
+}
+
+/* The card is the photograph. Everything else on it is a caption.
+
+   The previous card boxed a 210px thumbnail inside 12px of white padding and
+   then set the name, the category tag and the price at roughly equal weight
+   underneath -- four things asking for the same attention, and the picture
+   of the drink fenced off from the edge of its own card. Here the photo runs
+   to the card's corners and the two facts a customer compares, the price and
+   the name, are the only things drawn over it. */
+.item{
+  position:relative;background:var(--surface);
+  border-radius:var(--r-4);padding:0;overflow:hidden;
+  border:1.5px solid var(--line);
+  box-shadow:var(--sh-1);cursor:pointer;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease),
+             border-color .18s;
+}
+.item:hover{transform:translateY(-4px);box-shadow:var(--sh-2)}
+/* A finger gets a press state, because a kiosk has no hover to rely on: the
+   card takes the tap visibly before the panel has finished sliding in. */
+.item:active{transform:translateY(-1px) scale(.985)}
+.item.selected{
+  border-color:var(--brand);box-shadow:var(--sh-2);
+}
+/* The chosen drink carries a ring rather than only a border, so which card
+   the open drawer belongs to survives a glance from standing distance. */
+.item.selected::after{
+  content:"";position:absolute;inset:-1.5px;border-radius:inherit;
+  border:2.5px solid var(--brand);pointer-events:none;
+}
+
+.item .thumb{
+  position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;
+  display:grid;place-items:center;font-size:70px;
+  background:linear-gradient(155deg,var(--cream-2),var(--cream-3));
+}
+/* Drink photos come from the database's image column.
+   Taken out of the grid flow on purpose: .thumb is display:grid with
+   place-items:center, which content-sizes its item, so a percentage height
+   had nothing to resolve against and the photo rendered at its natural size
+   -- overflowing the box and covering the name and the price. Absolute
+   inset:0 pins it to the box instead, and the parent clips it. */
+/* Not draggable, for the same reason the strip photos are not: pressing on
+   one and pulling started the browser's own drag-and-drop instead of
+   scrolling the menu under it. */
+.item .thumb img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block;
+  -webkit-user-drag:none;user-drag:none;pointer-events:none;
+}
+/* The scrim. Only the bottom third, and only dark enough to seat the price
+   chip -- a photograph of a drink is the reason this card exists and a heavy
+   wash over it would be paying for legibility twice. */
+.item .thumb::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:46%;
+  background:linear-gradient(to top,
+      rgba(36,26,21,.58) 0%,rgba(36,26,21,.30) 42%,transparent 100%);
+  pointer-events:none;
+}
+/* The category, small, on the picture. It is context, so it stays light. */
+.item .tag{
+  position:absolute;top:var(--s-3);left:var(--s-3);z-index:2;
+  font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink);
+  background:rgba(255,255,255,.92);border-radius:999px;
+  padding:5px 11px;
+}
+/* The price is what the customer came to compare, so it is the heaviest
+   thing on the card and it sits on the photograph rather than under it. */
+.item .price{
+  position:absolute;left:var(--s-4);bottom:var(--s-3);z-index:2;
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-base);letter-spacing:-.02em;color:#fff;
+  text-shadow:0 1px 10px rgba(36,26,21,.55);
+}
+
+/* The shelf under the picture: the name, and a target that says the card
+   opens onto something. */
+/* A label that carries an icon beside its words. The sheet sets svg to
+   display:block, so without this the icon and the word would stack. */
+.addbtn > span,.qrbtn > span,.modal .printbtn > span,.modal .startbtn > span{
+  display:inline-flex;align-items:center;gap:var(--s-2);
+}
+
+.item .row2{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:var(--s-3);padding:var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+}
+.item .iname{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-base);line-height:1.2;letter-spacing:-.025em;
+  color:var(--ink);min-width:0;
+  /* Two lines then ellipsis: a long name is allowed to wrap, but not to
+     push every card in its row taller than the rest. */
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.item .pick{
+  flex:none;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--cream-2);color:var(--brand-deep);
+  transition:background .18s,color .18s,transform .18s var(--ease);
+}
+.item:hover .pick{background:var(--brand-wash)}
+.item.selected .pick{background:var(--grad-brand);color:#fff}
+
+/* An unorderable drink stays on the menu so customers can see it exists,
+   but nothing about it invites a tap: no lift, no pointer, and the whole
+   tile is dimmed behind its reason badge. renderGrid() also attaches no
+   click handler, so this is styling on top of a real block, not instead
+   of one. */
+.item.out{cursor:not-allowed}
+.item.out .thumb{filter:grayscale(.9)}
+.item.out .iname{color:var(--muted)}
+.item.out .pick{display:none}
+.item.out:hover,.item.out:active{transform:none;box-shadow:var(--sh-1)}
+.item.out .thumb,.item.out .iname,.item.out .row2{pointer-events:none}
+/* The reason, over the picture rather than beside it. It used to be a strip
+   pinned to the card's middle, which on a card that is now photograph plus
+   shelf landed across the drink's name. A veil over the whole tile says
+   "not this one" before any of the words are read. */
+.outbadge{
+  position:absolute;top:0;left:0;right:0;aspect-ratio:1/1;z-index:3;
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--s-5);text-align:center;
+  background:rgba(36,26,21,.62);color:#fff;
+  font-size:var(--t-sm);font-weight:700;line-height:1.4;letter-spacing:.01em;
+}
+
+/* ------------------------------------------------------ MENU PAGE DOTS ---
+   In place of the browser's scrollbar. The backdrop-filter blur that used to
+   sit behind this pill is gone: it forced a compositor pass over whatever
+   was scrolling underneath, on every frame, on a Pi. A solid warm ground
+   reads the same and costs nothing. */
+.scrolldots{
+  position:fixed;right:var(--s-4);top:50%;transform:translateY(-50%);z-index:25;
+  display:none;flex-direction:column;align-items:center;gap:var(--s-4);
+  padding:var(--s-3) 9px;border-radius:999px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:var(--sh-1);
+  transition:right .34s var(--ease);
+}
+/* Shown only when the menu is actually taller than the screen -- one dot for
+   a single page would be a control that does nothing. */
+.scrolldots.show{display:flex}
+/* Slid clear of the drawer, which is fixed over this same edge. */
+.app.side-open .scrolldots{right:calc(min(480px,92vw) + var(--s-4))}
+.scrolldots .dot{
+  position:relative;
+  width:10px;height:10px;padding:0;border:0;border-radius:50%;
+  background:var(--line-2);cursor:pointer;
+  transition:height .22s var(--ease),background .22s ease;
+}
+/* The tap area, which is not the dot. WCAG 2.2 asks for 24 CSS px and this
+   device has no pointer at all, so the hit box is drawn well outside the
+   paint rather than the paint being grown to meet it. */
+.scrolldots .dot::after{
+  content:"";position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);width:34px;height:26px;
+}
+.scrolldots .dot:hover{background:var(--ink-3)}
+/* The current page stretches into a pill rather than just changing colour,
+   so which one is active survives a glance from arm's length. */
+.scrolldots .dot.on{height:26px;border-radius:999px;background:var(--brand)}
+
+/* ------------------------------------------------- FLOATING BILL BUTTON ---
+   The way back to the bill while the drawer is parked. */
+.billfab{
+  position:fixed;right:var(--s-6);bottom:var(--s-6);z-index:26;
+  display:flex;align-items:center;gap:var(--s-3);
+  border:0;border-radius:999px;
+  min-height:60px;padding:var(--s-3) var(--s-6);
+  background:var(--grad-brand);color:#fff;
+  font-family:var(--font-display);font-weight:700;font-size:var(--t-base);
+  letter-spacing:-.01em;
+  box-shadow:var(--sh-brand);cursor:pointer;
+  transform:translateY(24px) scale(.92);opacity:0;visibility:hidden;pointer-events:none;
+  transition:transform .32s var(--ease-out),opacity .24s ease,visibility 0s linear .32s;
+}
+.billfab.show{
+  transform:translateY(0) scale(1);opacity:1;visibility:visible;pointer-events:auto;
+  transition:transform .32s var(--ease-out),opacity .24s ease,visibility 0s linear 0s;
+}
+.billfab:hover{filter:brightness(1.06)}
+.billfab:active{transform:translateY(1px) scale(1)}
+.billfab .bf-ic{display:inline-grid;place-items:center}
+.billfab .bf-amt{
+  font-weight:700;
+  padding-left:var(--s-3);border-left:1px solid rgba(255,255,255,.34);
+}
+
+/* ---------------------------------------------------------------- RIGHT ---
+   Off-canvas drawer: fixed to the viewport's right edge and floating over
+   the menu, which stays full width and stays clickable underneath -- picking
+   a different drink while the drawer is open just swaps its contents.
+
+   fixed, not absolute: absolute would pin it to .app, and .app is capped and
+   centred, so on a wider screen the drawer would float with a strip of
+   background to its right instead of sitting against the edge. A fixed box
+   also stays out of the document's scrollable overflow, so the parked drawer
+   cannot put a horizontal scrollbar on the page. */
+.right{
+  background:var(--surface);
+  display:flex;flex-direction:column;
+  /* Wide enough that the drink's name, price and options each get a line of
+     their own instead of wrapping. min() keeps it off a narrow screen's
+     opposite edge, where a drawer covering everything is just a page. */
+  position:fixed;top:0;right:0;width:min(480px,92vw);height:100vh;z-index:30;
+  box-shadow:var(--sh-3);
+  /* Slide only -- no fade, no scale. The drawer keeps its own weight the
+     whole way across; visibility is the only other property, flipped at the
+     end of the slide out and at the start of the slide in so a parked drawer
+     holds no focus and takes no clicks. */
+  transform:translateX(100%);visibility:hidden;
+  transition:transform .34s var(--ease-out), visibility 0s linear .34s;
+}
+.app.side-open .right{
+  transform:translateX(0);visibility:visible;
+  transition:transform .34s var(--ease-out), visibility 0s linear 0s;
+}
+
+/* ------------------------------------------------------- DRAWER HEADING --- */
+.rhead{
+  padding:var(--s-5) var(--s-6);
+  border-bottom:1px solid var(--line);position:relative;padding-right:76px;
+  background:var(--surface);
+}
+/* Was 30x30 -- under every touch minimum there is, and it is the only way
+   out of the drawer. Now a full 48px target. */
+.rclose{
+  position:absolute;top:50%;right:var(--s-4);transform:translateY(-50%);
+  width:var(--tap);height:var(--tap);border-radius:50%;
+  border:1.5px solid var(--line);background:var(--surface);color:var(--ink-2);
+  line-height:1;cursor:pointer;display:grid;place-items:center;
+  transition:background .15s,color .15s,border-color .15s;
+  font-family:inherit;font-size:var(--t-md);
+}
+.rclose:hover{background:var(--cream-2);color:var(--ink);border-color:var(--line-2)}
+.rclose:active{transform:translateY(calc(-50% + 1px))}
+.rhead .t{
+  display:flex;align-items:center;gap:var(--s-3);
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.025em;
+}
+.rhead .t .doc{color:var(--brand-deep);display:inline-grid;place-items:center}
+.rhead .sub{color:var(--muted);font-size:var(--t-xs);margin-top:3px;line-height:1.45}
+
+.detail{
+  flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  padding:var(--s-6);
+}
+.detail::-webkit-scrollbar{width:6px}
+.detail::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:999px}
+
+.empty{
+  height:100%;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;color:var(--muted);gap:var(--s-5);
+}
+.empty .big{
+  width:104px;height:104px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--cream-2);color:var(--ink-3);
+}
+.empty p{margin:0;font-size:var(--t-sm);max-width:290px;line-height:1.6}
+
+/* ----------------------------------------------------------------- HERO ---
+   The drink, full width, with its name written on it.
+
+   The old hero was a 104px thumbnail with three lines of text beside it --
+   the same photograph the card on the left had just shown at twice the size,
+   shrunk on arrival. The negative margins here pull the picture out through
+   .detail's padding so it meets the drawer's own edges; the scrim under the
+   text is what makes white legible over a photograph nobody controls. */
+.hero{
+  position:relative;flex:none;
+  margin:calc(-1 * var(--s-6)) calc(-1 * var(--s-6)) var(--s-8);
+  height:250px;overflow:hidden;
+  background:linear-gradient(150deg,#F6D0AE,#E4571F);
+}
+.hero .pic{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-size:76px;color:#fff;
+}
+.hero .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.hero .htxt{
+  position:absolute;left:0;right:0;bottom:0;z-index:2;
+  display:flex;flex-direction:column;
+  padding:var(--s-8) var(--s-6) var(--s-5);
+  background:linear-gradient(to top,rgba(36,26,21,.94),rgba(36,26,21,.55) 48%,transparent);
+  color:#fff;
+}
+.hero .hn{
+  order:2;
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-xl);line-height:1.08;letter-spacing:-.03em;
+  text-shadow:0 2px 14px rgba(36,26,21,.4);
+}
+/* Amber on the dark scrim: 7.9:1, and it is the one thing here that is not
+   the drink's own name. */
+.hero .hcat{
+  order:1;
+  font-size:var(--t-2xs);color:#FDBA74;font-weight:700;
+  margin-bottom:var(--s-2);letter-spacing:.14em;text-transform:uppercase;
+}
+.hero .hp{
+  order:3;
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-lg);margin-top:var(--s-2);letter-spacing:-.025em;color:#fff;
+}
+
+/* ------------------------------------------------------------- SECTIONS ---
+   One rhythm down the panel: a label, then its controls. The gap between
+   sections is larger than the gap inside one, so the groups read as groups
+   without needing rules between them. */
+.section{margin:var(--s-8) 0}
+.section:first-child{margin-top:0}
+.section:last-child{margin-bottom:0}
+/* A signpost, not a heading: it names the group and gets out of the way, so
+   full-strength ink is left for the answers underneath it. */
+.section .lbl{
+  font-size:var(--t-2xs);font-weight:700;margin-bottom:var(--s-3);
+  display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3);
+  letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+}
+/* Was scoped to .section .lbl .opt, so the two places that use it outside a
+   label -- the "no options" note and the "out of stock" tag -- inherited
+   nothing and rendered as full-size body text. */
+.opt{color:var(--ink-3);font-weight:400;font-size:var(--t-xs);letter-spacing:0;text-transform:none}
+.section .lbl .opt{flex:none}
+/* The whole of what this section has to say when a recipe is fixed. */
+.section .note{
+  margin:0;font-size:var(--t-sm);line-height:1.6;color:var(--ink-2);
+  background:var(--cream-2);border-radius:var(--r-2);padding:var(--s-4);
+}
+
+/* ------------------------------------------------------- OPTION CONTROLS ---
+   Named for the size picker that used to be here; the sugar dial now uses
+   these on its own. Every one of these is a finger target, so they are built
+   from --tap up rather than from padding down. */
+.sizes{display:flex;gap:var(--s-2)}
+.size{
+  flex:1;border:1.5px solid var(--line-2);border-radius:var(--r-2);
+  min-height:56px;display:grid;place-items:center;padding:0 var(--s-2);
+  text-align:center;cursor:pointer;
+  transition:border-color .14s,background .14s,color .14s,transform .1s;
+  font-family:var(--font-display);font-size:var(--t-base);font-weight:700;
+  letter-spacing:-.02em;color:var(--ink-2);background:var(--surface);
+}
+.size:hover{border-color:var(--line-2);background:var(--cream-2)}
+.size:active{transform:scale(.97)}
+.size.active{
+  border-color:var(--brand);background:var(--brand-wash);
+  color:var(--brand-deep);
+  box-shadow:inset 0 0 0 1px var(--brand);
+}
+
+.topping{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:var(--s-3) var(--s-4);min-height:var(--tap);
+  border:1.5px solid var(--line-2);border-radius:var(--r-2);
+  margin-bottom:var(--s-2);cursor:pointer;background:var(--surface);
+  transition:border-color .14s,background .14s,transform .1s;
+}
+.topping:last-child{margin-bottom:0}
+.topping:hover{background:var(--cream-2)}
+.topping:active{transform:scale(.99)}
+.topping.on{
+  border-color:var(--brand);background:var(--brand-wash);
+  box-shadow:inset 0 0 0 1px var(--brand);
+}
+/* A topping whose ingredient is below its threshold: shown, not tickable.
+   renderDetail() omits its data-top attribute, so there is no handler. */
+.topping.off{opacity:.5;cursor:not-allowed;background:var(--cream-2)}
+.topping.off:hover{background:var(--cream-2)}
+.topping.off:active{transform:none}
+.topping .lft{
+  display:flex;align-items:center;gap:var(--s-3);
+  font-size:var(--t-base);font-weight:400;
+}
+.topping .box{
+  width:26px;height:26px;flex:none;border-radius:8px;
+  border:2px solid var(--line-2);display:grid;place-items:center;
+  color:#fff;font-size:var(--t-sm);background:var(--surface);
+  transition:background .14s,border-color .14s;
+}
+.topping.on .box{background:var(--brand);border-color:var(--brand)}
+/* There is no price chip on the right any more -- toppings are free, so the
+   row is just the tick and the name. */
+
+/* Read-only copies of the rows the add-on was chosen on. Same shape, minus
+   everything that invited a tap: no pointer, no hover, no press. */
+.topping.read{cursor:default}
+.topping.read:hover{background:var(--surface)}
+.topping.read.on:hover{background:var(--brand-wash)}
+.topping.read:active{transform:none}
+/* Offered by the recipe and taken out. Kept on the list rather than dropped
+   from it, because "is the cream gone?" is a question this screen exists to
+   answer, and a missing row cannot answer it. */
+.topping.gone{background:var(--cream-2);border-style:dashed}
+.topping.gone:hover{background:var(--cream-2)}
+.topping.gone .lft{color:var(--muted)}
+.topping.gone .box{border-color:var(--line-2)}
+
+.notes textarea{
+  width:100%;border:1.5px solid var(--line-2);border-radius:var(--r-2);
+  padding:var(--s-4);font-family:inherit;background:var(--surface);
+  font-size:var(--t-base);line-height:1.5;resize:none;outline:0;color:var(--ink);
+  transition:border-color .15s;
+}
+.notes textarea::placeholder{color:var(--muted)}
+.notes textarea:focus{border-color:var(--brand)}
+/* outline:0 above is replaced, not simply removed -- see the FOCUS block. */
+.notes textarea:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* --------------------------------------------------------- THE ADD BUTTON --- */
+.addbar{
+  padding:var(--s-4) var(--s-6) var(--s-5);
+  border-top:1px solid var(--line);background:var(--surface);
+}
+.addbtn{
+  width:100%;border:0;border-radius:var(--r-3);
+  background:var(--grad-brand);color:#fff;
+  font-family:var(--font-display);font-weight:700;font-size:var(--t-md);
+  min-height:64px;padding:var(--s-4);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:var(--s-3);
+  letter-spacing:-.02em;box-shadow:var(--sh-brand);
+  transition:filter .15s,transform .08s,box-shadow .15s;
+}
+.addbtn:hover{filter:brightness(1.06)}
+.addbtn:active{transform:translateY(1px)}
+.addbtn:disabled{
+  background:var(--cream-3);color:var(--muted);cursor:not-allowed;
+  filter:none;box-shadow:none;
+}
+.addbtn svg{flex:none}
+
+/* --------------------------------------------------------- ORDER BUTTON ---
+   All that survives of the bill strip. The strip repeated the drink and the
+   total beneath a panel that had just shown both; the machine pours one cup,
+   so there is one drink and the total is its price. flex:1 is kept for the
+   QR modal's own row; the panel sets its width itself. */
+.qrbtn{
+  flex:1;border:0;border-radius:var(--r-3);background:var(--grad-brand);
+  color:#fff;font-family:var(--font-display);font-weight:700;font-size:var(--t-base);
+  min-height:var(--tap);padding:var(--s-4);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:var(--s-3);
+  letter-spacing:-.02em;box-shadow:var(--sh-brand);
+  transition:filter .15s,transform .08s;
+}
+.qrbtn:hover{filter:brightness(1.06)}
+.qrbtn:active{transform:translateY(1px)}
+
+/* ------------------------------------------------------------ BILL MODE ---
+   What the drawer shows when it is opened on the order rather than on a
+   drink. A definition list, because that is what these rows are: a label and
+   the value chosen for it. */
+/* The panel becomes a column so the footer below can be pushed to the bottom
+   of it; it still scrolls when the order is taller than the drawer. */
+.detail.bill-view{display:flex;flex-direction:column}
+/* Adjacent margins collapse in normal flow but not between flex items, so
+   the hero's bottom and the section's top would have stacked to double here
+   while reading as single in item mode. One of the two is dropped. */
+.bill-view .hero{margin-bottom:0}
+.bill-view .section{margin:var(--s-8) 0 0}
+/* The price is stated twice on this screen -- here and in the total -- and
+   only one of them can be the one you read. The total wins, so the hero
+   price steps down to a supporting size. */
+.bill-view .hero .hp{font-size:var(--t-base);margin-top:var(--s-1);color:rgba(255,255,255,.86)}
+
+.speclist{margin:0;display:grid;grid-template-columns:auto 1fr;gap:var(--s-3) var(--s-6)}
+.speclist dt{
+  font-size:var(--t-sm);font-weight:400;color:var(--muted);
+  /* The values are the answer; the labels only have to be findable. */
+  white-space:nowrap;line-height:1.5;
+}
+.speclist dd{
+  margin:0;font-size:var(--t-base);font-weight:700;color:var(--ink);line-height:1.5;
+  /* Left, not right. A note runs to several words, and right-aligned prose
+     hands the eye a new starting point on every line; ranged against the
+     labels it also reads as one list rather than two. */
+  text-align:left;overflow-wrap:anywhere;
+}
+
+/* The customer's own words, so they are set apart as a quotation rather than
+   left to read as one more field the screen filled in. Blue, not brand: this
+   is information, and the brand colour on this page means "chosen". */
+.notequote{
+  margin:0;padding:var(--s-4);border-left:4px solid var(--info);
+  background:var(--info-tint);border-radius:0 var(--r-2) var(--r-2) 0;
+  font-size:var(--t-base);line-height:1.55;color:var(--ink);
+  white-space:pre-wrap;overflow-wrap:anywhere;
+}
+
+/* ----------------------------------------------------------- BILL FOOTER --- */
+.billfoot{
+  /* Everything above it takes its natural height; this takes the rest. */
+  margin-top:auto;padding-top:var(--s-8);
+}
+.ordertotal{
+  display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3);
+  padding-top:var(--s-5);border-top:1px dashed var(--line-2);
+}
+/* The word is a label; the number is the point. Sizing them apart is what
+   makes the row scan as one rather than as two competing headings. */
+.ordertotal span:first-child{
+  font-size:var(--t-sm);color:var(--muted);letter-spacing:.06em;
+  text-transform:uppercase;font-weight:700;
+}
+.ordertotal span:last-child{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-2xl);color:var(--brand-deep);letter-spacing:-.035em;
+}
+/* A footnote to the number above it, so it sits well below body size. */
+.billfoot .note{
+  margin:var(--s-2) 0 0;font-size:var(--t-xs);line-height:1.5;
+  background:none;padding:0;color:var(--muted);
+}
+.billfoot .qrbtn{
+  width:100%;margin-top:var(--s-5);font-size:var(--t-md);
+  min-height:64px;
+}
+/* Removing the drink empties the order, so it is deliberately the quietest
+   thing in the panel -- a text link under the button, not a second button
+   competing with it. It still carries a full-height tap area; only its paint
+   is quiet. */
+.linkbtn{
+  display:block;margin:var(--s-2) auto 0;padding:var(--s-3) var(--s-4);
+  min-height:var(--tap);
+  border:0;background:transparent;font-family:inherit;
+  font-size:var(--t-sm);font-weight:700;color:var(--muted);cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:transparent;
+  transition:color .15s,text-decoration-color .15s;
+}
+.linkbtn:hover{color:var(--danger);text-decoration-color:currentColor}
+
+/* ---------------------------------------------------------------- MODALS ---
+   Both directions are transitions, not keyframes, and the box stays in the
+   layout the whole time. It used to toggle display:none, which can only
+   animate one way: an element cannot fade out from display:none, because it
+   is gone before the first frame. Opening popped and closing vanished.
+
+   visibility rather than display so the transition has something to run on,
+   and its own timing is what keeps the box clickable to the last frame:
+   going out it is delayed until the fade finishes (0s linear .24s), coming
+   in it switches immediately (0s linear 0s). pointer-events guards against
+   an invisible overlay swallowing taps.
+
+   The duration is mirrored in drinks-pos.js as MODAL_CLOSE_MS = 320, which
+   waits for this to finish before reloading the page. Nothing here may
+   outlast that budget. Change one, change both. */
+.overlay{
+  position:fixed;inset:0;background:rgba(36,26,21,.58);
+  display:flex;align-items:center;justify-content:center;
+  z-index:50;padding:var(--s-5);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .24s ease, visibility 0s linear .24s;
+}
+.overlay.show{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity .24s ease, visibility 0s linear 0s;
+}
+.modal{
+  position:relative;
+  background:var(--surface);border-radius:var(--r-5);width:400px;max-width:100%;
+  padding:var(--s-8) var(--s-6) var(--s-6);text-align:center;
+  box-shadow:var(--sh-3);
+  /* The resting state is the CLOSED one, so the same declaration serves both
+     the entrance and the exit and they cannot drift apart. */
+  transform:scale(.94) translateY(10px);opacity:0;
+  transition:transform .3s var(--ease-out), opacity .22s ease;
+}
+.overlay.show .modal{transform:none;opacity:1}
+
+.modal h3{
+  margin:0 0 var(--s-1);font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-lg);letter-spacing:-.03em;
+}
+.modal .msub{
+  color:var(--muted);font-size:var(--t-xs);margin-bottom:var(--s-5);
+  letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+}
+/* The dismiss control: a corner X, deliberately quiet but still a full
+   target. It anchors to the modal, which is position:relative above. */
+.modal .modal-x{
+  position:absolute;top:var(--s-3);right:var(--s-3);
+  width:var(--tap);height:var(--tap);border:0;border-radius:50%;
+  background:transparent;color:var(--muted);font-family:inherit;
+  font-size:var(--t-md);line-height:1;cursor:pointer;
+  display:grid;place-items:center;transition:background .15s,color .15s;
+}
+.modal .modal-x:hover{background:var(--cream-2);color:var(--ink)}
+
+/* ------------------------------------------------- THE DRINK, IN THE MODAL ---
+   Where the QR preview used to be. The code that buys a drink is allocated
+   by the Print button below, so the symbol drawn here belonged to nothing
+   and could not be scanned. What the customer needs to check before
+   committing is the drink -- so that is what the box holds. */
+.qrhero{
+  margin:0 auto var(--s-5);padding:var(--s-6) var(--s-4) var(--s-5);
+  border-radius:var(--r-4);background:var(--cream-2);
+}
+.qrpic{
+  width:150px;height:150px;margin:0 auto var(--s-4);
+  border-radius:var(--r-4);background:var(--surface);overflow:hidden;
+  display:grid;place-items:center;font-size:66px;
+  box-shadow:var(--sh-1);
+}
+.qrpic img{width:100%;height:100%;object-fit:cover;display:block}
+.qrname{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-md);letter-spacing:-.025em;color:var(--ink);
+  line-height:1.2;
+}
+/* The configuration, short enough to take in at a glance. The panel behind
+   the modal carries the full list; this only has to be recognisable as the
+   right drink before the customer commits to it. */
+.qrspec{
+  display:flex;flex-wrap:wrap;gap:var(--s-2);justify-content:center;margin-top:var(--s-3);
+}
+.qrspec:empty{display:none}
+.qrchip{
+  font-size:var(--t-2xs);font-weight:700;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:5px var(--s-3);
+}
+.modal .mtotal{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-2xl);margin-bottom:var(--s-5);
+  color:var(--brand-deep);letter-spacing:-.035em;line-height:1;
+}
+
+/* The action. Full width, because printing the label is why this opened. */
+.modal .printbtn{
+  width:100%;border:0;border-radius:var(--r-3);
+  background:var(--confirm);color:#fff;font-family:var(--font-display);
+  font-weight:700;
+  min-height:60px;padding:var(--s-3);cursor:pointer;font-size:var(--t-base);
+  display:flex;align-items:center;justify-content:center;gap:var(--s-3);
+  letter-spacing:-.02em;
+  box-shadow:0 4px 12px rgba(185,28,28,.22), 0 14px 30px rgba(185,28,28,.18);
+  transition:filter .15s,transform .1s;
+}
+.modal .printbtn:hover:not(:disabled){filter:brightness(1.08)}
+.modal .printbtn:active:not(:disabled){transform:translateY(1px)}
+.modal .printbtn:disabled{opacity:.6;cursor:progress}
+
+/* The way past a broken scanner or an empty printer: start this order on the
+   machine directly. Deliberately quieter than Print -- printing the label is
+   the normal path, and this one skips the paper the customer would otherwise
+   be holding. */
+.modal .startbtn{
+  width:100%;margin-top:var(--s-3);border:1.5px solid var(--brand);
+  border-radius:var(--r-3);background:var(--brand-wash);
+  color:var(--brand-deep);font-family:var(--font-display);font-weight:700;
+  min-height:var(--tap);padding:var(--s-3);cursor:pointer;font-size:var(--t-sm);
+  display:flex;align-items:center;justify-content:center;gap:var(--s-3);
+  letter-spacing:-.02em;
+  transition:background .15s,transform .1s;
+}
+.modal .startbtn:hover:not(:disabled){background:var(--cream-3)}
+.modal .startbtn:active:not(:disabled){transform:translateY(1px)}
+.modal .startbtn:disabled{opacity:.6;cursor:progress}
+
+/* Which of the two this shop offers is set in the admin console and read
+   by applyOrderMode() in drinks-pos.js, which sets el.hidden.
+
+   That needs saying in CSS because both rules above declare display:flex,
+   and an author rule beats the browser's own [hidden]{display:none}
+   whatever the specificity -- so without these two lines `hidden` sets the
+   attribute and the button stays on screen, which is exactly the bug this
+   fixes. The attribute selector also outranks the plain class rules it is
+   overriding, so order in the file is not what is holding it up. */
+.modal .printbtn[hidden],
+.modal .startbtn[hidden]{display:none}
+
+/* ONCE A LABEL HAS PRINTED, THE TWO BUTTONS SWAP JOBS.
+   The modal no longer closes itself, so "Done" is what nearly every order
+   needs next and "Print another copy" is the exception kept for a printer
+   that jammed. Emphasis follows the job rather than staying on whichever button
+   happens to be first -- otherwise the loudest thing on a finished order is
+   an invitation to print more paper. Positions do not move: the print
+   button stays where it was and keeps printing, so nothing has to be
+   re-learnt mid-order. */
+.modal[data-printed="1"] .printbtn{
+  background:var(--brand-wash);color:var(--brand-deep);
+  border:1.5px solid var(--brand);
+  min-height:var(--tap);font-size:var(--t-sm);box-shadow:none;
+}
+.modal[data-printed="1"] .printbtn:hover:not(:disabled){background:var(--cream-3);filter:none}
+.modal[data-printed="1"] .startbtn{
+  border-color:transparent;background:var(--confirm);color:#fff;
+  min-height:60px;font-size:var(--t-base);
+  box-shadow:0 4px 12px rgba(185,28,28,.22), 0 14px 30px rgba(185,28,28,.18);
+}
+.modal[data-printed="1"] .startbtn:hover:not(:disabled){background:var(--confirm);filter:brightness(1.08)}
+
+/* What the printer said. Held open after a failure so the reason can be
+   read; a success clears itself. */
+.modal .printnote{
+  margin:var(--s-3) 0 0;font-size:var(--t-xs);line-height:1.45;
+  color:var(--ink-2);word-break:break-word;
+}
+.modal .printnote.ok{color:var(--ok)}
+.modal .printnote.bad{color:var(--danger)}
+.modal .printnote[hidden]{display:none}
+
+/* ----------------------------------------------------------- REFUSED SCAN ---
+   Deliberately louder than the QR modal. It appears without being asked for,
+   at a machine somebody has just walked up to, and it has to be read from
+   standing distance -- hence the size, the red, and the shake that catches an
+   eye already looking somewhere else.
+
+   z-index above the QR modal: the two can coincide (a code is refused while
+   the next customer has the QR modal open) and the refusal is the more
+   urgent of the two. */
+.alertoverlay{z-index:60;background:rgba(36,26,21,.74)}
+/* A wider entrance than the QR modal's, and it overshoots slightly -- this
+   box appears unasked-for, so it has to announce itself. The transition
+   itself comes from .modal; only the closed-state transform differs. */
+.alertmodal{width:460px;padding:var(--s-8) var(--s-6) var(--s-6);transform:scale(.85) translateY(14px)}
+.overlay.show .alertmodal{transition:transform .3s cubic-bezier(.2,1.35,.4,1), opacity .22s ease}
+.alertmodal .alerticon{
+  width:80px;height:80px;margin:0 auto var(--s-5);border-radius:50%;
+  background:var(--danger-tint);color:var(--danger);
+  font-size:36px;line-height:1;display:grid;place-items:center;
+}
+.alertmodal .alerticon svg{display:block}
+/* Scoped to .show so it plays every time the box opens. Declared on the icon
+   itself it would run once, on page load, behind a hidden overlay, and never
+   again -- the box is in the DOM from the start now. */
+.overlay.show .alertmodal .alerticon{animation:alertshake .5s ease .18s both}
+@keyframes alertshake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-7px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(2px)}
+}
+.alertmodal h3{font-size:var(--t-lg);color:var(--danger);margin-bottom:var(--s-3)}
+/* The sentence from the machine. Big enough to read while standing back, and
+   wrapped rather than truncated -- a serial number cut off mid-way is the
+   part staff need to look the order up. */
+.alertmodal .alertmsg{
+  margin:0 0 var(--s-3);font-size:var(--t-base);line-height:1.5;color:var(--ink);
+  word-break:break-word;
+  /* The machine puts its technical reason on a line of its own after a blank
+     line. textContent keeps the newlines; without this they would collapse
+     and the reason would run straight into the sentence. */
+  white-space:pre-line;
+}
+.alertmodal .alertsub{margin:0 0 var(--s-5);font-size:var(--t-sm);color:var(--ink-2)}
+.alertmodal .alertbtn{
+  width:100%;border:0;border-radius:var(--r-3);
+  min-height:60px;padding:var(--s-3);font-family:var(--font-display);
+  background:var(--confirm);color:#fff;font-size:var(--t-base);font-weight:700;
+  letter-spacing:-.02em;cursor:pointer;transition:filter .15s,transform .1s;
+}
+.alertmodal .alertbtn:hover{filter:brightness(1.08)}
+.alertmodal .alertbtn:active{transform:translateY(1px)}
+/* The auto-dismiss countdown, so the box closing on its own is expected
+   rather than something the customer thinks they did. */
+.alertmodal .alertcount{opacity:.75;font-weight:400}
+
+/* ---------------------------------------- PANEL BUTTON 14: RESTARTING ---
+   The one notice on this screen with nothing to decide. Button 14 restarts
+   flexmix-backend.service; this page is going down with it and will be
+   reloaded by drinks-pos.js the moment the server answers again.
+
+   So it has no button. "Got it" offered a choice that did not exist -- the
+   only thing dismissing it achieved was leaving the customer on a page
+   whose server was already gone, with no way back until it reloaded
+   anyway. The backdrop is closed off in the same breath (see
+   noticeIsRestart in drinks-pos.js); the machine closes this box itself. */
+.alertmodal.restarting{width:540px;padding:var(--s-10) var(--s-8) var(--s-8)}
+/* The countdown lives inside this button. Hiding the pair together is the
+   point: there is no deadline for the customer to act on, only a machine
+   to wait for, and .alertsub already carries what it is doing. */
+.alertmodal.restarting .alertbtn{display:none}
+.alertmodal.restarting .alerticon{width:92px;height:92px;font-size:42px}
+.alertmodal.restarting h3{font-size:var(--t-xl)}
+.alertmodal.restarting .alertsub{margin-bottom:0}
+
+/* A misread QR: amber, not red. Nothing is broken and nobody is being
+   refused -- the scanner just did not get a clean read, and the customer only
+   has to hold the label up again. Dressing that as an error teaches people to
+   ignore the red box that means something real. */
+.alertmodal.rescan .alerticon{background:var(--warn-tint);color:var(--warn)}
+.alertmodal.rescan h3{color:var(--warn)}
+.alertmodal.rescan .alertbtn{background:var(--warn)}
+
+/* ------------------------------------- CONFIRM BEFORE LEAVING AN ORDER ---
+   Same shape as the refusal box, but amber rather than red and with a choice
+   at the bottom: nothing has gone wrong here, and the customer is being asked
+   something rather than told. */
+.confirmmodal .alerticon.warn{background:var(--warn-tint);color:var(--warn)}
+.confirmmodal h3{color:var(--ink)}
+.confirmbtns{display:flex;flex-direction:column;gap:var(--s-2)}
+/* The destructive choice is listed first, because it is the one that keeps
+   the machine attended -- a drink is already being poured and its cup gate is
+   on the screen this button leads to. */
+.confirmmodal .alertbtn{background:var(--confirm)}
+.confirmmodal .alertbtn.ghost{
+  background:transparent;color:var(--ink-2);
+  border:1.5px solid var(--line-2);font-weight:700;
+}
+.confirmmodal .alertbtn.ghost:hover{background:var(--cream-2);color:var(--ink);filter:none}
+
+/* -------------------------------------------- SWAPPING THE BILLED DRINK ---
+   Not an error and not urgent -- the customer asked for this by tapping Add
+   -- so it drops the red, keeps its icon still, and leads with the two drinks
+   rather than a sentence about them. */
+.replacemodal{width:480px}
+.replacemodal .alerticon.warn{background:var(--brand-wash);color:var(--brand-deep)}
+/* Overrides the shake inherited from .alertmodal: that one is for a box that
+   appeared unasked-for, and this one was requested. */
+.overlay.show .replacemodal .alerticon{animation:none}
+.replacemodal h3{color:var(--ink);font-size:var(--t-lg)}
+.replacemodal .alertmsg{font-size:var(--t-sm);color:var(--ink-2);margin-bottom:var(--s-5)}
+.replacemodal .alertbtn{background:var(--confirm)}
+
+.swaprow{
+  display:flex;align-items:center;gap:var(--s-3);
+  margin:0 0 var(--s-5);padding:var(--s-5) var(--s-4);
+  background:var(--cream-2);border-radius:var(--r-4);
+}
+.swapcard{flex:1;min-width:0;text-align:center}
+.swapemoji{
+  width:66px;height:66px;margin:0 auto var(--s-3);border-radius:var(--r-2);
+  background:var(--surface);display:grid;place-items:center;font-size:32px;
+  box-shadow:var(--sh-1);overflow:hidden;
+}
+.swapemoji img{width:100%;height:100%;object-fit:cover}
+.swapname{
+  font-family:var(--font-display);font-weight:700;
+  font-size:var(--t-sm);color:var(--ink);line-height:1.25;letter-spacing:-.02em;
+  /* Two lines, then ellipsis. A long name pushing the buttons off the bottom
+     of the box would hide the only way out of it. */
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.swaplbl{
+  margin-top:var(--s-1);font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);
+}
+/* The one being discarded is greyed and struck through, so which is which is
+   legible before any of the words are read. */
+.swapcard.out .swapemoji{filter:grayscale(1);opacity:.55;box-shadow:none}
+.swapcard.out .swapname{color:var(--muted);text-decoration:line-through}
+.swapcard.in .swaplbl{color:var(--brand-deep)}
+.swaparrow{flex:none;color:var(--ink-3);display:grid;place-items:center}
+.swaparrow svg{display:block}
+
+/* ------------------------------------------------------------ NARROW ---
+   A panel screen rather than the full kiosk display. */
+@media (max-width:1100px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+}
+@media (max-width:900px){
+  :root{--pad-r:var(--s-6)}
+  .topbar{flex-wrap:wrap;gap:var(--s-4)}
+  .brand-sub{display:none}
+  .statusbar{justify-content:flex-start}
+  .busybar{flex-wrap:wrap}
+  .busybar .bb-go{width:100%}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--s-6) var(--s-5)}
+  .hero{height:200px}
+}
+
+/* --------------------------------------------------------- REDUCED MOTION ---
+   Last in the file on purpose. Every rule here is a single class, so it only
+   beats .alertmodal's own transform by coming after it -- moved up next to
+   .modal, the alert box would keep scaling and this would look like it half
+   worked.
+
+   The state change still happens; only the travel is removed. */
+@media (prefers-reduced-motion: reduce){
+  .left{scroll-behavior:auto}
+  .scrolldots,.scrolldots .dot,.app::after{transition:none}
+  .right,.app.side-open .right{transition:none}
+  .billfab,.billfab.show{transform:none;transition:opacity .12s ease,visibility 0s}
+  .overlay,.overlay.show{transition:opacity .01s linear}
+  .modal,.alertmodal,.overlay.show .alertmodal{
+    transition:opacity .01s linear;transform:none;
+  }
+  .overlay.show .modal{transform:none}
+  .overlay.show .alertmodal .alerticon{animation:none}
+  .item:hover,.item:active,.cat:hover,.cat:active,
+  .size:active,.topping:active{transform:none}
+  /* The strip still appears -- only its travel is removed. */
+  .featured.show{animation:none}
+}

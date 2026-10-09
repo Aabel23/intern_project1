@@ -1,9 +1,0 @@
-{
-  "type": "result",
-  "subtype": "success",
-  "is_error": true,
-  "result": "You've hit your monthly spend limit · raise it at claude.ai/settings/usage?from=cc_cli_limit_message · your session limit resets 2:10am (Asia/Ho_Chi_Minh)",
-  "session_id": "6099e953-617e-4a7d-9334-187d7229ac8e",
-  "num_turns": 1,
-  "modelUsage": {}
-}

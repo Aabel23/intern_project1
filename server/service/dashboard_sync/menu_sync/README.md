@@ -8,7 +8,7 @@ Server chuyển yêu cầu/kết quả; máy giữ dữ liệu menu. Ví dụ ID
 
 ### 1. App gửi yêu cầu lấy menu lên server
 
-POST `/app/nhan-menu`, body:
+POST `/app/machine/menu/get`, body:
 
 ```json
 {"token": "token_app", "machine_id": "may_01", "menu_version": 0}
@@ -38,7 +38,7 @@ Hàm tham gia:
 
 ### 3. Server chuẩn bị lệnh; máy hỏi server để nhận lệnh
 
-Server đặt lệnh vào hộp thư và chờ kết quả. Máy POST `/machine/hoi-lenh` với:
+Server đặt lệnh vào hộp thư và chờ kết quả. Máy POST `/machine/command/poll` với:
 
 ```json
 {"product_key": "key_may"}
@@ -76,7 +76,7 @@ Hàm tham gia:
 
 ### 5. Máy gửi kết quả lên server
 
-POST `/machine/tra-ket-qua`, ví dụ:
+POST `/machine/result/send`, ví dụ:
 
 ```json
 {"product_key": "key_may", "id": 123, "ket_qua": {"status": "ok", "menu_version": 456, "packet": "chuoi_menu_da_nen"}}
@@ -93,7 +93,7 @@ Hàm tham gia:
 
 ### 6. Server trả menu cho app; app hiển thị
 
-Server trả nguyên `ket_qua` làm response cho POST `/app/nhan-menu` ở bước 1.
+Server trả nguyên `ket_qua` làm response cho POST `/app/machine/menu/get` ở bước 1.
 Không có link gửi menu riêng và app không cần tạo request khác để nhận kết quả.
 Nếu `ok`, app giải nén packet và cập nhật danh sách; nếu `up_to_date`, giữ menu cũ.
 
@@ -108,7 +108,7 @@ Hàm tham gia:
 
 ### 1. App gửi các món cần sửa lên server
 
-POST `/app/cap-nhat-menu`, body ví dụ:
+POST `/app/machine/menu/update`, body ví dụ:
 
 ```json
 {"token": "token_app", "machine_id": "may_01", "menu_version": 456, "thay_doi": [{"drink_id": 1001, "available": false}, {"drink_id": 1002, "price": 35000}]}
@@ -138,7 +138,7 @@ Hàm tham gia:
 
 ### 3. Server giao lệnh cập nhật cho máy đang hỏi lệnh
 
-Máy vẫn POST `/machine/hoi-lenh` với product_key như luồng lấy menu.
+Máy vẫn POST `/machine/command/poll` với product_key như luồng lấy menu.
 Response server chứa:
 
 ```json
@@ -166,7 +166,7 @@ Hàm tham gia:
 
 ### 5. Máy gửi kết quả cập nhật về server
 
-POST `/machine/tra-ket-qua`, body:
+POST `/machine/result/send`, body:
 
 ```json
 {"product_key": "key_may", "id": 124, "ket_qua": {"status": "ok", "menu_version": 789, "packet": "chuoi_menu_da_nen"}}
@@ -181,7 +181,7 @@ Hàm tham gia:
 
 ### 6. Server trả kết quả cho app; app cập nhật giao diện
 
-Server trả kết quả trên request `/app/cap-nhat-menu` ở bước 1. App đọc menu mới.
+Server trả kết quả trên request `/app/machine/menu/update` ở bước 1. App đọc menu mới.
 Nếu `conflict`, app cũng tải menu từ packet nhưng báo người dùng thử sửa lại.
 
 Hàm tham gia:

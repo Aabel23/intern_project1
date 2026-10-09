@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Nạp kho</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="refill">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Nạp kho</h1>
+        <div class="sub">Sau khi đổ đầy bình thật ngoài máy — nạp từng bình, hoặc nạp cả loạt về mức tối đa</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+      <a class="btn ghost" href="ingredients.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg> Khai báo nguyên liệu</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8v8.2a2 2 0 0 1-1 1.7l-7 4a2 2 0 0 1-2 0l-7-4a2 2 0 0 1-1-1.7V7.8a2 2 0 0 1 1-1.7l7-4a2 2 0 0 1 2 0L17 4.6"/><path d="m3.3 7.1 8.7 5 8.7-5"/><path d="M12 21.6V12"/></svg> Số bình</div><div class="v" id="stTotal">0</div></div>
+      <div class="stat ok"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4.5 12.5 5 5L19.5 7"/></svg> Đang đầy</div><div class="v" id="stFull">0</div></div>
+      <div class="stat low"><div class="k"><span class="lvl lvl-low" aria-hidden="true"></span> Chưa đầy</div><div class="v" id="stPartial">0</div></div>
+      <div class="stat out"><div class="k"><span class="lvl lvl-out" aria-hidden="true"></span> Dưới ngưỡng</div><div class="v" id="stOut">0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="searchbox">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+        <input id="search" placeholder="Tìm nguyên liệu theo tên hoặc vị trí…" />
+      </div>
+      <button class="btn primary" id="fillAllBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8v8.2a2 2 0 0 1-1 1.7l-7 4a2 2 0 0 1-2 0l-7-4a2 2 0 0 1-1-1.7V7.8a2 2 0 0 1 1-1.7l7-4a2 2 0 0 1 2 0L17 4.6"/><path d="m3.3 7.1 8.7 5 8.7-5"/><path d="M12 21.6V12"/></svg> Nạp đầy tất cả</button>
+      <button class="btn ghost" id="fillSelBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4.5 12.5 5 5L19.5 7"/></svg> Nạp đầy mục đã chọn</button>
+      <button class="btn ghost" id="resetBtn" title="Tải lại dữ liệu từ database"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg> Tải lại DB</button>
+    </div>
+
+    <div class="filterpills" id="pills"></div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="chd">
+        <div>
+          <h2>Bảng nạp kho</h2>
+          <div class="csub" id="listSub">—</div>
+        </div>
+        <div class="spacer"></div>
+        <span class="csub">Gõ thẳng vào ô <b>Sau khi nạp</b> nếu không đổ đầy được</span>
+      </div>
+      <div class="cbody" style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:44px"><input type="checkbox" id="checkAll" title="Chọn tất cả" /></th>
+              <th style="width:66px">ID</th>
+              <th style="width:22%">Nguyên liệu</th>
+              <th style="width:96px">Vị trí</th>
+              <th style="width:170px">% còn lại</th>
+              <th style="width:110px">Đang còn</th>
+              <th style="width:110px">Tối đa</th>
+              <th style="width:150px">Sau khi nạp</th>
+              <th style="text-align:right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="refillBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="csub" style="margin-top:16px;color:var(--muted);font-size:12px;line-height:1.7">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg> <b>Tối đa</b> là mức bình đầy, khai báo cho từng nguyên liệu bên
+      <a href="ingredients.html">Quản lý Nguyên liệu</a> (nút <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>). Bình chưa khai thì tạm tính theo
+      mặc định và được đánh dấu <b>?</b> — nạp đầy một bình như vậy là nạp theo số đoán.
+      <b>Trạng thái còn hàng</b> do database tự quyết sau khi ghi: còn hàng khi lượng tồn &ge; ngưỡng cảnh báo.
+    </p>
+  </main>
+</div>
+
+<!-- Xác nhận nạp hàng loạt -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal-card" id="confirmModal" style="width:640px"></div>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="ingredient-store.js"></script>
+<script src="refill.js"></script>

@@ -8,20 +8,20 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/may-cua-toi | App | token | valid, machines |
-| GET | /machine/trang-thai | App | machine_id trong query | trạng thái heartbeat |
-| POST | /app/doi-ten-may | Chủ máy | token, machine_id, name | valid, name, message |
-| POST | /app/go-may | App | token, machine_id | valid, deleted, message |
-| POST | /app/nhan-menu | App | token, machine_id, menu_version | status, menu_version, packet khi có dữ liệu mới |
-| POST | /app/cap-nhat-menu | App | token, machine_id, menu_version, thay_doi | status: ok/conflict, menu_version, packet |
-| POST | /app/nhan-kho | App | token, machine_id, version | status, version, ingredients khi có dữ liệu mới |
-| POST | /app/nap-kho | App | token, machine_id, target, value | kết quả nạp, warning tùy trường hợp |
+| POST | /app/user/machine/list | App | token | valid, machines |
+| GET | /app/machine/status/get | App | machine_id trong query | trạng thái heartbeat |
+| POST | /app/machine/name/update | Chủ máy | token, machine_id, name | valid, name, message |
+| POST | /app/user/machine/remove | App | token, machine_id | valid, deleted, message |
+| POST | /app/machine/menu/get | App | token, machine_id, menu_version | status, menu_version, packet khi có dữ liệu mới |
+| POST | /app/machine/menu/update | App | token, machine_id, menu_version, thay_doi | status: ok/conflict, menu_version, packet |
+| POST | /app/machine/ingredient/get | App | token, machine_id, version | status, version, ingredients khi có dữ liệu mới |
+| POST | /app/machine/ingredient/refill | App | token, machine_id, target, value | kết quả nạp, warning tùy trường hợp |
 
 ## A. Mở dashboard và chọn máy
 
 ### 1. App lấy danh sách máy
 
-POST `/app/may-cua-toi` với `{token}`. Server trả `{valid, machines}`; app chọn máy và hiển thị tên/quyền.
+POST `/app/user/machine/list` với `{token}`. Server trả `{valid, machines}`; app chọn máy và hiển thị tên/quyền.
 
 Hàm tham gia:
 
@@ -30,7 +30,7 @@ Hàm tham gia:
 
 ### 2. App xem trạng thái kết nối
 
-GET `/machine/trang-thai?machine_id=...`. Trạng thái được tính từ heartbeat, không bảo đảm request nghiệp vụ tiếp theo sẽ thành công.
+GET `/app/machine/status/get?machine_id=...`. Trạng thái được tính từ heartbeat, không bảo đảm request nghiệp vụ tiếp theo sẽ thành công.
 
 Hàm tham gia:
 
@@ -42,7 +42,7 @@ Hàm tham gia:
 
 ### 1. App gửi yêu cầu đọc dữ liệu
 
-Menu: POST `/app/nhan-menu` với `{token, machine_id, menu_version}`. Kho: POST `/app/nhan-kho` với `{token, machine_id, version}`. Hai luồng độc lập, cùng chọn một máy.
+Menu: POST `/app/machine/menu/get` với `{token, machine_id, menu_version}`. Kho: POST `/app/machine/ingredient/get` với `{token, machine_id, version}`. Hai luồng độc lập, cùng chọn một máy.
 
 Hàm tham gia:
 
@@ -51,7 +51,7 @@ Hàm tham gia:
 
 ### 2. Máy nhận lệnh và trả dữ liệu
 
-Máy gọi `/machine/hoi-lenh` rồi gửi kết quả lên `/machine/tra-ket-qua`. Bản không đổi trả up_to_date; bản mới trả menu nén hoặc kho JSON. Server phản hồi trên request app ban đầu.
+Máy gọi `/machine/command/poll` rồi gửi kết quả lên `/machine/result/send`. Bản không đổi trả up_to_date; bản mới trả menu nén hoặc kho JSON. Server phản hồi trên request app ban đầu.
 
 Hàm tham gia:
 
@@ -72,7 +72,7 @@ Hàm tham gia:
 
 ### 1. App gửi tác vụ cần làm
 
-Đổi tên/gỡ máy gửi API quản lý máy. Cập nhật món gửi `/app/cap-nhat-menu`; nạp kho gửi `/app/nap-kho`. Các gói được liệt kê ở bảng đầu.
+Đổi tên/gỡ máy gửi API quản lý máy. Cập nhật món gửi `/app/machine/menu/update`; nạp kho gửi `/app/machine/ingredient/refill`. Các gói được liệt kê ở bảng đầu.
 
 Hàm tham gia:
 
@@ -101,9 +101,9 @@ Mỗi tab dashboard của app là một folder, **chia theo tab, không chia the
 
 | Folder | Tab | Route | Dữ liệu ở đâu |
 | --- | --- | --- | --- |
-| `menu_sync/` | Menu | `/app/nhan-menu`, `/app/cap-nhat-menu` | của máy, hỏi xuống qua hộp thư |
-| `ingredient_sync/` | Kho | `/app/nhan-kho`, `/app/nap-kho` | của máy, hỏi xuống qua hộp thư |
-| `machinelist_sync/` | Máy | `/app/may-cua-toi`, `/app/doi-ten-may`, `/app/go-may`, GET `/machine/trang-thai` | của server (bảng `machines`, giờ heartbeat) |
+| `menu_sync/` | Menu | `/app/machine/menu/get`, `/app/machine/menu/update` | của máy, hỏi xuống qua hộp thư |
+| `ingredient_sync/` | Kho | `/app/machine/ingredient/get`, `/app/machine/ingredient/refill` | của máy, hỏi xuống qua hộp thư |
+| `machinelist_sync/` | Máy | `/app/user/machine/list`, `/app/machine/name/update`, `/app/user/machine/remove`, GET `/app/machine/status/get` | của server (bảng `machines`, giờ heartbeat) |
 
 Vai trò được phép nằm trong flow của mỗi module (`QUYEN_MENU`, `QUYEN_KHO`,
 `QUYEN_NAP_KHO`). `server/lib/machine/machine_access.py` cung cấp `check_access(data, roles)`:
@@ -116,12 +116,12 @@ Server không lưu dữ liệu máy. Module kiểm quyền và dạng gói, rồ
 tới khi máy long-poll lấy, máy trả kết quả, server chuyển nguyên cho app.
 
 ```
-App ─ POST /app/nhan-kho {token, machine_id, version}
+App ─ POST /app/machine/ingredient/get {token, machine_id, version}
  └→ ingredient_sync: check_access → is_version → send("nhan_kho", {version})
-      Máy ─ /machine/hoi-lenh → {id, instruction: "nhan_kho", data: {version}}
+      Máy ─ /machine/command/poll → {id, instruction: "nhan_kho", data: {version}}
       Máy: version trùng → {"status": "up_to_date", "version"}
            khác         → {"status": "ok", "version", "ingredients": [...]}
-      Máy ─ /machine/tra-ket-qua {id, ket_qua}
+      Máy ─ /machine/result/send {id, ket_qua}
  ←─ 200 + kết quả máy
 ```
 
@@ -133,10 +133,10 @@ vậy với `menu_version`, kết quả thêm gói `packet` = base64(zlib(JSON))
 
 | Route | Gửi | Kết quả |
 | --- | --- | --- |
-| `/app/nhan-menu` | `token`, `machine_id`, `menu_version` | `{status: up_to_date \| ok, menu_version, packet?}` |
-| `/app/cap-nhat-menu` | `token`, `machine_id`, `menu_version`, `thay_doi: [{drink_id, available?, price?}]` | `{status: ok \| conflict, menu_version, packet}`; `conflict` = app đang giữ bản cũ, máy không ghi |
-| `/app/nhan-kho` | `token`, `machine_id`, `version` | `{status: up_to_date \| ok, version, ingredients?}` |
-| `/app/nap-kho` | `token`, `machine_id`, `target` (id hoặc `"all"`), `value` (`"full"` hoặc số gram, số gram chỉ khi `target` là id) | kết quả `refill()` của máy, kèm `warning` nếu dựng lại menu màn bán hàng lỗi |
+| `/app/machine/menu/get` | `token`, `machine_id`, `menu_version` | `{status: up_to_date \| ok, menu_version, packet?}` |
+| `/app/machine/menu/update` | `token`, `machine_id`, `menu_version`, `thay_doi: [{drink_id, available?, price?}]` | `{status: ok \| conflict, menu_version, packet}`; `conflict` = app đang giữ bản cũ, máy không ghi |
+| `/app/machine/ingredient/get` | `token`, `machine_id`, `version` | `{status: up_to_date \| ok, version, ingredients?}` |
+| `/app/machine/ingredient/refill` | `token`, `machine_id`, `target` (id hoặc `"all"`), `value` (`"full"` hoặc số gram, số gram chỉ khi `target` là id) | kết quả `refill()` của máy, kèm `warning` nếu dựng lại menu màn bán hàng lỗi |
 
 `ingredients`: `ingredient_id`, `name`, `amount`, `max_gram`, `max_set`, `pump_no`,
 `in_stock`. `max_set = false` nghĩa là máy chưa khai báo mức tối đa, `max_gram` đang là

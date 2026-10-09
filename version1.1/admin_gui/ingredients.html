@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Quản lý Nguyên liệu</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="ingredients">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Quản lý Nguyên liệu</h1>
+        <div class="sub">Còn bao nhiêu trong từng bình, bình nào nằm trên bơm nào, và nạp thêm khi cần</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+      <a class="btn ghost" href="../store_gui/drinks-pos.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Mở màn POS</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg> Tổng số nguyên liệu</div><div class="v" id="stTotal">0</div></div>
+      <div class="stat ok"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4.5 12.5 5 5L19.5 7"/></svg> PUMP hoạt động</div><div class="v" id="stPump">0</div></div>
+      <div class="stat low"><div class="k"><span class="lvl lvl-low" aria-hidden="true"></span> Mức thấp (&lt;10%)</div><div class="v" id="stLow">0</div></div>
+      <div class="stat out"><div class="k"><span class="lvl lvl-out" aria-hidden="true"></span> Cần nạp ngay</div><div class="v" id="stRefill">0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="searchbox">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+        <input id="search" placeholder="Tìm nguyên liệu theo tên hoặc PUMP…" />
+      </div>
+      <button class="btn primary" id="addBtn">&#43; Thêm nguyên liệu</button>
+      <button class="btn ghost" id="resetBtn" title="Tải lại dữ liệu từ database"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg> Tải lại DB</button>
+    </div>
+
+    <div class="filterpills" id="pills"></div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="chd">
+        <div>
+          <h2>Danh sách Nguyên liệu</h2>
+          <div class="csub" id="listSub">—</div>
+        </div>
+        <div class="spacer"></div>
+        <span class="csub">Bấm <b>Nạp thêm</b> sau khi đổ đầy bình thật</span>
+      </div>
+      <div class="cbody" style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:72px">ID</th>
+              <th style="width:74px">Pump #</th>
+              <th style="width:26%">Nguyên liệu</th>
+              <th>Loại</th>
+              <th style="width:190px">% còn lại</th>
+              <th>Mức thực tế</th>
+              <th>Trạng thái</th>
+              <th style="text-align:right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="ingBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="csub" style="margin-top:16px;color:var(--muted);font-size:12px;line-height:1.7">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg> <b>% còn lại</b> = lượng tồn ÷ mức tối đa. Mức tối đa là số bạn khai báo cho từng bình
+      (mặc định 10.000g khi chưa khai) — sửa trong nút <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>. Nạp lại hàng loạt thì sang tab
+      <a href="refill.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8v8.2a2 2 0 0 1-1 1.7l-7 4a2 2 0 0 1-2 0l-7-4a2 2 0 0 1-1-1.7V7.8a2 2 0 0 1 1-1.7l7-4a2 2 0 0 1 2 0L17 4.6"/><path d="m3.3 7.1 8.7 5 8.7-5"/><path d="M12 21.6V12"/></svg> Nạp kho</a>.
+      <b>Trạng thái</b> thì do database tự quyết: còn hàng khi lượng tồn &ge; ngưỡng cảnh báo, và ngưỡng đó
+      được tính lại từ công thức (110% lượng dùng nhiều nhất) nên không sửa tay được.
+    </p>
+  </main>
+</div>
+
+<!-- Thêm / sửa nguyên liệu -->
+<div class="overlay" id="ingOverlay">
+  <div class="modal-card" id="ingModal"></div>
+</div>
+
+<!-- Nạp thêm -->
+<div class="overlay" id="refillOverlay">
+  <div class="modal-card" id="refillModal" style="width:520px"></div>
+</div>
+
+<!-- admin-guard.js first: it defines showToast, which the stores use to
+     report a database they cannot reach. menu-store.js is here for the
+     mode chip in the topbar, nothing on this page reads the menu. -->
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="ingredient-store.js"></script>
+<script src="ingredients.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Đăng nhập</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="login">
+<div class="login-wrap">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <div class="login-brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg></div>
+      <h1>Admin Console</h1>
+      <p>Hệ thống TRẠM RÓT · Đăng nhập Quản lý</p>
+    </div>
+
+    <div class="login-err" id="loginErr"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 3.9 1.8 18.1A2 2 0 0 0 3.5 21h17a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span><span id="loginErrMsg"></span></div>
+
+    <div class="field">
+      <label for="u">Tên đăng nhập</label>
+      <div class="inp">
+        <span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg></span>
+        <input type="text" id="u" placeholder="manager" autocomplete="username" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="p">Mật khẩu</label>
+      <div class="inp">
+        <span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
+        <input type="password" id="p" placeholder="••••••••" autocomplete="current-password" />
+        <span class="eye" id="eye" title="Hiện / ẩn mật khẩu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      </div>
+    </div>
+
+    <button class="login-btn" id="loginBtn" type="submit">Đăng nhập <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+
+    <div class="login-hint">
+      <small>Mật khẩu được kiểm tra trên máy chủ.<br>
+      Đặt hoặc đổi bằng: <code>python3 -m admin_gui.auth --set-password</code></small>
+    </div>
+  </form>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="login.js"></script>
+</body>
+</html>

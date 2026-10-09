@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Người dùng</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="users">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Người dùng</h1>
+        <div class="sub">Ai đăng nhập được vào console này, và làm được gì</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+      <button class="btn ghost" id="myPwBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Đổi mật khẩu của tôi</button>
+      <button class="btn primary" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg> Thêm người dùng</button>
+    </div>
+
+    <!-- Said once at the top, because the table below cannot say it: the
+         three roles ARE this feature, and somebody creating an account
+         needs to know what they are handing over before they pick one,
+         not after. -->
+    <div class="card">
+      <div class="chead">
+        <h2>Phân quyền</h2>
+        <span class="cnote">Tick để đổi. Máy chủ kiểm tra lại mọi request — giấu mục trên
+          sidebar chỉ là phép lịch sự, không phải hàng rào.</span>
+      </div>
+      <div class="cbody">
+        <div class="tablewrap">
+          <table class="tbl" id="roleTable">
+            <thead>
+              <tr>
+                <th>Nhóm quyền</th>
+                <th>Chủ</th><th>Quản lý</th><th>Nhân viên</th>
+              </tr>
+            </thead>
+            <tbody id="roleBody"></tbody>
+          </table>
+        </div>
+        <div class="permfoot">
+          <p class="mnote" id="permNote">
+            Ô mờ không bỏ tick được: vai trò <b>Chủ</b> luôn phải giữ
+            <b>Người dùng &amp; phân quyền</b> — bỏ đi thì không còn ai sửa
+            được phân quyền nữa, kể cả trang này.
+            <br>Cứu khi lỡ tay, chạy trên máy:
+            <code>python3 -m admin_gui.auth --reset-permissions</code>
+          </p>
+          <button class="btn ghost compact" id="permReset">Về mặc định</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chead">
+        <h2>Danh sách tài khoản</h2>
+        <span class="cnote" id="countNote">—</span>
+      </div>
+      <div class="cbody">
+        <div class="tablewrap">
+          <table class="tbl" id="userTable">
+            <thead>
+              <tr>
+                <th>Tài khoản</th><th>Tên hiển thị</th><th>Vai trò</th>
+                <th>Trạng thái</th><th>Đăng nhập cuối</th><th>Tạo lúc</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="userBody"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="emptyNote" hidden>Chưa có tài khoản nào.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="userOverlay">
+  <div class="modal-card" id="userModal" style="width:520px"></div>
+</div>
+
+<div class="overlay" id="confirmOverlay">
+  <div class="modal-card confirm-card" id="confirmModal"></div>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="users.js"></script>
+</body>
+</html>

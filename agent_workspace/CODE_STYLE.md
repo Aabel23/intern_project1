@@ -52,7 +52,8 @@ Ví dụ chuẩn để đối chiếu:
 
 ### Tên
 - Hàm, biến: snake_case. Hằng module: UPPER_SNAKE_CASE, đặt đầu file kèm comment nói vì sao có giới hạn đó.
-- Tên route theo `ĐỐI_TƯỢNG_MỤC_TIÊU_HÀNH_ĐỘNG` (`MACHINE_MENU_UPDATE`).
+- Tên route theo `ĐỐI_TƯỢNG_MỤC_TIÊU_HÀNH_ĐỘNG` (`MACHINE_MENU_UPDATE`); path tiếng Anh
+  `/<app|machine>/<đối_tượng>/<mục_tiêu>/<hành_động>` (`/app/machine/menu/update`), xem MODULE_PATTERN.md.
 - Hàm kiểm trả bool đặt `is_<thứ>` (`is_price`, `is_changes`).
 - Code mới dùng tên tiếng Anh. Tên tiếng Việt đã có trong code hoặc gói tin (`thay_doi`, `loi`, `cap_nhat_menu`, `QUYEN_MENU`) giữ nguyên; không đổi tên chỉ để thống nhất ngôn ngữ.
 

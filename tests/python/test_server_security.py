@@ -68,19 +68,19 @@ class SecurityScenarioTest(unittest.TestCase):
         return user_id, create_session(user_id)
 
     def machine(self, token, key="fm_tem_may_that"):
-        status, body = self.post("/app/dang-ky-may", {"machine_name": "FlexMix-A", "product_key": key,
+        status, body = self.post("/app/user/machine/register", {"machine_name": "FlexMix-A", "product_key": key,
                                                       "token": token})
         self.assertEqual(status, 200)
         return json.loads(body)["machine_id"]
 
     def login(self, username, password):
         request_id = secrets.token_hex(16)
-        status, body = self.post("/app/dang-nhap", {"request_id": request_id, "username": username,
+        status, body = self.post("/app/user/session/login", {"request_id": request_id, "username": username,
                                                     "password": password})
         data = json.loads(body)
         if status != 200:
             return status, data
-        status, body = self.post("/app/xac-minh-dang-nhap", {"request_id": request_id,
+        status, body = self.post("/app/user/session/verify", {"request_id": request_id,
                                                              "login_id": data["login_id"]})
         return status, json.loads(body)
 
@@ -90,10 +90,10 @@ class SecurityScenarioTest(unittest.TestCase):
         _, owner = self.user("chu")
         _, stranger = self.user("la")
         machine_id = self.machine(owner)
-        for path, extra in (("/app/nhan-kho", {"version": 0}), ("/app/nhan-menu", {}),
-                            ("/app/nap-kho", {"target": "all", "value": "full"}),
-                            ("/app/nhan-vien-may", {}), ("/app/tao-ma-chia-se", {}),
-                            ("/app/doi-ten-may", {"name": "x"}), ("/app/go-may", {})):
+        for path, extra in (("/app/machine/ingredient/get", {"version": 0}), ("/app/machine/menu/get", {}),
+                            ("/app/machine/ingredient/refill", {"target": "all", "value": "full"}),
+                            ("/app/machine/staff/list", {}), ("/app/machine/share/create", {}),
+                            ("/app/machine/name/update", {"name": "x"}), ("/app/user/machine/remove", {})):
             status, body = self.post(path, {"token": stranger, "machine_id": machine_id, **extra})
             self.assertIn(status, (400, 403), path)
         with get_connection() as conn:
@@ -107,12 +107,12 @@ class SecurityScenarioTest(unittest.TestCase):
             conn.execute("INSERT INTO machine_managers (machine_id, user_id, role) VALUES (?, ?, 'manager')",
                          (machine_id, staff_id))
         owner_id = self.user("x")[0] - 2
-        for path, extra in (("/app/tao-ma-chia-se", {}), ("/app/doi-ten-may", {"name": "hack"}),
-                            ("/app/nhan-vien-may", {}), ("/app/thu-hoi-quyen", {"user_id": owner_id})):
+        for path, extra in (("/app/machine/share/create", {}), ("/app/machine/name/update", {"name": "hack"}),
+                            ("/app/machine/staff/list", {}), ("/app/machine/staff/revoke", {"user_id": owner_id})):
             status, _ = self.post(path, {"token": staff, "machine_id": machine_id, **extra})
             self.assertEqual(status, 400, path)
         # Nhân viên "gỡ máy" chỉ bỏ quyền của mình, máy và chủ vẫn còn.
-        self.post("/app/go-may", {"token": staff, "machine_id": machine_id})
+        self.post("/app/user/machine/remove", {"token": staff, "machine_id": machine_id})
         with get_connection() as conn:
             self.assertEqual(conn.execute("SELECT role FROM machine_managers").fetchall()[0]["role"], "owner")
             self.assertEqual(conn.execute("SELECT COUNT(*) c FROM machines").fetchone()["c"], 1)
@@ -121,7 +121,7 @@ class SecurityScenarioTest(unittest.TestCase):
         _, owner = self.user("chu")
         _, thief = self.user("trom")
         self.machine(owner)
-        status, body = self.post("/app/dang-ky-may", {"machine_name": "FlexMix-A", "product_key": "fm_tem_may_that",
+        status, body = self.post("/app/user/machine/register", {"machine_name": "FlexMix-A", "product_key": "fm_tem_may_that",
                                                       "token": thief})
         self.assertEqual(status, 400)
 
@@ -130,12 +130,12 @@ class SecurityScenarioTest(unittest.TestCase):
         _, a = self.user("a")
         _, b = self.user("b")
         machine_id = self.machine(owner)
-        code = json.loads(self.post("/app/tao-ma-chia-se", {"token": owner, "machine_id": machine_id})[1])["code"]
+        code = json.loads(self.post("/app/machine/share/create", {"token": owner, "machine_id": machine_id})[1])["code"]
         with ThreadPoolExecutor(2) as pool:
-            results = list(pool.map(lambda t: self.post("/app/nhan-chia-se", {"token": t, "code": code})[0], (a, b)))
+            results = list(pool.map(lambda t: self.post("/app/machine/share/accept", {"token": t, "code": code})[0], (a, b)))
         self.assertEqual(sorted(results), [200, 400])
-        self.post("/app/dang-xuat", {"token": a})
-        self.assertEqual(self.post("/app/may-cua-toi", {"token": a})[0], 400)
+        self.post("/app/user/session/logout", {"token": a})
+        self.assertEqual(self.post("/app/user/machine/list", {"token": a})[0], 400)
 
     def test_wrong_password_and_unknown_user_look_the_same(self):
         self.user("co_that")
@@ -146,7 +146,7 @@ class SecurityScenarioTest(unittest.TestCase):
 
     def test_password_brute_force_is_rate_limited(self):
         self.user("nan_nhan")
-        statuses = [self.post("/app/dang-nhap", {"request_id": f"{i:032x}", "username": "nan_nhan",
+        statuses = [self.post("/app/user/session/login", {"request_id": f"{i:032x}", "username": "nan_nhan",
                                                  "password": f"doan-{i:04d}-xx"})[0] for i in range(35)]
         self.assertIn(429, statuses)
 
@@ -155,27 +155,27 @@ class SecurityScenarioTest(unittest.TestCase):
         app bỏ qua lỗi đăng xuất nên token bị lộ sẽ còn sống 30 ngày."""
         _, victim = self.user("nan_nhan")
         for i in range(35):
-            self.post("/app/dang-nhap", {"request_id": f"{i:032x}", "username": "nan_nhan",
+            self.post("/app/user/session/login", {"request_id": f"{i:032x}", "username": "nan_nhan",
                                          "password": f"doan-{i:04d}-xx"})
-        self.assertEqual(self.post("/app/dang-xuat", {"token": victim})[0], 200)
-        self.assertEqual(self.post("/app/may-cua-toi", {"token": victim})[0], 400)
+        self.assertEqual(self.post("/app/user/session/logout", {"token": victim})[0], 200)
+        self.assertEqual(self.post("/app/user/machine/list", {"token": victim})[0], 400)
 
     def test_machine_cannot_answer_for_another_machine(self):
         _, owner = self.user("chu")
         machine_id = self.machine(owner)
         _, other_owner = self.user("chu2")
         self.machine(other_owner, key="fm_may_khac")
-        self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
+        self.post("/machine/heartbeat/send", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
-            app = pool.submit(self.post, "/app/nhan-kho", {"token": owner, "machine_id": machine_id,
+            app = pool.submit(self.post, "/app/machine/ingredient/get", {"token": owner, "machine_id": machine_id,
                                                            "version": 0})
             time.sleep(0.3)
             for lenh_id in range(1, 50):
-                self.post("/machine/tra-ket-qua", {"product_key": "fm_may_khac", "id": lenh_id,
+                self.post("/machine/result/send", {"product_key": "fm_may_khac", "id": lenh_id,
                                                   "ket_qua": {"drinks": "gia"}})
-            status, body = self.post("/machine/hoi-lenh", {"product_key": "fm_tem_may_that"})
+            status, body = self.post("/machine/command/poll", {"product_key": "fm_tem_may_that"})
             lenh = json.loads(body)["lenh"]
-            self.post("/machine/tra-ket-qua", {"product_key": "fm_tem_may_that", "id": lenh["id"],
+            self.post("/machine/result/send", {"product_key": "fm_tem_may_that", "id": lenh["id"],
                                               "ket_qua": {"drinks": []}})
             self.assertEqual(json.loads(app.result(15)[1]), {"drinks": []})
 
@@ -187,14 +187,14 @@ class SecurityScenarioTest(unittest.TestCase):
         _, owner = self.user("chu")
         machine_id = self.machine(owner)
         # Kẻ tấn công chỉ có key trên tem: heartbeat + hỏi lệnh như máy thật.
-        self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
+        self.post("/machine/heartbeat/send", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
-            pool.submit(self.post, "/app/nap-kho", {"token": owner, "machine_id": machine_id,
+            pool.submit(self.post, "/app/machine/ingredient/refill", {"token": owner, "machine_id": machine_id,
                                                     "target": 1, "value": 1})
             time.sleep(0.3)
-            lenh = json.loads(self.post("/machine/hoi-lenh", {"product_key": "fm_tem_may_that"})[1])["lenh"]
+            lenh = json.loads(self.post("/machine/command/poll", {"product_key": "fm_tem_may_that"})[1])["lenh"]
             if lenh:
-                self.post("/machine/tra-ket-qua", {"product_key": "fm_tem_may_that", "id": lenh["id"],
+                self.post("/machine/result/send", {"product_key": "fm_tem_may_that", "id": lenh["id"],
                                                   "ket_qua": {"ok": True}})
         self.assertIsNone(lenh, "Kẻ giữ product key nhận được lệnh của chủ máy")
 
@@ -230,14 +230,14 @@ class SecurityScenarioTest(unittest.TestCase):
         self.assertEqual(taken, free)
 
     def test_SEC06_gzip_route_is_gone(self):
-        """SEC-06 (đã hết): đường gói gzip máy→app (/machine/tra-dong-bo) đã bỏ, kết quả chỉ còn JSON qua tra-ket-qua."""
+        """SEC-06 (đã hết): đường gói gzip máy→app (/machine/tra-dong-bo) đã bỏ, kết quả chỉ còn JSON qua /machine/result/send."""
         self.assertEqual(self.post("/machine/tra-dong-bo", {"product_key": "x"})[0], 404)
 
     def test_nested_json_gets_an_error_response(self):
         """JSON lồng sâu (RecursionError khi parse) vẫn nhận 400, server không rớt kết nối.
         Route nhận body lớn (Menu 64 KB, cổng máy 1 MB) đủ chỗ vượt giới hạn đệ quy của parser."""
-        for path, depth in (("/app/dang-nhap", 4000), ("/app/cap-nhat-menu", 60000),
-                            ("/machine/tra-ket-qua", 200000)):
+        for path, depth in (("/app/user/session/login", 4000), ("/app/machine/menu/update", 60000),
+                            ("/machine/result/send", 200000)):
             with self.subTest(path=path):
                 conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
                 conn.request("POST", path, body=b"[" * depth, headers={"Content-Type": "application/json"})
@@ -257,9 +257,9 @@ class SecurityScenarioTest(unittest.TestCase):
                 ' "email": "a@b.cc", "token": %s, "product_key": %s, "machine_name": "M",'
                 ' "code": %s, "machine_id": "fm_x", "registration_id": %s}'
                 % (("a" * 32,) + (text,) * 7)).encode()
-        for path in ("/app/dang-nhap", "/app/dang-ky-nguoi-dung", "/app/dang-xuat", "/app/dang-ky-may",
-                     "/app/nhan-chia-se", "/app/may-cua-toi", "/app/nhan-menu", "/app/nhan-kho",
-                     "/machine/heartbeat"):
+        for path in ("/app/user/session/login", "/app/user/account/register", "/app/user/session/logout", "/app/user/machine/register",
+                     "/app/machine/share/accept", "/app/user/machine/list", "/app/machine/menu/get", "/app/machine/ingredient/get",
+                     "/machine/heartbeat/send"):
             with self.subTest(path=path):
                 conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
                 conn.request("POST", path, body=body, headers={"Content-Type": "application/json"})
@@ -274,7 +274,7 @@ class SecurityScenarioTest(unittest.TestCase):
                 self.assertIsInstance(data, dict)
         # Cặp surrogate hợp lệ (json.dumps escape emoji thành 😀) vẫn được nhận.
         _, owner = self.user("chu")
-        status, _ = self.post("/app/dang-ky-may", {"machine_name": "Máy 😀", "product_key": "fm_emoji",
+        status, _ = self.post("/app/user/machine/register", {"machine_name": "Máy 😀", "product_key": "fm_emoji",
                                                    "token": owner})
         self.assertEqual(status, 200)
 
@@ -288,11 +288,11 @@ class SecurityScenarioTest(unittest.TestCase):
 
     @unittest.expectedFailure
     def test_SEC08_machine_status_requires_login(self):
-        """SEC-08: /machine/trang-thai không cần token, ai biết machine_id đều xem được online/last_seen."""
+        """SEC-08: /app/machine/status/get không cần token, ai biết machine_id đều xem được online/last_seen."""
         _, owner = self.user("chu")
         machine_id = self.machine(owner)
-        self.post("/machine/heartbeat", {"product_key": "fm_tem_may_that"})
-        with urlopen(f"http://127.0.0.1:{self.server.server_port}/machine/trang-thai?machine_id={machine_id}") as r:
+        self.post("/machine/heartbeat/send", {"product_key": "fm_tem_may_that"})
+        with urlopen(f"http://127.0.0.1:{self.server.server_port}/app/machine/status/get?machine_id={machine_id}") as r:
             data = json.loads(r.read())
         self.assertIsNone(data.get("last_seen"))
 

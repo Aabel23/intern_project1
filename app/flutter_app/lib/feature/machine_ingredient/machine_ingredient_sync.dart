@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:simple_app/core/server_client.dart';
 
-// Một nguyên liệu, đọc từ danh sách kho máy trả qua /app/nhan-kho.
+// Một nguyên liệu, đọc từ danh sách kho máy trả qua /app/machine/ingredient/get.
 class Ingredient {
   const Ingredient({
     required this.id,

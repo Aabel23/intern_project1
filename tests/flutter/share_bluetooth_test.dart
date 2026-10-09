@@ -64,7 +64,7 @@ void main() {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final bodies = <Object?>[];
       server.listen((request) async {
-        expect(request.uri.path, '/app/nhan-chia-se');
+        expect(request.uri.path, '/app/machine/share/accept');
         bodies.add(jsonDecode(await utf8.decoder.bind(request).join()));
         request.response.headers.contentType = ContentType.json;
         request.response.write(

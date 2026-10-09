@@ -1,0 +1,252 @@
+/* FlexMix manual test screen.
+   Workshop tool, not a customer screen: dense, legible at arm's length
+   from a bench, and every state readable at a glance.
+
+   RE-GROUNDED onto the palette and type the store, bartender and admin
+   screens share, so a technician moving between them is looking at one
+   machine. The density is untouched -- this is a bench tool, and the
+   kiosk's sizing would push half the pump grid off the screen. What is
+   shared is the colour, the two typefaces, the radii and the shadows.
+
+   FONTS ARE LOCAL. Same two files the other three screens load, from the
+   same folder, so this page needs no network either.
+
+   FOUR TOKENS THAT NEVER EXISTED
+     The hold-to-run block asked for --warn, --warn-soft, --panel-2 and
+     --muted, nine times between them. None of the four was ever declared
+     in this file, so every one fell through to its hardcoded fallback --
+     and those fallbacks were lifted from the ADMIN sheet, a different
+     palette entirely. The result was on screen the whole time: the
+     "đang giữ" strip glowed in the admin's bright #f0932b while the busy
+     banner three inches above it used this sheet's own muted #b06d14. Two
+     ambers, one screen. They are declared now, and they resolve here. */
+
+@font-face{font-family:"Bricolage Grotesque";src:url("../store_gui/fonts/BricolageGrotesque-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Bricolage Grotesque";src:url("../store_gui/fonts/BricolageGrotesque-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Work Sans";src:url("../store_gui/fonts/WorkSans-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Work Sans";src:url("../store_gui/fonts/WorkSans-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+
+:root{
+  --font:"Work Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --font-display:"Bricolage Grotesque","Work Sans",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+
+  --bg:#f7f1e9;
+  --panel:#ffffff;
+  --panel-2:#f7f1e9;      /* was undefined -- the quiet fill under a status strip */
+  --ink:#241a15;
+  --dim:#726059;
+  --muted:#726059;        /* was undefined */
+  --line:#efe0d2;
+  --line-2:#e6d5c5;
+
+  --brand:#e4571f;
+  --brand-deep:#b93e10;
+  --grad-brand:linear-gradient(135deg,#e4571f 0%,#b93e10 62%);
+
+  /* The result map. A primed pump is green, a short one amber, a dead one
+     red -- the same three the bartender screen uses for running / needs-you
+     / failed, so a fault means the same colour on both. */
+  --green:#166534;
+  --green-soft:#e7f6ec;
+  --amber:#b45309;
+  --amber-soft:#fef6e9;
+  --warn:#b45309;         /* was undefined -- and IS --amber. The hold state
+                             is the same "something is happening, watch it"
+                             as the busy banner, so it is one colour now. */
+  --warn-soft:#fef6e9;    /* was undefined */
+  --red:#b91c1c;
+  --red-soft:#fdecea;
+  --blue:#1d4ed8;
+  --blue-soft:#eff4ff;
+
+  /* The log. Espresso rather than the old green-black, so it matches the
+     admin rail -- the two dark surfaces in the system are now one colour. */
+  --log-bg:#2a1d16;
+  --log-ink:#e4d7cc;
+  --log-dim:#9a8577;
+
+  --shadow:0 1px 2px rgba(74,42,22,.05), 0 6px 18px rgba(74,42,22,.06);
+  --radius:18px;
+  --radius-sm:12px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--font);
+  background:var(--bg);color:var(--ink);
+  font-size:15px;line-height:1.45;
+  padding-bottom:24px;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- header ---------- */
+.top{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:14px 22px;background:var(--panel);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;
+  /* Was translucent with an 8px backdrop-filter: a full-width compositor
+     pass on every frame the page scrolled, on a Pi, behind a bar opaque
+     enough that nobody could see what it was blurring. */
+}
+.brand{display:flex;align-items:center;gap:12px}
+/* The machine's mark, the same one the other three screens carry. It was
+   a 9px green tick, which said nothing -- and said it in the colour this
+   sheet uses to mean "test passed". */
+.brand .mark{
+  width:38px;height:38px;border-radius:11px;flex:none;
+  display:grid;place-items:center;color:#fff;
+  background:var(--grad-brand);
+  box-shadow:0 4px 12px rgba(185,62,16,.24);
+}
+.brand .mark svg{display:block;width:20px;height:20px}
+.brand strong{display:block;font-family:var(--font-display);font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
+.brand .sub{font-size:12px;color:var(--dim)}
+.state{display:flex;align-items:center;gap:10px}
+.pill{
+  padding:7px 15px;border-radius:99px;font-size:11px;font-weight:700;
+  letter-spacing:.11em;text-transform:uppercase;
+  background:var(--green-soft);color:var(--green);
+}
+.pill.running{background:var(--amber-soft);color:var(--amber)}
+.pill.failed{background:var(--red-soft);color:var(--red)}
+.stop{
+  border:1.5px solid var(--red);background:var(--panel);color:var(--red);
+  padding:8px 18px;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.stop:hover:not(:disabled){background:var(--red-soft)}
+.stop:disabled{opacity:.4;cursor:default;color:var(--dim);border-color:var(--line-2)}
+
+/* The machine is busy with a real order. */
+.warn{
+  margin:14px 22px 0;padding:13px 17px;border-radius:var(--radius-sm);
+  background:var(--amber-soft);border:1px solid #f2dcb4;color:var(--amber);
+  font-weight:700;font-size:14px;
+}
+.warn[hidden]{display:none}
+
+/* ---------- layout ---------- */
+main{
+  display:grid;grid-template-columns:1fr 1fr;gap:18px;
+  padding:18px 22px;align-items:start;
+}
+@media (max-width:900px){ main{grid-template-columns:1fr} }
+
+.panel{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);
+}
+.panel h2{margin:0 0 5px;font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-.028em}
+.hint{margin:0 0 14px;font-size:13px;color:var(--dim)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+/* ---------- pump grid ---------- */
+.pumps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media (max-width:520px){ .pumps{grid-template-columns:repeat(3,1fr)} }
+
+.pump{
+  border:1.5px solid var(--line);background:var(--panel);border-radius:var(--radius-sm);
+  padding:10px 6px;cursor:pointer;text-align:center;transition:.12s;
+  display:flex;flex-direction:column;gap:2px;align-items:center;
+}
+.pump:hover:not(:disabled){transform:translateY(-2px);border-color:var(--line-2)}
+.pump:disabled{opacity:.45;cursor:default;transform:none}
+.pump .n{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.pump .name{
+  font-size:10.5px;color:var(--dim);max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* Result of the last prime, so the grid itself is the report. */
+.pump.ok{background:var(--green-soft);border-color:var(--green)}
+.pump.bad{background:var(--red-soft);border-color:var(--red)}
+.pump.part{background:var(--amber-soft);border-color:var(--amber)}
+.pump.active{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-soft)}
+
+/* ---------- buttons ---------- */
+button{font:inherit}
+.primary,.secondary,.ghost{
+  border:0;border-radius:var(--radius-sm);padding:13px 20px;
+  font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;
+  cursor:pointer;transition:filter .12s,background .12s,transform .08s;
+}
+.primary:active:not(:disabled),.secondary:active:not(:disabled),.ghost:active:not(:disabled){transform:translateY(1px)}
+/* Three buttons that used to be three unrelated colours: a green, a
+   cobalt and a white. Now one primary and two quieter ones, which is what
+   they actually are -- "mồi tất cả" is the job, the rest are checks. */
+.primary{background:var(--grad-brand);color:#fff;box-shadow:0 4px 10px rgba(185,62,16,.2),0 12px 26px rgba(185,62,16,.16)}
+.secondary{background:var(--log-bg);color:#fff}
+.secondary:hover:not(:disabled){filter:brightness(1.18)}
+.ghost{background:var(--panel);color:var(--dim);border:1.5px solid var(--line)}
+.ghost:hover:not(:disabled){background:var(--bg);color:var(--ink)}
+.wide{width:100%}
+.primary:hover:not(:disabled){filter:brightness(1.07)}
+.primary:disabled,.secondary:disabled,.ghost:disabled{opacity:.45;cursor:default}
+
+/* ---------- panel lamps ---------- */
+.lamps{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-top:16px}
+.lamp{
+  aspect-ratio:1;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--panel);display:grid;place-items:center;
+  font-family:var(--font-display);font-size:13px;font-weight:700;
+  letter-spacing:-.02em;color:var(--muted);transition:.12s;
+}
+.lamp.on{
+  background:linear-gradient(160deg,#f0a03a,var(--amber));
+  border-color:var(--amber);color:#fff;font-weight:700;
+  box-shadow:0 0 0 4px var(--amber-soft);
+}
+/* Already swept in this run. Quiet on purpose: the real result of a lamp
+   test is what you saw on the panel, not what this grid says. */
+.lamp.done{background:var(--bg);border-color:var(--line-2);color:var(--muted)}
+.lamp.hit{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700}
+.lamp.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+
+/* ---------- log ---------- */
+.log-panel{margin:0 22px}
+.log-head{display:flex;align-items:baseline;justify-content:space-between}
+.progress{font-family:var(--font-display);font-size:13.5px;font-weight:700;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:99px;background:var(--line);margin:10px 0 12px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#2f8f57,var(--green));transition:width .25s ease}
+.log{
+  margin:0;padding:14px 16px;border-radius:var(--radius-sm);
+  background:var(--log-bg);color:var(--log-ink);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  line-height:1.55;max-height:280px;overflow:auto;white-space:pre-wrap;
+}
+.results{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+.results[hidden]{display:none}
+.results th,.results td{
+  text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);
+}
+.results th{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+.results td.ok{color:var(--green);font-weight:700}
+.results td.bad{color:var(--red);font-weight:700}
+.results td.part{color:var(--amber);font-weight:700}
+
+/* ---------------- HOLD TO RUN ---------------- */
+/* Deliberately different from the prime buttons above: those start a job
+   and finish on their own, these run only while pressed. */
+.pumps.holds .pump.hold{border-style:dashed}
+/* The fallbacks are gone with the tokens now declared. They were not
+   harmless defaults: each one named a colour from the admin sheet, so the
+   day this block was written it painted itself in another product's
+   palette and nothing said so. A var() with no fallback fails loudly the
+   next time somebody deletes a token, which is the behaviour worth
+   having. */
+.pumps.holds .pump.hold:active,
+.pumps.holds .pump.hold.holding{
+  border-style:solid;border-color:var(--warn);
+  background:var(--warn-soft);color:var(--warn);
+  transform:scale(.97);
+}
+/* A finger sliding off the button must not select the label instead. */
+.pumps.holds .pump.hold{user-select:none;-webkit-user-select:none;touch-action:none}
+
+.holdstate{
+  margin-top:12px;padding:11px 15px;border-radius:var(--radius-sm);
+  background:var(--panel-2);color:var(--muted);
+  font-size:13px;font-variant-numeric:tabular-nums;
+}
+.holdstate.on{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.holdstate.bad{background:var(--red-soft);color:var(--red);font-weight:700}

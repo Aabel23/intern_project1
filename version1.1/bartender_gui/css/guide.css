@@ -1,0 +1,1842 @@
+/* ==========================================================================
+   FlexMix — Bartender guidance screen
+   Warm, quiet UI: ivory cards on a sage-cream page, hairline borders instead
+   of shadows, pastel badges, muted progress bars.
+
+   Semantic colour map:
+     sage   = running / on track / finished
+     peach  = a human gate, something is needed from you
+     rose   = a failure
+     lilac  = neutral chrome (tracks, machine parts)
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------------ TYPE ---
+   The same two faces the store screen uses, from the same files on the same
+   disk. A customer walks from one screen to the other in the space of one
+   drink, so a different typeface on each would read as two products.
+
+   Loaded from ../store_gui/fonts/ rather than copied here: 580KB of the
+   identical four files in a second folder is a second copy to forget to
+   update. serve.py serves the whole project tree, so the relative path
+   resolves for both screens.
+
+   Only the weights that exist as files are declared. Asking for 500 or 600
+   from a family that ships 400 and 700 gets a synthesised, smeared bold on
+   some engines. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../../store_gui/fonts/BricolageGrotesque-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../../store_gui/fonts/BricolageGrotesque-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Work Sans";
+  src: url("../../store_gui/fonts/WorkSans-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Work Sans";
+  src: url("../../store_gui/fonts/WorkSans-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
+:root {
+  /* ----------------------------------------------------------------------
+     Re-grounded onto the store screen's palette so the two displays read as
+     one machine rather than two products. What moved: the surfaces, the
+     text, the radii, the shadows, the type and the touch floor -- all now
+     the same values drinks-pos.css uses.
+
+     What did NOT move: the semantic map. sage / peach / rose still mean
+     running / needs-you / failed, because on this screen colour is not
+     decoration, it is the state of the machine. The tones below were
+     re-tuned to sit on the new warm ground and every one of them was
+     measured against the surface it is actually painted on.
+     ---------------------------------------------------------------------- */
+
+  /* surfaces — the store screen's cream, warmed the whole way through */
+  --bg: #fdf7f0;
+  --surface: #ffffff;
+  --surface-2: #f7ede2;
+  --inset: #f1e2d2;          /* pale clay, used for all tracks */
+  --line: #efe0d2;
+  --line-soft: #f7ede2;
+  --line-2: #e6d5c5;
+
+  /* text — browned, not blued. A blue-grey ink on a cream ground is the
+     one thing that still said "software" after the surfaces were warm. */
+  --text: #241a15;           /* 16:1 on the page ground */
+  --text-dim: #6b5750;       /* 6.4:1 on --bg, 6.8:1 on --surface */
+  --text-mute: #726059;      /* 5.6:1 on --bg, and still 4.7:1 on --inset,
+                                which is the tightest ground it is set on */
+
+  /* the store screen's mark. Used here only for the brand lockup and the
+     progress bar -- this screen's own states are the semantic map below. */
+  --brand: #e4571f;
+  --brand-deep: #b93e10;
+  --brand-wash: #fff0e7;
+  --grad-brand: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 62%);
+
+  /* sage: running, on track, done. 6.4:1 on its own soft fill. */
+  --sage: #7fb876;
+  --sage-fill: #a9d5a1;
+  --sage-deep: #166534;
+  --sage-soft: #e7f6ec;
+
+  /* peach: needs you. The store screen's amber, so "waiting on a human"
+     here is the same tone as "the machine is busy" there. The soft fill was
+     lightened from #fff4e3: --peach-deep on it measured 4.50:1, which
+     clears AA by a hundredth and nothing else. Now 4.7:1. */
+  --peach: #f0b478;
+  --peach-fill: #f5c99b;
+  --peach-deep: #b45309;
+  --peach-soft: #fef6e9;
+
+  /* rose: failure. 5.7:1 on its soft fill. */
+  --rose: #e09393;
+  --rose-deep: #b91c1c;
+  --rose-soft: #fdecea;
+
+  /* neutral accent for icon tiles — warm now, so it stops reading as a
+     third semantic colour. */
+  --lilac-deep: #6b5750;
+  --lilac-soft: #f7ede2;
+
+  /* action blue — deliberately outside the sage/peach/rose semantic map:
+     those say what STATE something is in, this says "press me". It is the
+     same blue the store screen uses for information, so the two screens
+     share the hue without this one losing its separation. */
+  --action: #2563eb;
+  --action-deep: #1d4ed8;
+  --action-ink: #1d4ed8;
+
+  /* type — the store screen's stack and its scale */
+  --font: "Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Noto Sans", sans-serif;
+  --font-display: "Bricolage Grotesque", "Work Sans", ui-sans-serif,
+    system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* geometry — the store screen's radii, which run large. A 22px corner on
+     a card is the difference between a tile and an object. */
+  --radius: 22px;
+  --radius-sm: 16px;
+  --radius-lg: 28px;
+  --radius-xl: 34px;
+
+  /* Shadows are warm. A neutral grey shadow on a cream ground looks like
+     dirt rather than depth. */
+  --shadow: 0 1px 2px rgba(74, 42, 22, 0.05), 0 4px 14px rgba(74, 42, 22, 0.055);
+  --shadow-lg: 0 2px 6px rgba(74, 42, 22, 0.07), 0 16px 34px rgba(74, 42, 22, 0.1);
+  --shadow-xl: 0 8px 20px rgba(74, 42, 22, 0.1), 0 40px 80px rgba(74, 42, 22, 0.2);
+
+  /* One solid ring in the store screen's focus colour, at the same weight.
+     A focus ring is the one thing on a page that may not be subtle. */
+  --ring: 0 0 0 3px #b93e10;
+
+  /* ------------------------------------------------------------------
+     CONFIRM — every "yes, do it" button in a popup, in one place.
+     Requested red. White on it is 6.5:1.
+     ------------------------------------------------------------------ */
+  --confirm: #b91c1c;
+  --confirm-deep: #991b1b;
+
+  /* touch floor — 44pt iOS, 48dp Android, 24px WCAG 2.2 AA; this is a
+     finger-only screen so it takes the largest of the three. */
+  --tap: 48px;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  /* kiosk hardening: no text selection callouts, no double-tap zoom,
+     no pull-to-refresh reloading the page mid-drink */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  /* The same two washes the store screen paints, at the same angles. */
+  background:
+    radial-gradient(900px 620px at 8% -8%, rgba(245, 158, 11, 0.16), transparent 62%),
+    radial-gradient(760px 560px at 104% 12%, rgba(228, 87, 31, 0.13), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: clamp(15px, 1.15vw, 20px);
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus {
+  left: 12px; top: 12px; z-index: 99;
+  padding: 10px 18px; background: var(--sage-deep);
+  color: #fff; border-radius: 99px;
+}
+
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* Author `display` rules outrank the UA [hidden] rule, so make it explicit
+   once here rather than repeating [hidden] on every component. */
+[hidden] { display: none !important; }
+
+/* Slim, on-palette scrollbars — the native ones are heavy on a light UI. */
+.rail-list, .pour-list, .gate-card, .now-card, .stage {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.rail-list::-webkit-scrollbar,
+.pour-list::-webkit-scrollbar,
+.gate-card::-webkit-scrollbar,
+.now-card::-webkit-scrollbar,
+.stage::-webkit-scrollbar { width: 8px; height: 8px; }
+.rail-list::-webkit-scrollbar-track,
+.pour-list::-webkit-scrollbar-track,
+.gate-card::-webkit-scrollbar-track,
+.now-card::-webkit-scrollbar-track,
+.stage::-webkit-scrollbar-track { background: transparent; }
+.rail-list::-webkit-scrollbar-thumb,
+.pour-list::-webkit-scrollbar-thumb,
+.gate-card::-webkit-scrollbar-thumb,
+.now-card::-webkit-scrollbar-thumb,
+.stage::-webkit-scrollbar-thumb {
+  background: var(--line-2); border-radius: 99px;
+  border: 2px solid transparent; background-clip: content-box;
+}
+.rail-list::-webkit-scrollbar-thumb:hover,
+.pour-list::-webkit-scrollbar-thumb:hover,
+.gate-card::-webkit-scrollbar-thumb:hover,
+.now-card::-webkit-scrollbar-thumb:hover,
+.stage::-webkit-scrollbar-thumb:hover { background: #d3bda8; background-clip: content-box; }
+
+/* ==================================================== PAGE ENTRANCE ====
+   The screen is arrived at mid-order, from the store page, so it should not
+   snap into place. The whole page fades while its three regions rise a
+   little, each slightly after the one before, which walks the eye from the
+   header down to the step list. Runs once on load and never again. */
+.topbar, .note-bar { animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.now-card { animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both; }
+.side { animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
+.statusbar { animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both; }
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==================================================== STEP CHANGE ======
+   When the machine moves on, the words in the card change under the reader.
+   A short fade-and-lift marks the swap so it is noticed, without holding
+   anything up: the text is already correct when the animation starts. */
+.now-copy.is-changing,
+.pour-list.is-changing { animation: stepSwap 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes stepSwap {
+  0%   { opacity: 0; transform: translateY(9px); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* The step chip is the one thing that always changes, so it gets its own
+   small pop rather than sliding with the rest. */
+.step-chip.is-changing { animation: chipPop 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes chipPop {
+  0%   { transform: scale(0.82); opacity: 0; }
+  60%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: none; }
+}
+
+/* ============================================================ TOP BAR ==== */
+
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 32px);
+  padding: clamp(12px, 1.2vw, 20px) clamp(16px, 2vw, 34px);
+  /* Solid, not translucent-with-a-blur. The blur behind this bar was a
+     full-width compositor pass on every frame anything moved underneath
+     it, on a Pi -- and the bar is opaque enough that nobody could see what
+     it was blurring. */
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { display: flex; align-items: center; gap: 13px; min-width: 0; flex: 1 1 auto; }
+
+/* The machine's mark, the same one the store screen carries. It was a 10px
+   sage tick -- which said nothing, and said it in the colour this screen
+   uses to mean "running". */
+.brand-mark {
+  width: clamp(42px, 3.4vw, 52px); aspect-ratio: 1;
+  border-radius: var(--radius-sm); flex: 0 0 auto;
+  display: grid; place-items: center; color: #fff;
+  background: var(--grad-brand);
+  box-shadow: 0 4px 12px rgba(185, 62, 16, 0.22),
+              0 14px 30px rgba(185, 62, 16, 0.18);
+}
+.brand-mark svg { display: block; width: 56%; height: 56%; }
+
+.brand-text { display: flex; flex-direction: column; min-width: 0; }
+.brand-text strong {
+  font-family: var(--font-display);
+  font-size: clamp(17px, 1.5vw, 26px); font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.brand-text span {
+  font-size: clamp(11px, 0.82vw, 14px);
+  color: var(--text-mute); font-variant-numeric: tabular-nums;
+}
+
+.progress-block {
+  display: flex; align-items: center; gap: 13px;
+  flex: 2 1 320px; max-width: 560px;
+}
+.progress-track {
+  position: relative; flex: 1 1 auto; height: 12px;
+  border-radius: 99px; background: var(--inset); overflow: hidden;
+}
+/* The fill was --sage-fill, a pastel on a pale track: from behind the
+   counter the bar read as empty at every stage. Sage stays -- this is the
+   "on track" colour and the bar is exactly that -- but at a weight that
+   can be seen across a room. */
+.progress-track span {
+  position: absolute; inset: 0 auto 0 0; width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--sage), var(--sage-deep));
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.progress-label {
+  font-family: var(--font-display);
+  font-size: clamp(12px, 0.95vw, 17px); font-weight: 700; letter-spacing: -0.02em;
+  color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+.topbar-controls { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+
+/* The same chip the store screen's status cluster uses. */
+.conn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 99px;
+  background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: clamp(11px, 0.82vw, 14px); font-weight: 400;
+  color: var(--text-dim); white-space: nowrap;
+}
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-mute); }
+.conn.is-live .conn-dot { background: var(--sage); animation: pulse 2.2s ease-in-out infinite; }
+.conn.is-sim .conn-dot { background: var(--peach); }
+.conn.is-down .conn-dot { background: var(--rose); }
+.conn.is-stale .conn-dot { background: var(--peach); animation: pulse 0.9s ease-in-out infinite; }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.ghost-btn, .primary-btn {
+  border-radius: 99px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--text-dim);
+  padding: 9px 18px; cursor: pointer; font-weight: 400;
+  font-size: clamp(12px, 0.88vw, 15px);
+  min-height: var(--tap);   /* the shared 48px touch floor */
+  transition: background 0.16s, color 0.16s, transform 0.1s;
+}
+.ghost-btn:hover { background: var(--surface-2); color: var(--text); }
+.primary-btn {
+  background: var(--sage-deep); border-color: transparent; color: #fff;
+}
+.primary-btn:hover { filter: brightness(1.08); }
+.ghost-btn:active, .primary-btn:active { transform: translateY(1px); }
+
+/* ============================================================== STAGE ==== */
+
+.stage {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.8fr);
+  gap: clamp(12px, 1.2vw, 20px);
+  padding: clamp(12px, 1.2vw, 20px);
+  min-height: 0;
+}
+
+/* ========================================================== NOW CARD ==== */
+
+/* Two columns. The drink photo bleeds to the card edges on the left and is
+   faded into the card surface by a gradient scrim, so there is no hard seam
+   and the image can be as large as possible. */
+.now-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 0;
+  position: relative; overflow: hidden;
+}
+
+/* With no process list to show, centre everything instead of leaving a
+   large empty area under the text. */
+.now-card[data-mode="done"],
+.now-card[data-mode="idle"] {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  /* `safe` keeps the content from being clipped at BOTH ends when it is
+     taller than the card — plain `center` overflows in each direction. */
+  align-content: safe center;
+  gap: clamp(12px, 1.3vw, 20px);
+  padding: clamp(18px, 1.9vw, 34px);
+  text-align: center;
+  overflow-y: auto;   /* the photo is contained here, so scrolling is safe */
+}
+
+/* a whisper of state colour along the top edge, not a hard bar.
+   z-index keeps it above the full-bleed photo. */
+.now-card::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; z-index: 3;
+  background: var(--line); transition: background 0.3s;
+}
+.now-card[data-mode="running"]::before { background: var(--sage-fill); }
+.now-card[data-mode="gate"]::before { background: var(--peach-fill); }
+.now-card[data-mode="retry"]::before { background: var(--rose); }
+.now-card[data-mode="done"]::before { background: var(--sage); }
+
+.now-head {
+  display: flex; align-items: center; gap: 9px; flex: 0 0 auto;
+  margin-bottom: clamp(10px, 1.1vw, 18px); flex-wrap: wrap;
+}
+
+/* pastel badges, dark text — the "On Track" / "At Risk" pill style */
+.step-chip, .type-chip, .eta-chip {
+  display: inline-flex; align-items: center;
+  padding: 6px 14px; border-radius: 99px;
+  font-size: clamp(9.5px, 0.74vw, 12px);
+  font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.step-chip { background: var(--surface-2); color: var(--text-dim); }
+.type-chip { background: var(--surface-2); color: var(--text-dim); }
+[data-mode="running"] .type-chip { background: var(--sage-soft); color: var(--sage-deep); }
+[data-mode="gate"] .type-chip { background: var(--peach-soft); color: var(--peach-deep); }
+[data-mode="retry"] .type-chip { background: var(--rose-soft); color: var(--rose-deep); }
+[data-mode="done"] .type-chip { background: var(--sage-soft); color: var(--sage-deep); }
+
+.eta-chip {
+  background: var(--lilac-soft); color: var(--lilac-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- LEFT COLUMN: the drink, full bleed ---- */
+
+/* The picture is the instruction, so it takes the larger half of the card:
+   a person glancing up from the counter reads the drawing before any of the
+   words beside it. */
+.now-visual {
+  position: relative; margin: 0; min-width: 0;
+  min-height: clamp(230px, 24vw, 460px);
+}
+
+.drink-frame {
+  position: absolute; inset: 0;
+  overflow: hidden; background: var(--surface-2);
+
+  /* THE RIGHT EDGE DISSOLVES -- it is not painted over.
+     ------------------------------------------------------------------
+     This used to be a white veil laid on top at 98deg. Two things were
+     wrong with that. A tilted gradient's axis is
+     |W·sin(a)| + |H·cos(a)| long, so in a tall narrow frame the axis runs
+     WELL past the frame's own width: at 325x610 it is 407px, and the stop
+     that finally reached solid white sat at 390px -- 20% beyond the right
+     edge. The photo was therefore still showing through a partly
+     transparent veil at the very last column of pixels, and that is the
+     line. Narrowing this column made it worse, not better.
+
+     Second, a veil can only ever approach the card's white; it cannot
+     become it. A mask can. The photo's own alpha is taken to zero
+     instead, so what shows through at the edge IS the card -- there is no
+     last column of photograph left to draw a line with.
+
+     `to right`, not a tilt: a horizontal axis is exactly as long as the
+     box is wide, so the stops mean what they say at every height. The old
+     8 degrees of lean bought nothing that survived the frame changing
+     shape. */
+  --edge-fade: linear-gradient(to right,
+      #000 0%,
+      #000 24%,
+      rgba(0, 0, 0, 0.97) 36%,
+      rgba(0, 0, 0, 0.88) 47%,
+      rgba(0, 0, 0, 0.70) 57%,
+      rgba(0, 0, 0, 0.48) 67%,
+      rgba(0, 0, 0, 0.28) 76%,
+      rgba(0, 0, 0, 0.13) 84%,
+      rgba(0, 0, 0, 0.04) 91%,
+      transparent 97%);
+  -webkit-mask-image: var(--edge-fade);
+  mask-image: var(--edge-fade);
+}
+
+.drink-photo {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  animation: photoIn 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes photoIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+
+/* The scrim does two jobs: dissolves the photo's right edge into the card
+   surface, and lifts a little warmth from the bottom so the caption reads. */
+.drink-frame::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  /* Only the footing now -- the dissolve is the mask on .drink-frame.
+     Kept because the caption pill sits over the bottom-left of the photo
+     and needs something to sit against. */
+  background: linear-gradient(to top, rgba(36, 26, 21, 0.18), transparent 42%);
+}
+
+/* If masks are ever unavailable, fall back to the veil -- but with a
+   horizontal axis, which is the half of the old rule that was actually
+   correct. Chromium has shipped -webkit-mask-image for years, so this is
+   belt and braces rather than a live code path. */
+@supports not ((-webkit-mask-image: linear-gradient(#000, #000))
+            or (mask-image: linear-gradient(#000, #000))) {
+  .drink-frame::after {
+    background:
+      linear-gradient(to right,
+        rgba(255, 255, 255, 0) 28%,
+        rgba(255, 255, 255, 0.55) 60%,
+        rgba(255, 255, 255, 0.9) 82%,
+        var(--surface) 96%),
+      linear-gradient(to top, rgba(36, 26, 21, 0.18), transparent 42%);
+  }
+}
+
+/* fallback when the drink has no photo: pastel tile with a state icon */
+.guide-art {
+  position: absolute; inset: 0;
+  background: var(--sage-soft);
+  display: grid; place-items: center; overflow: hidden;
+  color: var(--sage-deep);
+}
+.guide-art svg { width: 42%; height: 42%; display: block; }
+.guide-art img { width: 100%; height: 100%; object-fit: cover; }
+.guide-art.is-live::after {
+  content: ""; position: absolute; inset: 0;
+  box-shadow: inset 0 0 0 2px currentColor; opacity: 0.18;
+  animation: halo 2.4s ease-in-out infinite;
+}
+@keyframes halo { 0%, 100% { opacity: 0.08; } 50% { opacity: 0.34; } }
+
+/* caption sits on the photo, bottom-left, as a frosted pill */
+.guide-caption {
+  position: absolute; z-index: 2;
+  left: clamp(14px, 1.4vw, 26px); bottom: clamp(14px, 1.4vw, 26px);
+  margin: 0; padding: 6px 15px; border-radius: 99px;
+  /* Opaque, so it needs no blur behind it -- see the note on .topbar. */
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: clamp(10px, 0.78vw, 12.5px); font-weight: 700;
+  color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.guide-caption:empty { display: none; }
+
+/* ---- RIGHT COLUMN: the process ---- */
+
+.now-main {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  align-self: stretch;
+  padding: clamp(18px, 1.8vw, 32px) clamp(18px, 1.8vw, 32px)
+           clamp(18px, 1.8vw, 32px) clamp(4px, 0.5vw, 10px);
+  position: relative; z-index: 1;
+}
+
+/* ---- centred variant: contained tile, no scrim ---- */
+
+.now-card[data-mode="done"] .now-visual,
+.now-card[data-mode="idle"] .now-visual {
+  width: clamp(150px, 16vw, 250px); aspect-ratio: 1; min-height: 0;
+}
+.now-card[data-mode="done"] .drink-frame,
+.now-card[data-mode="idle"] .drink-frame { border-radius: var(--radius); }
+.now-card[data-mode="done"] .drink-frame::after,
+.now-card[data-mode="idle"] .drink-frame::after { display: none; }
+.now-card[data-mode="done"] .guide-caption,
+.now-card[data-mode="idle"] .guide-caption {
+  position: static; background: none; border: 0;
+  padding: 0; margin-top: 12px;
+}
+.now-card[data-mode="done"] .now-main,
+.now-card[data-mode="idle"] .now-main {
+  padding: 0; align-items: center; gap: clamp(10px, 1.1vw, 18px);
+}
+.now-card[data-mode="done"] .now-head,
+.now-card[data-mode="idle"] .now-head {
+  justify-content: center; margin-bottom: 0;
+}
+
+[data-mode="gate"] .guide-art { background: var(--peach-soft); color: var(--peach-deep); }
+[data-mode="running"] .guide-art { background: var(--sage-soft); color: var(--sage-deep); }
+[data-mode="retry"] .guide-art { background: var(--rose-soft); color: var(--rose-deep); }
+[data-mode="done"] .guide-art { background: var(--sage-soft); color: var(--sage-deep); }
+[data-mode="idle"] .guide-art { background: var(--lilac-soft); color: var(--lilac-deep); }
+
+.now-copy { min-width: 0; }
+/* A micro-label, the same treatment the store screen gives its section
+   headings: uppercase, tracked out, small, so it names the line under it
+   without competing with it. */
+.now-eyebrow {
+  margin: 0 0 8px; font-size: clamp(10px, 0.76vw, 12.5px); font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-mute);
+}
+.now-action {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.1vw, 52px);
+  line-height: 1.04; letter-spacing: -0.035em; font-weight: 700;
+  text-wrap: balance;
+}
+.now-detail { margin: 0; font-size: clamp(13px, 1.05vw, 19px); color: var(--text-dim); }
+
+.error-line {
+  margin: 14px 0 0; padding: 11px 15px; border-radius: var(--radius-sm);
+  background: var(--rose-soft); color: var(--rose-deep); font-weight: 400;
+  font-size: clamp(12px, 0.92vw, 16px);
+}
+
+/* ---- live pour meters ---- */
+
+/* Lives in the process panel now, bottom-right, under the drawing of the
+   pumps it is describing. In the main card it competed with the instruction
+   for the person -- and it is the one thing on this screen that nobody has
+   to act on. */
+.pour-list {
+  list-style: none; margin: clamp(10px, 1vw, 16px) 0 0;
+  padding: clamp(10px, 1vw, 16px) 0 0;
+  border-top: 1px solid var(--line-soft);
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pour-list:empty { display: none; }
+
+.pour {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 14px;
+  padding: clamp(10px, 0.95vw, 15px) clamp(12px, 1.1vw, 17px);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  transition: background 0.2s, opacity 0.2s;
+}
+.pour.is-running { background: var(--sage-soft); }
+.pour.is-done { opacity: 0.5; }
+.pour.is-retry { background: var(--rose-soft); }
+
+.pour-pump {
+  display: grid; place-items: center;
+  width: clamp(34px, 2.7vw, 44px); height: clamp(34px, 2.7vw, 44px);
+  border-radius: 13px; background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 700; font-size: clamp(13px, 1.05vw, 18px); color: var(--text-dim);
+}
+.pour.is-running .pour-pump {
+  background: var(--sage-fill); color: var(--sage-deep); border-color: transparent;
+}
+.pour.is-done .pour-pump { background: var(--surface); color: var(--sage-deep); }
+.pour.is-retry .pour-pump { background: var(--rose); color: #fff; border-color: transparent; }
+
+.pour-main { min-width: 0; }
+.pour-top {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 6px;
+}
+.pour-top strong {
+  font-size: clamp(13px, 0.98vw, 17px); font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pour-nums {
+  font-size: clamp(11px, 0.85vw, 15px); color: var(--text-dim); font-weight: 400;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  min-width: 4.5ch;          /* "100%" — stops the figure jittering */
+  text-align: right;
+}
+.pour-list:empty { display: none; }
+
+.pour-track {
+  position: relative; height: 8px; border-radius: 99px;
+  background: var(--inset); overflow: hidden;
+}
+.pour-track span {
+  position: absolute; inset: 0 auto 0 0; border-radius: 99px;
+  background: var(--sage-fill);
+  transition: width 0.12s linear;
+}
+.pour.is-done .pour-track span { background: var(--sage); }
+.pour.is-retry .pour-track span { background: var(--peach-fill); }
+
+.pour-state {
+  font-size: clamp(11px, 0.82vw, 14px); color: var(--text-mute); font-weight: 400;
+  white-space: nowrap;
+  /* Reserve the widest label ("Đang chạy" = 8.7ch) so the progress bar does
+     not resize when the status changes. ch scales with the font size. */
+  min-width: 9.5ch;
+  text-align: right;
+}
+.pour.is-done .pour-state { color: var(--sage-deep); }
+.pour.is-retry .pour-state { color: var(--rose-deep); }
+
+/* =============================================================== SIDE ==== */
+
+.side { display: flex; flex-direction: column; gap: clamp(12px, 1.2vw, 20px); min-height: 0; }
+
+.step-rail, .process-panel {
+  border-radius: var(--radius); background: var(--surface);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+  padding: clamp(14px, 1.3vw, 22px);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.step-rail { flex: 1 1 auto; }
+/* Was fixed to its drawing; it now also holds the pour meters, so it takes
+   a share of the column and scrolls its own list when a step has many
+   pumps. */
+.process-panel { flex: 1 1 auto; }
+
+.side-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 13px; flex: 0 0 auto;
+}
+.side-head h2 {
+  margin: 0; font-family: var(--font-display);
+  font-size: clamp(14px, 1.1vw, 19px); font-weight: 700;
+  letter-spacing: -0.025em; color: var(--text);
+}
+.side-note {
+  font-size: clamp(9.5px, 0.74vw, 12px); color: var(--text-mute); font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+.rail-list {
+  list-style: none; margin: 0; padding: 0;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.rail-item {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 11px;
+  padding: clamp(9px, 0.8vw, 13px) clamp(10px, 0.9vw, 14px);
+  border-radius: 14px; background: var(--surface-2);
+  font-size: clamp(11px, 0.86vw, 15px); font-weight: 400;
+  transition: background 0.2s, opacity 0.2s;
+}
+.rail-item.is-current { background: var(--sage-soft); }
+.rail-item.is-current.is-gate { background: var(--peach-soft); }
+.rail-item.is-done { opacity: 0.62; }
+.rail-item.is-skipped { opacity: 0.45; }
+.rail-item.is-retry { background: var(--rose-soft); }
+
+.rail-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-mute); flex: 0 0 auto; }
+.rail-item.is-gate .rail-dot { border-radius: 3px; background: var(--peach); }
+.rail-item.is-current .rail-dot { background: var(--sage-deep); }
+.rail-item.is-current.is-gate .rail-dot { background: var(--peach-deep); }
+.rail-item.is-done .rail-dot { background: var(--sage); }
+.rail-item.is-retry .rail-dot { background: var(--rose); }
+
+.rail-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-meta {
+  font-size: clamp(9px, 0.72vw, 12px); white-space: nowrap;
+  padding: 3px 9px; border-radius: 99px; font-weight: 700;
+  background: var(--surface); color: var(--text-mute);
+}
+.rail-item.is-auto .rail-meta { background: var(--sage-soft); color: var(--sage-deep); }
+.rail-item.is-gate .rail-meta { background: var(--peach-soft); color: var(--peach-deep); }
+
+/* ---- live process visual ---- */
+
+.process-visual {
+  flex: 0 1 auto; min-height: 0;
+  display: grid; place-items: center;
+  padding: clamp(4px, 0.5vw, 8px) 0;
+}
+
+.scene {
+  width: 100%; max-height: clamp(86px, 9.5vw, 150px); display: block;
+}
+
+.scene .rail { fill: var(--inset); }
+.scene .head { fill: var(--line-2); transition: fill 0.2s; }
+.scene .head.is-on { fill: var(--sage); }
+
+.scene .jet {
+  stroke: var(--sage-fill); stroke-width: 3.4; stroke-linecap: round;
+  stroke-dasharray: 7 9;
+  animation: jetFall 0.55s linear infinite;
+}
+@keyframes jetFall { to { stroke-dashoffset: -16; } }
+
+.scene .cup { fill: #fffdfa; stroke: #e0d3c6; stroke-width: 2.2; }
+.scene .cup-rim { fill: none; stroke: #cdbcab; stroke-width: 2.2; }
+.scene .liquid {
+  fill: var(--sage-fill);
+  transition: y 0.14s linear, height 0.14s linear;
+}
+.scene .liquid-top { fill: #b7dcae; transition: cy 0.14s linear; }
+
+.scene[data-tone="done"] .liquid { fill: var(--sage); }
+.scene[data-tone="done"] .liquid-top { fill: var(--sage-fill); }
+
+.scene .scale { fill: var(--inset); }
+.scene .scale-foot { fill: var(--inset); }
+
+.scene-glyph {
+  width: clamp(92px, 9.5vw, 142px); height: clamp(92px, 9.5vw, 142px);
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  background: var(--lilac-soft); color: var(--lilac-deep);
+}
+.scene-glyph svg { width: 55%; height: 55%; }
+.scene-glyph[data-tone="gate"] {
+  background: var(--peach-soft); color: var(--peach-deep);
+  animation: glyphBeat 2.2s ease-in-out infinite;
+}
+.scene-glyph[data-tone="retry"] { background: var(--rose-soft); color: var(--rose-deep); }
+@keyframes glyphBeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.process-caption {
+  margin: 0; text-align: center; flex: 0 0 auto;
+  font-size: clamp(11px, 0.88vw, 15px); font-weight: 400;
+  color: var(--text-dim); line-height: 1.35;
+}
+
+/* ============================================================== GATE ==== */
+
+.gate {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; place-items: center;
+  padding: clamp(16px, 3vw, 48px);
+  /* Dark, and no blur.
+
+     It was a pale wash with a 12px backdrop-filter behind it, which cost
+     two things. The page behind stayed fully legible, so a box that exists
+     to STOP the bartender read as a suggestion; and the blur forced the
+     compositor to re-filter everything underneath on every frame of the
+     entrance, on a Pi, which is exactly the work the store screen's sheet
+     refuses to do. A solid warm-dark scrim says "deal with this" and costs
+     one paint. */
+  background: rgba(36, 26, 21, 0.62);
+  animation: gateIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gate[hidden] { display: none; }
+
+@keyframes gateIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Closing: the mirror of gateIn/cardIn. The overlay is kept in the document
+   for the length of the animation and only then given [hidden], because
+   [hidden] is display:none and an element that is not displayed cannot
+   animate -- setting it straight away made the popup vanish on the frame
+   the machine started.
+
+   The card lifts and shrinks slightly rather than dropping, so it reads as
+   "done, moving on" instead of "dismissed". pointer-events go first so a
+   second press cannot land on a button that is on its way out. */
+.gate.is-closing {
+  animation: gateOut 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+/* The card leaves a little ahead of the backdrop, so the sheet behind it is
+   still there as it goes rather than both vanishing together. The easing
+   decelerates instead of accelerating: an exit that speeds up reads as a
+   dismissal, and this is the machine getting on with the job. */
+.gate.is-closing .gate-card {
+  animation: cardOut 0.34s cubic-bezier(0.32, 0, 0.24, 1) forwards;
+}
+@keyframes gateOut { to { opacity: 0; } }
+@keyframes cardOut {
+  to { transform: translateY(-10px) scale(0.975); opacity: 0; }
+}
+
+/* A gate asks one short question. Keep the card narrow and the composition
+   vertical so the eye lands on icon -> title -> action with no scanning. */
+.gate-card {
+  width: min(580px, 100%); max-height: 100%; overflow-y: auto;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  box-shadow: var(--shadow-xl);
+  padding: clamp(26px, 2.6vw, 40px) clamp(22px, 2.4vw, 38px)
+           clamp(22px, 2.2vw, 32px);
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(14px, 1.5vw, 22px);
+  text-align: center;
+  animation: cardIn 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* the hardware gate carries a row of button tiles, so it needs more room */
+.gate[data-kind="hardware"] .gate-card { width: min(720px, 100%); }
+
+@keyframes cardIn {
+  from { transform: translateY(16px) scale(0.985); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* A signpost, not a sentence: it names what kind of interruption this is
+   and gets out of the way, so full-strength ink is left for the question
+   underneath it. Set as a micro-label -- uppercase, tracked out, small --
+   which is the same treatment the store screen gives its section labels. */
+.gate-badge {
+  align-self: center;
+  padding: 7px 16px; border-radius: 99px;
+  background: var(--peach-soft); color: var(--peach-deep);
+  font-size: clamp(10px, 0.78vw, 12.5px); font-weight: 700;
+  letter-spacing: 0.13em; text-transform: uppercase;
+}
+/* data-kind "confirm" and "hardware" are the peach default above; only the
+   two exceptions need overriding. */
+.gate[data-kind="retry"] .gate-badge { background: var(--rose-soft); color: var(--rose-deep); }
+.gate[data-kind="start"] .gate-badge { background: var(--sage-soft); color: var(--sage-deep); }
+
+.gate[data-kind="confirm"] .gate-card,
+.gate[data-kind="hardware"] .gate-card { border-color: var(--peach); }
+.gate[data-kind="start"] .gate-card { border-color: var(--sage); }
+/* The dropped-order card. Only reachable on #thanks, which switches to
+   data-kind="retry" when an order ends without a drink -- without this it
+   kept the peach default border around a rose badge and rose art. */
+.gate[data-kind="retry"] .gate-card { border-color: var(--rose); }
+
+.gate-body {
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(12px, 1.3vw, 20px); width: 100%;
+}
+
+.gate-art {
+  width: clamp(78px, 7.4vw, 104px); aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  background: var(--peach-soft); color: var(--peach-deep);
+  display: grid; place-items: center; overflow: hidden; flex: 0 0 auto;
+}
+.gate-art svg { width: 50%; height: 50%; }
+.gate-art img { width: 100%; height: 100%; object-fit: cover; }
+.gate[data-kind="retry"] .gate-art { background: var(--rose-soft); color: var(--rose-deep); }
+.gate[data-kind="start"] .gate-art { background: var(--sage-soft); color: var(--sage-deep); }
+
+/* Centred flex columns size their children to content, so anything inside
+   here that is meant to span -- the reason grid, the note field -- has to
+   be told to. Without it the four reason chips sat in a 280px column in the
+   middle of a 580px card. */
+.gate-copy { min-width: 0; width: 100%; }
+.gate-step {
+  margin: 0 0 7px; font-size: clamp(10px, 0.78vw, 12.5px); font-weight: 700;
+  color: var(--text-mute); letter-spacing: 0.12em; text-transform: uppercase;
+}
+.gate-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 2.5vw, 38px);
+  line-height: 1.08; letter-spacing: -0.032em; font-weight: 700;
+  text-wrap: balance;
+}
+.gate-detail {
+  margin: 0 auto; font-size: clamp(13px, 1.02vw, 17px); color: var(--text-dim);
+  max-width: 42ch; line-height: 1.5;
+}
+
+.gate-checks {
+  list-style: none; margin: clamp(12px, 1.3vw, 18px) auto 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%; max-width: 420px; text-align: left;
+}
+.gate-checks li {
+  display: flex; align-items: center; gap: 12px;
+  padding: clamp(11px, 1vw, 15px) clamp(14px, 1.2vw, 18px);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: clamp(13px, 1vw, 17px); line-height: 1.4;
+}
+/* A tick in front of each line, drawn as a mask so it takes a token colour
+   and needs no image file. */
+.gate-checks li::before {
+  content: ""; flex: 0 0 auto;
+  width: 20px; height: 20px;
+  background-color: var(--sage-deep);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.5 4.5L19 7' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / contain no-repeat;
+}
+.gate-checks label {
+  display: flex; align-items: center; gap: 14px;
+  padding: clamp(12px, 1.05vw, 17px) clamp(14px, 1.2vw, 20px);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer; font-weight: 400;
+  font-size: clamp(14px, 1.05vw, 19px);
+  transition: background 0.16s;
+}
+.gate-checks label:hover { background: var(--sage-soft); }
+.gate-checks input {
+  width: clamp(21px, 1.7vw, 28px); height: clamp(21px, 1.7vw, 28px);
+  accent-color: var(--sage-deep); flex: 0 0 auto; cursor: pointer;
+}
+.gate-checks input:checked + span { color: var(--text-mute); text-decoration: line-through; }
+
+/* ---- hardware gate: LEDs that latch as each button is pressed ---- */
+
+.gate-hardware {
+  display: flex; flex-direction: column; gap: clamp(10px, 1.1vw, 16px);
+  width: 100%;   /* the centred flex column would otherwise shrink it */
+}
+.gate-hardware[hidden] { display: none; }
+
+.gate-wait {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin: 0; padding: clamp(9px, 0.9vw, 13px) clamp(14px, 1.3vw, 20px);
+  border-radius: 99px; background: var(--peach-soft);
+  font-size: clamp(12px, 0.95vw, 16px);
+  color: var(--peach-deep); font-weight: 700; text-align: center;
+}
+.gate-wait-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--peach);
+  flex: 0 0 auto; animation: pulse 1.5s ease-in-out infinite;
+}
+
+.hw-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(96px, 10vw, 140px), 1fr));
+  gap: clamp(8px, 0.85vw, 13px);
+  width: 100%;
+}
+
+/* The tile is the physical button, so the physical button's NUMBER is the
+   thing it has to say. It was the smallest and faintest text on the tile,
+   under a name the panel itself does not carry -- which is backwards: the
+   bartender is looking down at a row of numbered buttons and needs to know
+   which number to press. The order is set here rather than in the markup,
+   because js/guide.js builds led -> label -> number and that order is also
+   the sensible one to read aloud. */
+.hw-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(4px, 0.45vw, 7px);
+  padding: clamp(13px, 1.2vw, 18px) clamp(8px, 0.8vw, 12px);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  color: var(--text-dim); text-align: center;
+  transition: background 0.22s, border-color 0.22s, color 0.22s, transform 0.12s;
+}
+
+.hw-led {
+  width: clamp(20px, 1.85vw, 28px); height: clamp(20px, 1.85vw, 28px);
+  border-radius: 50%;
+  background: var(--inset);
+  box-shadow: inset 0 2px 4px rgba(80, 86, 70, 0.14);
+  transition: background 0.25s, box-shadow 0.25s;
+  flex: 0 0 auto;
+}
+
+.hw-btn.is-lit {
+  background: var(--sage-soft); border-color: var(--sage); color: var(--text);
+}
+.hw-btn.is-lit .hw-led {
+  background: radial-gradient(circle at 36% 30%, #c9e7c1, var(--sage) 64%);
+  box-shadow:
+    0 0 0 5px rgba(150, 199, 141, 0.22),
+    inset 0 1px 2px rgba(255, 255, 255, 0.65);
+  animation: ledOn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes ledOn {
+  0% { transform: scale(0.72); }
+  60% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+.hw-btn.is-off .hw-led { animation: ledWait 2s ease-in-out infinite; }
+@keyframes ledWait {
+  0%, 100% { box-shadow: inset 0 2px 4px rgba(80, 86, 70, 0.14); }
+  50% { box-shadow: inset 0 2px 4px rgba(80, 86, 70, 0.14), 0 0 0 5px rgba(240, 180, 120, 0.2); }
+}
+
+.hw-btn-label {
+  order: 3;
+  font-size: clamp(11px, 0.9vw, 14px); font-weight: 400; line-height: 1.25;
+  color: var(--text-mute);
+}
+.hw-btn-num {
+  order: 2;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 2.4vw, 38px); font-weight: 700;
+  line-height: 1; letter-spacing: -0.03em;
+  color: var(--text); font-variant-numeric: tabular-nums;
+}
+.hw-btn.is-lit .hw-btn-num { color: var(--sage-deep); }
+.hw-btn.is-lit .hw-btn-label { color: var(--sage-deep); }
+
+.hw-btn.is-clickable { cursor: pointer; }
+.hw-btn.is-clickable:hover {
+  border-color: var(--peach); background: var(--peach-soft); transform: translateY(-3px);
+}
+.hw-btn.is-clickable:active { transform: translateY(1px); }
+
+.hw-sim-note {
+  margin: 0; text-align: center;
+  font-size: clamp(10px, 0.82vw, 13px); color: var(--text-mute); font-weight: 400;
+}
+.hw-sim-note[hidden] { display: none; }
+
+/* ---- thank you: the seconds left before the store screen returns ---- */
+.thanks-count{
+  margin:0; align-self:center;
+  font-family:var(--font-display);
+  font-size:clamp(15px,1.25vw,20px); font-weight:700;
+  letter-spacing:-0.02em;
+  color:var(--sage-deep);
+  display:flex; align-items:center; gap:12px;
+}
+.thanks-count .num{
+  min-width:2.2em; height:2.2em; border-radius:50%;
+  background:var(--sage-soft); color:var(--sage-deep);
+  display:grid; place-items:center;
+  font-size:1.15em; font-variant-numeric:tabular-nums;
+  animation:tick 1s ease-in-out infinite;
+}
+@keyframes tick{ 0%,100%{transform:scale(1)} 50%{transform:scale(0.93)} }
+
+/* ---- the big confirm button ---- */
+
+/* Full width, not a centred pill.
+
+   It was a 200-280px lozenge floating in the middle of a 580px card, which
+   made the one thing the bartender is meant to press smaller than the
+   picture above it. A gate has exactly one action; the action should be the
+   width of the card. It is also the store screen's shape now -- the same
+   radius and the same coloured lift under it, so pressing "yes" looks the
+   same on both screens. */
+.gate-confirm {
+  align-self: stretch; width: 100%;
+  min-height: 68px;
+  border: none; border-radius: var(--radius-lg);
+  padding: clamp(13px, 1.25vw, 18px) clamp(20px, 2vw, 32px);
+  background: linear-gradient(180deg, var(--confirm), var(--confirm-deep));
+  color: #fff; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.22),
+              0 16px 34px rgba(185, 28, 28, 0.2);
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: clamp(12px, 1.2vw, 18px);
+  font-family: var(--font-display);
+  font-size: clamp(17px, 1.5vw, 23px); font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: filter 0.16s, transform 0.1s, opacity 0.16s, box-shadow 0.16s;
+
+  /* the ripple is a child circle that grows past the edges */
+  position: relative; overflow: hidden;
+}
+/* keep the label and spinner above the ripple */
+.gate-confirm > * { position: relative; z-index: 1; }
+
+.gate-confirm:hover:not(:disabled) { filter: brightness(1.09); }
+.gate-confirm:active:not(:disabled) { transform: translateY(2px); }
+.gate-confirm:disabled { opacity: 0.35; cursor: not-allowed; }
+.gate-confirm[hidden] { display: none; }
+
+/* ---- press feedback ----
+   The tap has to read from a metre away, so the button dips and springs
+   back rather than only nudging down 2px while the finger is held. */
+.gate-confirm.is-pressed {
+  animation: pressPop 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes pressPop {
+  0% { transform: scale(1); }
+  28% { transform: scale(0.945); }
+  70% { transform: scale(1.022); }
+  100% { transform: scale(1); }
+}
+
+/* The circle expands from wherever the finger landed and fades out. It is
+   sized and positioned by js/guide.js, which also removes it afterwards. */
+.gate-ripple {
+  position: absolute; z-index: 0;
+  border-radius: 50%; pointer-events: none;
+  background: rgba(255, 255, 255, 0.42);
+  transform: scale(0); opacity: 0.9;
+  animation: rippleOut 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes rippleOut {
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* ---- busy: the machine was asked, and has not answered yet ----
+   A cup check reads the load cell for up to ten seconds. Without this the
+   screen looks frozen and the customer presses again. */
+.gate-confirm.is-busy { cursor: progress; }
+.gate-confirm.is-busy:disabled { opacity: 1; }          /* keep it legible */
+.gate-confirm.is-busy .gate-confirm-label { opacity: 0.75; }
+
+/* A white disc holding an up arrow. Idle it just sits there; while the
+   machine is working the arrow rises out of the top and another follows it
+   from below, clipped by the disc. It keeps moving for as long as the
+   machine is actually busy -- including the pause between steps, which is
+   the whole point: a spinner that stopped while the machine was still
+   waiting was reading as "done" when nothing had happened yet. */
+.gate-confirm-icon {
+  width: 1.75em; height: 1.75em; flex: 0 0 auto;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--peach-deep);
+  display: grid; place-items: center;
+  overflow: hidden;
+  transition: color 0.2s;
+}
+.gate-confirm-icon svg { width: 58%; height: 58%; }
+
+.gate-confirm.is-busy .gate-confirm-icon svg {
+  animation: arrowRise 0.9s cubic-bezier(0.4, 0, 0.5, 1) infinite;
+}
+@keyframes arrowRise {
+  0%   { transform: translateY(115%); opacity: 0; }
+  30%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translateY(-115%); opacity: 0; }
+}
+
+/* A halo leaving the disc, so the movement is visible from across a room
+   and not only in the 20px of the arrow itself. */
+.gate-confirm.is-busy .gate-confirm-icon {
+  animation: discHalo 1.5s ease-out infinite;
+}
+@keyframes discHalo {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+  70%  { box-shadow: 0 0 0 0.7em rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+/* The arrow is the button's own blue on a white disc, whatever gate it is.
+   A failure still gets a red button, because that is a warning and not an
+   invitation. */
+.gate-confirm-icon { color: var(--confirm); }
+.gate[data-kind="retry"] .gate-confirm-icon { color: var(--rose-deep); }
+
+.gate[data-kind="retry"] .gate-confirm {
+  background: var(--rose-deep);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.22),
+              0 16px 34px rgba(185, 28, 28, 0.2);
+}
+
+/* The start gate breathes while it waits to be pressed. */
+.gate[data-kind="start"] .gate-confirm {
+  animation: startBreathe 2.6s ease-in-out infinite;
+}
+@keyframes startBreathe {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.22),
+                0 16px 34px rgba(185, 28, 28, 0.2),
+                0 0 0 0 rgba(185, 28, 28, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.22),
+                0 16px 34px rgba(185, 28, 28, 0.2),
+                0 0 0 16px rgba(185, 28, 28, 0);
+  }
+}
+/* the press and the idle breathing are both animations on the same element,
+   so the breathing has to stand down while either one is playing */
+.gate[data-kind="start"] .gate-confirm.is-pressed {
+  animation: pressPop 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gate[data-kind="start"] .gate-confirm.is-busy { animation: none; }
+
+/* The button is full width at every size now, so the narrow-screen
+   override that used to widen it has nothing left to do. */
+
+/* ==================================================== STATUS FOOTER ==== */
+
+.statusbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center;
+  gap: clamp(10px, 1.6vw, 30px);
+  padding: clamp(10px, 1vw, 16px) clamp(16px, 2vw, 34px);
+  background: var(--surface);    /* opaque; see the note on .topbar */
+  border-top: 1px solid var(--line);
+  overflow-x: auto;              /* never wrap: it stays one clean strip */
+  scrollbar-width: none;
+}
+.statusbar::-webkit-scrollbar { display: none; }
+
+.stat {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0; flex: 0 0 auto;
+  padding-right: clamp(10px, 1.6vw, 28px);
+  border-right: 1px solid var(--line);
+}
+
+/* Narrow screens: drop the two least useful stats so the requests keep
+   their room instead of overflowing. */
+@media (max-width: 720px) {
+  .stat-avg, .stat-last { display: none; }
+}
+
+/* machine info is separated to the far right — it is about the machine,
+   not the order */
+.statusbar-end {
+  margin-left: auto; flex: 0 0 auto;
+  display: flex; align-items: center; gap: clamp(12px, 1.6vw, 28px);
+  padding-left: clamp(14px, 1.8vw, 32px);
+  border-left: 1px solid var(--line);
+}
+.statusbar-end .stat:last-child { border-right: none; padding-right: 0; }
+.stat-clock { align-items: flex-end; }
+
+.stat-label {
+  font-size: clamp(9px, 0.7vw, 11.5px); font-weight: 700;
+  color: var(--text-mute); white-space: nowrap;
+  letter-spacing: 0.13em; text-transform: uppercase;
+}
+/* The numbers are what this strip is for, so they take the display face and
+   step up away from their own labels. */
+.stat-value {
+  font-family: var(--font-display);
+  font-size: clamp(14px, 1.15vw, 20px); font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================================================= DONE ACTIONS ==== */
+
+.done-actions {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  margin-top: clamp(6px, 0.8vw, 12px);
+}
+
+.done-btn {
+  border: none; border-radius: 99px; cursor: pointer;
+  padding: clamp(13px, 1.3vw, 20px) clamp(30px, 3.2vw, 56px);
+  background: var(--confirm); color: #fff;
+  min-height: var(--tap);
+  font-size: clamp(15px, 1.25vw, 22px); font-weight: 700;
+  letter-spacing: -0.01em;
+  transition: filter 0.16s, transform 0.1s;
+}
+.done-btn:hover { filter: brightness(1.09); }
+.done-btn:active { transform: translateY(2px); }
+
+.done-hint {
+  margin: 0; font-size: clamp(11px, 0.85vw, 14px);
+  color: var(--text-mute); text-align: center;
+}
+
+/* ============================================================ SIM DOCK ==== */
+
+.simdock {
+  position: fixed; right: clamp(12px, 1.5vw, 24px);
+  bottom: clamp(62px, 6vw, 90px);   /* sits above the status footer */
+  z-index: 60;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.simdock[hidden] { display: none; }
+
+/* Full opacity and labelled: this is a dev control, but an invisible one is
+   worse than a slightly loud one. */
+.simdock-toggle {
+  min-height: var(--tap); height: clamp(48px, 3.2vw, 54px);
+  padding: 0 clamp(16px, 1.4vw, 22px);
+  border-radius: 99px; cursor: pointer;
+  background: var(--peach-deep); border: none;
+  color: #fff; font-weight: 700;
+  font-size: clamp(12px, 0.95vw, 15px);
+  display: flex; align-items: center; gap: 9px;
+  box-shadow: 0 8px 22px rgba(169, 107, 37, 0.35);
+  transition: transform 0.14s, filter 0.18s;
+}
+.simdock-toggle::after {
+  content: "MÔ PHỎNG";
+  letter-spacing: 0.06em; white-space: nowrap;
+}
+.simdock-toggle svg { width: clamp(17px, 1.3vw, 21px); height: auto; flex: 0 0 auto; }
+.simdock-toggle:hover { filter: brightness(1.08); transform: translateY(-2px); }
+.simdock-toggle[aria-expanded="true"] { background: var(--text); }
+
+.simdock-panel {
+  display: flex; flex-direction: column; gap: 11px;
+  padding: clamp(14px, 1.2vw, 20px);
+  border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  animation: dockIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.simdock-panel[hidden] { display: none; }
+
+@keyframes dockIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.simdock-field {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  font-size: clamp(11px, 0.82vw, 14px); color: var(--text-dim); font-weight: 400;
+}
+.simdock-field select {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 7px 12px; min-width: 130px;
+  min-height: var(--tap);
+}
+.simdock-actions { display: flex; gap: 8px; }
+.simdock-actions button { flex: 1 1 auto; white-space: nowrap; }
+
+.noscript-message { padding: 24px; text-align: center; }
+
+/* ========================================================== RESPONSIVE ==== */
+
+/* The pour meters -- the rows that name what is actually going into the cup
+   -- live in the side column. This breakpoint used to drop that column to a
+   stacked row at 1100px, which on a 1024px panel put the ingredients below
+   a fold on a screen that is deliberately not scrollable: they were not
+   hidden, they were simply off the bottom, and the card's right half sat
+   empty above them.
+
+   So the column now survives down to 780px. It only narrows: the photo
+   gives up the width, because a drink photo one third smaller is still a
+   drink photo, while a missing ingredient list is a missing answer to
+   "what is in this?". */
+@media (max-width: 1100px) and (min-width: 781px) {
+  /* 280px is the side column's own minimum from the wide layout -- below it
+     a pour row cannot hold the pump chip, the name and the state on one
+     line. At 1024px this resolves to photo 325 / text 325 / ingredients 336. */
+  .stage { grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.8fr); }
+  /* the photo yields half the card; the instruction keeps its measure */
+  .now-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .now-visual { min-height: 0; }
+  /* the two side panels share the height rather than the rail taking it */
+  .step-rail { flex: 0 1 auto; }
+  .process-panel { flex: 1 1 auto; }
+}
+
+/* Below 780px there is genuinely no room for two columns, so it stacks and
+   the page is allowed to scroll. */
+@media (max-width: 780px) {
+  .stage { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  body { overflow: auto; }
+}
+
+@media (max-width: 760px) {
+  .now-card, .gate-body { grid-template-columns: minmax(0, 1fr); }
+  .now-visual { min-height: clamp(170px, 42vw, 260px); }
+  /* fade downward instead of sideways once stacked */
+  .drink-frame::after {
+    background: linear-gradient(to bottom, rgba(250,250,244,0) 44%,
+      rgba(250,250,244,0.85) 82%, var(--surface) 100%);
+  }
+  .now-main { padding: 0 clamp(16px,4vw,24px) clamp(16px,4vw,24px); }
+  .gate-art { max-width: 190px; margin-inline: auto; }
+  .progress-block { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ==================================================== CANCEL AN ORDER ====
+   Staff stopping a drink that is already pouring.
+
+   Small, in the corner, and rose rather than the action blue used by the
+   gates: it is not part of making the drink, and the one button on screen
+   that stops the machine should not sit beside the one that starts it. */
+.cancel-btn {
+  /* ABOVE the gate (z-index 50), not below it. A gate covers the whole
+     screen while it waits for a cup or a button press, and those are
+     exactly the moments staff most need to stop -- a customer who walked
+     off leaves the machine holding a gate for ever. Underneath the
+     overlay the button was rendered but unreachable.
+
+     Bottom-LEFT, away from .simdock in the other corner and away from the
+     gate's centred confirm button, so stopping the machine is never next
+     to the thumb reaching to continue it. */
+  position: fixed; left: clamp(14px, 1.6vw, 26px);
+  bottom: clamp(96px, 11vh, 140px); z-index: 55;
+  padding: 11px 20px; border-radius: 99px; min-height: var(--tap);
+  border: 1px solid var(--rose); background: var(--surface);
+  color: var(--rose-deep); font-size: clamp(12px, .9vw, 14px);
+  font-weight: 700; cursor: pointer; box-shadow: var(--shadow);
+  transition: .15s;
+}
+.cancel-btn:hover { background: var(--rose-soft); }
+.cancel-btn:active { transform: translateY(1px); }
+
+/* The reason list. Radio behaviour without radios: a row of targets big
+   enough for a thumb, because this gets used in a hurry. */
+.reasons {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin: clamp(12px, 1.2vw, 18px) 0 12px;
+}
+@media (max-width: 560px) { .reasons { grid-template-columns: 1fr; } }
+
+.reason {
+  min-height: var(--tap);
+  padding: 13px 16px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1.5px solid var(--line-2); background: var(--surface);
+  font-size: clamp(13px, .98vw, 16px); text-align: left;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.reason:hover { border-color: var(--rose); background: var(--surface-2); }
+/* The chosen reason carries an inset ring as well as a tint: on a card that
+   is already mostly warm white, a fill alone was not enough to tell which
+   of four chips had been picked from standing distance. */
+.reason.on {
+  border-color: var(--rose); background: var(--rose-soft);
+  color: var(--rose-deep); font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--rose);
+}
+
+.reason-note {
+  width: 100%; min-height: var(--tap);
+  padding: 13px 16px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line-2); background: var(--surface);
+  font-size: clamp(13px, .95vw, 16px); color: var(--text);
+}
+.reason-note::placeholder { color: var(--text-mute); }
+.reason-note:focus { outline: none; border-color: var(--rose); }
+
+/* Stacked, not side by side.
+
+   Two saturated buttons of nearly equal width -- a green one and a red one
+   -- were competing for the same glance, and at 14px of padding the longer
+   label wrapped to two lines inside its own button. This is the shape the
+   store screen uses for the same question: one full-width answer, then the
+   other underneath it, so which is which is settled by position and weight
+   rather than by reading both. */
+.cancel-actions {
+  display: flex; flex-direction: column; gap: 10px;
+  align-self: stretch;   /* see the note on .gate-copy */
+  margin-top: clamp(16px, 1.6vw, 22px);
+}
+.cancel-go, .cancel-back {
+  width: 100%; padding: 16px; border-radius: var(--radius-lg); border: 0;
+  min-height: 62px;
+  font-family: var(--font-display);
+  font-size: clamp(15px, 1.15vw, 19px); font-weight: 700;
+  letter-spacing: -0.02em; cursor: pointer;
+  transition: filter .15s, background .15s, transform .08s, border-color .15s;
+}
+.cancel-go:active:not(:disabled), .cancel-back:active { transform: translateY(1px); }
+/* Disabled until a reason is chosen -- an unexplained cancellation is the
+   one thing this dialog exists to prevent. Its paint is set with the rest
+   of the pair below. */
+
+
+/* The cancel dialog outranks everything it can appear over.
+
+   It shares the .gate class with the step gates and the thank-you card,
+   which all sit at z-index 50 -- and it comes EARLIER in the markup, so at
+   equal z-index the browser painted the step gate on top of it. Pressing
+   "Huỷ đơn" during a gate opened a dialog nobody could see.
+
+   70 puts it above the step gates (50), the cancel button itself (55) and
+   the dev sim dock (60). It is the one thing on this screen that must
+   always be reachable: it is opened by a request that has already told the
+   machine to stop, so a dialog hidden behind something else leaves the
+   machine held with no way to answer it. */
+#cancelGate { z-index: 70; }
+
+/* The farewell card outranks the step gates, for the same reason and by the
+   same accident as the cancel dialog above: #thanks shares .gate (z-index
+   50) and sits EARLIER in the markup than #gate, so at equal z-index the
+   browser painted the step gate over it. "Máy đang khởi động lại" arrived
+   underneath the "place the cup" popup it was explaining.
+
+   65 clears the step gates (50), the cancel button (55) and the sim dock
+   (60), and stays under the cancel dialog (70), which is documented above
+   as the one thing that must always be reachable. */
+#thanks { z-index: 65; }
+
+/* Resuming is the common outcome after a pause, so it is the filled button
+   and it is first. Cancelling is the one that throws a drink away, so it
+   drops to an outline underneath -- still unmistakably the destructive
+   choice by its colour, but no longer a solid slab competing for the thumb
+   already reaching for the obvious answer. */
+.cancel-back {
+  background: var(--sage-deep); color: #fff;
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.2),
+              0 16px 34px rgba(22, 101, 52, 0.16);
+}
+.cancel-back:hover { filter: brightness(1.08); }
+
+.cancel-go {
+  background: transparent; color: var(--rose-deep);
+  border: 2px solid var(--rose);
+}
+.cancel-go:hover:not(:disabled) { background: var(--rose-soft); }
+.cancel-go:disabled { opacity: .4; cursor: default; }
+.reason-hint {
+  margin: clamp(10px, 1vw, 16px) 0 0; font-size: clamp(11px, .82vw, 13px);
+  color: var(--text-mute);
+}
+
+
+/* ============================================================
+   CUSTOMER NOTE BAR
+   Amber rather than the screen's blue: this is the one thing on the
+   page the machine cannot do for you, so it should not look like the
+   rest of the machine's own reporting. Sticky under the top bar so it
+   stays readable while the step list scrolls.
+   ============================================================ */
+.note-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* Tight under the top bar: this is a continuation of the order's
+     heading, not a card floating in the page. Only the bottom margin
+     separates it from the work below. */
+  margin: 0 clamp(12px, 2vw, 24px) clamp(8px, 1vw, 14px);
+  padding: 15px 18px;
+  border-radius: 0 0 14px 14px;
+  /* PEACH, the palette's own "needs you" colour -- the same one the
+     manual-step chips and gate cards use. The first version invented an
+     amber of its own and put white text on it, which on a light screen
+     is the one combination that cannot be read. Dark charcoal on soft
+     peach is what the rest of this screen already does, and it means a
+     bartender who has learned that peach = do something recognises this
+     bar without being taught it separately. */
+  border: 1px solid var(--peach);
+  border-top-color: transparent;
+  background: var(--peach-soft);
+  box-shadow: var(--shadow);
+}
+.note-bar[hidden] { display: none; }
+/* Was an emoji sized by font-size; it is a drawn icon now, so it takes
+   currentColor and a real box instead of whatever the OS font shipped. */
+.note-bar .note-icon { display: inline-grid; place-items: center; flex: 0 0 auto; }
+.note-bar .note-icon svg { width: 24px; height: 24px; display: block; }
+.note-bar .note-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.note-bar .note-label {
+  font-size: clamp(10px, 0.8vw, 12px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--peach-deep);
+}
+.note-bar .note-text {
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 700;
+  margin-top: 6px;
+  /* The page's own text colour, not white and not the accent: this is
+     the sentence to READ, so it gets maximum contrast and the label
+     above it carries the colour. */
+  color: var(--text);
+  line-height: 1.35;
+  /* Wraps rather than truncates: a request cut off mid-word is worse
+     than one that takes two lines. */
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .note-bar { margin: 0 10px 10px; padding: 12px 14px; gap: 10px; }
+  .note-bar .note-icon svg { width: 22px; height: 22px; }
+}
+
+
+/* ======================================================= THE GLASS ========
+   One glass, named by the database, shown large. Not a set of choices: the
+   drink says which glass it is served in, and the person's job is to fetch
+   that one -- so the card states it and takes an acknowledgement.
+
+   Landscape, unlike every other gate. The other gates ask one short
+   question and a narrow column is right for them; this one carries a
+   picture AND four facts, and stacked they ran off the bottom of a
+   1024x600 panel. Side by side the picture answers "which object" while
+   the column answers "what about it", and both are read at once. */
+.gate[data-kind="glass"] .gate-card { width: min(980px, 100%); }
+.gate-card-wide { max-width: min(980px, 96vw); }
+
+/* ==================================================== ACTION GATE ======
+   An action step -- shake, stir, torch a peel, garnish -- shows a looping
+   clip of the thing being done, with the words beside it. It reuses the
+   ordinary #gate card rather than getting an overlay of its own, because
+   underneath it IS a confirm gate: one press releases it, the refusal
+   message and the button both behave exactly as they do elsewhere. Only
+   the card's shape changes.
+
+   Landscape for the same reason glassGate is: the clip and the words are
+   two different questions -- "what does this look like" and "how long,
+   how far" -- and side by side they are read at once instead of one
+   scrolling the other off a 1024x600 panel. */
+.gate[data-kind="action"] .gate-card { width: min(940px, 100%); }
+
+.gate[data-kind="action"] .gate-body {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+  gap: clamp(20px, 2.6vw, 38px);
+}
+
+/* The clip is wider than the text, the reverse of glassGate's 0.82fr/1fr.
+   There the picture only identifies an object and the words carry the
+   instruction; here the clip IS the instruction and the words just record
+   what the eye already saw. */
+.gate-media {
+  flex: 1.15 1 0; min-width: 0;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+/* <video> and <img> take the same rule, so the 4:3 frame crops both the
+   same way and the admin preview can promise what the bartender sees. */
+.gate-media > * {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+
+.gate[data-kind="action"] .gate-copy {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start;
+}
+.gate[data-kind="action"] .gate-detail { margin-left: 0; margin-right: 0; }
+.gate[data-kind="action"] .gate-checks { margin-left: 0; margin-right: 0; }
+.gate[data-kind="action"] .gate-badge { align-self: center; }
+
+/* Under 860px the panel is too narrow for two columns -- same breakpoint
+   and same fallback as the glass gate. */
+@media (max-width: 860px) {
+  .gate[data-kind="action"] .gate-body { flex-direction: column; text-align: center; }
+  .gate[data-kind="action"] .gate-copy { align-items: center; }
+  .gate-media { width: 100%; flex: 0 0 auto; }
+}
+
+/* The card centres its children; this one wants two full-height columns,
+   so it overrides the flex column it sits in. */
+.glass-called {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(20px, 2.6vw, 40px);
+  width: 100%; text-align: left;
+}
+
+/* ---- left: the object to go and fetch ---- */
+
+.glass-visual {
+  margin: 0; display: flex; justify-content: center;
+}
+
+.glass-called .glass-art {
+  width: 100%; max-width: 340px; aspect-ratio: 1;
+  display: grid; place-items: center; color: var(--text-dim);
+  background: var(--surface-2); border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.glass-called .glass-art svg { width: 66%; height: 66%; display: block; }
+.glass-called .glass-art img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ---- right: what has to be true before the pour ---- */
+
+.glass-info {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: clamp(10px, 1.1vw, 16px);
+  min-width: 0;
+}
+/* .gate-badge and .gate-confirm both centre themselves inside the card.
+   In this column they line up with the text instead. */
+.glass-info .gate-badge { align-self: flex-start; }
+.glass-info .gate-title { margin: 0; }
+.glass-info .gate-detail { margin: 0; max-width: 46ch; }
+
+/* The build method: its name in the reading weight, its description after
+   an em dash, both on one wrapped line. This is the sentence from the
+   recipe card -- "dựng thẳng trong ly, topping xuống đáy" -- and it is the
+   only free text on the gate, so it sits above the facts rather than
+   competing with them for a chip. */
+.serve-method {
+  margin: 0;
+  font-size: clamp(13px, 1.02vw, 17px); line-height: 1.45;
+  color: var(--text-dim);
+}
+.serve-method-name { color: var(--text); font-weight: 700; }
+
+/* ---- the prep facts ----
+   A chip per fact, two across. Not a table: these are four unrelated
+   nouns, and a person scans them for the one they have not done yet
+   rather than reading down a column. */
+.serve-facts {
+  list-style: none; margin: 0; padding: 0; width: 100%;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(8px, 0.8vw, 12px);
+}
+/* An odd number of facts leaves a hole; the last one takes the full row so
+   the grid reads as finished rather than broken. */
+.serve-facts .fact:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.fact {
+  display: flex; align-items: center; gap: clamp(10px, 0.9vw, 14px);
+  padding: clamp(11px, 1vw, 16px) clamp(13px, 1.1vw, 18px);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+
+.fact-icon {
+  width: clamp(30px, 2.4vw, 40px); aspect-ratio: 1; flex: 0 0 auto;
+  border-radius: 12px; overflow: hidden;
+  background: var(--surface); color: var(--brand-deep);
+  display: grid; place-items: center;
+}
+.fact-icon svg { width: 62%; height: 62%; display: block; }
+.fact-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+.fact-body { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+
+.fact-label {
+  font-size: clamp(9px, 0.7vw, 12px); font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-mute);
+}
+.fact-value {
+  font-family: var(--font-display);
+  font-size: clamp(13px, 1.05vw, 18px); font-weight: 700;
+  letter-spacing: -0.02em; color: var(--text);
+  line-height: 1.25;
+  /* A long garnish list wraps rather than being cut: an instruction
+     truncated mid-word is worse than one taking two lines. */
+  overflow-wrap: anywhere;
+}
+
+/* .gate-confirm is built for the machine's gate, where it fills the card.
+   Here it closes the right-hand column, so it takes that column's width
+   and the alignment that goes with it. */
+.glass-confirm {
+  align-self: stretch; width: 100%; min-width: 0;
+  justify-content: center;
+  margin-top: clamp(2px, 0.4vw, 6px);
+}
+
+/* Below this the two columns stop being two columns: the picture shrinks
+   to a thumbnail rather than a landscape crop nobody can read. */
+@media (max-width: 860px) {
+  .glass-called { grid-template-columns: minmax(0, 1fr); }
+  .glass-called .glass-art { max-width: clamp(120px, 40vw, 190px); }
+  .glass-info { align-items: center; text-align: center; }
+  .glass-info .gate-badge { align-self: center; }
+  .glass-info .gate-detail { margin: 0 auto; }
+  .serve-facts { grid-template-columns: minmax(0, 1fr); }
+  .fact { text-align: left; }
+}

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlexMix · Manual hệ thống app, server và máy</title>
+  <link rel="stylesheet" href="agent_workspace/tasks/middleware/fonts.css">
+  <meta name="description" content="Manual vận hành và sơ đồ luồng hệ thống FlexMix Android, server và máy pha, đối chiếu với mã nguồn androidv0.1.">
+  <style>
+    :root{color-scheme:light;--bg:#f5f4ed;--surface:#faf9f5;--card:#fff;--ink:#1f1e1b;--muted:#59564f;--subtle:#79756c;--line:#e3e0d4;--accent:#a9502f;--accent-soft:#f6e2d8;--blue:#4a7baf;--blue-soft:#e5edf6;--purple:#7d78ad;--purple-soft:#eceaf4;--green:#687f4d;--green-soft:#e5ebdb;--amber:#8c6724;--amber-soft:#f5ebd2;--red:#a33d2c;--red-soft:#f6dbd2;--serif:"Segoe UI",Arial,sans-serif;--sans:"Segoe UI",Arial,sans-serif;--mono:Consolas,"Courier New",monospace}
+    @media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#262624;--surface:#2e2d2a;--card:#30302d;--ink:#f3f1ea;--muted:#c6c2b7;--subtle:#a29d91;--line:#494741;--accent:#ee9a7a;--accent-soft:#4a2f25;--blue:#8db2da;--blue-soft:#263444;--purple:#b3aeda;--purple-soft:#35334a;--green:#a7be8a;--green-soft:#303a27;--amber:#ddb467;--amber-soft:#443922;--red:#ee8b73;--red-soft:#4c2a23}}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--serif)}a{color:var(--accent)}a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}code,pre{font-family:var(--mono)}code{font-size:.8em;background:var(--line);border-radius:4px;padding:.12em .35em;overflow-wrap:anywhere}pre{font-size:13px;line-height:1.5;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}pre code{background:none;padding:0;font-size:inherit}h1,h2,h3{line-height:1.2;margin:0;font-weight:600}p{margin:0}ul,ol{margin:0;padding-left:1.4em}li+li{margin-top:5px}
+    .page{max-width:1320px;margin:auto;padding:24px clamp(16px,3vw,40px) 80px}.masthead{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}.eyebrow,.sec-no,.label{font:600 12px/1.4 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}h1{font-size:clamp(28px,3vw,39px);margin:5px 0 10px}.lead{max-width:72ch;color:var(--muted);font-size:16px}.meta{font:13px/1.6 var(--sans);color:var(--subtle)}.meta strong{color:var(--muted)}
+    .overview{margin:30px 0 38px}.overview h2{font-size:25px;margin-bottom:14px}.map{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:clamp(16px,2.5vw,28px)}.map-grid{display:grid;grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr) 42px minmax(0,1fr);align-items:stretch;gap:12px}.node{padding:16px;border:1.5px solid;border-radius:12px;background:var(--card);font-family:var(--sans)}.node h3{font:600 17px/1.3 var(--sans);margin:8px 0}.node p{font:13px/1.45 var(--sans)}.node small{font:12px/1.4 var(--mono);color:var(--subtle)}.node.app{border-color:var(--blue);background:var(--blue-soft)}.node.server{border-color:var(--accent);background:var(--accent-soft)}.node.machine{border-color:var(--purple);background:var(--purple-soft)}.arrow{align-self:center;text-align:center;color:var(--accent);font:700 25px var(--sans)}.map-stores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px;font:13px/1.5 var(--sans)}.map-stores span{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 11px}.map-note{font-size:14px;color:var(--muted);margin-top:16px}.legend{font:12px var(--sans);color:var(--muted);display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:14px}.legend span:before{content:"";display:inline-block;width:12px;height:12px;border:1.5px solid;vertical-align:-2px;margin-right:6px;border-radius:3px}.legend .l-app:before{border-color:var(--blue);background:var(--blue-soft)}.legend .l-server:before{border-color:var(--accent);background:var(--accent-soft)}.legend .l-store:before{border-color:var(--subtle);background:var(--card)}.legend .l-machine:before{border-color:var(--purple);background:var(--purple-soft)}
+    .shell{border-top:1px solid var(--line);padding-top:28px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:40px}.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font:13px/1.5 var(--sans)}.toc strong{display:block;color:var(--subtle);text-transform:uppercase;font-size:11px;letter-spacing:.12em;margin-bottom:10px}.toc a{display:block;text-decoration:none;color:var(--muted);padding:6px 9px;border-left:2px solid var(--line)}.toc a:hover,.toc a:focus-visible{color:var(--accent);border-color:var(--accent);background:var(--surface)}main{display:grid;gap:55px;min-width:0}section{scroll-margin-top:20px;display:grid;gap:17px}.sec-head{display:grid;gap:4px}.sec-head h2{font-size:clamp(23px,2.5vw,30px)}.prose{max-width:78ch;color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;align-content:start;gap:10px}.card h3{font-size:21px}.card p,.card li{font-size:15px}.card .src{font:12px/1.6 var(--sans);color:var(--subtle)}.full{grid-column:1/-1}.steps{display:grid;gap:14px}.step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;grid-template-columns:38px 1fr;gap:14px}.num{width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:700 14px/32px var(--sans);text-align:center}.step h3{font-size:19px;margin-bottom:6px}.step p{font-size:15.5px;color:var(--muted)}.step .src{margin-top:7px;color:var(--subtle);font:12px/1.5 var(--sans)}.note{border:1px solid var(--amber);background:var(--amber-soft);padding:13px 16px;border-radius:10px;font-size:15px}.note strong{font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:3px}.note.red{border-color:var(--red);background:var(--red-soft)}.note.red strong{color:var(--red)}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}table{border-collapse:collapse;width:100%;min-width:650px;font:13.5px/1.45 var(--sans)}th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--surface);color:var(--subtle);font-size:11px;letter-spacing:.07em;text-transform:uppercase}tr:last-child td{border-bottom:0}.tag{display:inline-block;padding:1px 7px;border:1px solid;border-radius:99px;font:600 11px var(--sans)}.tag.ok{color:var(--green);background:var(--green-soft)}.tag.demo{color:var(--amber);background:var(--amber-soft)}.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font:13px var(--mono)}.flow span{border:1px solid var(--line);border-radius:7px;padding:6px 9px;background:var(--card)}.flow b{color:var(--accent)}footer{border-top:1px solid var(--line);padding-top:18px;color:var(--subtle);font:13px/1.5 var(--sans)}
+    .diagram{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}.diagram h3{font-size:20px}.diagram-scroll{overflow-x:auto}.diagram svg{display:block;max-width:none;height:auto;font-family:var(--sans);color:var(--ink)}.diagram figcaption{font:13.5px/1.5 var(--sans);color:var(--muted)}.diagram-tools{text-align:right}.diagram-tools button,.zoom-close{font:12px var(--sans);color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer}.diagram-tools button:hover,.zoom-close:hover{background:var(--accent-soft)}.zoom-dialog{width:min(98vw,1200px);max-width:none;max-height:96vh;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px}.zoom-dialog::backdrop{background:#000a}.zoom-header{display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 14px var(--sans);margin-bottom:12px}.zoom-content{overflow:auto;max-height:calc(96vh - 68px)}.zoom-content svg{display:block;max-width:none;height:auto}.diagram svg .box,.zoom-dialog svg .box{fill:var(--card);stroke:var(--line);stroke-width:1.5}.diagram svg .ui,.zoom-dialog svg .ui{fill:var(--blue-soft);stroke:var(--blue)}.diagram svg .proc,.zoom-dialog svg .proc{fill:var(--accent-soft);stroke:var(--accent)}.diagram svg .data,.zoom-dialog svg .data{fill:var(--card);stroke:var(--subtle)}.diagram svg .device,.zoom-dialog svg .device{fill:var(--purple-soft);stroke:var(--purple)}.diagram svg .good,.zoom-dialog svg .good{fill:var(--green-soft);stroke:var(--green)}.diagram svg .warn,.zoom-dialog svg .warn{fill:var(--amber-soft);stroke:var(--amber)}.diagram svg .bad,.zoom-dialog svg .bad{fill:var(--red-soft);stroke:var(--red)}.diagram svg .phase,.zoom-dialog svg .phase{fill:var(--amber-soft);stroke:var(--amber)}.diagram svg .line,.zoom-dialog svg .line{fill:none;stroke:var(--subtle);stroke-width:1.5}.diagram svg .edge,.zoom-dialog svg .edge{fill:none;stroke:var(--accent);stroke-width:2}.diagram svg .dash,.zoom-dialog svg .dash{stroke-dasharray:5 5}.diagram svg text,.zoom-dialog svg text{fill:var(--ink);font:14px var(--sans)}.diagram svg .head,.zoom-dialog svg .head{font-weight:700;font-size:15px}.diagram svg .small,.zoom-dialog svg .small{font-size:12px;fill:var(--muted)}.diagram svg .phase-text,.zoom-dialog svg .phase-text{font-size:12px;font-weight:700;fill:var(--amber)}.diagram svg .edge-text,.zoom-dialog svg .edge-text{font-size:12px;fill:var(--accent)}.diagram-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.mini-flow{display:grid;grid-template-columns:1fr;justify-items:center;gap:5px;font:13px/1.45 var(--sans)}.mini-flow .block{width:100%;border:1.5px solid var(--accent);background:var(--accent-soft);border-radius:7px;padding:9px 12px;text-align:center}.mini-flow .block.ui{border-color:var(--blue);background:var(--blue-soft)}.mini-flow .block.data{border-color:var(--subtle);background:var(--card)}.mini-flow .block.device{border-color:var(--purple);background:var(--purple-soft)}.mini-flow .block.good{border-color:var(--green);background:var(--green-soft)}.mini-flow .block.warn{border-color:var(--amber);background:var(--amber-soft)}.mini-flow .block.bad{border-color:var(--red);background:var(--red-soft)}.mini-flow .down{color:var(--accent);font-size:18px;line-height:1}.mini-flow .fork{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}.mini-flow .fork .block{height:100%}.mini-flow .block code{background:none;padding:0}.mini-flow .caption{color:var(--muted);font-size:12px;text-align:center}
+    @media(max-width:1050px){.shell{grid-template-columns:1fr}.toc{position:static;max-height:none;display:flex;gap:2px;flex-wrap:wrap}.toc strong{width:100%}.toc a{border:1px solid var(--line);border-radius:6px;padding:4px 8px}.map-grid{grid-template-columns:1fr;gap:8px}.arrow{transform:rotate(90deg);line-height:1.2}}
+    @media(max-width:700px){.cards,.map-stores,.diagram-grid{grid-template-columns:1fr}.full{grid-column:auto}.step{grid-template-columns:30px 1fr;gap:10px}.page{padding-bottom:40px}}
+    @media print{body{background:#fff;color:#111}.page{max-width:none;padding:0}.toc{display:none}.shell{display:block}main{gap:30px}.card,.step,.node{break-inside:avoid}a{color:inherit;text-decoration:none}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Tài liệu hệ thống · FlexMix androidv0.1</div>
+      <h1>Manual hệ thống FlexMix</h1>
+      <p class="lead">Cách vận hành và luồng dữ liệu giữa app Android, server và máy pha trong phiên bản hiện tại của dự án.</p>
+    </div>
+    <div class="meta"><strong>Đối tượng:</strong> người dùng, người vận hành, người phát triển<br><strong>Cập nhật:</strong> 06/10/2026 · <strong>Nguồn:</strong> mã nguồn và README trong repo</div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <h2>1 · Bức tranh toàn cục</h2>
+    <div class="map" role="img" aria-label="App Android gửi yêu cầu HTTP tới server; server quản lý tài khoản và quyền trong SQLite, giao lệnh qua relay cho Raspberry Pi; máy lưu menu và kho, trả kết quả về server rồi tới app.">
+      <div class="map-grid">
+        <div class="node app"><small>NGƯỜI DÙNG · ANDROID</small><h3>App Flutter</h3><p>Đăng ký, đăng nhập, chọn máy, quản lý quyền, menu và kho.</p></div>
+        <div class="arrow" aria-hidden="true">↔</div>
+        <div class="node server"><small>HTTP :8000</small><h3>Server Python</h3><p>Kiểm phiên và quyền; nhận request; chuyển lệnh, chờ kết quả.</p></div>
+        <div class="arrow" aria-hidden="true">↔</div>
+        <div class="node machine"><small>RASPBERRY PI</small><h3>Máy FlexMix</h3><p>Chủ động heartbeat, hỏi lệnh, xử lý menu/kho và trả kết quả.</p></div>
+      </div>
+      <div class="map-stores"><span><strong>Ở server:</strong> SQLite lưu tài khoản, phiên, máy, quyền và mã mời; RAM giữ heartbeat và hộp thư lệnh.</span><span><strong>Ở máy:</strong> lưu menu và kho; xử lý lệnh rồi trả kết quả cho server.</span></div>
+      <p class="map-note">App dùng token của người dùng. Máy dùng product key. Server không lưu menu/kho của máy; máy chủ động kết nối tới server, không cần mở API trên máy.</p>
+    </div>
+    <div class="legend"><span class="l-app">Giao diện</span><span class="l-server">Điều phối</span><span class="l-store">Dữ liệu</span><span class="l-machine">Thiết bị</span></div>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục"><strong>Mục lục</strong><a href="#tong-quan">1 · Tổng quan</a><a href="#bat-dau">2 · Bắt đầu sử dụng</a><a href="#luong-chinh">3 · Luồng nghiệp vụ</a><a href="#thanh-phan">4 · Thành phần</a><a href="#api">5 · API và dữ liệu</a><a href="#van-hanh">6 · Vận hành</a><a href="#gioi-han">7 · Giới hạn và xử lý lỗi</a></nav>
+    <main>
+      <section id="bat-dau">
+        <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Bắt đầu sử dụng</h2></div>
+        <p class="prose">Server, app và máy phải cùng truy cập được địa chỉ server. Máy cần cấu hình riêng trước khi ghép đôi hoặc chạy relay.</p>
+        <div class="cards">
+          <article class="card"><h3>1. Khởi động server</h3><p>Từ thư mục gốc dự án, chạy:</p><pre><code>python -m server.main
+# hoặc chọn cổng khác
+python -m server.main --port 8001</code></pre><p>Mặc định server nghe trên <code>0.0.0.0:8000</code>. Nếu muốn gửi OTP qua email, cấu hình <code>SERVICE_EMAIL</code> và <code>SMTP_PASSWORD</code> trong <code>server/config/.env</code>.</p><div class="src"><a href="server/START.md">server/START.md</a> · <a href="server/service/README.md">server/service/README.md</a></div></article>
+          <article class="card"><h3>2. Cấu hình và chạy máy</h3><p>Tạo <code>machine/config/machine.env</code> riêng cho từng máy; file chứa <code>MACHINE_NAME</code>, <code>PRODUCT_KEY</code> và <code>SERVER_URL</code>.</p><pre><code>python -m machine.config.create_env --name FlexMix-02 --server http://&lt;IP server&gt;:8000
+python machine_qr.py --from-env
+cd machine
+python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>python3 -m machine.pairing.machine_bluetooth_pair</code> trên Raspberry Pi.</p><div class="src"><a href="machine/README.md">machine/README.md</a> · <a href="machine/pairing/README.md">machine/pairing/README.md</a></div></article>
+          <article class="card full"><h3>3. Cài và kết nối app</h3><p>Build từ <code>app/flutter_app</code> với địa chỉ server mà điện thoại truy cập được. Sau khi mở app: đăng ký tài khoản và xác minh OTP, đăng nhập, vào tab <strong>Máy</strong> để quét QR hoặc ghép Bluetooth. Nếu không có Raspberry Pi, các công cụ mô phỏng nằm trong <a href="tests/README.md">tests/README.md</a>.</p><pre><code>flutter build apk --release --dart-define=SERVER_URL=http://&lt;IP server&gt;:8000</code></pre><div class="src"><a href="app/flutter_app/README.md">app/flutter_app/README.md</a></div></article>
+        </div>
+        <div class="note red"><strong>Bí mật máy</strong>Product key là thông tin đăng ký và xác thực của máy. Giữ file <code>machine.env</code> ngoài git; không chia sẻ key hoặc ảnh QR đăng ký công khai.</div>
+      </section>
+
+      <section id="luong-chinh">
+        <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Luồng chính: từ tài khoản tới dữ liệu máy</h2></div>
+        <figure class="diagram">
+          <h3>3.1 · Tài khoản, ghép đôi và đăng ký máy</h3>
+          <div class="diagram-scroll"><svg viewBox="0 0 950 570" width="950" role="img" aria-label="Biểu đồ tuần tự: app đăng ký, xác minh OTP và đăng nhập; lấy thông tin máy qua QR hoặc Bluetooth; gửi product key lên server; server lưu máy và quyền chủ trong SQLite.">
+            <defs><marker id="seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+            <rect class="ui" x="25" y="10" width="150" height="42" rx="7"/><text class="head" x="100" y="37" text-anchor="middle">App Android</text>
+            <rect class="proc" x="265" y="10" width="150" height="42" rx="7"/><text class="head" x="340" y="37" text-anchor="middle">Server :8000</text>
+            <rect class="data" x="505" y="10" width="150" height="42" rx="7"/><text class="head" x="580" y="37" text-anchor="middle">SQLite server</text>
+            <rect class="device" x="745" y="10" width="175" height="42" rx="7"/><text class="head" x="832" y="37" text-anchor="middle">Máy / tem QR</text>
+            <path class="line dash" d="M100 52V555 M340 52V555 M580 52V555 M832 52V555"/>
+            <rect class="phase" x="25" y="67" width="895" height="26" rx="4"/><text class="phase-text" x="472" y="85" text-anchor="middle">GIAI ĐOẠN 1 · TÀI KHOẢN</text>
+            <path class="edge" d="M100 122H336" marker-end="url(#seq-arrow)"/><text class="edge-text" x="218" y="115" text-anchor="middle">1 · gửi thông tin đăng ký</text>
+            <path class="edge" d="M336 158H104" marker-end="url(#seq-arrow)"/><text class="edge-text" x="220" y="151" text-anchor="middle">2 · yêu cầu nhập OTP đã gửi email</text>
+            <path class="edge" d="M100 194H336" marker-end="url(#seq-arrow)"/><text class="edge-text" x="220" y="187" text-anchor="middle">3 · xác minh OTP</text>
+            <path class="edge" d="M340 230H576" marker-end="url(#seq-arrow)"/><text class="edge-text" x="458" y="223" text-anchor="middle">4 · tạo tài khoản</text>
+            <path class="edge" d="M100 266H336" marker-end="url(#seq-arrow)"/><text class="edge-text" x="220" y="259" text-anchor="middle">5 · đăng nhập; server trả token</text>
+            <rect class="phase" x="25" y="284" width="895" height="26" rx="4"/><text class="phase-text" x="472" y="302" text-anchor="middle">GIAI ĐOẠN 2 · GHÉP ĐÔI VÀ GÁN CHỦ MÁY</text>
+            <path class="edge" d="M828 345H104" marker-end="url(#seq-arrow)"/><text class="edge-text" x="466" y="338" text-anchor="middle">6 · QR / Bluetooth: machine_name + product_key</text>
+            <path class="edge" d="M100 386H336" marker-end="url(#seq-arrow)"/><text class="edge-text" x="220" y="379" text-anchor="middle">7 · token + thông tin máy</text>
+            <path class="edge" d="M340 427H576" marker-end="url(#seq-arrow)"/><text class="edge-text" x="458" y="420" text-anchor="middle">8 · tìm/tạo máy, gán chủ</text>
+            <path class="edge" d="M336 468H104" marker-end="url(#seq-arrow)"/><text class="edge-text" x="220" y="461" text-anchor="middle">9 · trả machine_id</text>
+            <path class="edge" d="M100 509H336" marker-end="url(#seq-arrow)"/><text class="edge-text" x="220" y="502" text-anchor="middle">10 · tải danh sách máy</text>
+            <text class="small" x="470" y="549" text-anchor="middle">Máy không cần online khi đăng ký nếu app đã có gói pairing.</text>
+          </svg></div>
+          <figcaption>OTP chỉ tạo tài khoản sau khi xác minh. Đăng ký máy dùng cùng một request HTTP; người đầu tiên đăng ký key trở thành chủ. Xem <a href="server/service/user_register/README.md">đăng ký</a>, <a href="server/service/user_login/README.md">đăng nhập</a> và <a href="server/service/machine_register/README.md">đăng ký máy</a>.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <h3>3.2 · Một request Menu/Kho đi qua relay</h3>
+          <div class="diagram-scroll"><svg viewBox="0 0 950 610" width="950" role="img" aria-label="Biểu đồ tuần tự: máy heartbeat; app gửi yêu cầu menu hoặc kho; server kiểm quyền, xếp lệnh; máy long-poll nhận lệnh và trả kết quả; server phản hồi app. Nhánh offline hoặc timeout trả lỗi.">
+            <defs><marker id="relay-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+            <rect class="ui" x="25" y="10" width="170" height="42" rx="7"/><text class="head" x="110" y="37" text-anchor="middle">App</text>
+            <rect class="proc" x="276" y="10" width="170" height="42" rx="7"/><text class="head" x="361" y="37" text-anchor="middle">Feature server</text>
+            <rect class="data" x="527" y="10" width="170" height="42" rx="7"/><text class="head" x="612" y="37" text-anchor="middle">Hộp thư RAM</text>
+            <rect class="device" x="778" y="10" width="145" height="42" rx="7"/><text class="head" x="850" y="37" text-anchor="middle">Máy</text>
+            <path class="line dash" d="M110 52V590 M361 52V590 M612 52V590 M850 52V590"/>
+            <rect class="phase" x="25" y="67" width="898" height="26" rx="4"/><text class="phase-text" x="474" y="85" text-anchor="middle">KẾT NỐI · XÁC THỰC MÁY BẰNG PRODUCT KEY</text>
+            <path class="edge" d="M846 124H365" marker-end="url(#relay-arrow)"/><text class="edge-text" x="604" y="116" text-anchor="middle">1 · heartbeat mỗi 5 giây</text>
+            <rect class="phase" x="25" y="151" width="898" height="26" rx="4"/><text class="phase-text" x="474" y="169" text-anchor="middle">YÊU CẦU NGHIỆP VỤ · TOKEN APP + MACHINE_ID</text>
+            <path class="edge" d="M110 211H357" marker-end="url(#relay-arrow)"/><text class="edge-text" x="234" y="202" text-anchor="middle">2 · nhận menu/kho, cập nhật hoặc nạp</text>
+            <rect class="proc" x="280" y="229" width="162" height="42" rx="6"/><text class="small" x="361" y="246" text-anchor="middle">kiểm phiên, quyền,</text><text class="small" x="361" y="261" text-anchor="middle">dạng gói</text>
+            <path class="edge" d="M365 293H608" marker-end="url(#relay-arrow)"/><text class="edge-text" x="487" y="285" text-anchor="middle">3 · xếp lệnh và chờ</text>
+            <path class="edge" d="M846 337H616" marker-end="url(#relay-arrow)"/><text class="edge-text" x="731" y="329" text-anchor="middle">4 · hỏi lệnh (long-poll)</text>
+            <path class="edge" d="M616 379H846" marker-end="url(#relay-arrow)"/><text class="edge-text" x="731" y="371" text-anchor="middle">5 · {id, instruction, data}</text>
+            <rect class="device" x="779" y="397" width="143" height="42" rx="6"/><text class="small" x="850" y="414" text-anchor="middle">xử lý menu / kho</text><text class="small" x="850" y="429" text-anchor="middle">trên máy</text>
+            <path class="edge" d="M846 463H616" marker-end="url(#relay-arrow)"/><text class="edge-text" x="731" y="455" text-anchor="middle">6 · {id, ket_qua}</text>
+            <path class="edge" d="M608 505H365" marker-end="url(#relay-arrow)"/><text class="edge-text" x="487" y="497" text-anchor="middle">7 · đánh thức request chờ</text>
+            <path class="edge" d="M357 547H114" marker-end="url(#relay-arrow)"/><text class="edge-text" x="235" y="539" text-anchor="middle">8 · response cùng request ban đầu</text>
+            <text class="small" x="474" y="585" text-anchor="middle">Offline: 503 · Máy lỗi hoặc quá hạn: 502 · Không có request lấy kết quả riêng.</text>
+          </svg></div>
+          <figcaption>Menu và Kho dùng cùng cơ chế chuyển lệnh; dữ liệu nghiệp vụ vẫn ở máy. Server không gọi API trên máy. Xem <a href="server/service/machine_link/README.md">machine_link</a> và <a href="server/service/dashboard_sync/README.md">dashboard_sync</a>.</figcaption>
+        </figure>
+        <div class="diagram-grid">
+          <figure class="diagram"><h3>3.3 · Quyền và chia sẻ máy</h3><div class="mini-flow"><div class="block ui">Chủ chọn máy → tạo mã mời</div><div class="down">↓</div><div class="block">Server lưu hash mã · hạn 5 phút · dùng một lần</div><div class="down">↓</div><div class="block ui">Nhân viên quét QR / nhận qua Bluetooth</div><div class="down">↓</div><div class="fork"><div class="block good">Mã hợp lệ → cấp quyền manager</div><div class="block bad">Sai / hết hạn / đã dùng → từ chối</div></div><div class="down">↓</div><div class="block data">Chủ xem danh sách và có thể thu hồi quyền</div></div><figcaption>Chủ đổi tên hoặc gỡ toàn bộ máy; nhân viên chỉ bỏ quyền của mình. <a href="server/service/machine_share/README.md">Chi tiết chia sẻ</a>.</figcaption></figure>
+          <figure class="diagram"><h3>3.4 · Đọc và cập nhật Menu</h3><div class="mini-flow"><div class="block ui">App gửi <code>menu_version</code> đang giữ</div><div class="down">↓</div><div class="block device">Máy so phiên bản menu</div><div class="down">↓</div><div class="fork"><div class="block good">Trùng → <code>up_to_date</code></div><div class="block data">Khác → <code>ok</code> + menu nén</div></div><div class="down">↓</div><div class="block ui">App sửa món với phiên bản đang hiển thị</div><div class="down">↓</div><div class="fork"><div class="block good">Còn khớp → ghi cả gói</div><div class="block warn">Bản cũ → <code>conflict</code>, không ghi</div></div></div><figcaption>Gói menu là <code>base64(zlib(JSON))</code>. UI hiện bật/tắt món; API hỗ trợ sửa giá. <a href="server/service/dashboard_sync/menu_sync/README.md">Luồng Menu</a>.</figcaption></figure>
+          <figure class="diagram"><h3>3.5 · Đọc và nạp Kho</h3><div class="mini-flow"><div class="block ui">App gửi <code>version</code> kho đang giữ</div><div class="down">↓</div><div class="block device">Máy so phiên bản kho</div><div class="down">↓</div><div class="fork"><div class="block good">Trùng → <code>up_to_date</code></div><div class="block data">Khác → <code>ok</code> + nguyên liệu</div></div><div class="down">↓</div><div class="block ui">App yêu cầu nạp một món hoặc tất cả</div><div class="down">↓</div><div class="block device">Máy ghi kho → dựng lại menu bán hàng</div><div class="down">↓</div><div class="fork"><div class="block good">Hoàn tất → app tải kho mới</div><div class="block warn">Lỗi dựng menu → <code>warning</code>; kho đã ghi</div></div></div><figcaption>Kho trả JSON trực tiếp. Nạp kho chưa có nhánh <code>conflict</code> phiên bản. <a href="server/service/dashboard_sync/ingredient_sync/README.md">Luồng Kho</a>.</figcaption></figure>
+        </div>
+      </section>
+
+      <section id="thanh-phan">
+        <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Từng thành phần và nơi lưu dữ liệu</h2></div>
+        <figure class="diagram">
+          <h3>4.1 · Sơ đồ khối mã nguồn</h3>
+          <div class="diagram-scroll"><svg viewBox="0 0 950 455" width="950" role="img" aria-label="Các khối app Flutter, server Python và Raspberry Pi. App có feature, core và config; server có routing, module nghiệp vụ, SQLite và machine transport; máy có relay, menu, kho và Bluetooth pairing riêng.">
+            <defs><marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
+            <rect class="ui" x="15" y="10" width="260" height="370" rx="12"/><text class="head" x="145" y="38" text-anchor="middle">APP FLUTTER</text>
+            <rect class="box" x="35" y="62" width="220" height="54" rx="7"/><text x="145" y="84" text-anchor="middle">app + dashboard</text><text class="small" x="145" y="103" text-anchor="middle">điều hướng / chọn máy</text>
+            <rect class="box" x="35" y="138" width="220" height="72" rx="7"/><text x="145" y="164" text-anchor="middle">feature/*</text><text class="small" x="145" y="184" text-anchor="middle">auth · register · share</text><text class="small" x="145" y="200" text-anchor="middle">machine_list · menu · kho</text>
+            <rect class="box" x="35" y="232" width="220" height="56" rx="7"/><text x="145" y="254" text-anchor="middle">core + config</text><text class="small" x="145" y="273" text-anchor="middle">HTTP · token · route · QR/BT</text>
+            <text class="small" x="145" y="344" text-anchor="middle">Orders: dữ liệu demo</text>
+            <rect class="proc" x="345" y="10" width="260" height="370" rx="12"/><text class="head" x="475" y="38" text-anchor="middle">SERVER PYTHON :8000</text>
+            <rect class="box" x="365" y="62" width="220" height="54" rx="7"/><text x="475" y="84" text-anchor="middle">main.py + routing.py</text><text class="small" x="475" y="103" text-anchor="middle">tám module HTTP</text>
+            <rect class="box" x="365" y="138" width="220" height="72" rx="7"/><text x="475" y="164" text-anchor="middle">service/*</text><text class="small" x="475" y="184" text-anchor="middle">tài khoản · máy · chia sẻ</text><text class="small" x="475" y="200" text-anchor="middle">menu_sync · ingredient_sync</text>
+            <rect class="data" x="365" y="232" width="103" height="64" rx="7"/><text x="416" y="257" text-anchor="middle">SQLite</text><text class="small" x="416" y="276" text-anchor="middle">quyền / phiên</text>
+            <rect class="data" x="482" y="232" width="103" height="64" rx="7"/><text x="533" y="257" text-anchor="middle">RAM</text><text class="small" x="533" y="276" text-anchor="middle">lệnh / online</text>
+            <text class="small" x="475" y="344" text-anchor="middle">lib/machine/machine_transport.py</text>
+            <rect class="device" x="675" y="10" width="260" height="370" rx="12"/><text class="head" x="805" y="38" text-anchor="middle">MÁY RASPBERRY PI</text>
+            <rect class="box" x="695" y="62" width="220" height="54" rx="7"/><text x="805" y="84" text-anchor="middle">machine/main.py</text><text class="small" x="805" y="103" text-anchor="middle">heartbeat · poll · result</text>
+            <rect class="box" x="695" y="138" width="220" height="72" rx="7"/><text x="805" y="164" text-anchor="middle">menu_sync + ingredient_sync</text><text class="small" x="805" y="184" text-anchor="middle">nhận lệnh · xử lý · đóng gói</text><text class="small" x="805" y="200" text-anchor="middle">menu SQLite · kho MySQL</text>
+            <rect class="box" x="695" y="232" width="220" height="56" rx="7"/><text x="805" y="254" text-anchor="middle">pairing Bluetooth</text><text class="small" x="805" y="273" text-anchor="middle">tiến trình chạy riêng</text>
+            <text class="small" x="805" y="344" text-anchor="middle">machine.env: tên · key · URL</text>
+            <path class="edge" d="M275 175H339" marker-end="url(#arch-arrow)"/><text class="edge-text" x="307" y="161" text-anchor="middle">HTTP</text>
+            <path class="edge" d="M605 175H669" marker-start="url(#arch-arrow)" marker-end="url(#arch-arrow)"/><text class="edge-text" x="637" y="161" text-anchor="middle">relay</text>
+            <path class="edge" d="M805 382V420H145V382" marker-end="url(#arch-arrow)"/><text class="edge-text" x="475" y="411" text-anchor="middle">QR / Bluetooth cục bộ khi ghép đôi</text>
+          </svg></div>
+          <figcaption>Mũi tên relay biểu diễn trao đổi qua các request do máy chủ động gửi tới server. Ghép đôi QR/Bluetooth cung cấp tên và product key cho app; không đi qua server ở bước đọc gói.</figcaption>
+        </figure>
+        <div class="cards">
+          <article class="card"><h3>App Android</h3><p><code>lib/app</code> lắp ghép màn hình; <code>lib/config</code> giữ URL/route; <code>lib/core</code> giữ HTTP, phiên, gói QR/Bluetooth; mỗi <code>lib/feature</code> giữ request, state và UI của mình.</p><p>Dashboard có năm tab: Tổng quan, Đơn hàng, Sản phẩm, Kho, Máy. Chuyển máy sẽ bỏ dữ liệu menu/kho cũ.</p><div class="src"><a href="app/flutter_app/README.md">Cấu trúc app</a></div></article>
+          <article class="card"><h3>Server Python</h3><p><code>server/main.py</code> nạp trực tiếp tám module và mở HTTP. Route tập trung tại <code>server/config/routing.py</code>. Tài khoản, phiên, máy, quyền và mã mời nằm trong SQLite; các luồng Menu/Kho chỉ kiểm quyền và chuyển lệnh.</p><div class="src"><a href="server/START.md">Cách chạy server</a> · <a href="MODULE_PATTERN.md">Quy ước module</a></div></article>
+          <article class="card"><h3>Relay và hộp thư</h3><p><code>machine/main.py</code> chạy heartbeat và vòng hỏi lệnh. Hộp thư lệnh, heartbeat và kết quả chờ ở RAM server, trong <code>server/lib/machine/machine_transport.py</code>. Máy không cần biết ID được server cấp.</p><div class="src"><a href="server/service/machine_link/README.md">Luồng relay</a></div></article>
+          <article class="card"><h3>Dữ liệu trên máy</h3><p>Menu dùng dữ liệu tại <code>machine/database/database.db</code>. Kho dùng tầng MySQL của phần mềm máy pha <code>version1.0</code>, không nằm trong repo này. Pairing Bluetooth là tiến trình riêng, không tự khởi chạy cùng relay.</p><div class="src"><a href="machine/README.md">Cấu trúc máy</a> · <a href="machine/pairing/README.md">Pairing</a></div></article>
+        </div>
+        <div class="note"><strong>Phạm vi</strong>Manual này mô tả hệ thống quản lý Android ↔ server ↔ máy trong repo <code>androidv0.1</code>. Logic pha đồ uống, phần cứng và giao diện kiosk của <code>version1.0</code> thuộc tài liệu riêng.</div>
+      </section>
+
+      <section id="api">
+        <div class="sec-head"><span class="sec-no">Mục 5</span><h2>API và hợp đồng dữ liệu chính</h2></div>
+        <p class="prose">Các route nghiệp vụ gửi JSON qua POST, ngoại trừ route trạng thái máy là GET. Bảng này giúp tìm đúng luồng; cấu trúc gói chi tiết nằm trong README của từng feature.</p>
+        <div class="table-wrap"><table><thead><tr><th>Nhóm</th><th>Route</th><th>Gửi chính</th><th>Kết quả / ý nghĩa</th></tr></thead><tbody>
+          <tr><td>Tài khoản</td><td><code>/app/user/account/register</code><br><code>/app/user/otp/send</code><br><code>/app/user/otp/verify</code><br><code>/app/user/session/login</code><br><code>/app/user/session/logout</code></td><td>Thông tin đăng ký, OTP hoặc token</td><td>Tạo tài khoản; cấp hoặc xóa phiên</td></tr>
+          <tr><td>Đăng ký máy</td><td><code>/app/user/machine/register</code></td><td><code>token, machine_name, product_key</code></td><td><code>machine_id</code> và quyền chủ</td></tr>
+          <tr><td>Chia sẻ</td><td><code>/app/machine/share/create</code><br><code>/app/machine/share/accept</code><br><code>/app/machine/staff/list</code><br><code>/app/machine/staff/revoke</code></td><td>Token, máy, mã mời hoặc user_id</td><td>Tạo/nhận mã, xem/thu hồi quyền</td></tr>
+          <tr><td>Danh sách máy</td><td><code>/app/user/machine/list</code><br><code>/app/machine/name/update</code><br><code>/app/user/machine/remove</code><br><code>GET /app/machine/status/get</code></td><td>Token và machine_id; GET dùng query</td><td>Danh sách, tên, quyền, trạng thái heartbeat</td></tr>
+          <tr><td>Menu</td><td><code>/app/machine/menu/get</code><br><code>/app/machine/menu/update</code></td><td>Token, máy, <code>menu_version</code>, thay đổi</td><td><code>ok</code>, <code>up_to_date</code> hoặc <code>conflict</code></td></tr>
+          <tr><td>Kho</td><td><code>/app/machine/ingredient/get</code><br><code>/app/machine/ingredient/refill</code></td><td>Token, máy, version hoặc target/value</td><td>Nguyên liệu hoặc kết quả nạp</td></tr>
+          <tr><td>Cổng máy</td><td><code>/machine/heartbeat/send</code><br><code>/machine/command/poll</code><br><code>/machine/result/send</code></td><td><code>product_key</code>; ID và kết quả khi trả lời</td><td>Báo sống, nhận lệnh, chuyển kết quả</td></tr>
+        </tbody></table></div>
+        <div class="flow"><span>App POST + token</span><b>→</b><span>Kiểm phiên/quyền</span><b>→</b><span>Hộp thư máy</span><b>→</b><span>Máy POST kết quả</span><b>→</b><span>Response cho app</span></div>
+      </section>
+
+      <section id="van-hanh">
+        <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Vận hành và kiểm tra</h2></div>
+        <div class="cards">
+          <article class="card"><h3>Cấu hình cần có</h3><ul><li>Server: cổng HTTP mặc định <code>8000</code>; SMTP trong <code>server/config/.env</code> nếu dùng OTP email.</li><li>Máy: <code>MACHINE_NAME</code>, <code>PRODUCT_KEY</code>, <code>SERVER_URL</code> trong <code>machine/config/machine.env</code>.</li><li>App: truyền <code>SERVER_URL</code> khi build hoặc sửa <code>app_config.dart</code>.</li></ul></article>
+          <article class="card"><h3>Kiểm tra cơ bản</h3><pre><code>.\tests\test.ps1 -Flow py
+cd app/flutter_app
+flutter analyze
+flutter test ../../tests/flutter</code></pre><p>Kiểm tra end-to-end trên điện thoại: <code>python tests/e2e/run_e2e.py</code>. Bộ này cần ADB và môi trường theo <a href="tests/README.md">hướng dẫn test</a>.</p></article>
+        </div>
+        <p class="prose">Sau khi server khởi động lại, phiên token trong SQLite vẫn còn. OTP đang chờ, heartbeat và lệnh trong RAM mất; máy phải heartbeat lại. Máy online theo heartbeat chỉ là dấu hiệu còn kết nối, chưa bảo đảm tác vụ tiếp theo thành công.</p>
+      </section>
+
+      <section id="gioi-han">
+        <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Giới hạn hiện tại và xử lý lỗi</h2></div>
+        <div class="table-wrap"><table><thead><tr><th>Hiện tượng</th><th>Ý nghĩa</th><th>Việc cần làm</th></tr></thead><tbody>
+          <tr><td>OTP không đến</td><td>Thiếu/sai SMTP hoặc email chậm</td><td>Kiểm tra <code>server/config/.env</code> và thông báo trả về; dùng nút gửi lại khi hết thời gian chờ.</td></tr>
+          <tr><td>Phiên hết hạn</td><td>Token không còn hợp lệ</td><td>Đăng nhập lại; app sẽ quay về màn đăng nhập khi API báo <code>login_required</code>.</td></tr>
+          <tr><td>Không có quyền máy</td><td>Người dùng không phải chủ/nhân viên hoặc tác vụ chỉ dành cho chủ</td><td>Kiểm tra máy đang chọn và quyền chia sẻ. Chỉ chủ đổi tên, tạo mã mời và thu hồi nhân viên.</td></tr>
+          <tr><td>Máy offline / HTTP 503</td><td>Server chưa thấy heartbeat gần đây</td><td>Kiểm tra relay, product key, <code>SERVER_URL</code> của máy và kết nối mạng.</td></tr>
+          <tr><td>HTTP 502 / timeout</td><td>Máy báo lỗi hoặc không trả kết quả kịp</td><td>Tải lại menu/kho để xác định trạng thái. Nếu máy đã lấy lệnh, tác vụ có thể đã chạy.</td></tr>
+          <tr><td>Menu <code>conflict</code></td><td>Phiên bản menu đã thay đổi</td><td>App tải menu mới; thực hiện lại sửa đổi trên bản mới.</td></tr>
+          <tr><td>Đơn hàng / doanh thu</td><td><span class="tag demo">Dữ liệu demo / trống</span></td><td>Tab Đơn hàng dùng dữ liệu demo; Tổng quan chưa có API doanh thu, số đơn hay giá trị trung bình.</td></tr>
+        </tbody></table></div>
+        <div class="note"><strong>Ranh giới xác thực</strong>Route <code>GET /app/machine/status/get</code> hiện không yêu cầu token. Nó phản ánh heartbeat, không phải quyền điều khiển máy.</div>
+      </section>
+
+      <footer>Manual đối chiếu theo mã nguồn và README của <code>androidv0.1</code>. Trang HTML tự chứa CSS, dùng được offline và có bố cục in. Tài liệu chi tiết từng luồng: <a href="server/service/README.md">server/service/README.md</a>.</footer>
+    </main>
+  </div>
+</div>
+<dialog class="zoom-dialog" id="diagram-zoom" aria-label="Sơ đồ phóng to"><div class="zoom-header"><span id="zoom-title"></span><button class="zoom-close" type="button" id="zoom-close">Đóng</button></div><div class="zoom-content" id="zoom-content"></div></dialog>
+<script>
+  const zoomDialog = document.getElementById('diagram-zoom');
+  const zoomContent = document.getElementById('zoom-content');
+  const zoomTitle = document.getElementById('zoom-title');
+  document.querySelectorAll('figure.diagram svg').forEach(svg => {
+    const figure = svg.closest('figure');
+    const tools = document.createElement('div');
+    tools.className = 'diagram-tools';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Phóng to';
+    button.addEventListener('click', () => {
+      zoomTitle.textContent = figure.querySelector('h3').textContent;
+      zoomContent.replaceChildren(svg.cloneNode(true));
+      zoomDialog.showModal();
+    });
+    tools.append(button);
+    figure.querySelector('.diagram-scroll').after(tools);
+  });
+  document.getElementById('zoom-close').addEventListener('click', () => zoomDialog.close());
+  zoomDialog.addEventListener('close', () => zoomContent.replaceChildren());
+</script>
+</body>
+</html>

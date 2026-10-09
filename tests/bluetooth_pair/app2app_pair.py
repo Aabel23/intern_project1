@@ -1,7 +1,7 @@
 """Laptop đóng vai app thứ hai để thử luồng share máy khi chỉ có một điện thoại.
 
 Nhân viên (mặc định): điện thoại là chủ máy, bấm Chia sẻ rồi gửi mã qua Bluetooth
-(hoặc hiện QR); laptop nhận mã, đăng nhập tài khoản thứ hai, gọi /app/nhan-chia-se.
+(hoặc hiện QR); laptop nhận mã, đăng nhập tài khoản thứ hai, gọi /app/machine/share/accept.
 Chủ máy (--send): điện thoại là nhân viên, mở "Nhận chia sẻ qua Bluetooth";
 laptop đăng nhập tài khoản chủ, tạo mã mời rồi gửi qua Bluetooth tới điện thoại.
 Mọi gói tin Bluetooth lẫn HTTP đều in ra terminal.

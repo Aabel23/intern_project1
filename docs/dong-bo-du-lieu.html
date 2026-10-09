@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="Cách app và máy FlexMix giữ menu và kho khớp nhau: phiên bản CRC32, tải lại có điều kiện, khóa lạc quan, đóng gói và nén.">
+  <title>Đồng bộ menu và kho · FlexMix</title>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="document.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="intro">
+      <p class="eyebrow">FlexMix · project1_app · cơ chế đồng bộ dữ liệu</p>
+      <h1>Máy giữ bản gốc của menu và kho, app chỉ tải lại khi dấu CRC32 đổi</h1>
+      <p class="lead">Trang này giải thích cách app quản lý và máy pha giữ menu, kho khớp nhau mà server không lưu bản nào. Đọc xong, bạn sẽ biết một lần tải và một lần sửa menu đi qua đâu, vì sao app có thể nhận <code>conflict</code>, và những chỗ nào cần sửa cùng lúc khi đổi gói tin.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối tượng:</b> dev mới vào team, đã biết Python và Flutter cơ bản</span>
+      <span><b>Nguồn:</b> code commit <code>58a0b01</code> + working tree, đối chiếu 09/10/2026</span>
+      <span><b>Trạng thái:</b> <span class="status done">hiện trạng code</span> · chưa chạy thử trên máy thật</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan" aria-labelledby="overview-title">
+    <div class="overview-head">
+      <h2 id="overview-title">1 · Ba bên, một nguồn chuẩn</h2>
+      <ul class="legend" aria-label="Chú giải sơ đồ">
+        <li><i class="swatch ui" aria-hidden="true"></i>App (giao diện)</li>
+        <li><i class="swatch process" aria-hidden="true"></i>Server (xử lý, chuyển tiếp)</li>
+        <li><i class="swatch device" aria-hidden="true"></i>Máy pha</li>
+        <li><i class="swatch store" aria-hidden="true"></i>Dữ liệu bền</li>
+      </ul>
+    </div>
+    <figure class="diagram" aria-labelledby="map-heading map-caption">
+      <div class="diagram-head"><h3 id="map-heading">Yêu cầu đi xuống máy, kết quả quay về trên cùng request của app</h3><span class="status done">Hiện trạng</span></div>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 1040 330" width="1040" height="330" role="img" aria-labelledby="map-svg-title map-svg-desc" xmlns="http://www.w3.org/2000/svg">
+          <title id="map-svg-title">Bản đồ đồng bộ app, server, máy</title>
+          <desc id="map-svg-desc">App gửi yêu cầu kèm phiên bản đang giữ lên server. Server kiểm quyền rồi đặt lệnh vào hộp thư; máy lấy lệnh qua long-poll, đọc database của mình, tính CRC32, trả kết quả lên server; server trả nguyên kết quả cho app.</desc>
+          <defs><marker id="arrow-map" class="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z"/></marker></defs>
+          <rect class="zone" x="664" y="40" width="368" height="270" rx="12" stroke-dasharray="6 5"/>
+          <text class="diagram-label" x="684" y="66">TẠI QUÁN · SAU ROUTER</text>
+          <rect class="node ui" x="24" y="95" width="210" height="130" rx="9"/>
+          <text class="diagram-title" x="129" y="128" text-anchor="middle">App Flutter</text>
+          <text class="diagram-sub" x="129" y="152" text-anchor="middle">ProductsSync · IngredientsSync</text>
+          <text class="diagram-sub" x="129" y="172" text-anchor="middle">bản sao: danh sách</text>
+          <text class="diagram-sub" x="129" y="190" text-anchor="middle">+ phiên bản đang giữ</text>
+          <rect class="node process" x="330" y="95" width="250" height="130" rx="9"/>
+          <text class="diagram-title" x="455" y="128" text-anchor="middle">Server trung gian</text>
+          <text class="diagram-sub" x="455" y="152" text-anchor="middle">check_access · kiểm dạng gói</text>
+          <text class="diagram-sub" x="455" y="172" text-anchor="middle">hộp thư lệnh trong RAM</text>
+          <text class="diagram-sub" x="455" y="190" text-anchor="middle">không lưu menu, không mở packet</text>
+          <rect class="node device" x="676" y="95" width="180" height="130" rx="9"/>
+          <text class="diagram-title" x="766" y="128" text-anchor="middle">Máy pha</text>
+          <text class="diagram-sub" x="766" y="152" text-anchor="middle">nguồn chuẩn</text>
+          <text class="diagram-sub" x="766" y="172" text-anchor="middle">tính CRC32</text>
+          <text class="diagram-sub" x="766" y="190" text-anchor="middle">so phiên bản · đóng gói</text>
+          <rect class="node store" x="890" y="95" width="130" height="130" rx="9"/>
+          <text class="diagram-title" x="955" y="128" text-anchor="middle">DB máy</text>
+          <text class="diagram-sub" x="955" y="152" text-anchor="middle">bảng drink</text>
+          <text class="diagram-sub" x="955" y="172" text-anchor="middle">nguyên liệu</text>
+          <path class="edge" d="M234 130H326" marker-end="url(#arrow-map)"/>
+          <path class="edge" d="M580 130H672" marker-end="url(#arrow-map)"/>
+          <path class="edge back" d="M676 190H584" marker-end="url(#arrow-map)"/>
+          <path class="edge back" d="M330 190H238" marker-end="url(#arrow-map)"/>
+          <path class="edge" d="M856 145H886" marker-end="url(#arrow-map)"/>
+          <path class="edge back" d="M890 175H860" marker-end="url(#arrow-map)"/>
+          <text class="diagram-edge-label" x="282" y="120" text-anchor="middle">① yêu cầu</text>
+          <text class="diagram-edge-label" x="628" y="120" text-anchor="middle">② lệnh</text>
+          <text class="diagram-edge-label" x="628" y="212" text-anchor="middle">③ kết quả</text>
+          <text class="diagram-edge-label" x="282" y="212" text-anchor="middle">④ trả app</text>
+          <text class="diagram-sub" x="282" y="262" text-anchor="middle">HTTP JSON</text>
+          <text class="diagram-sub" x="282" y="280" text-anchor="middle">token trong body</text>
+          <text class="diagram-sub" x="620" y="254" text-anchor="middle">long-poll:</text>
+          <text class="diagram-sub" x="620" y="272" text-anchor="middle">máy hỏi,</text>
+          <text class="diagram-sub" x="620" y="290" text-anchor="middle">server trả</text>
+        </svg>
+      </div>
+      <p class="diagram-hint">↔ Kéo ngang để xem hết sơ đồ.</p>
+      <figcaption id="map-caption">Nét liền là chiều đi xuống, nét đứt là chiều quay về. Server không gọi được xuống máy vì máy nằm sau router của quán; máy chủ động hỏi <code>/machine/command/poll</code> và nhận lệnh trong response. Kết quả ③ được trả cho app ④ trên chính request ①, app không phải hỏi lại.</figcaption>
+    </figure>
+    <div class="summary-box">
+      <h3>Ba ý cần nhớ</h3>
+      <ol>
+        <li><strong>Máy là nguồn chuẩn.</strong> App chỉ giữ bản sao kèm một con số phiên bản. Server chuyển tiếp và kiểm quyền, không lưu menu hay kho.</li>
+        <li><strong>Phiên bản là CRC32 của chính dữ liệu</strong>, không phải bộ đếm. Dữ liệu giống nhau thì số giống nhau; app chưa có gì thì gửi <code>0</code>.</li>
+        <li><strong>Sửa menu dùng khóa lạc quan:</strong> app nói "tôi đang sửa bản X". Máy chỉ ghi khi bản hiện tại vẫn là X, nếu không thì trả <code>conflict</code> kèm bản mới nhất.</li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="shell">
+    <aside class="toc" aria-label="Mục lục">
+      <div class="toc-inner"><p class="small-label">Mục lục</p><nav aria-label="Các mục">
+        <ol>
+          <li><a href="#tong-quan">1 · Ba bên, một nguồn chuẩn</a></li>
+          <li><a href="#tinh-huong">2 · Tắt một món, từ đầu tới cuối</a></li>
+          <li><a href="#co-che">3 · Năm cơ chế</a></li>
+          <li class="sub"><a href="#phien-ban">3.1 Phiên bản CRC32</a></li>
+          <li class="sub"><a href="#tai-lai">3.2 Tải lại có điều kiện</a></li>
+          <li class="sub"><a href="#khoa-lac-quan">3.3 Khóa lạc quan</a></li>
+          <li class="sub"><a href="#kiem-hai-lop">3.4 Kiểm hai lớp</a></li>
+          <li class="sub"><a href="#dong-goi">3.5 Đóng gói và nén</a></li>
+          <li><a href="#kho">4 · Tab Kho dùng lại gì</a></li>
+          <li><a href="#loi">5 · Khi lỗi, chậm, mất kết nối</a></li>
+          <li><a href="#gioi-han">6 · Giới hạn và điểm chưa kiểm</a></li>
+          <li><a href="#sua-code">7 · Khi sửa code</a></li>
+        </ol>
+      </nav></div>
+    </aside>
+    <main id="noi-dung">
+
+      <section id="tinh-huong" aria-labelledby="tinh-huong-title">
+        <div class="sec-head"><span class="sec-no">Mục 2</span><h2 id="tinh-huong-title">Tắt một món: mười bước, ba lần đổi tay</h2></div>
+        <p class="section-intro">Chủ quán gạt công tắc tắt món <em>Peach Tea</em> trong tab Menu. App đang giữ menu ở phiên bản ký hiệu <strong>A</strong>. Đây là nhánh thành công, khi không ai khác sửa menu trong lúc đó. <strong>A</strong> và <strong>B</strong> là ký hiệu minh họa, không phải số thật.</p>
+        <figure class="diagram" aria-labelledby="seq-heading seq-caption">
+          <div class="diagram-head"><h3 id="seq-heading">Sơ đồ tuần tự: cập nhật menu thành công</h3><span class="status done">Hiện trạng</span></div>
+          <div class="diagram-scroll">
+            <svg viewBox="0 0 1040 540" width="1040" height="540" role="img" aria-labelledby="seq-svg-title seq-svg-desc" xmlns="http://www.w3.org/2000/svg">
+              <title id="seq-svg-title">Tuần tự cập nhật menu</title>
+              <desc id="seq-svg-desc">App gửi menu/update kèm phiên bản A. Server kiểm quyền và gói, trả lệnh cho máy đang chờ hỏi lệnh. Máy đọc database, thấy CRC32 bằng A, ghi trong một transaction, đọc lại được B, gửi kết quả lên server. Server trả kết quả cho app, app giải nén và giữ phiên bản B.</desc>
+              <defs><marker id="arrow-seq" class="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z"/></marker></defs>
+              <rect class="node ui" x="40" y="20" width="140" height="44" rx="8"/><text class="diagram-title" x="110" y="47" text-anchor="middle">App</text>
+              <rect class="node process" x="300" y="20" width="140" height="44" rx="8"/><text class="diagram-title" x="370" y="47" text-anchor="middle">Server</text>
+              <rect class="node device" x="560" y="20" width="140" height="44" rx="8"/><text class="diagram-title" x="630" y="47" text-anchor="middle">Máy</text>
+              <rect class="node store" x="820" y="20" width="140" height="44" rx="8"/><text class="diagram-title" x="890" y="47" text-anchor="middle">DB máy</text>
+              <path class="lifeline" d="M110 64V525M370 64V525M630 64V525M890 64V525"/>
+              <path class="edge" d="M110 100H366" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="240" y="92" text-anchor="middle">① menu/update · bản A</text>
+              <rect class="node process" x="380" y="118" width="200" height="34" rx="6"/>
+              <text class="note-text" x="390" y="140">② kiểm quyền + kiểm gói</text>
+              <path class="edge back" d="M630 180H374" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="500" y="172" text-anchor="middle">máy đang chờ command/poll</text>
+              <path class="edge" d="M370 215H626" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="500" y="207" text-anchor="middle">③ lệnh cap_nhat_menu</text>
+              <path class="edge" d="M630 255H886" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="760" y="247" text-anchor="middle">④ đọc drink</text>
+              <rect class="node device" x="640" y="273" width="200" height="34" rx="6"/>
+              <text class="note-text" x="650" y="295">⑤ CRC32 = A → khớp</text>
+              <path class="edge" d="M630 335H886" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="760" y="327" text-anchor="middle">⑥ UPDATE · 1 transaction</text>
+              <path class="edge back" d="M890 375H634" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="760" y="367" text-anchor="middle">⑦ đọc lại → CRC32 = B</text>
+              <path class="edge back" d="M630 415H374" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="500" y="407" text-anchor="middle">⑧ result/send · ok · B</text>
+              <path class="edge back" d="M370 455H114" marker-end="url(#arrow-seq)"/>
+              <text class="diagram-edge-label" x="240" y="447" text-anchor="middle">⑨ trả trên request ①</text>
+              <rect class="node ui" x="120" y="475" width="230" height="34" rx="6"/>
+              <text class="note-text" x="130" y="497">⑩ giải nén · giữ phiên bản B</text>
+            </svg>
+          </div>
+          <p class="diagram-hint">↔ Kéo ngang để xem hết sơ đồ.</p>
+          <figcaption id="seq-caption">Đọc từ trên xuống. Nét đứt là dữ liệu quay về. Bước không đánh số là request hỏi lệnh mà máy đã gửi từ trước và server đang giữ (tối đa 8 giây). Lệnh ③ nằm trong response của chính request đó.</figcaption>
+        </figure>
+        <div class="table-wrap"><table class="steps">
+          <thead><tr><th>Bước</th><th>Ai</th><th>Làm gì</th><th>Dữ liệu</th></tr></thead>
+          <tbody>
+            <tr><td class="id">①</td><td>App</td><td><code>setAvailable()</code> → <code>_send()</code> gửi thay đổi.</td><td><code>POST /app/machine/menu/update</code> · <code>{token, machine_id, menu_version: A, thay_doi: [{drink_id, available: false}]}</code></td></tr>
+            <tr><td class="id">②</td><td>Server</td><td><code>check_access</code> kiểm phiên và vai trò owner/manager; <code>is_menu_version</code>, <code>is_changes</code> kiểm dạng. Sai thì trả lỗi ngay, không giao lệnh.</td><td>400 / 401 / 403 nếu sai</td></tr>
+            <tr><td class="id">③</td><td>Server → Máy</td><td><code>send()</code> đặt lệnh vào hộp thư rồi chờ tối đa 20 giây. Request hỏi lệnh đang chờ của máy nhận lệnh. <strong>Token không đi xuống máy.</strong></td><td><code>{lenh: {id, instruction: "cap_nhat_menu", data: {menu_version: A, thay_doi}}}</code></td></tr>
+            <tr><td class="id">④–⑤</td><td>Máy</td><td><code>read_drinks()</code> đọc mọi món chưa xóa mềm; <code>menu_version_of()</code> tính CRC32 và so với A.</td><td>—</td></tr>
+            <tr><td class="id">⑥</td><td>Máy</td><td><code>check_changes()</code> kiểm <em>hết</em> mọi dòng trước, rồi <code>update_drink()</code> từng dòng trong cùng một kết nối. Có lỗi thì rollback cả gói.</td><td><code>UPDATE drink SET available = 0 WHERE drink_id = ?</code></td></tr>
+            <tr><td class="id">⑦</td><td>Máy</td><td>Đọc lại menu, tính phiên bản mới B, đóng gói.</td><td><code>reply_with_menu("ok", drinks)</code></td></tr>
+            <tr><td class="id">⑧</td><td>Máy → Server</td><td>Gửi kết quả kèm <code>id</code> lệnh để server ghép đúng request đang chờ.</td><td><code>POST /machine/result/send</code> · <code>{product_key, id, ket_qua: {status: "ok", menu_version: B, packet}}</code></td></tr>
+            <tr><td class="id">⑨</td><td>Server → App</td><td><code>deliver()</code> chuyển kết quả cho <code>send()</code> đang chờ; server trả nguyên <code>ket_qua</code>, HTTP 200.</td><td>như ⑧, bỏ <code>product_key</code> và <code>id</code></td></tr>
+            <tr><td class="id">⑩</td><td>App</td><td><code>_apply()</code> → <code>decodeMenuPacket()</code>; thay toàn bộ danh sách và <code>menuVersion = B</code>.</td><td>—</td></tr>
+          </tbody>
+        </table></div>
+        <aside class="callout warn"><strong>Nhánh xung đột</strong><p>Nếu giữa lúc app tải menu và lúc gửi ①, menu trên máy đã đổi (một app khác vừa sửa, hoặc một cột trong menu tự đổi), thì ở bước ⑤ CRC32 sẽ khác A. Máy <strong>không ghi gì</strong> và trả <code>{status: "conflict", menu_version, packet}</code> với menu mới nhất. App vẫn nạp menu mới đó, rồi báo người dùng "Menu trên máy vừa thay đổi, đã tải bản mới. Hãy thử lại."</p></aside>
+      </section>
+
+      <section id="co-che" aria-labelledby="co-che-title">
+        <div class="sec-head"><span class="sec-no">Mục 3</span><h2 id="co-che-title">Năm cơ chế làm nên luồng trên</h2></div>
+        <p class="section-intro">Mỗi cơ chế dưới đây giải quyết một câu hỏi riêng. Tab Kho dùng lại cơ chế 3.1, 3.2 và 3.4 (xem <a href="#kho">mục 4</a>).</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Cơ chế</th><th>Trả lời câu hỏi</th><th>Nằm ở</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#phien-ban">3.1 Phiên bản CRC32</a></td><td>Làm sao biết hai bản menu có giống nhau không?</td><td>Máy</td></tr>
+            <tr><td><a href="#tai-lai">3.2 Tải lại có điều kiện</a></td><td>Làm sao không gửi lại menu khi nó không đổi?</td><td>Máy + app</td></tr>
+            <tr><td><a href="#khoa-lac-quan">3.3 Khóa lạc quan</a></td><td>Hai người cùng sửa thì ai thắng?</td><td>Máy + app</td></tr>
+            <tr><td><a href="#kiem-hai-lop">3.4 Kiểm hai lớp</a></td><td>Gói sai bị chặn ở đâu?</td><td>Server + máy</td></tr>
+            <tr><td><a href="#dong-goi">3.5 Đóng gói và nén</a></td><td>Menu đi trong JSON gọn thế nào?</td><td>Máy + app</td></tr>
+          </tbody>
+        </table></div>
+
+        <article class="component" id="phien-ban"><header><h3>3.1 Phiên bản là CRC32 của chính dữ liệu</h3><span class="status done">Hiện trạng</span></header>
+          <p>Máy không lưu số phiên bản ở đâu cả. Mỗi lần cần, nó đọc danh sách món rồi tính lại:</p>
+          <pre><code># version1.1/machine/menu_sync/machine_menu_pack.py
+def menu_version_of(drinks):
+    return zlib.crc32(_to_json(drinks))   # JSON gọn, UTF-8, giữ nguyên tiếng Việt</code></pre>
+          <p>Để cùng dữ liệu luôn ra cùng chuỗi JSON, thứ tự phải cố định: các món được <code>ORDER BY drink_id</code>, cột theo đúng tuple <code>FIELDS</code>. Kết quả là số nguyên không dấu 32 bit (0 … 2³²−1). Server và app đều kiểm khoảng này trước khi nhận.</p>
+          <dl class="io"><div><dt>Được gì</dt><dd>Không cần cột phiên bản hay bộ đếm, không cần tăng số mỗi lần ghi. Ai sửa DB bằng đường nào, kể cả sửa tay, phiên bản vẫn đổi theo.</dd></div><div><dt>Phải chấp nhận</dt><dd>Mỗi lần hỏi đều phải đọc toàn bảng. CRC32 không chống sửa có chủ đích và có xác suất trùng rất nhỏ. Cột nào nằm trong <code>FIELDS</code> đổi thì phiên bản đổi, kể cả cột người dùng không sửa (xem <a href="#gioi-han">mục 6</a>).</dd></div></dl>
+          <p>Số <code>0</code> có nghĩa riêng: "app chưa có bản nào". App đặt <code>menuVersion = 0</code> khi mở tab hoặc đổi máy; server mặc định <code>0</code> nếu thiếu trường này.</p>
+        </article>
+
+        <article class="component" id="tai-lai"><header><h3>3.2 Tải lại có điều kiện: chỉ gửi menu khi nó khác bản app đang giữ</h3><span class="status done">Hiện trạng</span></header>
+          <p>Mỗi lần mở tab hoặc kéo làm mới, app gửi <code>/app/machine/menu/get</code> kèm phiên bản đang giữ. Máy so với CRC32 hiện tại. Cách làm này giống <code>ETag</code>/<code>If-None-Match</code> của HTTP.</p>
+          <figure class="diagram" aria-labelledby="flow-heading flow-caption">
+            <div class="diagram-head"><h3 id="flow-heading">Máy quyết định gì khi nhận hai lệnh menu</h3><span class="status done">Hiện trạng</span></div>
+            <div class="diagram-scroll">
+              <svg viewBox="0 0 1040 420" width="1040" height="420" role="img" aria-labelledby="flow-svg-title flow-svg-desc" xmlns="http://www.w3.org/2000/svg">
+                <title id="flow-svg-title">Nhánh quyết định của nhan_menu và cap_nhat_menu</title>
+                <desc id="flow-svg-desc">Cả hai lệnh đều đọc menu và tính CRC32. nhan_menu: trùng thì trả up_to_date, khác thì trả ok kèm gói. cap_nhat_menu: khác thì trả conflict kèm gói, không ghi; trùng thì kiểm mọi dòng; có dòng sai thì trả lỗi, không ghi; tất cả đúng thì ghi trong một transaction và trả ok kèm gói mới.</desc>
+                <defs><marker id="arrow-flow" class="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z"/></marker></defs>
+                <rect class="zone" x="10" y="20" width="420" height="390" rx="12"/>
+                <text class="diagram-label" x="30" y="46">LỆNH nhan_menu · ĐỌC</text>
+                <rect class="zone" x="450" y="20" width="580" height="390" rx="12"/>
+                <text class="diagram-label" x="470" y="46">LỆNH cap_nhat_menu · SỬA</text>
+                <rect class="node device" x="40" y="70" width="360" height="46" rx="8"/><text class="diagram-title" x="220" y="98" text-anchor="middle">Đọc drink → CRC32 hiện tại</text>
+                <rect class="node warn" x="40" y="150" width="360" height="46" rx="8"/><text class="diagram-title" x="220" y="178" text-anchor="middle">Bản app gửi == hiện tại?</text>
+                <rect class="node ok" x="40" y="260" width="170" height="60" rx="8"/><text class="diagram-title" x="125" y="285" text-anchor="middle">up_to_date</text><text class="diagram-sub" x="125" y="305" text-anchor="middle">không gửi menu</text>
+                <rect class="node device" x="230" y="260" width="170" height="60" rx="8"/><text class="diagram-title" x="315" y="285" text-anchor="middle">ok + packet</text><text class="diagram-sub" x="315" y="305" text-anchor="middle">gửi cả menu</text>
+                <path class="edge" d="M220 116V146" marker-end="url(#arrow-flow)"/>
+                <path class="edge" d="M125 196V256" marker-end="url(#arrow-flow)"/>
+                <path class="edge" d="M315 196V256" marker-end="url(#arrow-flow)"/>
+                <text class="diagram-edge-label" x="125" y="230" text-anchor="middle">trùng</text>
+                <text class="diagram-edge-label" x="315" y="230" text-anchor="middle">khác</text>
+
+                <rect class="node device" x="480" y="70" width="520" height="46" rx="8"/><text class="diagram-title" x="740" y="98" text-anchor="middle">Đọc drink → CRC32 hiện tại</text>
+                <rect class="node warn" x="480" y="150" width="520" height="46" rx="8"/><text class="diagram-title" x="740" y="178" text-anchor="middle">Bản app đang sửa == hiện tại?</text>
+                <rect class="node error" x="480" y="240" width="200" height="60" rx="8"/><text class="diagram-title" x="580" y="265" text-anchor="middle">conflict + packet</text><text class="diagram-sub" x="580" y="285" text-anchor="middle">không ghi gì</text>
+                <rect class="node warn" x="720" y="240" width="280" height="60" rx="8"/><text class="diagram-title" x="860" y="265" text-anchor="middle">Kiểm mọi dòng thay_doi</text><text class="diagram-sub" x="860" y="285" text-anchor="middle">món có trên máy? cột, giá trị hợp lệ?</text>
+                <rect class="node error" x="720" y="340" width="135" height="54" rx="8"/><text class="diagram-title" x="787" y="363" text-anchor="middle">{loi} → 502</text><text class="diagram-sub" x="787" y="381" text-anchor="middle">không ghi gì</text>
+                <rect class="node ok" x="865" y="340" width="135" height="54" rx="8"/><text class="diagram-title" x="932" y="363" text-anchor="middle">ghi 1 transaction</text><text class="diagram-sub" x="932" y="381" text-anchor="middle">ok + packet mới</text>
+                <path class="edge" d="M740 116V146" marker-end="url(#arrow-flow)"/>
+                <path class="edge" d="M580 196V236" marker-end="url(#arrow-flow)"/>
+                <path class="edge" d="M860 196V236" marker-end="url(#arrow-flow)"/>
+                <path class="edge" d="M787 300V336" marker-end="url(#arrow-flow)"/>
+                <path class="edge" d="M932 300V336" marker-end="url(#arrow-flow)"/>
+                <text class="diagram-edge-label" x="580" y="220" text-anchor="middle">khác</text>
+                <text class="diagram-edge-label" x="860" y="220" text-anchor="middle">trùng</text>
+                <text class="diagram-edge-label" x="779" y="322" text-anchor="end">có dòng sai</text>
+                <text class="diagram-edge-label" x="940" y="322" text-anchor="start">đều đúng</text>
+              </svg>
+            </div>
+            <p class="diagram-hint">↔ Kéo ngang để xem hết sơ đồ.</p>
+            <figcaption id="flow-caption">Xanh lá là kết thúc bình thường, đỏ là kết thúc không ghi. Mọi nhánh của <code>cap_nhat_menu</code> trừ nhánh lỗi đều trả kèm menu mới nhất, nên sau một lần sửa app không phải tải lại.</figcaption>
+          </figure>
+          <p>Phía app (<code>ProductsSync.load()</code>): chỉ khi <code>status == "ok"</code> mới gọi <code>_apply()</code>. Với <code>up_to_date</code>, app giữ nguyên danh sách đang hiển thị.</p>
+        </article>
+
+        <article class="component" id="khoa-lac-quan"><header><h3>3.3 Khóa lạc quan: không khóa trước, chỉ từ chối khi bản đã cũ</h3><span class="status done">Hiện trạng</span></header>
+          <p>Hệ thống không giữ khóa "đang có người sửa menu". Mỗi lệnh sửa mang theo phiên bản mà người sửa đã nhìn thấy. Máy so phiên bản và ghi trong cùng một kết nối DB, nên không có lệnh nào ghi đè lên một bản mà nó chưa thấy.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Tình huống</th><th>Kết quả</th></tr></thead>
+            <tbody>
+              <tr><td>Chủ và quản lý cùng mở menu ở bản A. Chủ tắt món X trước.</td><td>Lệnh của chủ: bản A khớp → ghi → menu thành B.</td></tr>
+              <tr><td>Vài giây sau quản lý đổi giá món Y, vẫn gửi bản A.</td><td>Bản A ≠ B → <code>conflict</code>, giá Y <strong>chưa</strong> được ghi. App của quản lý nhận menu B và báo thử lại.</td></tr>
+              <tr><td>Quản lý gửi lại thay đổi trên bản B.</td><td>Khớp → ghi → menu thành C, có cả hai thay đổi.</td></tr>
+            </tbody>
+          </table></div>
+          <p>Vì sao chọn cách này: số người sửa một máy cùng lúc rất ít, và mỗi request vốn đã phải đi qua server rồi tới máy. Giữ khóa qua đường đó sẽ phức tạp và dễ kẹt khi máy mất mạng.</p>
+          <aside class="callout warn"><strong>Chỉ đúng khi máy xử lý lần lượt</strong><p>Bước so phiên bản và bước ghi không nằm trong một transaction khóa trước như <code>BEGIN IMMEDIATE</code>. Khóa lạc quan đúng nhờ vòng lặp máy chạy lệnh tuần tự: hỏi một lệnh, chạy xong, rồi mới hỏi lệnh tiếp theo. Nếu sau này máy chạy lệnh song song, cần thêm khóa ghi trước bước đọc.</p></aside>
+        </article>
+
+        <article class="component" id="kiem-hai-lop"><header><h3>3.4 Kiểm hai lớp: server kiểm dạng, máy kiểm sự tồn tại</h3><span class="status done">Hiện trạng</span></header>
+          <p>Server không biết trên máy có những món nào, nên chỉ chặn được gói sai dạng. Máy kiểm lại dạng thêm một lần nữa, vì máy không nên tin rằng gói đến không bị sửa trên đường. Tới khi có crypto, HTTP vẫn đang gửi dạng rõ.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Điều kiện</th><th>Server (<code>machine_menu_update.py</code>)</th><th>Máy (<code>machine_menu_validate.py</code>)</th></tr></thead>
+            <tbody>
+              <tr><td>Phiên đăng nhập, vai trò owner/manager</td><td>✓ <code>check_access</code></td><td>—</td></tr>
+              <tr><td><code>menu_version</code> là số nguyên</td><td>✓ 0 … 2³²−1</td><td>✓ ≥ 0</td></tr>
+              <tr><td>Số dòng thay đổi</td><td>✓ 1 … 200</td><td>✓ ≥ 1</td></tr>
+              <tr><td>Chỉ có cột <code>available</code> (bool) và <code>price</code> (số ≥ 0)</td><td>✓ giá ≤ 99 999 999,99</td><td>✓</td></tr>
+              <tr><td><code>drink_id</code> có thật trên máy</td><td>✗ không biết</td><td>✓ so với danh sách vừa đọc</td></tr>
+              <tr><td>Một dòng sai</td><td>Từ chối cả gói, HTTP 400</td><td>Không ghi dòng nào, trả <code>{loi}</code> → app nhận 502</td></tr>
+            </tbody>
+          </table></div>
+          <p>Hiện giao diện app chỉ dùng công tắc bật/tắt món. Phần đổi giá đã có trong API và trên máy nhưng chưa có nút trong app.</p>
+        </article>
+
+        <article class="component" id="dong-goi"><header><h3>3.5 Đóng gói và nén: tên cột gửi một lần, rồi zlib và base64</h3><span class="status done">Hiện trạng</span></header>
+          <p>Kết quả của máy phải đi trong một trường JSON (<code>ket_qua</code>) qua server. Máy đóng gói như sau:</p>
+          <figure class="diagram" aria-labelledby="pack-heading pack-caption">
+            <div class="diagram-head"><h3 id="pack-heading">Đường đi của packet: máy nén, server chuyển nguyên, app mở</h3><span class="status done">Hiện trạng</span></div>
+            <div class="diagram-scroll">
+              <svg viewBox="0 0 1040 290" width="1040" height="290" role="img" aria-labelledby="pack-svg-title pack-svg-desc" xmlns="http://www.w3.org/2000/svg">
+                <title id="pack-svg-title">Đóng gói và mở packet menu</title>
+                <desc id="pack-svg-desc">Trên máy: đọc món, dựng JSON dạng cột, nén zlib mức 9, mã base64. Server chuyển nguyên chuỗi. Trên app: giải base64, giải nén zlib, kiểm type, v và menu_version, ghép tên cột với từng hàng thành món.</desc>
+                <defs><marker id="arrow-pack" class="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z"/></marker></defs>
+                <text class="diagram-label" x="30" y="40">MÁY · machine_menu_pack.py</text>
+                <rect class="node device" x="30" y="55" width="200" height="64" rx="8"/><text class="diagram-title" x="130" y="82" text-anchor="middle">read_drinks()</text><text class="diagram-sub" x="130" y="102" text-anchor="middle">hàng theo FIELDS</text>
+                <rect class="node device" x="280" y="55" width="200" height="64" rx="8"/><text class="diagram-title" x="380" y="82" text-anchor="middle">JSON dạng cột</text><text class="diagram-sub" x="380" y="102" text-anchor="middle">fields 1 lần · hàng = mảng</text>
+                <rect class="node device" x="530" y="55" width="200" height="64" rx="8"/><text class="diagram-title" x="630" y="82" text-anchor="middle">zlib mức 9</text><text class="diagram-sub" x="630" y="102" text-anchor="middle">JSON gọn, UTF-8</text>
+                <rect class="node device" x="780" y="55" width="220" height="64" rx="8"/><text class="diagram-title" x="890" y="82" text-anchor="middle">base64 → chuỗi</text><text class="diagram-sub" x="890" y="102" text-anchor="middle">vừa trong JSON relay</text>
+                <path class="edge" d="M230 87H276" marker-end="url(#arrow-pack)"/><path class="edge" d="M480 87H526" marker-end="url(#arrow-pack)"/><path class="edge" d="M730 87H776" marker-end="url(#arrow-pack)"/>
+                <path class="edge back" d="M890 119V191" marker-end="url(#arrow-pack)"/>
+                <text class="diagram-edge-label" x="890" y="160" text-anchor="middle">server chuyển nguyên</text>
+                <text class="diagram-label" x="30" y="180">APP · decodeMenuPacket()</text>
+                <rect class="node ui" x="780" y="195" width="220" height="64" rx="8"/><text class="diagram-title" x="890" y="222" text-anchor="middle">base64Decode</text><text class="diagram-sub" x="890" y="242" text-anchor="middle">chuỗi → byte</text>
+                <rect class="node ui" x="530" y="195" width="200" height="64" rx="8"/><text class="diagram-title" x="630" y="222" text-anchor="middle">ZLibCodec().decode</text><text class="diagram-sub" x="630" y="242" text-anchor="middle">byte → JSON</text>
+                <rect class="node ui" x="280" y="195" width="200" height="64" rx="8"/><text class="diagram-title" x="380" y="222" text-anchor="middle">Kiểm gói</text><text class="diagram-sub" x="380" y="242" text-anchor="middle">type · v = 1 · version</text>
+                <rect class="node ui" x="30" y="195" width="200" height="64" rx="8"/><text class="diagram-title" x="130" y="222" text-anchor="middle">Map.fromIterables</text><text class="diagram-sub" x="130" y="242" text-anchor="middle">fields + hàng → Drink</text>
+                <path class="edge" d="M780 227H734" marker-end="url(#arrow-pack)"/><path class="edge" d="M530 227H484" marker-end="url(#arrow-pack)"/><path class="edge" d="M280 227H234" marker-end="url(#arrow-pack)"/>
+              </svg>
+            </div>
+            <p class="diagram-hint">↔ Kéo ngang để xem hết sơ đồ.</p>
+            <figcaption id="pack-caption">Hàng trên chạy trên máy, hàng dưới chạy trên app. Server không giải nén, nên server không phụ thuộc vào cấu trúc menu.</figcaption>
+          </figure>
+          <p>Cấu trúc gói trước khi nén. Các giá trị dưới đây là <strong>minh họa</strong>:</p>
+          <pre><code>{
+  "type": "menu_sync",            // loại gói
+  "v": 1,                          // phiên bản CẤU TRÚC gói, khác menu_version
+  "menu_version": 123456789,       // CRC32 của drinks
+  "generated_at": "2026-09-28T17:30:00",
+  "fields": ["drink_id","drink_name","image","price","available","in_stock",
+             "glass_id","drink_type_id","garnish","featured"],
+  "drinks": [[1001,"Peach Tea","Peach Tea.webp",35000,1,1,2,3,null,0], ...]
+}</code></pre>
+          <dl class="io"><div><dt>Vì sao dạng cột</dt><dd>Tên 10 cột chỉ xuất hiện một lần thay vì lặp lại ở mỗi món. App ghép lại bằng tên cột, nên thêm cột mới vào cuối <code>FIELDS</code> không làm hỏng app cũ.</dd></div><div><dt>Vì sao base64</dt><dd>Dữ liệu sau zlib là byte nhị phân, không đặt thẳng vào JSON được. base64 làm chuỗi dài thêm khoảng 33%, nhưng vẫn đi được qua relay JSON hiện có.</dd></div></dl>
+          <p><code>image</code> chỉ là tên file. Ảnh món không đi trong gói này.</p>
+        </article>
+      </section>
+
+      <section id="kho" aria-labelledby="kho-title">
+        <div class="sec-head"><span class="sec-no">Mục 4</span><h2 id="kho-title">Tab Kho dùng lại phiên bản CRC32, nhưng nạp kho không có khóa lạc quan</h2></div>
+        <p class="section-intro">Kho đi cùng đường app → server → máy và dùng cùng ý tưởng tải lại có điều kiện. Có ba điểm khác dev hay nhầm:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th></th><th>Menu</th><th>Kho</th></tr></thead>
+          <tbody>
+            <tr><td>Route đọc / sửa</td><td><code>/app/machine/menu/get</code> · <code>/app/machine/menu/update</code></td><td><code>/app/machine/ingredient/get</code> · <code>/app/machine/ingredient/refill</code></td></tr>
+            <tr><td>Tên trường phiên bản</td><td><code>menu_version</code></td><td><code>version</code></td></tr>
+            <tr><td>Cách tính CRC32</td><td>Mảng theo <code>FIELDS</code>, món theo <code>drink_id</code></td><td>Danh sách dict, JSON <code>sort_keys=True</code></td></tr>
+            <tr><td>Gói trả về</td><td><code>packet</code> nén zlib + base64</td><td><code>ingredients</code> là JSON thường, <strong>không nén</strong></td></tr>
+            <tr><td>Lệnh sửa có kèm phiên bản?</td><td>Có → có <code>conflict</code></td><td><strong>Không.</strong> <code>{target, value}</code>, ai gửi sau thì người đó thắng</td></tr>
+            <tr><td>Sau khi sửa</td><td>Máy trả menu mới ngay</td><td>Máy trả kết quả nạp; app tự gọi lại <code>load()</code>. Máy dựng lại <code>menu-data.js</code> cho màn bán hàng, lỗi thì kèm <code>warning</code></td></tr>
+            <tr><td>Giá trị sửa</td><td><code>available</code>, <code>price</code></td><td><code>target</code> = id hoặc <code>"all"</code>; <code>value</code> = gram hoặc <code>"full"</code> (<code>"all"</code> chỉ đi với <code>"full"</code>). App hiện chỉ gửi <code>"full"</code></td></tr>
+          </tbody>
+        </table></div>
+        <p class="prose">Nạp kho không cần khóa lạc quan khi giá trị là <code>"full"</code>: nạp đầy hai lần cũng ra cùng một kết quả. Nếu sau này app gửi số gram cụ thể thì phải xem lại, vì hàm <code>refill()</code> của máy nằm ngoài repo và chưa kiểm được nó <em>đặt</em> giá trị hay <em>cộng thêm</em> (<a href="#gioi-han">mục 6</a>).</p>
+      </section>
+
+      <section id="loi" aria-labelledby="loi-title">
+        <div class="sec-head"><span class="sec-no">Mục 5</span><h2 id="loi-title">Khi lỗi, chậm hoặc mất kết nối: app luôn biết nên làm gì tiếp</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tình huống</th><th>App nhận</th><th>Dữ liệu trên máy</th><th>Nên làm</th></tr></thead>
+          <tbody>
+            <tr><td>Gói sai dạng</td><td>400 <code>{loi}</code></td><td>Không đổi</td><td>Sửa app, đây là bug</td></tr>
+            <tr><td>Phiên hết hạn</td><td>401 <code>login_required</code></td><td>Không đổi</td><td>App tự quay về màn đăng nhập</td></tr>
+            <tr><td>Không có quyền với máy</td><td>403</td><td>Không đổi</td><td>—</td></tr>
+            <tr><td>Máy không heartbeat quá 15 giây</td><td>503 "Máy đang offline"</td><td>Không đổi</td><td>Thử lại sau</td></tr>
+            <tr><td>Hết 20 giây, máy <em>chưa lấy</em> lệnh</td><td>502 "lệnh đã được hủy"</td><td>Không đổi: lệnh bị rút khỏi hộp thư</td><td>Thử lại</td></tr>
+            <tr><td>Hết 20 giây, máy <em>đã lấy</em> lệnh</td><td>502 "hãy tải lại để kiểm tra"</td><td><strong>Có thể đã ghi</strong></td><td>Tải lại menu. Phiên bản sẽ cho biết bản đã đổi hay chưa</td></tr>
+            <tr><td>Máy báo lỗi (món không có, DB lỗi)</td><td>502 <code>{loi}</code></td><td>Không đổi (rollback)</td><td>Xem câu lỗi</td></tr>
+            <tr><td>Phiên bản lệch</td><td>200 <code>conflict</code> + menu mới</td><td>Không đổi</td><td>App đã nạp bản mới; sửa lại</td></tr>
+            <tr><td>Kết quả về sau khi app đã hết giờ chờ</td><td>—</td><td>Đã ghi</td><td>Server bỏ kết quả. Lần tải sau sẽ thấy</td></tr>
+            <tr><td>Người dùng đổi máy hoặc đóng tab khi đang chờ</td><td>—</td><td>Tùy lệnh</td><td>App tăng <code>_session</code>, bỏ kết quả về muộn để không hiện menu của máy khác</td></tr>
+            <tr><td>Server khởi động lại</td><td>Request đang chờ bị đứt</td><td>Tùy lệnh</td><td>Hộp thư nằm trong RAM nên mất. Tải lại</td></tr>
+          </tbody>
+        </table></div>
+        <aside class="callout ok"><strong>Vì sao phiên bản giúp khi timeout</strong><p>App không biết lệnh đã chạy hay chưa, nhưng không cần biết. Tải lại menu là thấy trạng thái thật trên máy, và lần sửa tiếp theo sẽ bị chặn nếu app vẫn dùng bản cũ. Không có trường hợp ghi đè mà không ai biết.</p></aside>
+      </section>
+
+      <section id="gioi-han" aria-labelledby="gioi-han-title">
+        <div class="sec-head"><span class="sec-no">Mục 6</span><h2 id="gioi-han-title">Giới hạn hiện tại và điểm chưa kiểm</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Điểm</th><th>Trạng thái</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Nguồn dữ liệu của tab Menu.</strong> <code>menu_sync</code> đọc SQLite tại <code>version1.1/machine/database/database.db</code>, nhưng file này không có trong working tree. Tab Kho đọc MySQL qua package database của máy pha. Header của <code>database/sqlite_reference/machine.sql</code> ghi "runtime version1.1 vẫn dùng MySQL"</td><td><span class="status error">lệch, chưa kiểm</span></td><td>Trên máy thật, menu app thấy có thể không phải menu máy đang bán. Cần chốt menu_sync dùng DB nào</td></tr>
+            <tr><td><strong>Conflict dù không ai sửa.</strong> <code>in_stock</code> nằm trong <code>FIELDS</code>, và cả hai schema đều có trigger tự đổi <code>in_stock</code> khi nguyên liệu qua ngưỡng</td><td><span class="status wait">suy từ code, chưa chạy thử</span></td><td>Pha xong một ly làm kho qua ngưỡng thì phiên bản đổi, và lần sửa đang mở sẽ bị <code>conflict</code></td></tr>
+            <tr><td><strong>Gửi lại cả menu</strong>, không có delta</td><td><span class="status done">hiện trạng</span></td><td>Nhỏ với vài chục món. Nếu menu lớn hoặc mạng yếu thì nên thêm delta</td></tr>
+            <tr><td><strong>Không có đẩy (push).</strong> App chỉ thấy thay đổi khi tự tải lại</td><td><span class="status done">hiện trạng</span></td><td>Menu trên điện thoại có thể cũ cho tới lần tải sau</td></tr>
+            <tr><td><strong>Bom zlib (SEC-19).</strong> App giải nén mà không giới hạn kích thước sau giải nén</td><td><span class="status error">lỗ hổng đã biết</span></td><td>Gói độc vài KB có thể nở thành rất lớn trên điện thoại</td></tr>
+            <tr><td><strong>CRC32 trùng</strong>, hoặc menu có CRC32 đúng bằng <code>0</code></td><td><span class="status wait">rủi ro lý thuyết</span></td><td>Xác suất rất nhỏ. Nếu xảy ra, app có thể nhận <code>up_to_date</code> khi chưa có menu</td></tr>
+            <tr><td><strong>Nạp kho bằng số gram.</strong> Hàm <code>refill()</code> nằm ngoài repo</td><td><span class="status wait">chưa kiểm</span></td><td>Chưa rõ hàm này đặt giá trị hay cộng thêm. Hiện app chỉ gửi <code>"full"</code></td></tr>
+            <tr><td><strong>Gói đi dạng rõ, không ký</strong></td><td><span class="status proposed">đã chốt thiết kế, chưa code</span></td><td>Ai đứng giữa đường cũng sửa được gói. Kiểm hai lớp chỉ chặn được gói sai dạng</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="sua-code" aria-labelledby="sua-code-title">
+        <div class="sec-head"><span class="sec-no">Mục 7</span><h2 id="sua-code-title">Khi sửa code: ba chỗ phải đổi cùng lúc</h2></div>
+        <div class="summary-box"><h3>Danh sách kiểm</h3><ol>
+          <li><strong>Thêm cột vào menu:</strong> thêm vào <em>cuối</em> <code>FIELDS</code> trong <code>machine_menu_store.py</code>. App ghép theo tên nên không vỡ, nhưng phiên bản của mọi app đang giữ sẽ đổi một lần.</li>
+          <li><strong>Cho sửa thêm cột:</strong> thêm vào <code>EDITABLE</code> ở <em>cả</em> server (<code>machine_menu_update.py</code>) <em>và</em> máy (<code>machine_menu_validate.py</code>), rồi mới thêm nút trong app.</li>
+          <li><strong>Đổi cấu trúc packet:</strong> tăng <code>PACKET_VERSION</code> trên máy <em>và</em> sửa điều kiện <code>json['v'] != 1</code> trong <code>decodeMenuPacket()</code>. App cũ sẽ báo "sai phiên bản" thay vì đọc sai.</li>
+          <li><strong>Đổi tên route, lệnh hoặc trường gói:</strong> sửa <code>routing.dart</code>, <code>server/config/routing.py</code> và bảng <code>COMMANDS</code> của máy trong cùng một thay đổi, kèm test.</li>
+          <li><strong>Đổi cách tính phiên bản:</strong> không cần sửa app. App chỉ coi phiên bản là một con số để gửi lại.</li>
+        </ol></div>
+        <details><summary>Nguồn đã đối chiếu cho trang này</summary><ul class="source-list">
+          <li><a href="../server/service/dashboard_sync/menu_sync/README.md">server/service/dashboard_sync/menu_sync/README.md</a>: luồng chi tiết từng hàm</li>
+          <li><a href="../server/service/dashboard_sync/menu_sync/machine_menu_get.py">machine_menu_get.py</a>, <a href="../server/service/dashboard_sync/menu_sync/machine_menu_update.py">machine_menu_update.py</a>: kiểm phía server</li>
+          <li><a href="../server/lib/machine/machine_transport.py">server/lib/machine/machine_transport.py</a>, <a href="../server/config/config.py">config.py</a>: hộp thư, timeout 20s, poll 8s, heartbeat 15s</li>
+          <li><a href="../version1.1/machine/menu_sync/machine_menu_sync.py">version1.1/machine/menu_sync/</a>: sync, validate, store, pack</li>
+          <li><a href="../version1.1/machine/ingredient_sync/machine_ingredient_sync.py">version1.1/machine/ingredient_sync/</a>: kho trên máy</li>
+          <li><a href="../server/service/dashboard_sync/ingredient_sync/README.md">server/service/dashboard_sync/ingredient_sync/</a>: kho phía server</li>
+          <li><a href="../app/flutter_app/lib/feature/machine_menu/machine_menu_sync.dart">app/…/machine_menu/machine_menu_sync.dart</a>, <a href="../app/flutter_app/lib/feature/machine_ingredient/machine_ingredient_sync.dart">machine_ingredient_sync.dart</a>: phía app</li>
+          <li><a href="../version1.1/database/sqlite_reference/machine.sql">version1.1/database/sqlite_reference/machine.sql</a>, <code>version1.1/database/database.sql</code>: schema và trigger <code>in_stock</code></li>
+        </ul></details>
+      </section>
+    </main>
+  </div>
+  <footer class="page-footer">FlexMix · project1_app · trang mẫu trong bộ doc cơ chế. Đối chiếu code ngày 09/10/2026, commit <code>58a0b01</code> + working tree. Code đổi thì sửa trang này theo diff.</footer>
+</div>
+
+<dialog class="zoom" id="dg-zoom" aria-labelledby="dg-zoom-title">
+  <div class="zoom-bar"><span id="dg-zoom-title"></span><button type="button" id="dg-zoom-close">Đóng</button></div>
+  <div class="zoom-body"><div class="diagram" id="dg-zoom-body"></div></div>
+</dialog>
+<script>
+  // Mỗi sơ đồ có hai nút: "Phóng to" mở bản lớn, "Mã nguồn" chép SVG để sửa hoặc dán sang chỗ khác.
+  (function () {
+    const dialog = document.getElementById('dg-zoom');
+    const body = document.getElementById('dg-zoom-body');
+    const title = document.getElementById('dg-zoom-title');
+    document.querySelectorAll('figure.diagram').forEach(figure => {
+      const scroll = figure.querySelector('.diagram-scroll');
+      const svg = scroll && scroll.querySelector('svg');
+      if (!svg) return;
+      const bar = document.createElement('div');
+      bar.className = 'dg-tools';
+      const zoom = document.createElement('button');
+      zoom.type = 'button';
+      zoom.textContent = 'Phóng to';
+      zoom.addEventListener('click', () => {
+        title.textContent = figure.querySelector('h3').textContent;
+        body.replaceChildren(svg.cloneNode(true));
+        dialog.showModal();
+      });
+      const source = document.createElement('button');
+      source.type = 'button';
+      source.textContent = 'Mã nguồn';
+      source.addEventListener('click', () => {
+        const text = svg.outerHTML;
+        const showText = () => {
+          if (figure.querySelector('.dg-fallback')) return;
+          const pre = document.createElement('pre');
+          pre.className = 'dg-fallback';
+          pre.textContent = text;
+          bar.after(pre);
+        };
+        const done = () => { source.textContent = 'Đã chép'; setTimeout(() => { source.textContent = 'Mã nguồn'; }, 1600); };
+        try { navigator.clipboard.writeText(text).then(done, showText); } catch (error) { showText(); }
+      });
+      bar.append(zoom, source);
+      scroll.after(bar);
+    });
+    document.getElementById('dg-zoom-close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => body.replaceChildren());
+  })();
+
+  // Tô mục đang đọc trong mục lục.
+  (function () {
+    const links = [...document.querySelectorAll('.toc a')];
+    const targets = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    if (!('IntersectionObserver' in window) || !targets.length) return;
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        links.forEach(a => a.toggleAttribute('aria-current', a.getAttribute('href') === '#' + entry.target.id));
+        links.filter(a => a.hasAttribute('aria-current')).forEach(a => a.setAttribute('aria-current', 'location'));
+      });
+    }, { rootMargin: '0px 0px -70% 0px' });
+    targets.forEach(t => observer.observe(t));
+  })();
+</script>
+</body>
+</html>

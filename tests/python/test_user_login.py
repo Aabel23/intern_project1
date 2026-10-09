@@ -116,7 +116,7 @@ class LoginFlowTest(unittest.TestCase):
                 connection = http.client.HTTPConnection("127.0.0.1", server.server_port)
                 connection.request(
                     "POST",
-                    "/app/dang-nhap",
+                    "/app/user/session/login",
                     json.dumps(
                         {
                             "request_id": self.request_id,
@@ -129,7 +129,7 @@ class LoginFlowTest(unittest.TestCase):
                 accepted = json.loads(connection.getresponse().read())
                 connection.request(
                     "POST",
-                    "/app/xac-minh-dang-nhap",
+                    "/app/user/session/verify",
                     json.dumps(
                         {
                             "request_id": self.request_id,

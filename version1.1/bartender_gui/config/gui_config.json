@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "_comment": "Single source of truth shared by the Python machine code and the bartender GUI. Edit by hand, or with: python configuration/gui_config.py --help",
+  "ui": {
+    "default_language": "vi",
+    "poll_interval_ms": 120,
+    "down_poll_ms": 1000,
+    "stale_after_ms": 8000,
+    "step_delay_ms": 2000,
+    "gram_per_sec_fallback": 10.5,
+    "simulation_speed": 3
+  },
+  "ingredients": {
+    "1": {
+      "pump": 1,
+      "gpio": 26,
+      "icon": "water",
+      "name": {
+        "vi": "Nước",
+        "en": "Water"
+      }
+    },
+    "2": {
+      "pump": 2,
+      "gpio": 15,
+      "icon": "tea",
+      "name": {
+        "vi": "Trà",
+        "en": "Tea"
+      }
+    },
+    "3": {
+      "pump": 3,
+      "gpio": 21,
+      "icon": "coffee",
+      "name": {
+        "vi": "Cà phê",
+        "en": "Coffee"
+      }
+    },
+    "4": {
+      "pump": 4,
+      "gpio": 20,
+      "icon": "syrup",
+      "name": {
+        "vi": "Siro đào",
+        "en": "Peach Syrup"
+      }
+    },
+    "5": {
+      "pump": 5,
+      "gpio": 16,
+      "icon": "syrup",
+      "name": {
+        "vi": "Siro dâu",
+        "en": "Strawberry Syrup"
+      }
+    },
+    "6": {
+      "pump": 6,
+      "gpio": 12,
+      "icon": "soda",
+      "name": {
+        "vi": "Soda",
+        "en": "Soda Water"
+      }
+    },
+    "7": {
+      "pump": null,
+      "gpio": null,
+      "icon": "sugar",
+      "name": {
+        "vi": "Đường",
+        "en": "Sugar"
+      }
+    },
+    "8": {
+      "pump": null,
+      "gpio": null,
+      "icon": "milk",
+      "name": {
+        "vi": "Sữa",
+        "en": "Milk"
+      }
+    },
+    "9": {
+      "pump": null,
+      "gpio": null,
+      "icon": "cream",
+      "name": {
+        "vi": "Kem",
+        "en": "Cream"
+      }
+    },
+    "10": {
+      "pump": null,
+      "gpio": null,
+      "icon": "chocolate",
+      "name": {
+        "vi": "Sô-cô-la",
+        "en": "Chocolate"
+      }
+    },
+    "11": {
+      "pump": null,
+      "gpio": null,
+      "icon": "strawberry",
+      "name": {
+        "vi": "Dâu",
+        "en": "Strawberry"
+      }
+    },
+    "12": {
+      "pump": null,
+      "gpio": null,
+      "icon": "ice",
+      "name": {
+        "vi": "Đá",
+        "en": "Ice"
+      }
+    },
+    "13": {
+      "pump": null,
+      "gpio": null,
+      "icon": "pearls",
+      "name": {
+        "vi": "Trân châu",
+        "en": "Pearls"
+      }
+    }
+  },
+  "panel_buttons": {
+    "11": {
+      "icon": "pearls",
+      "label": {
+        "vi": "Trân châu",
+        "en": "Pearls"
+      }
+    },
+    "12": {
+      "icon": "ice",
+      "label": {
+        "vi": "Thạch",
+        "en": "Jelly"
+      }
+    },
+    "13": {
+      "icon": "pearls",
+      "label": {
+        "vi": "Pudding",
+        "en": "Pudding"
+      }
+    },
+    "14": {
+      "icon": "cup",
+      "label": {
+        "vi": "Kiểm tra ly",
+        "en": "Cup check"
+      }
+    },
+    "15": {
+      "icon": "drop",
+      "label": {
+        "vi": "Mồi bơm",
+        "en": "Priming"
+      }
+    }
+  },
+  "gates": {
+    "start": {
+      "release": "confirm",
+      "start": true,
+      "icon": "cup",
+      "title": {
+        "vi": "Đặt ly lên máy",
+        "en": "Place the cup on the machine"
+      },
+      "detail": {
+        "vi": "Đặt ly rỗng lên bàn cân, rồi bấm BẮT ĐẦU. Máy sẽ tự bơm cho đến khi cần bạn.",
+        "en": "Put the empty cup on the scale, then press START. The machine pours on its own until it needs you."
+      },
+      "confirm": {
+        "vi": "BẮT ĐẦU",
+        "en": "START"
+      }
+    },
+    "topping": {
+      "release": "hardware",
+      "icon": "hand",
+      "title": {
+        "vi": "Lấy ly ra và làm topping",
+        "en": "Take the cup out and add the topping"
+      },
+      "detail": {
+        "vi": "Nhấc ly khỏi bàn cân. Cho từng loại topping vào ly, mỗi lần cho xong bấm đúng nút của nó trên máy. Khi tất cả đèn sáng, máy tự chạy tiếp.",
+        "en": "Lift the cup off the scale. Add each topping and press its button on the machine. When every light is on, the machine continues on its own."
+      },
+      "buttons": [
+        11,
+        12,
+        13
+      ]
+    },
+    "cup_back": {
+      "release": "confirm",
+      "icon": "cup",
+      "title": {
+        "vi": "Đặt ly trở lại máy",
+        "en": "Put the cup back on the machine"
+      },
+      "detail": {
+        "vi": "Đặt ly lên bàn cân rồi bấm xác nhận. Máy sẽ tự động bơm tiếp.",
+        "en": "Place the cup on the scale, then confirm. The machine continues on its own."
+      },
+      "confirm": {
+        "vi": "Đã đặt ly — chạy tiếp",
+        "en": "Cup is in place — continue"
+      }
+    },
+    "ice_fruit": {
+      "release": "hardware",
+      "icon": "ice",
+      "title": {
+        "vi": "Thêm đá và dâu tươi",
+        "en": "Add ice and fresh strawberry"
+      },
+      "detail": {
+        "vi": "Cho đá và dâu cắt lát vào ly, rồi bấm nút tương ứng trên máy.",
+        "en": "Add ice and sliced strawberry, then press its button on the machine."
+      },
+      "buttons": [
+        12,
+        11
+      ]
+    }
+  },
+  "drinks": [
+    {
+      "drink_id": 1002,
+      "name": "Milk Tea (topping)",
+      "image": "recipe/image/milk tea.jpg",
+      "options": {
+        "sugar": 50,
+        "milk": true,
+        "ice": true,
+        "pearls": true
+      },
+      "steps": [
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 1,
+              "gram": 50.0
+            },
+            {
+              "ingredient": 2,
+              "gram": 100
+            }
+          ]
+        },
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 3,
+              "gram": 40
+            },
+            {
+              "ingredient": 4,
+              "gram": 30
+            }
+          ]
+        },
+        {
+          "type": "gate",
+          "gate": "topping"
+        },
+        {
+          "type": "gate",
+          "gate": "cup_back"
+        },
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 5,
+              "gram": 35
+            },
+            {
+              "ingredient": 3,
+              "gram": 25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "drink_id": 1001,
+      "name": "Peach Tea",
+      "image": "recipe/image/peach tea.jpg",
+      "options": {
+        "sugar": 30,
+        "ice": true
+      },
+      "steps": [
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 1,
+              "gram": 60
+            },
+            {
+              "ingredient": 2,
+              "gram": 90
+            }
+          ]
+        },
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 4,
+              "gram": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "drink_id": 1004,
+      "name": "Strawberry Soda",
+      "image": "recipe/image/strawberry soda.jpg",
+      "options": {
+        "sugar": 20,
+        "ice": true,
+        "strawberry": true
+      },
+      "steps": [
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 6,
+              "gram": 120
+            }
+          ]
+        },
+        {
+          "type": "gate",
+          "gate": "ice_fruit"
+        },
+        {
+          "type": "pump",
+          "pours": [
+            {
+              "ingredient": 5,
+              "gram": 40
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

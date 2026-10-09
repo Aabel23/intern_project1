@@ -8,7 +8,7 @@ QR phải chứa chuỗi JSON UTF-8 theo mẫu:
 ```
 
 Dùng tên và key thật của máy khi tạo tem. Không phải QR chứa URL.
-App chỉ lấy ba trường trên, gửi POST `/app/dang-ky-may` đến server đang cấu hình
+App chỉ lấy ba trường trên, gửi POST `/app/user/machine/register` đến server đang cấu hình
 trong app và hiển thị ID server trả về. Không lấy địa chỉ server từ QR.
 Mỗi lượt quét chỉ gửi một request, camera đóng khi nhận được QR.
 Nếu QR sai hoặc server lỗi, bấm Quét lại để thử lại.
@@ -20,16 +20,16 @@ Chưa truyền ID mới xuống máy.
 # Chia sẻ máy cho nhân viên
 
 Chủ máy: tab Máy → menu ⋮ của máy → Chia sẻ cho nhân viên. App gọi
-`/app/tao-ma-chia-se` và hiện QR:
+`/app/machine/share/create` và hiện QR:
 
 ```json
 {"type":"share","code":"MA_MOI_SERVER_TAO"}
 ```
 
 Nhân viên: tab Máy → Quét QR (cùng màn hình quét tem). App gửi mã tới
-`/app/nhan-chia-se`, server ghi nhân viên là `manager` của máy.
+`/app/machine/share/accept`, server ghi nhân viên là `manager` của máy.
 Mã dùng một lần, hết hạn sau 5 phút. Sau khi quét, dashboard đọc lại
-`/app/may-cua-toi` nên máy hiện ngay trong danh sách.
+`/app/user/machine/list` nên máy hiện ngay trong danh sách.
 
 ## Chia sẻ qua Bluetooth
 
@@ -46,7 +46,7 @@ nên mã hóa sau này trong `core/machine_packet.dart` áp dụng cho cả hai 
    - Chủ → nhân viên: `{"type":"share","code":"..."}`
    - Nhân viên → chủ: `{"type":"ack","ok":true}` (`ok:false` nếu không phải gói share),
      rồi chờ chủ đóng kết nối trước để ACK không bị mất.
-4. App nhân viên kiểm tra gói bằng `parseMachineQr`, gọi `/app/nhan-chia-se`
+4. App nhân viên kiểm tra gói bằng `parseMachineQr`, gọi `/app/machine/share/accept`
    như khi quét QR. Mã vẫn dùng một lần, hết hạn sau 5 phút.
 
 Thử với một điện thoại: laptop Windows đóng vai nhân viên bằng

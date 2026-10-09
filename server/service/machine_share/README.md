@@ -8,16 +8,16 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/tao-ma-chia-se | Chủ máy | token, machine_id | valid, code, machine_id, expires_in, message |
-| POST | /app/nhan-chia-se | Nhân viên | token, code | valid, machine_id, machine_name, message |
-| POST | /app/nhan-vien-may | Chủ máy | token, machine_id | valid, staff |
-| POST | /app/thu-hoi-quyen | Chủ máy | token, machine_id, user_id | valid, message |
+| POST | /app/machine/share/create | Chủ máy | token, machine_id | valid, code, machine_id, expires_in, message |
+| POST | /app/machine/share/accept | Nhân viên | token, code | valid, machine_id, machine_name, message |
+| POST | /app/machine/staff/list | Chủ máy | token, machine_id | valid, staff |
+| POST | /app/machine/staff/revoke | Chủ máy | token, machine_id, user_id | valid, message |
 
 ## A. Mời nhân viên
 
 ### 1. Chủ gửi yêu cầu tạo mã
 
-POST `/app/tao-ma-chia-se` với `{token, machine_id}`. Server kiểm người gọi là chủ, tạo mã và lưu hash. Response `{valid, code, machine_id, expires_in, message}`.
+POST `/app/machine/share/create` với `{token, machine_id}`. Server kiểm người gọi là chủ, tạo mã và lưu hash. Response `{valid, code, machine_id, expires_in, message}`.
 
 Hàm tham gia:
 
@@ -35,7 +35,7 @@ Hàm tham gia:
 
 ### 3. Nhân viên gửi mã nhận quyền
 
-POST `/app/nhan-chia-se` với `{token, code}`. Server kiểm mã còn hạn/chưa dùng, đánh dấu dùng và thêm quyền manager trong transaction. Response `{valid, machine_id, machine_name, message}`.
+POST `/app/machine/share/accept` với `{token, code}`. Server kiểm mã còn hạn/chưa dùng, đánh dấu dùng và thêm quyền manager trong transaction. Response `{valid, machine_id, machine_name, message}`.
 
 Hàm tham gia:
 
@@ -44,7 +44,7 @@ Hàm tham gia:
 
 ### 4. App cập nhật danh sách máy
 
-App gọi POST `/app/may-cua-toi` với `{token}`, nhận `{valid, machines}` rồi hiển thị máy mới. Chủ nhận mã của mình vẫn giữ quyền owner.
+App gọi POST `/app/user/machine/list` với `{token}`, nhận `{valid, machines}` rồi hiển thị máy mới. Chủ nhận mã của mình vẫn giữ quyền owner.
 
 Hàm tham gia:
 
@@ -56,7 +56,7 @@ Hàm tham gia:
 
 ### 1. Chủ lấy danh sách nhân viên
 
-POST `/app/nhan-vien-may` với `{token, machine_id}`. Server kiểm quyền chủ rồi trả `{valid, staff}`.
+POST `/app/machine/staff/list` với `{token, machine_id}`. Server kiểm quyền chủ rồi trả `{valid, staff}`.
 
 Hàm tham gia:
 
@@ -65,7 +65,7 @@ Hàm tham gia:
 
 ### 2. Chủ thu hồi quyền của một người
 
-POST `/app/thu-hoi-quyen` với `{token, machine_id, user_id}`. user_id là nhân viên bị thu hồi. Server xóa quyền manager, trả `{valid, message}`. Nhân viên không còn quyền với máy; danh sách app cập nhật khi tải lại.
+POST `/app/machine/staff/revoke` với `{token, machine_id, user_id}`. user_id là nhân viên bị thu hồi. Server xóa quyền manager, trả `{valid, message}`. Nhân viên không còn quyền với máy; danh sách app cập nhật khi tải lại.
 
 Hàm tham gia:
 
@@ -103,7 +103,7 @@ users/machines. Khởi tạo lại giữ dữ liệu hiện có; module không c
 Mã tạo từ 24 byte ngẫu nhiên (32 ký tự), lưu SHA-256. Dạng mã nhận chấp nhận chuỗi
 20–100 ký tự như trước. QR/Bluetooth dùng `{"type":"share","code":"..."}`;
 [xem gói chia sẻ](../../../app/flutter_app/lib/feature/machine_share/QR.md).
-Danh sách máy `/app/may-cua-toi` thuộc module `machinelist_sync`.
+Danh sách máy `/app/user/machine/list` thuộc module `machinelist_sync`.
 
 ```sh
 python -m unittest tests.python.test_machine_share tests.python.test_server_modules -v

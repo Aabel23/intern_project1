@@ -21,26 +21,64 @@ python -m server.main --port 8001
 
 Thêm tính năng: thêm hằng vào routing, viết module rồi import/đăng ký ở main.
 
-## Tên biến routing
+## Tên biến và đường dẫn routing
 
-Dùng tiếng Anh theo thứ tự `<đối_tượng_lớn>_<mục_tiêu_chính>_<hành_động>`.
-Đối tượng là miền nghiệp vụ (`USER`, `MACHINE`), mục tiêu là dữ liệu hoặc tác vụ
-(`MENU`, `OTP`, `STAFF`), hành động đứng cuối (`GET`, `UPDATE`, `SEND`, `VERIFY`).
-Không dùng `APP` làm đối tượng chỉ vì app gọi route. GET/UPDATE diễn tả nghiệp vụ,
-không bắt buộc trùng HTTP method; route lấy menu hiện vẫn dùng POST.
+Toàn bộ routing dùng tiếng Anh. Tên biến và path mô tả cùng một ý theo cùng thứ tự,
+nên đọc một bên suy ra được bên kia.
 
-Python dùng UPPER_SNAKE_CASE; Dart dùng lowerCamelCase với cùng thứ tự ý nghĩa:
-
-| Python | Dart | Ý nghĩa |
+| Phần | Dạng | Ví dụ |
 | --- | --- | --- |
-| `MACHINE_MENU_GET` | `machineMenuGet` | Lấy menu từ máy |
-| `MACHINE_MENU_UPDATE` | `machineMenuUpdate` | Cập nhật giá/trạng thái món trong menu |
-| `USER_OTP_SEND` | `userOtpSend` | Gửi OTP cho người dùng |
-| `MACHINE_STAFF_REVOKE` | `machineStaffRevoke` | Thu hồi quyền nhân viên |
+| Biến Python | `<ĐỐI_TƯỢNG>_<MỤC_TIÊU>_<HÀNH_ĐỘNG>`, UPPER_SNAKE_CASE | `MACHINE_MENU_UPDATE` |
+| Biến Dart | cùng thứ tự, lowerCamelCase | `machineMenuUpdate` |
+| Path bên gọi app | `/app/<đối_tượng>/<mục_tiêu>/<hành_động>` | `/app/machine/menu/update` |
+| Path bên gọi máy | `/machine/<mục_tiêu>/<hành_động>` | `/machine/command/poll` |
 
-`MACHINE_MENU_UPDATE` dùng `/app/cap-nhat-menu`; lệnh máy là `cap_nhat_menu`.
-Đây là thao tác cập nhật món, không phải đường gửi phản hồi của thao tác lấy menu.
-Các bên app/server/machine phải cập nhật đồng thời khi đổi URL hoặc tên lệnh.
+- **Bên gọi** là đoạn đầu path: `app` (app điện thoại, xác thực bằng token) hoặc
+  `machine` (máy pha, xác thực bằng `product_key`). Chọn theo ai gọi, không theo dữ liệu:
+  trạng thái máy do app hỏi nên là `/app/machine/status/get`. Với bên gọi `machine`,
+  đối tượng luôn là chính máy nên bỏ đoạn đối tượng.
+- **Đối tượng** là miền nghiệp vụ sở hữu dữ liệu: `user`, `machine`. Không dùng `app`
+  làm đối tượng. `user/machine/...` là tập máy của tài khoản (đăng ký, liệt kê, gỡ);
+  `machine/...` là thao tác trên một máy cụ thể.
+- **Mục tiêu** là danh từ số ít chỉ dữ liệu hoặc tính năng: `account`, `otp`, `session`,
+  `share`, `staff`, `name`, `status`, `menu`, `ingredient`, `heartbeat`, `command`, `result`.
+- **Hành động** là động từ đứng cuối, lấy từ bộ: `get`, `list`, `create`, `update`,
+  `remove`, `register`, `send`, `verify`, `accept`, `revoke`, `refill`, `poll`,
+  `login`, `logout`. `get`/`update` diễn tả nghiệp vụ, không bắt buộc trùng HTTP method.
+- Path chữ thường, chỉ `a-z`, nối nhiều từ trong một đoạn bằng `-`; không dấu tiếng Việt,
+  không đuôi `/`, tham số đi trong body JSON hoặc query (`?machine_id=`), không nằm trong path.
+- Path bỏ `/app` hoặc `/machine` rồi đổi `/` thành `_` phải ra đúng tên biến
+  (trừ bên gọi máy, tên biến thêm tiền tố `MACHINE_`).
+
+| Python | Dart | Path |
+| --- | --- | --- |
+| `USER_ACCOUNT_REGISTER` | `userAccountRegister` | `/app/user/account/register` |
+| `USER_OTP_SEND` | `userOtpSend` | `/app/user/otp/send` |
+| `USER_OTP_VERIFY` | `userOtpVerify` | `/app/user/otp/verify` |
+| `USER_SESSION_LOGIN` | `userSessionLogin` | `/app/user/session/login` |
+| — (chưa có ở server) | `userSessionVerify` | `/app/user/session/verify` |
+| `USER_SESSION_LOGOUT` | `userSessionLogout` | `/app/user/session/logout` |
+| `USER_MACHINE_REGISTER` | `userMachineRegister` | `/app/user/machine/register` |
+| `USER_MACHINE_LIST` | `userMachineList` | `/app/user/machine/list` |
+| `USER_MACHINE_REMOVE` | `userMachineRemove` | `/app/user/machine/remove` |
+| `MACHINE_SHARE_CREATE` | `machineShareCreate` | `/app/machine/share/create` |
+| `MACHINE_SHARE_ACCEPT` | `machineShareAccept` | `/app/machine/share/accept` |
+| `MACHINE_STAFF_LIST` | `machineStaffList` | `/app/machine/staff/list` |
+| `MACHINE_STAFF_REVOKE` | `machineStaffRevoke` | `/app/machine/staff/revoke` |
+| `MACHINE_NAME_UPDATE` | `machineNameUpdate` | `/app/machine/name/update` |
+| `MACHINE_STATUS_GET` | `machineStatusGet` | `/app/machine/status/get` (GET) |
+| `MACHINE_MENU_GET` | `machineMenuGet` | `/app/machine/menu/get` |
+| `MACHINE_MENU_UPDATE` | `machineMenuUpdate` | `/app/machine/menu/update` |
+| `MACHINE_INGREDIENT_GET` | `machineIngredientGet` | `/app/machine/ingredient/get` |
+| `MACHINE_INGREDIENT_REFILL` | `machineIngredientRefill` | `/app/machine/ingredient/refill` |
+| `MACHINE_HEARTBEAT_SEND` | (máy) | `/machine/heartbeat/send` |
+| `MACHINE_COMMAND_POLL` | (máy) | `/machine/command/poll` |
+| `MACHINE_RESULT_SEND` | (máy) | `/machine/result/send` |
+
+Nguồn: `server/config/routing.py`, `app/flutter_app/lib/config/routing.dart`,
+`version1.1/machine/config/routing.py`. Ba file phải khớp; đổi path thì sửa cả ba và test
+cùng lúc. Tên lệnh gửi xuống máy (`instruction`, ví dụ `cap_nhat_menu`) và trường gói tin
+không thuộc routing; đổi chúng là thay hợp đồng gói tin riêng.
 
 ## Giao diện với server
 

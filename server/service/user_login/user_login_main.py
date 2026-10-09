@@ -1,7 +1,7 @@
 """HTTP của đăng nhập: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
 
-    POST /app/dang-nhap   {username, password}   kiểm tài khoản, trả token
-    POST /app/dang-xuat   {token}                xóa phiên trên server
+    POST /app/user/session/login   {username, password}  kiểm tài khoản, trả token
+    POST /app/user/session/logout  {token}               xóa phiên trên server
 
 Đăng nhập chưa cần token nên giới hạn request theo IP (dò mật khẩu). Đăng xuất đã mang
 token nên không tính, để kẻ cùng IP dò mật khẩu không chặn được việc xóa phiên.

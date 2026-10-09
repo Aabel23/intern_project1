@@ -10,16 +10,16 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/may-cua-toi | App | token | valid, machines |
-| POST | /app/doi-ten-may | Chủ máy | token, machine_id, name | valid, name, message |
-| POST | /app/go-may | Chủ hoặc nhân viên | token, machine_id | valid, deleted, message |
-| GET | /machine/trang-thai | App | machine_id trong query URL | trạng thái máy theo heartbeat |
+| POST | /app/user/machine/list | App | token | valid, machines |
+| POST | /app/machine/name/update | Chủ máy | token, machine_id, name | valid, name, message |
+| POST | /app/user/machine/remove | Chủ hoặc nhân viên | token, machine_id | valid, deleted, message |
+| GET | /app/machine/status/get | App | machine_id trong query URL | trạng thái máy theo heartbeat |
 
 ## A. Hiển thị danh sách
 
 ### 1. App hỏi danh sách máy
 
-POST `/app/may-cua-toi` với `{token}`. Server trả `{valid, machines: [{machine_id, name, role}]}` cho các máy tài khoản có quyền.
+POST `/app/user/machine/list` với `{token}`. Server trả `{valid, machines: [{machine_id, name, role}]}` cho các máy tài khoản có quyền.
 
 Hàm tham gia:
 
@@ -28,7 +28,7 @@ Hàm tham gia:
 
 ### 2. App xem máy đang online hay offline
 
-GET `/machine/trang-thai?machine_id=...`. Server đọc giờ heartbeat gần nhất để trả trạng thái; không gửi lệnh mới xuống máy.
+GET `/app/machine/status/get?machine_id=...`. Server đọc giờ heartbeat gần nhất để trả trạng thái; không gửi lệnh mới xuống máy.
 
 Hàm tham gia:
 
@@ -40,7 +40,7 @@ Hàm tham gia:
 
 ### 1. Chủ nhập tên mới và gửi
 
-POST `/app/doi-ten-may` với `{token, machine_id, name}`. Server kiểm phiên, mã máy, tên 1–150 ký tự rồi quyền chủ; lưu tên mới và trả `{valid, name, message}`.
+POST `/app/machine/name/update` với `{token, machine_id, name}`. Server kiểm phiên, mã máy, tên 1–150 ký tự rồi quyền chủ; lưu tên mới và trả `{valid, name, message}`.
 
 Hàm tham gia:
 
@@ -49,7 +49,7 @@ Hàm tham gia:
 
 ### 2. App hiển thị tên đã đổi
 
-App tải lại `/app/may-cua-toi` và cập nhật dòng máy; thất bại thì hiển thị message.
+App tải lại `/app/user/machine/list` và cập nhật dòng máy; thất bại thì hiển thị message.
 
 Hàm tham gia:
 
@@ -60,7 +60,7 @@ Hàm tham gia:
 
 ### 1. Người dùng xác nhận gỡ
 
-POST `/app/go-may` với `{token, machine_id}`. Server kiểm phiên và mã máy, mở transaction với BEGIN IMMEDIATE rồi kiểm quyền. Chủ gọi thì xóa máy cùng quyền và mã mời; nhân viên gọi thì chỉ xóa quyền của chính mình. Response `{valid, deleted, message}`; deleted=true là xóa máy, false là bỏ quyền.
+POST `/app/user/machine/remove` với `{token, machine_id}`. Server kiểm phiên và mã máy, mở transaction với BEGIN IMMEDIATE rồi kiểm quyền. Chủ gọi thì xóa máy cùng quyền và mã mời; nhân viên gọi thì chỉ xóa quyền của chính mình. Response `{valid, deleted, message}`; deleted=true là xóa máy, false là bỏ quyền.
 
 Hàm tham gia:
 

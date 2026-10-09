@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:simple_app/feature/dashboard/dashboard_controller.dart';
 import 'package:simple_app/core/server_client.dart';
 
-// Server giả: /app/may-cua-toi trả danh sách máy đang giữ trong [machines];
+// Server giả: /app/user/machine/list trả danh sách máy đang giữ trong [machines];
 // máy offline nên lệnh xem menu/đồng bộ kho trả lỗi offline như server thật.
 Future<HttpServer> _fakeServer(List<Map<String, String>> machines) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -15,9 +15,9 @@ Future<HttpServer> _fakeServer(List<Map<String, String>> machines) async {
     Object reply;
     var status = 200;
     switch (request.uri.path) {
-      case '/app/may-cua-toi':
+      case '/app/user/machine/list':
         reply = {'valid': true, 'machines': machines};
-      case '/machine/trang-thai':
+      case '/app/machine/status/get':
         reply = {'online': false};
       default:
         // Menu, kho: server thật trả 503 khi máy offline.
@@ -33,18 +33,18 @@ Future<HttpServer> _fakeServer(List<Map<String, String>> machines) async {
   return server;
 }
 
-// Server giả giữ các request /app/may-cua-toi để test tự chọn thứ tự trả lời;
+// Server giả giữ các request /app/user/machine/list để test tự chọn thứ tự trả lời;
 // các route khác trả ngay như máy offline.
 Future<(HttpServer, StreamIterator<HttpRequest>)> _heldListServer() async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   final lists = StreamController<HttpRequest>();
   server.listen((request) async {
     await utf8.decoder.bind(request).join();
-    if (request.uri.path == '/app/may-cua-toi') {
+    if (request.uri.path == '/app/user/machine/list') {
       lists.add(request);
       return;
     }
-    final status = request.uri.path == '/machine/trang-thai' ? 200 : 503;
+    final status = request.uri.path == '/app/machine/status/get' ? 200 : 503;
     request.response
       ..statusCode = status
       ..headers.contentType = ContentType.json

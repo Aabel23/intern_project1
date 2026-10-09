@@ -19,23 +19,23 @@ void main() {
       server.listen((request) async {
         final text = await utf8.decoder.bind(request).join();
         Object reply;
-        if (request.uri.path == '/machine/trang-thai') {
+        if (request.uri.path == '/app/machine/status/get') {
           reply = {'machine_id': 'fm_1', 'online': false, 'last_seen': null};
         } else {
           final body = jsonDecode(text) as Map<String, dynamic>;
           bodies[request.uri.path] = body;
           reply = switch (request.uri.path) {
-            '/app/may-cua-toi' => {'valid': true, 'machines': machines},
-            '/app/doi-ten-may' => {'valid': true, 'name': body['name']},
-            '/app/go-may' => {'valid': true, 'deleted': true},
+            '/app/user/machine/list' => {'valid': true, 'machines': machines},
+            '/app/machine/name/update' => {'valid': true, 'name': body['name']},
+            '/app/user/machine/remove' => {'valid': true, 'deleted': true},
             _ => {'valid': false, 'message': 'sai đường dẫn'},
           };
-          if (request.uri.path == '/app/doi-ten-may') {
+          if (request.uri.path == '/app/machine/name/update') {
             machines = [
               {'machine_id': 'fm_1', 'name': body['name'], 'role': 'owner'},
             ];
           }
-          if (request.uri.path == '/app/go-may') machines = [];
+          if (request.uri.path == '/app/user/machine/remove') machines = [];
         }
         request.response.headers.contentType = ContentType.json;
         request.response.write(jsonEncode(reply));
@@ -81,7 +81,7 @@ void main() {
         await tester.tap(find.text('Lưu'));
         await waitFor(() => find.byType(TextField).evaluate().isEmpty);
         await pumpUntil(find.text('FlexMix-Moi'));
-        expect(bodies['/app/doi-ten-may'], {
+        expect(bodies['/app/machine/name/update'], {
           'machine_id': 'fm_1',
           'name': 'FlexMix-Moi',
           'token': 'owner-token',
@@ -92,7 +92,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
         await tester.tap(find.text('Gỡ máy'));
         await pumpUntil(find.text('Quán chưa có máy nào.'));
-        expect(bodies['/app/go-may'], {
+        expect(bodies['/app/user/machine/remove'], {
           'machine_id': 'fm_1',
           'token': 'owner-token',
         });

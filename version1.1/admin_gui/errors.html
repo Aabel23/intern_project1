@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Nhật ký lỗi</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="errors">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Nhật ký lỗi</h1>
+        <div class="sub">Mọi sự cố máy tự ghi lại — bảng error_log</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+    </div>
+
+    <!-- Same date range as the report, deliberately: staff already know
+         how it works there, and "what went wrong last week" is asked the
+         same way as "what did we sell last week". -->
+    <div class="card">
+      <div class="cbody filterbar">
+        <div class="daterange">
+          <label class="datefield"><span>Từ ngày</span><input type="date" id="fromDate" /></label>
+          <label class="datefield"><span>Đến ngày</span><input type="date" id="toDate" /></label>
+        </div>
+        <div class="presets" id="presets">
+          <button class="pill" data-preset="today">Hôm nay</button>
+          <button class="pill" data-preset="7">7 ngày</button>
+          <button class="pill" data-preset="30">30 ngày</button>
+          <button class="pill" data-preset="month">Tháng này</button>
+        </div>
+        <div class="spacer"></div>
+        <!-- The only narrowing left besides the date range, since
+             category was dropped on 2026-09-07. Three fixed values --
+             the only ones the severity column accepts -- and the reason
+             the delete is still usable: clearing a month of `info` noise
+             while every `Lỗi` row stays is the common case. -->
+        <label class="datefield">
+          <span>Mức</span>
+          <select id="severityFilter">
+            <option value="">Tất cả</option>
+            <option value="error">Lỗi</option>
+            <option value="warning">Cảnh báo</option>
+            <option value="info">Thông tin</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Shown only when this page was opened from a ticket row. -->
+    <div class="linkbanner" id="linkBanner" hidden>
+      <span class="lb-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13.5a4 4 0 0 0 5.7.4l3-3a4 4 0 0 0-5.7-5.7l-1.7 1.7"/><path d="M14 10.5a4 4 0 0 0-5.7-.4l-3 3a4 4 0 0 0 5.7 5.7l1.7-1.7"/></svg></span>
+      <span id="linkBannerText"></span>
+      <a class="btn ghost compact" href="errors.html">Xem toàn bộ nhật ký</a>
+    </div>
+
+    <div class="card">
+      <div class="chead">
+        <h2>Danh sách lỗi</h2>
+        <span class="cnote" id="countNote">—</span>
+        <!-- Hidden until the server says this account holds the purge
+             area, and while the list is narrowed to one ticket (there is
+             no date range in play then, so there is nothing to scope a
+             delete to). It acts on the filters above it, which is why it
+             sits with the list rather than in the filter bar. -->
+        <button class="btn danger compact" id="deleteBtn" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          Xoá theo bộ lọc
+        </button>
+      </div>
+      <div class="cbody">
+        <div class="tablewrap">
+          <table class="tbl" id="errorTable">
+            <thead>
+              <tr>
+                <th>Thời điểm</th><th>Mức</th><th>Vé</th>
+                <th>Bước</th><th>Món</th><th>Nội dung</th>
+              </tr>
+            </thead>
+            <tbody id="errorBody"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="emptyNote" hidden>Không có lỗi nào trong khoảng này.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="confirmOverlay">
+  <div class="modal-card confirm-card" id="confirmModal"></div>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="errors.js"></script>
+</body>
+</html>

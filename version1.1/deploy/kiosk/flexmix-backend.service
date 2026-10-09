@@ -1,0 +1,71 @@
+# Chạy main.py (store_gui server + sync_menu + run_flow) làm nền, tự khởi
+# động lại nếu crash, khởi động cùng máy trước khi X/kiosk chạy lên.
+#
+# Cài đặt:
+#   sudo cp flexmix-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now flexmix-backend.service
+#
+# Xem log:
+#   journalctl -u flexmix-backend.service -f
+
+[Unit]
+Description=FlexMix backend (store_gui server + sync_menu + run_flow)
+# VÌ SAO CÓ time-sync.target Ở ĐÂY
+#     Pi không có pin đồng hồ. Mất điện xong, đồng hồ máy quay về một mốc
+#     vô nghĩa cho tới khi NTP kéo nó về đúng. Mọi thứ dựa trên mốc thời
+#     gian đều sai trong khoảng đó: vé ghi giờ sai, error_log ghi giờ sai,
+#     và khi máy nói chuyện với Hub thì chữ ký bị từ chối vì lệch quá 300
+#     giây — kèm một thông báo nói về chữ ký chứ không nói về đồng hồ, nên
+#     không ai đoán ra nguyên nhân.
+#
+# HAI DÒNG NÀY CHƯA ĐỦ — CÒN HAI NỬA NỮA
+#     1. time-sync.target được coi là ĐẠT ngay khi một dịch vụ đồng bộ giờ
+#        KHỞI ĐỘNG, không phải khi đồng hồ đã đúng. Thứ thực sự chặn tới
+#        lúc đồng hồ đúng là systemd-time-wait-sync.service, mà Ubuntu TẮT
+#        mặc định. Thiếu nó thì hai dòng dưới trông đúng mà không làm gì.
+#
+#     2. Nhưng unit đó mặc định TimeoutStartSec=infinity — đợi vĩnh viễn.
+#        Máy mất mạng thì time-sync.target không bao giờ đạt, và vì dòng
+#        After= dưới đây, backend KHÔNG BAO GIỜ KHỞI ĐỘNG. Tiệm mất mạng
+#        rồi mất điện = màn hình trắng, không báo lỗi gì, vì máy không
+#        hỏng — nó đang đợi. Phải giới hạn thời gian chờ.
+#
+#     Wants= chứ không phải Requires= là có chủ ý: hết giờ chờ thì unit kia
+#     thất bại, nhưng phụ thuộc YẾU nên backend vẫn chạy. Đồng hồ có thể
+#     sai — vé lệch giờ thì tệ, không bán được gì thì tệ hơn nhiều.
+#
+#     deploy/install.sh phase 'service' làm cả hai; phase 'verify' kiểm lại.
+After=network.target mysql.service time-sync.target
+Wants=time-sync.target
+
+[Service]
+Type=simple
+User=flexxource
+WorkingDirectory=/home/flexxource/hungvu/version1.0
+# Project có venv riêng ở version1.0/.venv (đủ gpiozero, mysql-connector,
+# pyserial, smbus2) nên chạy bằng python trong đó, không dùng /usr/bin/python3.
+EnvironmentFile=/etc/flexmix/qrproto.env
+# Cho phép store_gui/kiosk_watchdog.py khởi động lại trình duyệt kiosk khi
+# tab của nó chết (renderer crash mà browser vẫn sống, nên vòng `while
+# true` trong autostart không kích hoạt). CHỈ đặt ở đây: watchdog mặc định
+# TẮT, vì nó không phân biệt được server này với một lần chạy serve.py
+# khác trên cùng máy — mà lần chạy đó cũng sẽ thấy browser kiosk và giết
+# nó. Xem phần OPT-IN trong kiosk_watchdog.py.
+Environment=FLEXMIX_KIOSK_WATCHDOG=1
+# Cho phép loadcell/loadcell.py nâng luồng đọc cân lên SCHED_FIFO trong
+# đúng ~0.3ms phát 25 xung clock cho HX711. Không có quyền này thì Linux
+# đá tiến trình ra giữa khung, chip HX711 lệch nhịp hoặc bị ép ngủ, và
+# cân trả về số sai (đo được: 16.76 g cho ly nặng 159 g). Chỉ cấp quyền,
+# KHÔNG đặt CPUSchedulingPolicy=fifo cho cả service — tiến trình này còn
+# chạy HTTP server, để tất cả ở realtime là rủi ro treo máy.
+AmbientCapabilities=CAP_SYS_NICE
+CapabilityBoundingSet=CAP_SYS_NICE
+ExecStart=/home/flexxource/hungvu/version1.0/.venv/bin/python3 main.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

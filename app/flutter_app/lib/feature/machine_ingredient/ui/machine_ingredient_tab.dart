@@ -4,7 +4,7 @@ import 'package:simple_app/feature/machine_ingredient/machine_ingredient_sync.da
 import 'package:simple_app/shared/ui/app_theme.dart';
 import 'package:simple_app/shared/ui/list_widgets.dart';
 
-// Tab Kho: đồng bộ nguyên liệu từ máy; "Nạp đầy"/"Nạp tất cả" gửi /app/nap-kho.
+// Tab Kho: đồng bộ nguyên liệu từ máy; "Nạp đầy"/"Nạp tất cả" gửi /app/machine/ingredient/refill.
 class InventoryTab extends StatelessWidget {
   const InventoryTab({super.key, required this.inventory});
   final IngredientsSync inventory;

@@ -1,0 +1,1317 @@
+/* ================================================================
+   TRẠM RÓT — ADMIN GUI
+   Re-grounded onto the same palette and type as the store screen and the
+   bartender screen, so the three displays read as one system.
+
+   WHAT DID NOT MOVE: the density. This is a back-office tool driven with a
+   mouse and a keyboard, sitting in front of tables of forty drinks -- not a
+   kiosk operated by a fingertip at arm's length. The kiosk's 17px base and
+   its 48px touch floor would turn a page of data into a page of scrolling,
+   so the compact scale here is kept on purpose. What is shared is the
+   palette, the two typefaces, the corner radii, the warm shadows and the
+   popup language; not the sizing.
+
+   FONTS ARE LOCAL NOW
+     This sheet opened with
+       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans…')
+     -- a request to a font CDN, on a Raspberry Pi that may have no route to
+     the internet. Offline it simply failed, silently, and every admin page
+     fell back to whatever sans the OS happened to ship: the typeface named
+     throughout this file was one almost nobody ever saw. The two faces
+     below are files on the same disk, shared with the other two screens.
+   ================================================================ */
+@font-face{
+  font-family:"Bricolage Grotesque";
+  src:url("../store_gui/fonts/BricolageGrotesque-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Bricolage Grotesque";
+  src:url("../store_gui/fonts/BricolageGrotesque-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Work Sans";
+  src:url("../store_gui/fonts/WorkSans-Regular.ttf") format("truetype");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Work Sans";
+  src:url("../store_gui/fonts/WorkSans-Bold.ttf") format("truetype");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+
+:root{
+  --font:"Work Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --font-display:"Bricolage Grotesque","Work Sans",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+
+  /* The app ground is one step deeper than the kiosk's #fdf7f0. White cards
+     on a dense page need a little more separation than a menu of
+     photographs does, and this is still unmistakably the same cream. */
+  --bg:#f7f1e9;
+  --panel:#ffffff;
+  --ink:#241a15;
+  --muted:#726059;          /* 5.3:1 on --bg, 5.9:1 on white */
+  --line:#efe0d2;
+  --line-2:#e6d5c5;
+
+  /* The primary action. It was a cobalt blue that belonged to no other
+     screen in the system; it is now the store screen's mark, which is what
+     "this is the button" looks like everywhere else. */
+  --blue:#e4571f;           /* kept under its old name: dozens of rules ask
+                               for --blue and they all mean "primary" */
+  --blue-deep:#b93e10;
+  --blue-soft:#fff0e7;
+  --grad-brand:linear-gradient(135deg,#e4571f 0%,#b93e10 62%);
+
+  --green:#166534;
+  --green-soft:#e7f6ec;
+  --red:#b91c1c;
+  --red-soft:#fdecea;
+  --orange:#b45309;
+  --amber-soft:#fef6e9;
+
+  /* Espresso, not navy. The rail is the one large dark surface in the
+     system and a blue-black one beside a cream page read as a different
+     product bolted on. */
+  --sidebar:#2a1d16;
+  --sidebar-ink:#d8c7bb;    /* 10:1 on the rail */
+  --sidebar-dim:#9a8577;    /* 4.7:1 -- still AA for the section headings */
+
+  --shadow:0 1px 2px rgba(74,42,22,.05), 0 6px 18px rgba(74,42,22,.06);
+  --shadow-lg:0 2px 6px rgba(74,42,22,.07), 0 16px 34px rgba(74,42,22,.1);
+  --shadow-xl:0 8px 20px rgba(74,42,22,.1), 0 40px 80px rgba(74,42,22,.2);
+  --radius:18px;
+  --radius-sm:12px;
+  --radius-lg:24px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:var(--font);
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+a{color:inherit;text-decoration:none}
+/* A pointer to another tab, inside running text. The reset above is
+   right where an anchor is the whole surface -- a rail item, a card --
+   but a sentence saying "cài đặt ở tab X" has to look clickable, and in
+   body copy the underline is what says so. --blue-deep, not --blue: this
+   is 13px on white. */
+.tablink{color:var(--blue-deep);text-decoration:underline;text-underline-offset:2px;font-weight:700}
+.tablink:hover{color:var(--blue)}
+button{font-family:inherit}
+
+/* ---------------- APP SHELL (sidebar + main) ---------------- */
+.admin{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+.sidebar{
+  background:var(--sidebar);color:var(--sidebar-ink);display:flex;flex-direction:column;
+  padding:22px 16px;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:6px 8px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand .logo{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+  background:var(--grad-brand);box-shadow:0 8px 18px rgba(185,62,16,.42);
+}
+.brand .logo svg{display:block;width:22px;height:22px}
+.brand .bt{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-.02em;color:#fff;line-height:1.15}
+.brand .bs{font-size:10.5px;color:var(--sidebar-dim);font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.nav{display:flex;flex-direction:column;gap:4px;margin-top:18px}
+.nav .sechead{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--sidebar-dim);margin:14px 10px 6px;font-weight:700}
+.nav a{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;font-weight:700;font-size:14px;
+  color:var(--sidebar-ink);transition:.15s;
+}
+/* The icon slot is a fixed square so the labels line up whatever is in it,
+   and the drawing inherits the link's own colour -- which is the whole
+   point of moving off emoji. */
+.nav a .ico{width:22px;height:22px;flex:none;display:grid;place-items:center;opacity:.85}
+.nav a .ico svg{width:20px;height:20px;display:block}
+.nav a:hover .ico,.nav a.active .ico{opacity:1}
+.nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav a.active{background:var(--grad-brand);color:#fff;box-shadow:0 8px 18px rgba(185,62,16,.36)}
+.nav a.active .ico{opacity:1}
+.side-foot{margin-top:auto;border-top:1px solid rgba(255,255,255,.08);padding-top:14px}
+.userbox{display:flex;align-items:center;gap:11px;padding:6px 8px 12px}
+.userbox .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#2f8f57,var(--green));display:grid;place-items:center;font-family:var(--font-display);font-weight:700;color:#fff;font-size:15px}
+.userbox .un{font-weight:700;color:#fff;font-size:13px}
+.userbox .ur{font-size:11px;color:var(--sidebar-dim)}
+.logout{
+  width:100%;border:0;border-radius:11px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;
+  background:rgba(224,120,110,.16);color:#f0a9a2;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;
+}
+.logout svg{width:16px;height:16px;display:block}
+.logout:hover{background:rgba(224,120,110,.3);color:#fff}
+
+/* ---------------- MAIN ---------------- */
+.main{padding:26px 30px;overflow-y:auto;max-height:100vh}
+.topbar{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.topbar h1{margin:0;font-family:var(--font-display);font-size:27px;font-weight:700;letter-spacing:-.035em}
+.topbar .sub{color:var(--muted);font-size:13px;margin-top:3px}
+.topbar .spacer{flex:1}
+.modechip{
+  display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:9px 14px;box-shadow:var(--shadow);font-size:13px;font-weight:700;
+}
+.modechip .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+.modechip .lbl{color:var(--muted);font-weight:700}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card .chd{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.card .chd h2{margin:0;font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:-.028em}
+.card .chd .csub{color:var(--muted);font-size:12px;margin-top:2px}
+.card .chd .spacer{flex:1}
+.card .cbody{padding:8px 22px 20px}
+
+/* ---- folding a card away (home page modules) ----
+   The label is the whole hit target, not the chevron beside it, and it
+   spans the row: on a card whose head holds nothing else, an operator
+   aiming anywhere along the heading hits it. */
+.chd-title{flex:1;min-width:0}
+.card-toggle{
+  display:flex;align-items:center;gap:8px;width:100%;
+  border:0;background:none;padding:0;margin:0;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;
+}
+.card-toggle:hover{color:var(--blue)}
+.card-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
+/* The rule under the heading divides a head from a body. With the body
+   folded away there is nothing left to divide. */
+.card[data-collapsed] > .cbody{display:none}
+.card[data-collapsed] > .chd{border-bottom:0}
+
+/* buttons */
+.btn{border:0;border-radius:var(--radius-sm);padding:11px 16px;font-weight:700;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:filter .15s,background .15s,transform .08s}
+.btn svg{width:16px;height:16px;flex:none;display:block}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--grad-brand);color:#fff;box-shadow:0 4px 10px rgba(185,62,16,.2),0 12px 26px rgba(185,62,16,.18)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line-2)}
+.btn.ghost:hover{background:var(--bg)}
+.btn.danger{background:var(--red-soft);color:var(--red)}
+.btn.danger:hover{background:#fbdcda}
+
+/* ---------------- MENU TABLE (ADMIN-02) ---------------- */
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.searchbox{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);flex:1;min-width:220px}
+.searchbox input{border:0;outline:0;flex:1;font-size:14px;background:transparent;color:var(--ink)}
+.filterpills{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filterpills::-webkit-scrollbar{display:none}
+.pill{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:8px 14px;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.12s}
+.pill:hover{border-color:var(--line-2)}
+.pill.active{background:var(--grad-brand);color:#fff;border-color:transparent;box-shadow:0 4px 10px rgba(185,62,16,.18)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+.stat .k{font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.11em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.stat .k svg{width:15px;height:15px;flex:none;display:block}
+.stat .v{font-family:var(--font-display);font-size:30px;font-weight:700;letter-spacing:-.035em;margin-top:6px}
+.stat.ok .v{color:var(--green)} .stat.out .v{color:var(--red)}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:13px 10px;border-bottom:1px solid var(--line-2)}
+.tbl td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tr.soldout{background:#fdfaf6}
+.tbl tr.soldout .m-name{color:var(--muted)}
+.m-item{display:flex;align-items:center;gap:12px}
+.m-emoji{width:44px;height:44px;border-radius:11px;background:var(--bg);display:grid;place-items:center;font-size:24px;flex:none;overflow:hidden}
+/* The photo fills the tile; a drink with no photo keeps the glyph, which
+   is why this rule only touches the image. */
+.m-emoji img{width:100%;height:100%;object-fit:cover;display:block}
+.m-name{font-weight:700}
+.m-sku{font-size:11.5px;color:var(--muted)}
+/* A drink can be in several categories, so the cell holds several tags
+   and has to wrap rather than push the price column off the table. */
+.tagwrap{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:11.5px;color:var(--orange);font-weight:700;background:var(--amber-soft);padding:3px 10px;border-radius:20px}
+.price{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.priceinput{width:88px;border:1px solid var(--line-2);border-radius:9px;padding:7px 9px;font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:-.02em;color:var(--ink);outline:0;font-variant-numeric:tabular-nums}
+.priceinput:focus{border-color:var(--blue)}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px}
+.badge.in{background:var(--green-soft);color:var(--green)}
+.badge.out{background:var(--red-soft);color:var(--red)}
+.badge .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+/* toggle switch */
+.switch{position:relative;display:inline-block;width:52px;height:30px;cursor:pointer;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--line-2);border-radius:30px;transition:.22s}
+.slider:before{content:"";position:absolute;height:24px;width:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.22s;box-shadow:0 2px 5px rgba(74,42,22,.22)}
+.switch input:checked + .slider{background:var(--green)}
+.switch input:checked + .slider:before{transform:translateX(22px)}
+.rowacts{display:flex;gap:8px;justify-content:flex-end}
+.iconbtn{border:1px solid var(--line-2);background:var(--panel);border-radius:10px;width:36px;height:36px;cursor:pointer;font-size:15px;display:grid;place-items:center;color:var(--muted);transition:background .12s,border-color .12s,color .12s}
+.iconbtn svg{width:17px;height:17px;display:block}
+.iconbtn:hover{background:var(--bg);color:var(--ink)}
+.iconbtn.del:hover{background:var(--red-soft);border-color:#f0bdb8;color:var(--red)}
+
+/* ---------------- MODE SELECTOR (ADMIN-03) ---------------- */
+/* operation switches */
+.opgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px}
+.optoggle{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 18px;box-shadow:var(--shadow)}
+.optoggle.warn{background:var(--amber-soft);border-color:#f6e2bf}
+.optoggle .opt-ic{width:46px;height:46px;border-radius:12px;background:var(--blue-soft);color:var(--blue-deep);display:grid;place-items:center;font-size:23px;flex:none}
+.optoggle.warn .opt-ic{background:#fff;color:var(--orange)}
+.optoggle .opt-txt{flex:1;min-width:0}
+.optoggle .opt-name{font-family:var(--font-display);font-weight:700;font-size:16px;letter-spacing:-.025em}
+.optoggle .opt-sub{color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.4}
+
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-top:6px}
+.mode{
+  position:relative;background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:24px;
+  cursor:pointer;transition:.16s;box-shadow:var(--shadow);text-align:left;
+}
+.mode:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow-lg)}
+.mode.active{border-color:var(--blue);box-shadow:0 16px 34px rgba(185,62,16,.2)}
+.mode .ic{width:56px;height:56px;border-radius:15px;background:var(--blue-soft);color:var(--blue-deep);display:grid;place-items:center;font-size:28px;margin-bottom:16px;transition:background .16s,color .16s}
+.mode.active .ic{background:var(--grad-brand);color:#fff}
+.mode .mno{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mode .mname{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:-.03em;margin:4px 0 8px}
+.mode .mdesc{font-size:13px;color:var(--muted);line-height:1.55}
+.mode .check{position:absolute;top:18px;right:18px;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:#fff;font-size:14px;transition:.15s}
+.mode.active .check{background:var(--blue);border-color:var(--blue)}
+.mode .check svg{width:15px;height:15px;display:block}
+.mode-note{margin-top:22px;background:var(--amber-soft);border:1px solid #f6e2bf;border-radius:14px;padding:16px 18px;font-size:13px;color:#8a6417;line-height:1.6;display:flex;gap:12px}
+.mode-note b{color:#6b4d10}
+
+/* toast */
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(120%);opacity:0;
+  background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-weight:700;font-size:14px;
+  box-shadow:0 14px 34px rgba(74,42,22,.34);
+  transition:transform .28s cubic-bezier(.22,.68,.32,1), opacity .22s ease;
+  z-index:80;display:flex;align-items:center;gap:10px;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+/* biến mất TẠI CHỖ (chỉ mờ dần) thay vì trượt lùi xuống lại */
+.toast.hide{transform:translateX(-50%) translateY(0);opacity:0}
+.toast.ok{background:var(--green)}.toast.warn{background:var(--orange)}
+
+/* ---------------- LOGIN (ADMIN-01) ---------------- */
+/* The two washes were a cold blue and a mint green -- the last corner of
+   the old palette still on screen, and the first thing anyone signing in
+   sees. They are now the store screen's own ambience. */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(900px 620px at 8% -8%,rgba(245,158,11,.18),transparent 62%),
+             radial-gradient(760px 560px at 104% 12%,rgba(228,87,31,.15),transparent 60%),var(--bg);
+}
+.login-card{width:400px;max-width:100%;background:var(--panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-xl);padding:34px 32px;border:2px solid var(--line)}
+.login-brand{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:24px}
+.login-brand .logo{width:60px;height:60px;border-radius:18px;display:grid;place-items:center;font-size:32px;color:#fff;background:var(--grad-brand);box-shadow:0 12px 26px rgba(185,62,16,.36);margin-bottom:14px}
+.login-brand h1{margin:0;font-family:var(--font-display);font-size:25px;font-weight:700;letter-spacing:-.035em}
+.login-brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;color:var(--muted)}
+.field .inp{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;transition:.15s;background:#fff}
+.field .inp:focus-within{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.field .inp .i{color:var(--muted);display:grid;place-items:center;flex:none}
+.field .inp input{border:0;outline:0;flex:1;font-size:15px;background:transparent;color:var(--ink)}
+.field .inp .eye{cursor:pointer;color:var(--muted);display:grid;place-items:center;flex:none;user-select:none}
+.login-btn{
+  width:100%;border:0;border-radius:var(--radius-sm);background:var(--grad-brand);color:#fff;
+  font-family:var(--font-display);font-weight:700;font-size:16.5px;letter-spacing:-.02em;
+  padding:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 4px 12px rgba(185,62,16,.24),0 14px 30px rgba(185,62,16,.22);
+  margin-top:6px;transition:filter .15s,transform .08s;
+}
+.login-btn svg{width:18px;height:18px;flex:none;display:block}
+.login-btn:active:not(:disabled){transform:translateY(1px)}
+.login-btn:hover{filter:brightness(1.05)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-err{background:var(--red-soft);color:var(--red);border-radius:11px;padding:11px 14px;font-size:13px;font-weight:700;margin-bottom:16px;display:none;align-items:center;gap:9px}
+.login-err.show{display:flex}
+.login-hint{margin-top:20px;text-align:center;font-size:12px;color:var(--muted);background:var(--bg);border:1px dashed var(--line-2);border-radius:11px;padding:11px}
+.login-hint code{background:var(--bg);padding:2px 7px;border-radius:6px;font-weight:700;color:var(--ink)}
+
+/* ---------------- MODAL (add / edit item) ---------------- */
+/* The same scrim the store and bartender popups use: warm-dark, opaque
+   enough that the page behind reads as blocked rather than merely tinted,
+   and with no backdrop-filter to re-composite on a Pi. */
+.overlay{position:fixed;inset:0;background:rgba(36,26,21,.62);display:none;align-items:center;justify-content:center;z-index:70;padding:20px}
+.overlay.show{display:flex}
+.modal-card{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius-lg);width:700px;max-width:100%;max-height:90vh;overflow:auto;padding:26px 26px 24px;box-shadow:var(--shadow-xl);animation:pop .18s cubic-bezier(.16,1,.3,1)}
+@keyframes pop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-card h3{margin:0 0 4px;font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:-.03em}
+.modal-card .msub{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:18px}
+.mfield{margin-bottom:14px}
+.mfield label{display:flex;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;color:var(--muted)}
+.mfield input,.mfield select,.mfield textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;font-size:14px;outline:0;color:var(--ink);background:#fff}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{border-color:var(--blue)}
+/* The shared build-method description. Sits under its own picker, so it
+   gets a little air above it and grows downward only -- a box that can be
+   dragged wider than the modal is a box that breaks the modal. */
+.mfield textarea{margin-top:8px;font-family:inherit;line-height:1.45;resize:vertical;min-height:58px}
+.mfield textarea:disabled{background:var(--bg);color:var(--muted);cursor:not-allowed}
+/* A line under a control saying what it does downstream. The glass picker
+   needs it: nothing on this screen shows the consequence of leaving it
+   empty, which is a step the bartender screen then skips. */
+.mfield .mhint{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--muted)}
+
+/* Whether the recipe fits the glass it was given. Two states on one
+   element: a quiet fact while it fits, and the same line in amber once it
+   does not. One element rather than two because it is one sentence about
+   one thing -- swapping between two nodes would make the layout jump on
+   the keystroke that tips a recipe over. */
+.capfit{margin-top:6px;padding:7px 10px;border-radius:9px;
+  font-size:11.5px;line-height:1.45;color:var(--muted);
+  background:var(--bg);border:1px solid var(--line)}
+.capfit.over{background:var(--amber-soft);border-color:#f0d9a8;
+  color:#8a5a00;font-weight:600}
+/* An author rule beats the browser's own [hidden]{display:none}, and this
+   one sets no display -- but padding and border would still paint a
+   coloured bar on a page with no glass chosen. Same guard as .linkbanner
+   and .imglib carry, for the same reason. */
+.capfit[hidden]{display:none}
+
+/* In the recipe builder it sits between the head and the step list rather
+   than under a field. Open, .steps-head's own 10px is the gap above it. */
+.steps-box .capfit{margin:0 0 10px}
+/* Shut, that 10px is taken away (the rule below assumed nothing followed
+   the head) -- so the line puts the gap back on its own side rather than
+   sitting flush against the word "Công thức". It stays visible when the
+   builder is folded away on purpose: whether the recipe fits its glass is
+   exactly the kind of thing a one-line summary should still say. */
+.steps-box[data-collapsed] > .capfit{margin-top:10px}
+.mrow{display:flex;gap:12px}.mrow .mfield{flex:1}
+/* The confirm is the wider of the two and sits on the right, where the
+   eye finishes. Both are tall enough to be unmistakable targets -- this is
+   the last thing pressed before something is written to the database. */
+.modal-acts{display:flex;gap:10px;margin-top:24px}
+.modal-acts .btn{flex:1;justify-content:center;padding:15px;font-size:14.5px;border-radius:var(--radius-sm)}
+.modal-acts .btn.primary{flex:1.4}
+.editor-tabs{display:flex;gap:6px;margin:0 0 18px;border-bottom:1px solid var(--line)}
+.editor-tabs button{border:0;background:transparent;padding:10px 12px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.editor-tabs button.active{color:var(--blue);border-bottom-color:var(--blue)}
+/* A dropdown that picks SEVERAL things.
+   <select multiple> cannot do this: the attribute makes the browser draw a
+   listbox that is always open, and no styling collapses it. So the shut
+   state is a button painted to match the real selects beside it, and the
+   open state is a panel of ordinary checkboxes.
+
+   The panel is absolutely positioned so opening it does not shove the rest
+   of the form down, and capped with max-height so a long category list
+   scrolls inside the panel instead of running off the modal. */
+.dropselect{position:relative}
+.dropselect-field{display:flex;align-items:center;gap:10px;width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;font:inherit;font-size:14px;color:var(--ink);background:#fff;cursor:pointer;text-align:left}
+.dropselect-field:hover{border-color:var(--line-2)}
+.dropselect.open .dropselect-field{border-color:var(--blue)}
+/* The summary is one line: a drink in five categories must not grow the
+   field to five lines and reflow the form. */
+.dropselect-summary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.dropselect-summary.empty{color:var(--muted);font-weight:400}
+.dropselect-caret{flex:none;color:var(--muted);font-size:12px;transition:transform .14s}
+.dropselect.open .dropselect-caret{transform:rotate(180deg)}
+.dropselect-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:5;max-height:240px;overflow-y:auto;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:5px;box-shadow:0 12px 28px rgba(74,42,22,.16)}
+.dropselect.open .dropselect-menu{display:block}
+.dropselect-option{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;font-size:13.5px;font-weight:700;line-height:1.3;color:var(--ink);cursor:pointer;user-select:none}
+.dropselect-option:hover{background:var(--bg)}
+/* These checkboxes sit inside a .mfield, so `.mfield input` above was
+   dressing them as text boxes: 100% wide, an 11px/13px padding and a
+   rounded 1.5px border. box-sizing is border-box, so 26px of horizontal
+   padding on a 16px box cannot fit inside it -- the control grew into a
+   bordered lump, ate the row height and shoved the label against it.
+   Everything that rule sets has to be undone by name; the two selectors
+   have equal weight, so this one is qualified with .mfield to win
+   outright rather than by being further down the file. */
+.mfield .dropselect-option input{flex:none;width:16px;height:16px;margin:0;padding:0;border:0;border-radius:0;background:none;accent-color:var(--blue);cursor:pointer}
+/* The label takes the rest of the row and truncates, so one long category
+   name cannot widen the panel or wrap into a two-line row. */
+.dropselect-option span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dropselect-option:has(input:checked){background:var(--blue-soft);color:var(--blue)}
+.available-field{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;margin:4px 0 14px}
+.available-field input{width:17px;height:17px}
+.recipe-help{font-size:12px;color:var(--muted);margin-bottom:10px}
+.recipe-step{border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:10px;background:var(--bg)}
+.recipe-step-head{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+
+/* ---- folding a step away ----
+   The head is the lid: everything between the grab bar and "Bỏ bước" is one
+   button. A chevron on its own would be a 14px target on a screen whose
+   other controls are all far bigger, and the title is the thing the eye is
+   already on when it decides this step is not the one being edited.
+   Takes the slack too, so "Bỏ bước" stays pinned to the right edge the way
+   it did under the justify-content:space-between this replaced. */
+.step-title{
+  flex:1;min-width:0;display:flex;align-items:center;gap:8px;
+  border:0;background:none;padding:3px 2px;margin:0;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:8px;
+}
+.step-title:hover{color:var(--blue)}
+.step-title:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.step-title strong{flex:none;white-space:nowrap}
+.step-title .step-kind-tag{margin-left:0}
+/* Points down while the thing is open, right while it is shut -- the same
+   direction the content itself went. Keyed off aria-expanded rather than
+   off each lid's own class, so the arrow cannot disagree with what the
+   button is telling a screen reader. Every disclosure on these pages --
+   a step, the recipe builder, a card on the home page -- uses this. */
+.chev{
+  flex:none;width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;
+  stroke-linecap:round;stroke-linejoin:round;color:var(--muted);
+  transform:rotate(90deg);transition:transform .16s ease;
+}
+[aria-expanded="false"] .chev{transform:rotate(0)}
+
+/* What a shut card has left to say: the pour it makes, or the title of the
+   action. One line, cut off rather than wrapped -- a summary that grows to
+   two lines is no longer summarising anything. */
+.step-summary{
+  flex:1;min-width:0;font-size:12px;color:var(--muted);font-weight:400;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.recipe-step:not([data-collapsed]) .step-summary{display:none}
+.recipe-step[data-collapsed] > [data-step-body]{display:none}
+.recipe-step[data-collapsed] > .recipe-step-head{margin-bottom:0}
+/* Shut cards are stacked to be read and reordered, not filled in, so they
+   sit tighter and lose the inner padding they no longer wrap anything in. */
+.recipe-step[data-collapsed]{padding:8px 13px;margin-bottom:7px}
+
+/* ---- folding the whole builder away ----
+   The recipe is the taller half of this form. Folded to its one bar, the
+   fields above it are all on screen at once -- which is the state most
+   edits actually start from. */
+.steps-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.steps-toggle{
+  flex:1;min-width:0;display:flex;align-items:center;gap:8px;
+  border:0;background:none;padding:3px 2px;margin:0;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:8px;
+}
+.steps-toggle:hover{color:var(--blue)}
+.steps-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.steps-toggle strong{flex:none;font-size:14px}
+.steps-count{font-size:12px;color:var(--muted)}
+.steps-box[data-collapsed] > [data-step-list],
+.steps-box[data-collapsed] > .step-adds{display:none}
+.steps-box[data-collapsed] > .steps-head{margin-bottom:0}
+/* Nothing left on screen for it to fold: with the builder shut, "Thu gọn
+   tất cả" would act on cards nobody can see it act on. */
+.steps-box[data-collapsed] [data-collapse-all]{display:none}
+
+/* ---- reordering the steps ----
+   The grab bar is the only place a drag may start. Making the whole card
+   draggable would mean every attempt to select the text of a field, or to
+   open an ingredient picker, first had to be told apart from a drag. */
+.step-drag{
+  flex:none;width:30px;height:30px;padding:0;display:grid;place-items:center;
+  border:1px solid var(--line);border-radius:9px;background:#fff;
+  color:var(--muted);cursor:grab;
+  /* A finger on the bar drags the step; without this the browser claims
+     the gesture first and scrolls the modal instead. */
+  touch-action:none;
+}
+.step-drag:hover{border-color:var(--line-2);color:var(--ink);background:var(--bg)}
+.step-drag:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.step-drag svg{width:16px;height:16px;fill:currentColor;pointer-events:none}
+
+/* The card being carried. It keeps its place in the list rather than
+   following the cursor as a floating copy -- see recipe-editor.js. */
+.recipe-step.dragging{
+  opacity:.6;border-style:dashed;border-color:var(--blue);
+  box-shadow:var(--shadow-lg);
+}
+.recipe-step.dragging .step-drag{cursor:grabbing}
+
+/* For the length of a drag only. The grabbing cursor has to hold across
+   every card the pointer crosses, and the text of those cards must not
+   start selecting itself under it. */
+[data-step-list].reordering{cursor:grabbing;user-select:none}
+.recipe-ingredient{display:grid;grid-template-columns:minmax(0,1fr) 120px 36px;gap:8px;margin-bottom:8px}
+.recipe-ingredient select,.recipe-ingredient input{min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff}
+.btn.compact{padding:8px 10px;font-size:12px}
+.editor-error{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--red-soft);color:var(--red);font-size:13px}
+
+/* ---------------- responsive ---------------- */
+@media (max-width:860px){
+  .admin{grid-template-columns:1fr}
+  .sidebar{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px}
+  .brand{border:0;padding:6px}
+  .nav{flex-direction:row;margin:0;flex:1}
+  .nav .sechead,.side-foot .userbox{display:none}
+  .side-foot{margin:0;border:0;padding:0}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .modes{grid-template-columns:1fr}
+}
+
+/* ---------------- TASTE PASS (typography + tactile states, per taste-skill §4.1/4.5) ---------------- */
+.topbar h1,.login-brand h1,.brand .bt,.card .chd h2,.mode .mname,.opt-name{letter-spacing:-.02em}
+.stat .v,.price,.priceinput,.m-sku{font-variant-numeric:tabular-nums}
+.btn,.pill,.iconbtn{transition:background .15s ease, border-color .15s ease, transform .08s ease}
+.btn:active,.pill:active,.iconbtn:active,.login-btn:active,.mode:active,.optoggle:active{transform:translateY(1px)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+
+/* ---------------- REPORT ---------------- */
+.filterbar{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.daterange{display:flex;gap:10px}
+.datefield{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:700}
+/* input AND select. A .datefield holding a dropdown is not a special
+   case -- report, tickets and the fault log all put one in this bar --
+   and styling only the input left every one of them drawn as the
+   browser's default control beside a set of rounded date boxes. */
+.datefield input,.datefield select{
+  font-family:inherit;font-size:14px;color:var(--ink);
+  border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;
+  /* One explicit height on both rather than letting each find its own.
+     box-sizing is border-box globally (see the top of this file), so the
+     same number means the same rendered box -- an input[type=date] and a
+     select size their content differently and would otherwise land a
+     pixel or two apart on the same row. */
+  height:42px;
+}
+/* The native arrow is kept, the way .statuspick keeps it: the box is what
+   looked foreign in this bar, not the affordance. Less right padding
+   because that arrow needs the room. */
+.datefield select{cursor:pointer;padding-right:8px}
+.datefield input:focus,.datefield select:focus{outline:none;border-color:var(--blue)}
+.presets{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:2px}
+/* The markup in errors.html and tickets.html has always carried a
+   .spacer here to push the trailing filters to the right edge, but the
+   only flex:1 rules were scoped to .topbar and .card .chd -- so it has
+   been an empty div doing nothing. */
+.filterbar .spacer{flex:1}
+
+/* A sale valued at today's price rather than the price it went out at.
+   Loud on purpose: it is the line between a record and an estimate. */
+.estimate-note{
+  margin:16px 0 0;padding:12px 14px;border-radius:12px;
+  background:var(--amber-soft);color:#8a5a00;font-size:13px;line-height:1.5;
+  display:flex;gap:10px;
+}
+/* Không có dòng này thì icon cảnh báo giãn ra chiếm nguyên trang: SVG chỉ
+   có viewBox mà không có width/height sẽ lấy 100% chiều ngang. Mọi
+   component khác trong file đều có quy tắc svg riêng — cái này bị sót.
+   Cùng khuôn với .mode-note svg, component cảnh báo tương đương. */
+.estimate-note svg{width:18px;height:18px;flex:none;display:block;margin-top:1px}
+.est{color:var(--orange);font-weight:700;cursor:help}
+
+/* Revenue share, relative to the best-selling drink in the range. */
+.sharebar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.sharebar span{display:block;height:100%;border-radius:99px;background:var(--blue)}
+
+
+
+/* ---------------- ORDER LIST ---------------- */
+.orderlist{display:flex;flex-direction:column}
+.orderrow{
+  display:grid;grid-template-columns:48px 1fr auto auto;align-items:center;gap:14px;
+  padding:12px 4px;border-bottom:1px solid var(--line);
+}
+.orderrow:last-child{border-bottom:0}
+.orderrow .thumb{
+  width:48px;height:48px;border-radius:12px;overflow:hidden;background:var(--blue-soft);
+  display:grid;place-items:center;font-size:24px;
+}
+.orderrow .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.orderrow .oname{font-weight:700;font-size:14px}
+.orderrow .ometa{font-size:12px;color:var(--muted);margin-top:2px}
+.orderrow .otime{font-size:13px;color:var(--muted);white-space:nowrap}
+.orderrow .oprice{font-weight:700;font-size:15px;min-width:76px;text-align:right}
+.orderempty{padding:26px;text-align:center;color:var(--muted)}
+
+.pager{display:flex;align-items:center;gap:8px}
+.pager button{
+  font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+  border:1.5px solid var(--line);background:#fff;color:var(--ink);
+  border-radius:10px;padding:7px 12px;transition:.15s;
+}
+.pager button:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager .pageat{font-size:12px;color:var(--muted);font-weight:700;padding:0 2px}
+
+@media (max-width:820px){
+  .orderrow{grid-template-columns:44px 1fr auto;row-gap:4px}
+  .orderrow .otime{grid-column:2/4;text-align:left}
+}
+
+/* The list dims while a page is being fetched -- the only sign that the
+   press did anything, since the rest of the page deliberately does not
+   move. Kept subtle: a spinner for a request this small reads as slower
+   than it is. */
+.orderlist.is-loading{opacity:.45;pointer-events:none;transition:opacity .12s}
+.orderlist{transition:opacity .12s}
+
+.pager .pagenum{min-width:34px;padding:7px 9px;text-align:center}
+.pager .pagenum.active{
+  border-color:var(--blue);background:var(--blue);color:#fff;cursor:default;
+}
+.pager .pagegap{color:var(--muted);font-size:13px;padding:0 2px}
+.pager-bottom{justify-content:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.pager-bottom:empty{display:none}
+
+/* ---------------- RECYCLE BIN ---------------- */
+.binnote{display:flex;align-items:flex-start;gap:12px;font-size:13px;line-height:1.55;color:var(--ink)}
+.binnote-ic{font-size:22px;line-height:1;flex:none}
+
+.binrow{grid-template-columns:48px 1fr auto auto}
+.binacts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+.btn.compact{padding:8px 12px;font-size:13px}
+/* The only destructive control in the console, so it is the only one
+   that looks it. Everything else stays quiet. */
+.btn.danger{
+  border:1.5px solid var(--red);background:#fff;color:var(--red);
+  border-radius:12px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .15s,color .15s;
+}
+.btn.danger:hover:not(:disabled){background:var(--red);color:#fff}
+.btn.danger:disabled,.binacts .btn:disabled{opacity:.5;cursor:progress}
+
+@media (max-width:820px){
+  .binrow{grid-template-columns:44px 1fr;row-gap:8px}
+  .binrow .otime{grid-column:1/3}
+  .binacts{grid-column:1/3;justify-content:flex-start}
+}
+
+/* ---------------- IMAGE PICKER ---------------- */
+.imgpick{display:flex;gap:14px;align-items:flex-start;margin-bottom:8px}
+.imgpick-now{
+  width:92px;height:92px;flex:none;border-radius:12px;overflow:hidden;
+  border:1.5px solid var(--line);background:var(--blue-soft);
+  display:grid;place-items:center;
+}
+.imgpick-now img{width:100%;height:100%;object-fit:cover;display:block}
+.imgpick-empty{font-size:11px;color:var(--muted);text-align:center;padding:6px;line-height:1.35}
+.imgpick-side{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1}
+.imgpick-name{font-size:12px;color:var(--muted);word-break:break-all;min-height:16px}
+.imgpick-btns{display:flex;gap:8px;flex-wrap:wrap}
+/* The upload control is a <label> wrapping a hidden file input, so it
+   needs the pointer a real button would have. */
+.imgpick-btns label.btn{cursor:pointer;display:inline-flex;align-items:center; margin-bottom: 0;}
+.imgpick-path{font-size:12px;font-family:ui-monospace,Consolas,monospace}
+
+/* The library, opened by "Chọn ảnh có sẵn". */
+.imglib{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+  gap:10px;margin-top:12px;padding:12px;border-radius:12px;
+  background:var(--bg);border:1px solid var(--line);
+  max-height:280px;overflow-y:auto;
+}
+.imglib[hidden]{display:none}
+.imglib-note{grid-column:1/-1;font-size:13px;color:var(--muted);text-align:center;padding:12px}
+.imglib-item{
+  border:2px solid transparent;border-radius:10px;background:var(--panel);
+  padding:0;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;
+  font-family:inherit;transition:border-color .14s;
+}
+.imglib-item:hover{border-color:var(--blue)}
+.imglib-item.active{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.imglib-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.imglib-item span{
+  font-size:10px;color:var(--muted);padding:4px 5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* ================== ADMIN-05 · INGREDIENT STOCK ================== */
+/* The level bar. The number is written across the MIDDLE of the track
+   rather than beside it -- at 3% there is no room inside the fill for it,
+   and a percentage that jumps from inside the bar to outside it as stock
+   drops is harder to read down a column than one that never moves.
+   Which means it lands on the fill boundary at around half full, so it is
+   drawn TWICE: dark on the track, and white again inside the fill, which
+   clips its copy. Whatever the level, every digit is on one colour.
+   That trick needs both copies to be exactly as wide as the track, so the
+   track has a fixed width rather than flexing. */
+.lvl{display:flex;align-items:center;gap:9px}
+.lvlbar{position:relative;width:168px;height:28px;border-radius:9px;background:var(--bg);border:1px solid var(--line);overflow:hidden;flex:none}
+.lvlbar i{position:absolute;left:0;top:0;bottom:0;overflow:hidden;background:var(--green);transition:width .25s ease}
+.lvlbar b{position:absolute;left:0;top:0;height:100%;width:166px;display:grid;place-items:center;font-size:12.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.lvlbar i b{color:#fff}
+.lvl.low .lvlbar i{background:var(--orange)}
+.lvl.crit .lvlbar i{background:var(--red)}
+/* An unmeasured container: the percentage is a guess against the default
+   size, so the bar says so instead of looking like a measurement. */
+.lvl.guess .lvlbar{border-style:dashed}
+
+/* Which pump / which panel pin the bottle sits on. */
+.pumpno{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-variant-numeric:tabular-nums}
+.pumpno .pi{width:30px;height:30px;border-radius:9px;background:var(--blue-soft);display:grid;place-items:center;font-size:15px;flex:none}
+.pumpno.manual .pi{background:var(--bg)}
+.pumpno.none{color:var(--muted);font-weight:700}
+
+.typetag{font-size:11.5px;font-weight:700;letter-spacing:.3px;padding:4px 10px;border-radius:20px;background:var(--blue-soft);color:var(--blue)}
+.typetag.manual{background:var(--bg);color:var(--muted)}
+
+.amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.amt small{display:block;font-weight:700;font-size:11.5px;color:var(--muted);margin-top:2px}
+.rowacts .btn.compact{white-space:nowrap}
+.badge{white-space:nowrap}
+
+.badge.warn{background:var(--amber-soft);color:var(--orange)}
+.stat.low .v{color:var(--orange)}
+
+/* Refill modal: the quick amounts, and the note that says what the
+   database will do with the number once it lands. */
+.quickrow{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 16px}
+.chipbtn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 13px;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;transition:.12s}
+.chipbtn:hover{border-color:var(--line-2);background:var(--bg)}
+.chipbtn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.readout{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.readout div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.readout .rk{font-size:11.5px;color:var(--muted);font-weight:700}
+.readout .rv{font-size:16px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.mnote{font-size:12.5px;color:var(--muted);line-height:1.6;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-top:2px}
+.mnote b{color:var(--ink)}
+
+/* ---------------- FAULT LOG + TICKETS ----------------
+   Two long tables the machine writes and this console reads. They share a
+   look because they are read the same way: scan down a time column for the
+   row you want, then read across it. */
+
+/* Long tables scroll inside their card rather than stretching the page --
+   the filter bar above has to stay reachable while you read the list. */
+.tablewrap{overflow-x:auto;max-height:66vh;overflow-y:auto}
+.tablewrap .tbl th{position:sticky;top:0;background:var(--panel);z-index:1}
+
+.chead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:18px 20px 0}
+.chead h2{margin:0;font-size:16px;font-weight:700}
+.cnote{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);font-size:13.5px;text-align:center;padding:26px 0;margin:0}
+
+/* Timestamps and serials line up column-wise only in a fixed pitch, and
+   lining up is the whole reason they are in a table. */
+.tbl .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.tbl .nowrap{white-space:nowrap}
+.tbl .dim{color:var(--muted)}
+
+/* Severity. Only 'error' is loud: a log where every line is red is a log
+   where the red says nothing. */
+.tag-error{color:var(--red);background:var(--red-soft)}
+.tag-warning{color:var(--orange);background:var(--amber-soft)}
+.tag-info{color:var(--blue);background:var(--blue-soft)}
+
+/* Ticket status. 'used' is the one the revenue report counts, so it is the
+   one that reads as settled. */
+.tag-used{color:var(--green);background:var(--green-soft)}
+.tag-unused{color:var(--muted);background:var(--bg)}
+.tag-in_progress{color:var(--blue);background:var(--blue-soft)}
+.tag-expired{color:var(--muted);background:var(--bg)}
+.tag-noqr_err{color:var(--red);background:var(--red-soft)}
+
+/* ---- ADMIN-10 · người dùng ----
+   Role colours run warm-to-cool the way the roles run powerful-to-not, so
+   a table of thirty accounts can be read by shape before it is read by
+   word. */
+.tag-owner{color:var(--red);background:var(--red-soft)}
+.tag-manager{color:var(--orange);background:var(--amber-soft)}
+.tag-staff{color:var(--blue);background:var(--blue-soft)}
+
+.ok-mark{color:var(--green);font-weight:700}
+
+/* A locked account stays in the table -- it is still who made last
+   month's changes -- but must not read as one of the live ones. */
+.tbl tr.is-off td{opacity:.55}
+.tbl tr.is-off td:first-child{text-decoration:line-through}
+
+/* The permission grid: narrow centred columns, and the first column
+   carrying all the words. */
+#roleTable th:not(:first-child),
+#roleTable td:not(:first-child){text-align:center;width:110px}
+
+/* Which screens an area unlocks, under its name. A tick is a decision
+   about pages the operator recognises, not about a word like "catalogue". */
+.permpages{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+/* The whole cell is the target, not the 16px box inside it -- this is
+   used on a tablet behind a counter. */
+.permbox{display:grid;place-items:center;padding:6px;border-radius:8px;
+  cursor:pointer;transition:background .12s}
+.permbox:hover{background:var(--bg)}
+.permbox input{width:18px;height:18px;accent-color:var(--brand);cursor:pointer}
+
+/* Forced on and not up for discussion. Dimmed rather than hidden: the
+   rule is easier to trust when you can see it being applied. */
+.permbox.is-locked{cursor:not-allowed;background:transparent}
+.permbox.is-locked input{cursor:not-allowed;opacity:.45}
+
+.permfoot{display:flex;gap:16px;align-items:flex-start;
+  justify-content:space-between;margin-top:14px}
+.permfoot .mnote{margin:0;flex:1}
+.permfoot code{font-size:12px;background:var(--bg);padding:2px 6px;
+  border-radius:5px;white-space:nowrap}
+.permchanged{color:var(--orange)}
+
+/* Why the grid is empty, said in the grid. Amber not red: nothing is
+   broken and nothing was lost -- the defaults are still in force -- it is
+   just that this screen cannot edit them yet. */
+.permfail{padding:18px 14px;background:var(--amber-soft);color:var(--orange);
+  font-size:13px;line-height:1.55;text-align:left}
+.permfail-hint{color:var(--ink);opacity:.75;margin-top:6px;font-weight:500}
+.permfoot .btn:disabled{opacity:.45;cursor:not-allowed}
+
+.logmsg{max-width:520px}
+/* The machine's JSON, folded away: wanted on the one row being
+   investigated, noise on the other two hundred. */
+.statuspick{border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;
+  font-family:inherit;font-size:13px;color:var(--ink);background:#fff;cursor:pointer}
+.statuspick:focus{border-color:var(--blue);outline:0}
+
+/* Narrower than the recipe editor's: it holds one sentence and two buttons. */
+.confirm-card{width:460px}
+
+/* A link from a ticket row to that ticket's faults. Quiet: most rows have
+   none, and the ones that do should read as an offer, not an alarm. */
+.faultlink{color:var(--red);font-weight:700;font-size:13px;text-decoration:none;
+  background:var(--red-soft);padding:4px 10px;border-radius:20px;white-space:nowrap}
+.faultlink:hover{filter:brightness(.96)}
+
+/* The same link the other way: a fault row naming the ticket it happened
+   to. Plain rather than a pill -- it sits in a column of its own beside
+   the timestamp and reads as an id, and a column of red pills down the
+   fault log would make every row look like the alarming one. */
+.ticketlink{color:var(--blue);font-weight:700;text-decoration:none;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.ticketlink:hover{text-decoration:underline}
+
+/* Says the list is narrowed to one ticket, and how to get back out.
+   Without it the page looks like the whole log with most of it missing. */
+.linkbanner{display:flex;align-items:center;gap:12px;margin-bottom:14px;
+  background:var(--blue-soft);border:1px solid var(--blue-soft);border-radius:14px;
+  padding:12px 16px;font-size:13.5px;font-weight:700;color:var(--ink)}
+/* display:flex above is an author rule, and an author rule beats the
+   browser's own [hidden]{display:none} whatever the specificity -- so
+   without this the banner shows on every load. Same reason .chead
+   #deleteBtn carries one. */
+.linkbanner[hidden]{display:none}
+.linkbanner .lb-ico{font-size:16px;display:flex}
+.linkbanner .lb-ico svg{width:18px;height:18px}
+.linkbanner a{margin-left:auto}
+
+/* The record's id, in the first column. Muted and monospaced: it is there
+   to be matched against a machine log or a printed label, not read as part
+   of the row's content. Fixed width so a column of them lines up -- which
+   is the only reason to zero-pad in the first place. */
+.idcell{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
+  color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+
+
+/* ---------------- INLINE CHROME ICONS ----------------
+   Every glyph in the shell used to be a character from the OS emoji font.
+   That made the size, weight and colour of each icon a property of the
+   device rather than of this app -- a red warning triangle and a blue
+   folder in a row of warm-grey labels -- and none of them could take
+   currentColor, so an icon inside a white-on-brand button stayed
+   full-colour. These are drawn, inherit the colour of whatever they sit
+   in, and are sized here by the slot they sit in rather than by a
+   font-size that meant something different in every context.
+
+   NOT converted: the ingredient pictograms in ingredients.js and
+   refill.js. Those are data, not chrome -- the colour of a lemon against a
+   chocolate is what makes a forty-row stock table scannable, and an
+   outline of both would be two identical grey circles. Same reasoning as
+   the drink emoji the store screen keeps. */
+.searchbox svg{width:18px;height:18px;flex:none;display:block;color:var(--muted)}
+.stat .k svg{width:15px;height:15px;flex:none;display:block}
+.field .inp .i svg,.field .inp .eye svg{width:18px;height:18px;display:block}
+.login-brand .logo svg{width:30px;height:30px;display:block}
+.optoggle .opt-ic svg{width:22px;height:22px;display:block}
+.mode .ic svg{width:26px;height:26px;display:block}
+.mode-note svg{width:20px;height:20px;flex:none;display:block;margin-top:1px}
+.badge svg{width:13px;height:13px;flex:none;display:block}
+.card .chd svg,.csub svg{width:14px;height:14px;flex:none;display:inline-block;vertical-align:-2px}
+.login-err svg{width:16px;height:16px;flex:none;display:block}
+
+/* The stock-level dots. They were a yellow circle emoji and a red circle
+   emoji -- pictures of dots, at whatever size the emoji font drew them. */
+.lvl{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;vertical-align:0}
+.lvl-low{background:var(--orange);box-shadow:0 0 0 3px var(--amber-soft)}
+.lvl-out{background:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+
+/* The mode chip in the top bar carries a preset icon from menu-store.js. */
+.modechip svg{width:15px;height:15px;flex:none;display:block;color:var(--blue-deep)}
+.modechip{font-family:var(--font-display);letter-spacing:-.02em}
+.modechip .lbl{font-family:var(--font);letter-spacing:0}
+.toast svg{width:17px;height:17px;flex:none;display:block}
+
+/* ============================================================ FEATURED ===
+   The "Món nổi bật" panel on home.html, and the star on menu.html that
+   puts a drink in it. Two pages because they answer two questions -- what
+   the shop sells, and how the customer screen is arranged -- but one
+   block of rules, because the chip a starred drink becomes is the same
+   chip either way.
+
+   Almost nothing here is new furniture. The switch is the same .switch the
+   availability column uses, the position picker is the same .mode card the
+   operating-mode page is built from, and the heading box is the same
+   .field .inp as every other text input in this console. What follows is
+   the handful of things those three did not already cover: a compact
+   variant of .mode, a chip for a chosen drink, and the star itself. */
+
+/* A small caps label over a group of controls. .field label already does
+   this, but these three groups are not all form fields -- the position
+   picker is a radiogroup and the chip list is not a control at all. */
+.featlabel{
+  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin:22px 0 10px;
+}
+.featcard .cbody > .featlabel:first-child{margin-top:0}
+.featfield{margin:22px 0 0}
+.feathint{margin-top:7px;font-size:12px}
+
+/* ---------------------------------------------------- LAYOUT BUILDER ---
+   The order the store screen stacks its blocks in, as a list you reorder.
+
+   WHY IT IS A LIST AND NOT TWO "top / bottom" PICKERS
+       That is what it was, while there was one module. With two, both
+       can say "top" and nothing decides which of them comes first. A
+       list answers it for any number of modules, and it is the shape the
+       server stores -- so this panel edits the setting directly rather
+       than translating for it.
+
+   DRAG IS NOT THE ONLY WAY IN
+       Each row also carries move-up and move-down buttons. WCAG 2.2 AA
+       requires a single-pointer alternative to any drag a page invents,
+       and on a trackpad the buttons are what most people reach for
+       anyway. */
+.builder{display:flex;flex-direction:column;gap:10px}
+
+.bblock{
+  display:flex;align-items:center;gap:14px;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:13px 16px;box-shadow:var(--shadow);
+  cursor:grab;position:relative;
+  transition:border-color .14s,box-shadow .14s,opacity .14s;
+}
+.bblock:active{cursor:grabbing}
+/* The card being carried. Kept visible but obviously lifted, so the row
+   it came from stays readable as a gap rather than vanishing. */
+.bblock.dragging{opacity:.45;border-color:var(--blue);box-shadow:var(--shadow-lg)}
+/* Where it would land. Drawn on the side it is coming from, so the line
+   answers "does it go above or below this one" before the mouse is
+   released -- a highlight on the whole card cannot say that. */
+.bblock.over-up::before,.bblock.over-down::before{
+  content:"";position:absolute;left:12px;right:12px;height:3px;
+  background:var(--blue);border-radius:999px;
+}
+.bblock.over-up::before{top:-7px}
+.bblock.over-down::before{bottom:-7px}
+/* A block that is switched off keeps its place in the order -- turning a
+   module off should not lose where the operator had put it -- but it must
+   not look like it is on the screen, because it is not. */
+.bblock.off{background:var(--bg);border-style:dashed}
+.bblock.off .bic,.bblock.off .bname{color:var(--muted)}
+
+.bgrip{color:var(--line-2);flex:none;display:grid;place-items:center}
+.bgrip svg{width:20px;height:20px;display:block}
+.bblock:hover .bgrip{color:var(--muted)}
+
+/* The position in the stack, said as a number. The list is short enough
+   to count, but a number is what makes "move this to 1" a thing an
+   operator can aim at rather than a thing they discover afterwards. */
+.bstep{
+  flex:none;width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:11.5px;font-weight:700;
+  background:var(--bg);color:var(--muted);
+}
+.bblock:not(.off) .bstep{background:var(--blue-soft);color:var(--blue-deep)}
+
+.bic{
+  width:40px;height:40px;border-radius:11px;flex:none;
+  background:var(--blue-soft);color:var(--blue-deep);
+  display:grid;place-items:center;
+}
+.bic svg{width:20px;height:20px;display:block}
+.bblock.off .bic{background:var(--bg)}
+
+.btxt{flex:1;min-width:0}
+.bname{
+  display:block;font-family:var(--font-display);font-weight:700;
+  font-size:15px;letter-spacing:-.02em;
+}
+.bdesc{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+
+.bmoves{display:flex;gap:6px;flex:none}
+/* Disabled at the ends rather than hidden: a button that disappears
+   moves the one beside it, and the operator's aim with it. */
+.bmoves .iconbtn:disabled{opacity:.35;cursor:default}
+.bmoves .iconbtn:disabled:hover{background:var(--panel);color:var(--muted)}
+
+.buildernote{margin-top:14px;font-size:12.5px;line-height:1.6}
+
+/* ------------------------------------------ NUMBER + PRESET SHORTCUTS ---
+   A number box that is the truth, and pills that only fill it. Two
+   controls writing one value can disagree on screen; a shortcut that
+   types into the box cannot. */
+.numrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.numbox{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1.5px solid var(--line);border-radius:12px;
+  padding:9px 14px;background:#fff;transition:.15s;
+}
+.numbox:focus-within{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.numbox input{
+  border:0;outline:0;width:64px;background:transparent;color:var(--ink);
+  font-family:var(--font-display);font-size:19px;font-weight:700;
+  letter-spacing:-.02em;
+}
+.numbox .unit{color:var(--muted);font-size:13px}
+
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.preset{
+  border:1px solid var(--line-2);background:var(--panel);border-radius:999px;
+  padding:8px 15px;font-size:13px;font-weight:700;color:var(--muted);
+  cursor:pointer;transition:background .12s,border-color .12s,color .12s;
+}
+.preset:hover{background:var(--bg);color:var(--ink)}
+.preset.on{background:var(--grad-brand);border-color:transparent;color:#fff}
+
+/* A chip in the bán-chạy preview: the rank, the drink, and what it sold.
+   The number is the point -- it is the evidence that this ranking is real
+   and not another hand-written list claiming to be one. */
+.featchip.rankchip{padding-left:6px}
+.featchip .crank{
+  flex:none;min-width:26px;height:26px;padding:0 7px;border-radius:999px;
+  display:grid;place-items:center;
+  font-family:var(--font-display);font-size:12.5px;font-weight:700;
+  background:var(--grad-brand);color:#fff;
+}
+.featchip .csold{
+  flex:none;font-size:12px;font-weight:700;color:var(--muted);
+  padding-right:6px;
+}
+
+/* THE CHOSEN DRINKS
+   The star lives in the table, one row at a time, so without this the
+   panel could never answer "what is on the strip right now" -- the
+   operator would be reading forty rows to find six stars. */
+.featpicked{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.featchip{
+  display:inline-flex;align-items:center;gap:9px;
+  background:var(--panel);border:1px solid var(--line-2);border-radius:999px;
+  padding:6px 8px 6px 7px;box-shadow:var(--shadow);max-width:100%;
+}
+.featchip .cimg{
+  width:28px;height:28px;border-radius:50%;flex:none;overflow:hidden;
+  background:var(--bg);display:grid;place-items:center;font-size:15px;
+}
+.featchip .cimg img{width:100%;height:100%;object-fit:cover;display:block}
+.featchip .cname{
+  font-weight:700;font-size:13px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* A picked drink the machine cannot pour right now. It stays in the panel
+   -- taking it out would look like the star had been lost -- but the strip
+   on the customer screen holds it back, and this is the only place that
+   difference can be seen. Never colour alone: the chip also says so. */
+.featchip.held{background:var(--amber-soft);border-color:#f6e2bf}
+.featchip.held .cname{color:var(--orange)}
+.featchip .cwhy{
+  font-size:11px;font-weight:700;color:var(--orange);
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.featchip .cx{
+  border:0;background:transparent;cursor:pointer;color:var(--muted);
+  width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  flex:none;transition:background .12s,color .12s;
+}
+.featchip .cx:hover{background:var(--red-soft);color:var(--red)}
+.featchip .cx svg{width:14px;height:14px;display:block}
+/* Nothing picked yet. A blank row here reads as a panel that failed to
+   load, so it says what to do instead. */
+.featempty{
+  color:var(--muted);font-size:13px;line-height:1.5;
+  border:1px dashed var(--line-2);border-radius:12px;padding:14px 16px;width:100%;
+}
+
+/* THE STAR IN THE TABLE
+   Filled when the drink is on the strip and hollow when it is not, so the
+   state is a SHAPE before it is a colour -- the column is scanned down at
+   a glance and forty amber-vs-grey outlines would not separate. */
+.starbtn{
+  border:1px solid var(--line-2);background:var(--panel);border-radius:10px;
+  width:36px;height:36px;cursor:pointer;display:grid;place-items:center;
+  color:var(--muted);transition:background .12s,border-color .12s,color .12s;
+}
+.starbtn svg{width:18px;height:18px;display:block}
+.starbtn:hover{background:var(--bg);color:var(--orange);border-color:#f0d9a8}
+.starbtn[aria-pressed="true"]{
+  background:var(--amber-soft);border-color:#f0d9a8;color:var(--orange);
+}
+/* The strip is full and this drink is not in it. Not `disabled`: a
+   disabled button cannot be focused and gives no reason when clicked, and
+   the reason is the entire content of this state. It stays operable and
+   answers with a toast. */
+.starbtn.full{opacity:.4}
+.starbtn.full:hover{background:var(--panel);color:var(--muted);border-color:var(--line-2)}
+
+/* ------------------------------------------------- STRIP STYLE PICKER ---
+   How each strip arranges its drinks: four options, each drawn as a
+   diagram of the arrangement.
+
+   The diagram is the control, not decoration. "Nổi bật một món" and
+   "Lưới" are words describing a layout, and a layout is exactly the thing
+   words are worst at -- an operator picking between them by name is
+   guessing until they go and look at the kiosk. The bars are the cards in
+   the shape and proportion they really take. */
+.stylepick{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:12px;
+}
+.styleopt{
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  background:var(--panel);border:2px solid var(--line);border-radius:16px;
+  padding:14px;cursor:pointer;text-align:left;
+  transition:border-color .14s,box-shadow .14s,transform .14s;
+  box-shadow:var(--shadow);
+}
+.styleopt:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.styleopt.on{border-color:var(--blue);box-shadow:0 12px 26px rgba(185,62,16,.16)}
+.stylename{font-family:var(--font-display);font-weight:700;font-size:14.5px;letter-spacing:-.02em}
+.styledesc{color:var(--muted);font-size:12px;line-height:1.5}
+
+/* THE DIAGRAMS
+   One box per option, filled with bars laid out by the same rules the
+   store screen uses. They are the control, not decoration: "bảng menu
+   quán" and "ảnh tràn viền" are words describing a layout, and a layout
+   is exactly the thing words are worst at. */
+.stylediag{
+  width:100%;height:64px;border-radius:9px;padding:6px;
+  background:var(--bg);border:1px solid var(--line);
+  display:flex;align-items:center;gap:5px;overflow:hidden;
+}
+.stylediag i{display:block;background:var(--line-2);border-radius:3px}
+.styleopt.on .stylediag{background:var(--blue-soft);border-color:#f0d9c8}
+.styleopt.on .stylediag i{background:var(--blue)}
+
+/* carousel: cards in a row, the last running off the edge */
+.d-carousel i.c{flex:none;width:32%;height:100%}
+
+/* cinematic: taller tiles with a caption band inside them, not under */
+.d-cinematic i.t{flex:none;width:30%;height:100%;position:relative}
+.d-cinematic i.t b{
+  position:absolute;left:4px;right:4px;bottom:4px;height:32%;
+  display:block;border-radius:2px;background:var(--panel);opacity:.75;
+}
+.styleopt.on .d-cinematic i.t b{background:#fff;opacity:.9}
+
+/* bubble: circles in a row */
+.d-bubble i.o{flex:none;width:22%;aspect-ratio:1/1;height:auto;border-radius:50%}
+
+/* board: full-width lines with a leader running across them */
+.d-board{flex-direction:column;justify-content:center;gap:7px}
+.d-board i.l{
+  width:100%;height:8px;background:transparent;position:relative;
+}
+.d-board i.l u{
+  position:absolute;inset:0;display:block;border-radius:2px;
+  background:linear-gradient(to right,
+    var(--line-2) 0 26%, transparent 26% 30%,
+    var(--line) 30% 78%, transparent 78% 82%,
+    var(--line-2) 82% 100%);
+}
+.styleopt.on .d-board i.l u{
+  background:linear-gradient(to right,
+    var(--blue) 0 26%, transparent 26% 30%,
+    #f3c3ab 30% 78%, transparent 78% 82%,
+    var(--blue) 82% 100%);
+}
+
+/* chart: a big numeral block with the row beside it */
+.d-chart{flex-direction:column;justify-content:center;gap:10px}
+.d-chart i.n{
+  width:100%;height:20px;background:transparent;position:relative;
+  display:flex;align-items:center;gap:6px;
+}
+/* The numeral block is the whole difference between this diagram and the
+   board's, so it is drawn big enough to be that difference at a glance --
+   at 15px the two options were two sets of stacked bars. */
+.d-chart i.n::before{
+  content:"";flex:none;width:26px;height:100%;border-radius:3px;
+  background:var(--line-2);
+}
+.d-chart i.n s{
+  flex:1;height:9px;display:block;border-radius:2px;background:var(--line-2);
+}
+.styleopt.on .d-chart i.n::before{background:#f3c3ab}
+.styleopt.on .d-chart i.n s{background:var(--blue)}
+
+/* `hidden` has to beat the display the element was given. .numrow is a
+   flex row and .featlabel a block, and either one wins over the
+   attribute's own display:none on specificity alone -- so the column
+   control stayed on screen for arrangements it means nothing to. */
+.colsrow[hidden]{display:none}
+
+/* ==================================================== ACTION STEP ======
+   A step the bartender performs while a clip loops on the guide screen.
+   Sits in the same list as the pour steps, so it borrows .recipe-step and
+   only adds what a pour step has no use for. */
+.step-adds{display:flex;gap:8px;flex-wrap:wrap}
+.step-adds .btn{flex:1 1 auto}
+
+/* Names the kind at a glance. A pour step needs no tag -- it is the
+   default and the ingredient rows already say what it is. */
+.step-kind-tag{
+  margin-left:8px;padding:3px 9px;border-radius:99px;
+  background:var(--blue-soft);color:var(--blue);
+  font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+}
+.recipe-step[data-step-kind="action"]{border-color:var(--line-2)}
+
+/* Two columns on a wide modal so VI and EN sit side by side and the
+   difference between them is visible while typing; one column when there
+   is no room, rather than two cramped ones. */
+.action-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 14px}
+.action-fields .mfield:first-child{grid-column:1/-1}
+
+/* The clip picker. Deliberately the same shape as .imgpick above -- the
+   two do the same job on the same screen, and making them look alike is
+   what stops either needing to be learned twice.
+
+   The one difference is the preview's aspect: 4:3, because that is the
+   frame the guide screen crops to. A square well would promise a crop the
+   bartender is never going to see. */
+.mediapick{display:flex;gap:14px;align-items:flex-start;margin-bottom:8px}
+.mediapick-now{
+  width:124px;aspect-ratio:4/3;flex:none;border-radius:12px;overflow:hidden;
+  border:1.5px solid var(--line);background:var(--blue-soft);
+  display:grid;place-items:center;
+}
+.mediapick-now img,.mediapick-now video{
+  width:100%;height:100%;object-fit:cover;display:block;
+}
+.mediapick-empty{font-size:11px;color:var(--muted);text-align:center;padding:6px}
+.mediapick-side{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1}
+.mediapick-name{font-size:12px;color:var(--muted);word-break:break-all;min-height:16px}
+.mediapick-btns{display:flex;gap:8px;flex-wrap:wrap}
+.mediapick-btns label.btn{cursor:pointer;display:inline-flex;align-items:center;margin-bottom:0}
+
+/* Clip tiles in the library keep the 4:3 of the frame too, where a photo
+   tile is square. .imglib itself is shared, so only the tile is restated. */
+.imglib-item video{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.imglib-item img{aspect-ratio:4/3}
+
+.action-returns{
+  display:flex;gap:11px;align-items:flex-start;margin-top:4px;
+  padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;
+}
+.action-returns input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--blue)}
+.action-returns strong{display:block;font-size:13.5px}
+.action-returns em{font-style:normal;font-size:12px;color:var(--muted);line-height:1.45}
+
+/* The fault log's purge button. It lives in the list header rather than
+   the filter bar because it acts on the list the filters produced, and
+   the header is already where that list says how many rows it has.
+   .chead aligns to baseline, which would hang a button with an icon in
+   it off its label's baseline -- hence the override. */
+.chead #deleteBtn{align-self:center;margin-left:auto;flex:none}
+/* .btn sets display:inline-flex, and an author rule beats the browser's
+   own [hidden]{display:none} whatever the specificity -- so without this
+   the button stays on screen for an account that may not use it, and the
+   refusal only arrives as a 403 after the click. Same reason .linkbanner
+   and .imglib carry one. */
+.chead #deleteBtn[hidden]{display:none}
+
+/* What the purge dialog is about to remove, spelled out one line per
+   filter. A range and three optional narrowings read as a list far
+   better than as a sentence, and the number is the part that has to be
+   impossible to miss. */
+.purgesum{margin:0 0 14px;padding:12px 14px;background:var(--bg);
+  border:1px solid var(--line);border-radius:11px;font-size:13px;line-height:1.7}
+.purgesum dt{display:inline;color:var(--muted);font-weight:700;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase}
+.purgesum dd{display:inline;margin:0 0 0 8px;font-weight:700;color:var(--ink)}
+.purgesum div+div{margin-top:4px}
+.purgecount{font-size:15px}
+.purgecount b{color:var(--red);font-variant-numeric:tabular-nums}

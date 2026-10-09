@@ -8,7 +8,7 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/dang-ky-may | App | token, machine_name, product_key | valid, registered, created, machine_id, message |
+| POST | /app/user/machine/register | App | token, machine_name, product_key | valid, registered, created, machine_id, message |
 
 ## A. Lấy gói thông tin máy
 
@@ -36,7 +36,7 @@ Hàm tham gia:
 
 ### 1. App gửi gói đăng ký
 
-POST `/app/dang-ky-may` với `{token, machine_name, product_key}`. Token thuộc người dùng đang đăng nhập.
+POST `/app/user/machine/register` với `{token, machine_name, product_key}`. Token thuộc người dùng đang đăng nhập.
 
 Hàm tham gia:
 
@@ -54,7 +54,7 @@ Hàm tham gia:
 
 ### 3. Server trả ID máy và app tải danh sách
 
-Response thành công: `{valid: true, registered: true, created, machine_id, message}`. App quay về dashboard và gọi `/app/may-cua-toi` với `{token}` để cập nhật danh sách. Không có request xác minh đăng ký máy thứ hai.
+Response thành công: `{valid: true, registered: true, created, machine_id, message}`. App quay về dashboard và gọi `/app/user/machine/list` với `{token}` để cập nhật danh sách. Không có request xác minh đăng ký máy thứ hai.
 
 Hàm tham gia:
 

@@ -34,8 +34,8 @@ Hệ thống có ba mặt tiếp xúc; mỗi gói tin đến từ đó đều co
 Dùng OWASP ASVS 5.0, OWASP MASTG/MASVS và NIST SP 800-121 Rev.2 làm khung (nguồn ở
 `agent_workspace/sources/RESEARCH.md`). Trọng tâm trên repo này:
 
-1. **Vượt quyền / IDOR:** gọi `/app/cap-nhat-menu`, `/app/go-may`, `/app/thu-hoi-quyen`,
-   `/app/nhan-kho`... với `machine_id` của máy mình không có quyền, hoặc với vai thấp
+1. **Vượt quyền / IDOR:** gọi `/app/machine/menu/update`, `/app/user/machine/remove`, `/app/machine/staff/revoke`,
+   `/app/machine/ingredient/get`... với `machine_id` của máy mình không có quyền, hoặc với vai thấp
    (staff cố làm việc của owner). Kiểm quyền có được tra ở **mọi tác vụ** không, hay chỉ ở cửa vào.
 2. **Phiên và token:** token người khác, token đã đăng xuất/hết hạn, token rỗng/méo;
    thử đoán hoặc dò mã (OTP, mã chia sẻ) bằng nhiều lần thử — có bị giới hạn tần suất không.

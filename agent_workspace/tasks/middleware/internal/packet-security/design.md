@@ -7,9 +7,9 @@ các shortlist nghiên cứu. Không thay code, route, schema hoặc quy ước 
 ## 0. Quyết định đã chốt — 07/10/2026
 
 Người dùng chốt bộ `D1-B, C2-B, C4-B, C1-A, C3-A, D2-C, D3-B, D4-B, D5-A, D6-A, D8-C`
-sau đối chiếu hệ thống ([system-fit](../operator/system-fit-2026-10-07.md)). Các mục
+sau đối chiếu hệ thống ([system-fit](/home/abel/.secondbrain/projects/internproj/project1_app/archive/middleware-operator-2026-10/system-fit-2026-10-07.md)). Các mục
 bên dưới đã sửa theo bộ này; phương án bị loại và so sánh chỉ còn ở hồ sơ nghiên cứu
-([D](../operator/decision-options-2026-10-07.md), [C](../operator/crypto-options-2026-10-07.md)).
+([D](/home/abel/.secondbrain/projects/internproj/project1_app/archive/middleware-operator-2026-10/decision-options-2026-10-07.md), [C](/home/abel/.secondbrain/projects/internproj/project1_app/archive/middleware-operator-2026-10/crypto-options-2026-10-07.md)).
 Chốt thiết kế **không** là bằng chứng thư viện build được, vector đạt hay số đo đã có.
 
 | Mã | Thiết kế đã chốt | Mục chịu ảnh hưởng |
@@ -24,7 +24,7 @@ Chốt thiết kế **không** là bằng chứng thư viện build được, ve
 | D4-B | **Recovery code** một lần cấp lúc enroll, lưu hash, rate limit, thu hồi/báo credential cũ; đường admin đối soát là nền | §3 |
 | D5-A | **Server Python tự kết thúc TLS** bằng `ssl` stdlib, không proxy; cert tự cấp được pin trong `network_security_config` | §1, §9 |
 | D6-A | **Chuyển toàn profile một đợt qua bảo trì** cho deployment thử nghiệm hiện tại | §13 |
-| D8-C | **Bỏ GET `/machine/trang-thai`**; `online`/`last_seen` trả trong `USER_MACHINE_LIST` | §4 |
+| D8-C | **Bỏ GET `/app/machine/status/get`**; `online`/`last_seen` trả trong `USER_MACHINE_LIST` | §4 |
 
 Hai chỗ đổi design R5 đã được người dùng chấp nhận khi chốt: C3-A thay câu fallback
 FFI ở §2; D2-C thêm kênh time có chữ ký server ở §6.
@@ -224,7 +224,7 @@ bị từ chối trước verify. Không gzip/nén input; giới hạn cả ciph
   module động hay rename constants. Proxy rewrite chỉ hợp lệ khi deployment map
   tĩnh một-một đã kiểm; cấu hình chưa rõ thì reject, không tin X-Forwarded-* tùy ý.
 - Query rỗng cho mọi route protected; profile không có wire adapter cho GET.
-- **D8-C:** bỏ GET `/machine/trang-thai` (không token, mỗi máy một request). Danh
+- **D8-C:** bỏ GET `/app/machine/status/get` (không token, mỗi máy một request). Danh
   sách máy `USER_MACHINE_LIST` trả thêm `online` và `last_seen` cho từng máy, sau
   kiểm phiên/quyền như hiện tại; dashboard bỏ vòng gọi status và refresh bằng tải
   lại danh sách. Đây là thay hợp đồng: server, app, test và e2e đổi cùng lúc; route
@@ -658,7 +658,7 @@ Người dùng xác nhận ngày 07/10/2026: hệ thống **chưa phục vụ ng
 toàn bộ app–server–máy của một deployment/audience trong **một đợt có điều phối qua
 bảo trì**; không canary, không blue/green, không giữ song song giao thức cũ. Luồng
 chi tiết, bảng hiện trạng mã, gate và nhánh lỗi ở
-[d6-rollout](../operator/d6-rollout-2026-10-07.md); tóm tắt bắt buộc:
+[d6-rollout](/home/abel/.secondbrain/projects/internproj/project1_app/archive/middleware-operator-2026-10/d6-rollout-2026-10-07.md); tóm tắt bắt buộc:
 
 1. Kiểm kê app/máy, artifact/hash, trust/profile/schema; diễn tập với simulator hoặc máy riêng.
 2. Bảo trì: chặn **mọi** producer tạo lệnh (kể cả đọc menu/kho đang tạo command) và

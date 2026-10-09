@@ -1,3 +1,0 @@
-Tôi chưa sửa được file. Cả lệnh đọc repo lẫn công cụ áp dụng bản vá đều dừng trước khi truy cập file với lỗi sandbox: `error building bubblewrap command: mountinfo path is not absolute`. Vì vậy tôi chưa thể đọc thiết kế R5, phản biện vòng 3 hoặc giữ nguyên lịch sử các vòng cũ một cách đáng tin cậy. Không có file nào được thay đổi.
-
-Vui lòng khôi phục môi trường filesystem rồi giao lại tác vụ; tôi sẽ tiếp tục sửa đúng một file theo yêu cầu.

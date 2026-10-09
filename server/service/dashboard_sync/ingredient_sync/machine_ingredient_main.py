@@ -1,7 +1,7 @@
 """Cửa vào ingredient_sync: nhận POST, chọn luồng và trả JSON.
 
-    POST /app/nhan-kho  {token, machine_id, version}          xem tồn kho
-    POST /app/nap-kho   {token, machine_id, target, value}    nạp kho
+    POST /app/machine/ingredient/get     {token, machine_id, version}        xem tồn kho
+    POST /app/machine/ingredient/refill  {token, machine_id, target, value}  nạp kho
 
 Module tự quyết giới hạn body và status; server chính chỉ gọi handle() cho mỗi
 request POST, handle() trả False nếu đường dẫn không thuộc module này.

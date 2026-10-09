@@ -52,8 +52,8 @@ Thứ tự đọc bắt buộc:
    bảng dữ liệu cầu nối ghi ai tạo/ghi, ai nhận/đọc, nơi giữ và thời gian sống.
 5. **Từng thành phần:** theo thứ tự đường đi của thao tác, cùng khuôn ở mục 2 dưới đây.
 6. **Quyết định và giới hạn:** phương án/đánh đổi cần người dùng chốt, điểm chặn,
-   điều kiện kiểm chứng. Lịch sử phản biện và chi tiết sâu để trong phần mở rộng;
-   hồ sơ điều phối, nghiên cứu và bằng chứng đầy đủ vẫn là Markdown nội bộ.
+   điều kiện kiểm chứng. Kết quả phản biện (điểm đã sửa, bất đồng còn lại) và chi
+   tiết sâu để trong phần mở rộng; không chép lượt trao đổi, chúng bị xóa sau khi có kết quả cuối.
 
 Phạm vi nhỏ có thể gộp luồng chính/cầu nối vào từng thẻ; không thêm mục rỗng.
 Giữ vài trang theo PHASE_FORMAT. Bản đồ là trách nhiệm chức năng thực tế, không

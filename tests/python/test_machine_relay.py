@@ -70,7 +70,7 @@ class MachineRelayTest(unittest.TestCase):
                 "INSERT INTO users (full_name, username, password, email) VALUES ('o','o','x','o@t.local')"
             ).lastrowid
         self.token = create_session(user_id)
-        self.machine_id = self.post("/app/dang-ky-may", {
+        self.machine_id = self.post("/app/user/machine/register", {
             "machine_name": "FlexMix-Test", "product_key": "fm_test_key", "token": self.token,
         })["machine_id"]
 
@@ -123,10 +123,10 @@ class MachineRelayTest(unittest.TestCase):
 
     def test_machine_serves_app_commands(self):
         # Máy chưa chạy (chưa heartbeat) thì server báo offline ngay.
-        self.assertEqual(self.call("/app/nhan-kho", {"version": 0})[0], 503)
+        self.assertEqual(self.call("/app/machine/ingredient/get", {"version": 0})[0], 503)
         threading.Thread(target=self.machine.run, daemon=True).start()
         for _ in range(100):
-            with urlopen(f"{self.url}/machine/trang-thai?machine_id={self.machine_id}") as response:
+            with urlopen(f"{self.url}/app/machine/status/get?machine_id={self.machine_id}") as response:
                 if json.loads(response.read())["online"]:
                     break
             threading.Event().wait(0.05)
@@ -141,7 +141,7 @@ class MachineRelayTest(unittest.TestCase):
     def check_menu_tab(self):
         unpack = lambda reply: json.loads(zlib.decompress(base64.b64decode(reply["packet"])))
         # Lần đầu (menu_version 0) nhận nguyên gói; món đã xóa mềm không có trong gói.
-        status, reply = self.call("/app/nhan-menu", {"menu_version": 0})
+        status, reply = self.call("/app/machine/menu/get", {"menu_version": 0})
         self.assertEqual((status, reply["status"]), (200, "ok"))
         packet = unpack(reply)
         self.assertEqual((packet["type"], packet["v"], packet["menu_version"]), ("menu_sync", 1, reply["menu_version"]))
@@ -149,72 +149,72 @@ class MachineRelayTest(unittest.TestCase):
         self.assertEqual([d["drink_name"] for d in drinks], ["Cà phê", "Trà đào"])
         version = reply["menu_version"]
         # Đã có bản mới nhất thì máy không gửi lại gói.
-        self.assertEqual(self.call("/app/nhan-menu", {"menu_version": version}),
+        self.assertEqual(self.call("/app/machine/menu/get", {"menu_version": version}),
                          (200, {"status": "up_to_date", "menu_version": version}))
 
         # Gửi thay đổi dựa trên bản đang giữ: máy ghi rồi trả menu mới.
-        status, reply = self.call("/app/cap-nhat-menu", {"menu_version": version, "thay_doi": [
+        status, reply = self.call("/app/machine/menu/update", {"menu_version": version, "thay_doi": [
             {"drink_id": 1001, "available": False}, {"drink_id": 1002, "price": 35000}]})
         self.assertEqual((status, reply["status"]), (200, "ok"))
         drinks = {row[0]: dict(zip(packet["fields"], row)) for row in unpack(reply)["drinks"]}
         self.assertEqual((drinks[1001]["available"], drinks[1002]["price"]), (0, 35000))
         self.assertNotEqual(reply["menu_version"], version)
         # Gửi lại trên bản cũ thì máy không ghi, trả conflict kèm menu mới nhất.
-        status, stale = self.call("/app/cap-nhat-menu", {"menu_version": version, "thay_doi": [
+        status, stale = self.call("/app/machine/menu/update", {"menu_version": version, "thay_doi": [
             {"drink_id": 1001, "available": True}]})
         self.assertEqual((status, stale["status"], stale["menu_version"]), (200, "conflict", reply["menu_version"]))
         # Món không có trên máy: máy báo lỗi, không ghi gì.
-        status, error = self.call("/app/cap-nhat-menu", {"menu_version": reply["menu_version"], "thay_doi": [
+        status, error = self.call("/app/machine/menu/update", {"menu_version": reply["menu_version"], "thay_doi": [
             {"drink_id": 1002, "price": 1}, {"drink_id": 1003, "price": 1}]})
         self.assertEqual(status, 502)
         self.assertIn("loi", error)
-        self.assertEqual(self.call("/app/nhan-menu", {"menu_version": reply["menu_version"]})[1]["status"],
+        self.assertEqual(self.call("/app/machine/menu/get", {"menu_version": reply["menu_version"]})[1]["status"],
                          "up_to_date")
         # Gói sai bị server chặn, không xuống máy.
         for bad in ({"menu_version": -1}, {"menu_version": "x"}):
-            self.assertEqual(self.call("/app/nhan-menu", bad)[0], 400)
+            self.assertEqual(self.call("/app/machine/menu/get", bad)[0], 400)
         for thay_doi in ([], [{"drink_id": 1001}], [{"drink_id": 1001, "drink_name": "x"}],
                          [{"drink_id": 1001, "price": -1}], [{"drink_id": 1001, "available": 1}],
                          [{"drink_id": True, "price": 1}], {"drink_id": 1001}):
-            self.assertEqual(self.call("/app/cap-nhat-menu", {"menu_version": 0, "thay_doi": thay_doi})[0], 400)
+            self.assertEqual(self.call("/app/machine/menu/update", {"menu_version": 0, "thay_doi": thay_doi})[0], 400)
 
     def check_ingredient_tab(self):
         # Lần đầu (version 0) nhận nguyên danh sách kho kèm version.
-        status, reply = self.call("/app/nhan-kho", {"version": 0})
+        status, reply = self.call("/app/machine/ingredient/get", {"version": 0})
         self.assertEqual((status, reply["status"], reply["ingredients"]), (200, "ok", INGREDIENTS["ingredients"]))
         version = reply["version"]
         # Đã có bản mới nhất thì máy không gửi lại danh sách.
-        self.assertEqual(self.call("/app/nhan-kho", {"version": version}),
+        self.assertEqual(self.call("/app/machine/ingredient/get", {"version": version}),
                          (200, {"status": "up_to_date", "version": version}))
         # Kho trên máy đổi thì version cũ không còn khớp.
         INGREDIENTS["ingredients"][0]["amount"] = 400
         self.addCleanup(INGREDIENTS["ingredients"][0].update, amount=500)
-        status, reply = self.call("/app/nhan-kho", {"version": version})
+        status, reply = self.call("/app/machine/ingredient/get", {"version": version})
         self.assertEqual((status, reply["ingredients"][0]["amount"]), (200, 400))
         self.assertNotEqual(reply["version"], version)
         # Máy đọc dữ liệu lỗi thì app nhận lỗi 502, vòng lặp của máy vẫn chạy.
         INGREDIENTS["ingredients"].append(object())
         self.addCleanup(INGREDIENTS["ingredients"].pop)
-        status, error = self.call("/app/nhan-kho", {"version": 0})
+        status, error = self.call("/app/machine/ingredient/get", {"version": 0})
         self.assertEqual(status, 502)
         self.assertIn("loi", error)
 
         # Nạp kho: target = id hoặc "all", value = "full" hoặc số gram; nạp xong dựng lại menu bán hàng.
         self.calls.clear()
-        self.assertEqual(self.call("/app/nap-kho", {"target": 1, "value": "full"}),
+        self.assertEqual(self.call("/app/machine/ingredient/refill", {"target": 1, "value": "full"}),
                          (200, {"ingredient_id": 1, "amount": 1000, "in_stock": True}))
-        self.assertEqual(self.call("/app/nap-kho", {"target": "all", "value": "full"})[0], 200)
-        self.assertEqual(self.call("/app/nap-kho", {"target": 2, "value": 750})[0], 200)
+        self.assertEqual(self.call("/app/machine/ingredient/refill", {"target": "all", "value": "full"})[0], 200)
+        self.assertEqual(self.call("/app/machine/ingredient/refill", {"target": 2, "value": 750})[0], 200)
         self.assertEqual(self.calls, [("refill", 1, "full"), ("publish",), ("refill", "all", "full"), ("publish",),
                                       ("refill", 2, 750), ("publish",)])
         # Gói sai bị server chặn, không xuống máy.
         for target, value in (("all", 500), (0, "full"), (1, -5), (1, "nhieu"), (True, "full"),
                               (None, "full"), (1, True), (1, None), (1, 100000000),
                               (1, float('nan')), (1, float('inf'))):
-            self.assertEqual(self.call("/app/nap-kho", {"target": target, "value": value})[0], 400)
+            self.assertEqual(self.call("/app/machine/ingredient/refill", {"target": target, "value": value})[0], 400)
         for bad in ({"version": -1}, {"version": "x"}, {"version": True}, {"version": 2**32},
                     {"version": None}, {"version": 1.5}):
-            self.assertEqual(self.call("/app/nhan-kho", bad)[0], 400)
+            self.assertEqual(self.call("/app/machine/ingredient/get", bad)[0], 400)
         self.assertEqual(len(self.calls), 6)
 
 

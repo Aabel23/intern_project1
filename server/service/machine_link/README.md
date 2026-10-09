@@ -8,15 +8,15 @@ Cả ba route nhận POST JSON từ máy, kèm product_key; không dùng token a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /machine/heartbeat | Máy | product_key | da_nhan: true |
-| POST | /machine/hoi-lenh | Máy | product_key | lenh: {id, instruction, data} hoặc null |
-| POST | /machine/tra-ket-qua | Máy | product_key, id, ket_qua | da_nhan: true |
+| POST | /machine/heartbeat/send | Máy | product_key | da_nhan: true |
+| POST | /machine/command/poll | Máy | product_key | lenh: {id, instruction, data} hoặc null |
+| POST | /machine/result/send | Máy | product_key, id, ket_qua | da_nhan: true |
 
 ## A. Duy trì kết nối
 
 ### 1. Máy báo còn hoạt động
 
-Máy định kỳ POST `/machine/heartbeat` với `{product_key}`. Server xác thực key, ghi thời gian rồi trả `{da_nhan: true}`.
+Máy định kỳ POST `/machine/heartbeat/send` với `{product_key}`. Server xác thực key, ghi thời gian rồi trả `{da_nhan: true}`.
 
 Hàm tham gia:
 
@@ -28,7 +28,7 @@ Hàm tham gia:
 
 ### 1. App gửi yêu cầu nghiệp vụ
 
-Ví dụ POST `/app/nhan-kho` với `{token, machine_id, version: 0}`. Feature tương ứng kiểm quyền và dữ liệu rồi chuẩn bị lệnh.
+Ví dụ POST `/app/machine/ingredient/get` với `{token, machine_id, version: 0}`. Feature tương ứng kiểm quyền và dữ liệu rồi chuẩn bị lệnh.
 
 Hàm tham gia:
 
@@ -44,7 +44,7 @@ Hàm tham gia:
 
 ### 3. Máy hỏi và nhận lệnh
 
-Máy POST `/machine/hoi-lenh` với `{product_key}`. Server trả `{lenh: {id, instruction, data}}`; nếu chưa có lệnh thì chờ tối đa thời gian long-poll và trả lenh=null.
+Máy POST `/machine/command/poll` với `{product_key}`. Server trả `{lenh: {id, instruction, data}}`; nếu chưa có lệnh thì chờ tối đa thời gian long-poll và trả lenh=null.
 
 Hàm tham gia:
 
@@ -53,7 +53,7 @@ Hàm tham gia:
 
 ### 4. Máy thực hiện và gửi kết quả
 
-Máy chọn feature theo instruction, thực hiện tác vụ rồi POST `/machine/tra-ket-qua` với `{product_key, id, ket_qua}`. Server trả `{da_nhan: true}` cho máy.
+Máy chọn feature theo instruction, thực hiện tác vụ rồi POST `/machine/result/send` với `{product_key, id, ket_qua}`. Server trả `{da_nhan: true}` cho máy.
 
 Hàm tham gia:
 

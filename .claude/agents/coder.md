@@ -84,7 +84,7 @@ mọi file đều phải có đủ các nhóm này.
 
 ## Model của coder — 07/10/2026
 
-- Claude: **Sonnet, effort medium**. Frontmatter đặt `model: sonnet`,
+- Claude: **Opus5.5, effort Low**. Frontmatter đặt `model: sonnet`,
   `effort: medium`; khi chạy CLI dùng `--agent coder --model sonnet --effort medium`.
 - GPT: **Sol, effort low** theo yêu cầu “Sol light”. Operator chọn ID Sol được
   runtime hỗ trợ và truyền rõ mức `low` khi giao coder, không để kế thừa model/effort

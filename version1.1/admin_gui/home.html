@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Trang chủ màn khách</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="home">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Trình dựng Trang chủ</h1>
+        <div class="sub">Bố cục và các module hiện trên màn hình khách</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+      <button class="btn ghost" id="resetBtn" title="Tải lại dữ liệu từ database"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg> Tải lại DB</button>
+      <a class="btn ghost" href="../store_gui/drinks-pos.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Mở màn POS</a>
+    </div>
+
+    <!-- ============ MÀN HÌNH KHÁCH ============
+         Three decisions, kept on three cards because they are three
+         different things and get changed at different times:
+
+           the ORDER of the blocks        rarely, when the shop rethinks
+                                          the screen
+           what the featured strip HOLDS  often -- it is a promotion
+           how bán-chạy is COUNTED        rarely, and it is a definition
+                                          rather than a list
+
+         Nothing here has a Save button. Every other control in this
+         console writes on change and reports with a toast, and a panel
+         that behaved differently would be the one place an operator has
+         to remember to press something.
+
+         WHICH drinks sit in the featured strip is not here: that is the
+         star column on menu.html, beside the drink it belongs to. This
+         page shows what the picking produced. -->
+
+    <div class="card featcard" style="margin-top:16px">
+      <!-- The heading is the lid. A button inside the <h2> rather than an
+           <h2> inside a button: the heading has to stay a heading for
+           anything reading this page by its outline, and only the label is
+           pressable. The csub under it stays visible while the card is
+           shut -- it already says what the module is doing right now, so a
+           folded card is still answering the question it was opened for. -->
+      <div class="chd">
+        <div class="chd-title">
+          <h2><button type="button" class="card-toggle" data-card-toggle
+                      aria-expanded="true" aria-controls="layoutBody">
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5.5 7 6.5-7 6.5"/></svg> Bố cục màn hình khách
+          </button></h2>
+          <div class="csub" id="layoutSub">—</div>
+        </div>
+        <div class="spacer"></div>
+        <a class="btn ghost" href="../store_gui/drinks-pos.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Xem trên màn POS</a>
+      </div>
+      <div class="cbody" id="layoutBody">
+        <!-- Drag to reorder, OR use the two arrow buttons. Both, not one:
+             WCAG 2.2 AA requires a single-pointer alternative to any drag
+             a page invents, and an operator on a trackpad reaches for the
+             buttons anyway. -->
+        <div class="builder" id="builder" role="list"
+             aria-label="Thứ tự các khối trên màn hình khách"></div>
+        <p class="csub buildernote">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg>
+          Kéo thẻ để đổi thứ tự, hoặc dùng nút <b>&#8593; &#8595;</b>. Khối
+          <b>Tất cả món</b> di chuyển được nhưng không tắt được — màn hình
+          khách phải luôn có menu.
+        </p>
+      </div>
+    </div>
+
+    <div class="card featcard" style="margin-top:16px">
+      <div class="chd">
+        <div class="chd-title">
+          <h2><button type="button" class="card-toggle" data-card-toggle
+                      aria-expanded="true" aria-controls="featBody">
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5.5 7 6.5-7 6.5"/></svg> Module “Món nổi bật”
+          </button></h2>
+          <div class="csub" id="featSub">—</div>
+        </div>
+      </div>
+      <div class="cbody" id="featBody">
+        <div class="optoggle">
+          <div class="opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9Z"/></svg></div>
+          <div class="opt-txt">
+            <div class="opt-name">Hiện dải “Món nổi bật”</div>
+            <div class="opt-sub">Món do bạn tự chọn. Tắt thì dải biến mất khỏi màn POS, danh sách món đã chọn vẫn được giữ nguyên.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="featEnabled" aria-describedby="featSub">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="field featfield">
+          <label for="featTitle">Tiêu đề hiện trên dải</label>
+          <div class="inp">
+            <span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/></svg></span>
+            <input id="featTitle" maxlength="60" placeholder="Món nổi bật"
+                   aria-describedby="featTitleHint">
+          </div>
+          <div class="csub feathint" id="featTitleHint">Tối đa 60 ký tự · để trống sẽ quay về “Món nổi bật”</div>
+        </div>
+
+        <div class="featlabel" id="featStyleLabel">Kiểu hiển thị</div>
+        <div class="stylepick" id="featStyle" role="radiogroup"
+             aria-labelledby="featStyleLabel"></div>
+
+
+        <div class="featlabel colsrow" id="featColsLabel">Số cột</div>
+        <div class="numrow colsrow">
+          <div class="numbox">
+            <input id="featCols" type="number" min="1" max="3" step="1"
+                   aria-labelledby="featColsLabel">
+            <span class="unit">cột</span>
+          </div>
+          <div class="presets" id="featColsPresets"></div>
+        </div>
+
+        <div class="featlabel">Món đang được chọn</div>
+        <div class="featpicked" id="featPicked"></div>
+      </div>
+    </div>
+
+    <div class="card featcard" style="margin-top:16px">
+      <div class="chd">
+        <div class="chd-title">
+          <h2><button type="button" class="card-toggle" data-card-toggle
+                      aria-expanded="true" aria-controls="bestBody">
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5.5 7 6.5-7 6.5"/></svg> Module “Bán chạy nhất”
+          </button></h2>
+          <div class="csub" id="bestSub">—</div>
+        </div>
+      </div>
+      <div class="cbody" id="bestBody">
+        <div class="optoggle">
+          <div class="opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 3h10v4a5 5 0 0 1-10 0Z"/><path d="M7 5H4.5v1A3.5 3.5 0 0 0 8 9.5"/><path d="M17 5h2.5v1A3.5 3.5 0 0 1 16 9.5"/><path d="M12 12v4M9 20h6M10 16h4l.6 4H9.4Z"/></svg></div>
+          <div class="opt-txt">
+            <div class="opt-name">Hiện dải “Bán chạy nhất”</div>
+            <div class="opt-sub">Không chọn tay — máy đếm từ đơn đã pha xong mỗi lần dựng lại menu, nên không bao giờ lạc hậu.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="bestEnabled" aria-describedby="bestSub">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="field featfield">
+          <label for="bestTitle">Tiêu đề hiện trên dải</label>
+          <div class="inp">
+            <span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/></svg></span>
+            <input id="bestTitle" maxlength="60" placeholder="Bán chạy nhất">
+          </div>
+        </div>
+
+        <!-- The window is the DEFINITION of "bán chạy" -- the one control
+             here that changes what the strip means rather than how it
+             looks. The number box is the truth; the pills only fill it,
+             so the two can never show different answers. -->
+        <div class="featlabel" id="bestWindowLabel">Tính bán chạy trong bao lâu</div>
+        <div class="numrow">
+          <div class="numbox">
+            <input id="bestWindow" type="number" min="1" max="365" step="1"
+                   aria-labelledby="bestWindowLabel">
+            <span class="unit">ngày</span>
+          </div>
+          <div class="presets" id="bestWindowPresets"></div>
+        </div>
+
+        <div class="featlabel" id="bestCountLabel">Hiện bao nhiêu món</div>
+        <div class="numrow">
+          <div class="numbox">
+            <input id="bestCount" type="number" min="1" max="12" step="1"
+                   aria-labelledby="bestCountLabel">
+            <span class="unit">món</span>
+          </div>
+          <div class="presets" id="bestCountPresets"></div>
+        </div>
+
+        <!-- The whole point of the card. Every other control here is a
+             setting; this is the answer those settings produce, so an
+             operator can see the ranking is real before trusting it on
+             the shop floor. -->
+        <div class="featlabel" id="bestStyleLabel">Kiểu hiển thị</div>
+        <div class="stylepick" id="bestStyle" role="radiogroup"
+             aria-labelledby="bestStyleLabel"></div>
+
+
+        <div class="featlabel colsrow" id="bestColsLabel">Số cột</div>
+        <div class="numrow colsrow">
+          <div class="numbox">
+            <input id="bestCols" type="number" min="1" max="3" step="1"
+                   aria-labelledby="bestColsLabel">
+            <span class="unit">cột</span>
+          </div>
+          <div class="presets" id="bestColsPresets"></div>
+        </div>
+
+        <div class="featlabel">Đang xếp hạng như thế này</div>
+        <div class="featpicked" id="bestPreview"></div>
+      </div>
+    </div>
+
+    <p class="csub" style="margin-top:16px;color:var(--muted);font-size:12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg> Mọi thay đổi được lưu ngay và màn hình khách dựng lại menu sau khi API xác nhận.
+    </p>
+  </main>
+</div>
+
+<!-- admin-guard.js first: it defines showToast, which menu-store.js
+     uses to report a database it cannot reach. -->
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="home.js"></script>
+</body>
+</html>

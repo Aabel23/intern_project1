@@ -59,10 +59,10 @@ class MachineRegisterTest(unittest.TestCase):
     def test_register_retry(self):
         packet = {'type': 'pairing', 'machine_name': 'FlexMix-01', 'product_key': 'test-key',
                   'token': self.token}
-        status, first = self.post('/app/dang-ky-may', packet)
+        status, first = self.post('/app/user/machine/register', packet)
         self.assertEqual(status, 200)
         self.assertTrue(first['created'])
-        status, second = self.post('/app/dang-ky-may', packet)
+        status, second = self.post('/app/user/machine/register', packet)
         self.assertEqual(first['machine_id'], second['machine_id'])
         self.assertFalse(second['created'])
         # Route xác minh riêng đã bỏ (app không gọi).
@@ -79,15 +79,15 @@ class MachineRegisterTest(unittest.TestCase):
 
     def test_owner_and_login_required(self):
         packet = {'machine_name': 'FlexMix-01', 'product_key': 'owned-key'}
-        self.assertEqual(self.post('/app/dang-ky-may', packet)[0], 400)
-        self.assertEqual(self.post('/app/dang-ky-may', {**packet, 'token': self.token})[0], 200)
-        status, result = self.post('/app/dang-ky-may', {**packet, 'token': self.make_user('other')})
+        self.assertEqual(self.post('/app/user/machine/register', packet)[0], 400)
+        self.assertEqual(self.post('/app/user/machine/register', {**packet, 'token': self.token})[0], 200)
+        status, result = self.post('/app/user/machine/register', {**packet, 'token': self.make_user('other')})
         self.assertEqual(status, 400)
         self.assertIn('chủ máy', result['message'])
 
     def test_invalid_data(self):
         for data in ([], {}, {'machine_name': 'FlexMix', 'product_key': 123}):
-            status, result = self.post('/app/dang-ky-may', data)
+            status, result = self.post('/app/user/machine/register', data)
             self.assertEqual(status, 400)
             self.assertFalse(result['valid'])
 

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FlexMix — Test tay</title>
+<meta name="theme-color" content="#f7f1e9" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg></span>
+    <div>
+      <strong>Test tay</strong>
+      <span class="sub">Kiểm tra bơm, cân và bảng nút</span>
+    </div>
+  </div>
+  <div class="state">
+    <span class="pill" id="statePill">Sẵn sàng</span>
+    <button class="stop" id="stopBtn" disabled>Dừng</button>
+  </div>
+</header>
+
+<!-- Shown when order/run_flow.py owns the machine. Every button is
+     disabled behind it: two processes on one I2C bus is the one thing
+     this screen must never cause. -->
+<div class="warn" id="busyWarn" hidden></div>
+
+<main>
+  <section class="panel">
+    <h2>Mồi từng bơm</h2>
+    <p class="hint">
+      Đặt ly rỗng lên cân, cho tất cả vòi vào ly. Máy bơm đến khi cân
+      tăng đủ <strong>8 g</strong>, hoặc dừng khi hết thời gian cho phép.
+    </p>
+    <div class="pumps" id="pumps"></div>
+    <div class="row">
+      <button class="primary wide" id="primeAll">Mồi tất cả 10 bơm</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Bơm tay</h2>
+    <p class="hint">
+      <strong>Giữ nút</strong> thì bơm chạy, <strong>thả ra</strong> thì
+      dừng. Dùng để xả line hoặc kiểm tra vòi bằng mắt. Máy tự dừng nếu
+      mất kết nối, và không bơm quá
+      <strong>60 giây</strong> một lần giữ.
+    </p>
+    <div class="pumps holds" id="holdPumps"></div>
+    <div class="holdstate" id="holdState">Chưa giữ nút nào.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Bảng nút</h2>
+    <p class="hint">
+      Đèn sáng lần lượt từng vị trí. Ở bài test nút, hãy bấm đúng nút
+      đang sáng — sai nút nghĩa là đấu dây lệch.
+    </p>
+    <div class="row">
+      <button class="secondary" id="ledTest">Test đèn LED</button>
+      <button class="secondary" id="buttonTest">Test nút bấm</button>
+      <button class="ghost" id="scaleTest">Kiểm tra cân</button>
+    </div>
+    <div class="lamps" id="lamps"></div>
+  </section>
+</main>
+
+<section class="panel log-panel">
+  <div class="log-head">
+    <h2 id="jobName">Nhật ký</h2>
+    <span class="progress" id="progress"></span>
+  </div>
+  <div class="bar"><span id="barFill"></span></div>
+  <pre class="log" id="log">Chưa chạy bài test nào.</pre>
+  <table class="results" id="results" hidden>
+    <thead><tr id="resultsHead"></tr></thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

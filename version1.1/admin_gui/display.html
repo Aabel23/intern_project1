@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Màn hình</title>
+<link rel="stylesheet" href="admin.css" />
+<style>
+/* The probation banner. Only ever on screen for the twenty seconds
+   between a mode being applied and somebody saying they can still read
+   it, so it is allowed to be loud. */
+.revert{
+  margin:0 0 20px;border-radius:14px;padding:18px 20px;
+  background:var(--amber-soft);border:1px solid #f6e2bf;color:#6b4d10;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.revert .rtxt{flex:1;min-width:260px;font-size:13.5px;line-height:1.55}
+.revert .rcount{
+  font-family:var(--font-display);font-size:34px;font-weight:700;
+  min-width:64px;text-align:center;font-variant-numeric:tabular-nums;
+}
+.revert.gone{display:none}
+/* A resolution is a number, and numbers line up. */
+.mode .mname{font-variant-numeric:tabular-nums}
+.mode .mdesc b{color:var(--ink)}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;min-height:18px}
+.tag{
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 7px;border-radius:20px;
+}
+.tag.live{background:var(--green-soft);color:var(--green)}
+.tag.native{background:var(--blue-soft);color:var(--blue-deep)}
+.tag.saved{background:var(--bg);color:var(--muted);border:1px solid var(--line-2)}
+</style>
+</head>
+<body data-page="display">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Màn hình</h1>
+        <div class="sub">Độ phân giải của màn hình bán hàng</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="chip"></div>
+    </div>
+
+    <div class="revert gone" id="revert">
+      <div class="rcount" id="rcount">20</div>
+      <div class="rtxt">
+        <b>Hãy nhìn sang màn hình bán hàng.</b> Nếu vẫn đọc được bình thường,
+        bấm <b>Giữ chế độ này</b>. Không bấm gì thì màn hình sẽ tự quay lại
+        chế độ cũ — đó là cách thoát khi chọn phải chế độ màn hình không hiện được.
+      </div>
+      <button class="btn primary" id="keep">Giữ chế độ này</button>
+      <button class="btn ghost" id="undo">Quay lại ngay</button>
+    </div>
+
+    <div class="card">
+      <div class="chd">
+        <div>
+          <h2>Chọn độ phân giải</h2>
+          <div class="csub" id="csub">Đang đọc màn hình…</div>
+        </div>
+      </div>
+      <div class="cbody">
+        <div class="modes" id="modes"></div>
+
+        <div class="mode-note">
+          <span style="font-size:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg></span>
+          <div>
+            Đây là <b>đòn bẩy mạnh nhất</b> cho độ mượt của màn hình bán hàng. GPU của
+            Pi phải ghép lại từng khung hình khi khách vuốt menu, và chi phí đó gần
+            như tỉ lệ thuận với số điểm ảnh — <b>ít điểm ảnh hơn là mượt hơn</b>.
+            Đo trên chính máy này ngày 09/09/2026: ở 1920×1200 vuốt menu bị khựng,
+            ở 1280×800 thì mượt, trong khi trang web không đổi một dòng nào.
+            <br><br>
+            Đổi ở đây <b>không làm hỏng bố cục</b>: màn hình bán hàng co giãn theo
+            kích thước được cấp. Cái mất là độ nét — panel LCD nét nhất ở đúng chế độ
+            gốc của nó. Nhưng panel này chỉ khoảng 216×135mm, nên ngay cả 1280×800
+            vẫn còn ~150 điểm ảnh mỗi inch, nét hơn phần lớn laptop, và khách thì
+            đứng cách màn hình cả sải tay.
+            <br><br>
+            Lựa chọn được lưu trên máy chủ và <b>tự áp lại mỗi lần khởi động máy</b>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="display.js"></script>
+</body>
+</html>

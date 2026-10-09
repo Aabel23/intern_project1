@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fdf7f0" />
+  <meta
+    name="description"
+    content="Màn hình hướng dẫn pha chế tự động cho nhân viên tại máy FlexMix."
+  />
+  <title>FlexMix | Hướng dẫn pha chế</title>
+  <link rel="stylesheet" href="css/guide.css" />
+</head>
+<body>
+  <a class="skip-link" href="#nowCard">Đi đến bước hiện tại</a>
+
+  <!-- ============================================================
+       TOP BAR
+       ============================================================ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg></span>
+      <div class="brand-text">
+        <strong id="drinkName">—</strong>
+        <span id="orderId">Chưa có đơn</span>
+      </div>
+    </div>
+
+    <div class="progress-block">
+      <div class="progress-track" aria-hidden="true">
+        <span id="progressBar"></span>
+      </div>
+      <span class="progress-label" id="progressLabel">— / —</span>
+    </div>
+
+    <div class="topbar-controls">
+      <span class="conn" id="conn" role="status" aria-live="polite">
+        <span class="conn-dot" aria-hidden="true"></span>
+        <span id="connLabel">Đang kết nối</span>
+      </span>
+      <button type="button" class="ghost-btn" id="langBtn" aria-label="Đổi ngôn ngữ">
+        EN
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       THE CUSTOMER'S NOTE — free text they typed at the till, and
+       nothing else.
+
+       Deliberately not the ticked options: those describe a drink the
+       machine already knows how to pour, and mixing them in here made
+       this strip appear on every order carrying nothing that needed a
+       person. It appears ONLY when there is a note, so its presence is
+       itself the message: if this bar is on screen, read it.
+       ============================================================ -->
+  <div class="note-bar" id="noteBar" hidden role="status">
+    <span class="note-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+    <div class="note-body">
+      <span class="note-label" id="noteLabel">Yêu cầu riêng của khách</span>
+      <strong class="note-text" id="noteText"></strong>
+    </div>
+  </div>
+
+  <main class="stage">
+    <!-- ==========================================================
+         LEFT — WHAT THE MACHINE IS DOING RIGHT NOW
+         ========================================================== -->
+    <section
+      class="now-card"
+      id="nowCard"
+      data-mode="idle"
+      aria-labelledby="nowAction"
+    >
+      <!-- LEFT COLUMN — the drink itself -->
+      <figure class="now-visual">
+        <div class="drink-frame">
+          <img class="drink-photo" id="drinkPhoto" alt="" hidden />
+          <div class="guide-art" id="guideArt" aria-hidden="true"></div>
+        </div>
+        <figcaption class="guide-caption" id="guideCaption"></figcaption>
+      </figure>
+
+      <!-- RIGHT COLUMN — the process -->
+      <div class="now-main">
+        <div class="now-head">
+          <span class="step-chip" id="stepChip">Bước —</span>
+          <span class="type-chip" id="typeChip">Đang chờ</span>
+          <span class="eta-chip" id="etaChip" hidden>—</span>
+        </div>
+
+        <div class="now-copy">
+          <p class="now-eyebrow" id="nowEyebrow">Trạng thái</p>
+          <h1 class="now-action" id="nowAction">Đang chờ đơn hàng</h1>
+          <p class="now-detail" id="nowDetail">
+            Quét mã QR của khách để bắt đầu.
+          </p>
+          <p class="error-line" id="errorLine" hidden></p>
+        </div>
+
+        <!-- The pour meters used to sit here. They are numbers about the
+             machine, and this half of the card is the instruction to the
+             person -- so they moved to the process panel bottom-right,
+             beside the pump drawing they describe. -->
+
+        <!-- Shown only when the drink is finished -->
+        <div class="done-actions" id="doneActions" hidden>
+          <button type="button" class="done-btn" id="nextOrderBtn">
+            <span id="nextOrderLabel">Đơn tiếp theo</span>
+          </button>
+          <p class="done-hint" id="doneHint">
+            Máy sẽ chờ quét mã QR tiếp theo.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         RIGHT — STEP TIMELINE
+         ========================================================== -->
+    <aside class="side">
+      <section class="step-rail" aria-labelledby="railTitle">
+        <div class="side-head">
+          <h2 id="railTitle">Quy trình</h2>
+          <span class="side-note" id="railNote">—</span>
+        </div>
+        <ol class="rail-list" id="railList"></ol>
+      </section>
+
+      <section class="process-panel" aria-labelledby="machineTitle">
+        <div class="side-head">
+          <h2 id="machineTitle">Đang diễn ra</h2>
+          <span class="side-note" id="pumpNote">—</span>
+        </div>
+        <div class="process-visual" id="processVisual" aria-hidden="true"></div>
+        <p class="process-caption" id="processCaption">—</p>
+        <!-- One row per pump in this step, under the drawing of the pumps
+             themselves. -->
+        <ul class="pour-list" id="pourList" aria-live="polite"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <!-- ============================================================
+       STATUS FOOTER — at-a-glance facts about the order in progress
+       ============================================================ -->
+  <footer class="statusbar">
+    <!-- The drink's options used to be listed here. Nothing acted on
+         them: the machine pours the sugar itself and raises its own step
+         for a manual topping, so the line said "Không có yêu cầu thêm" on
+         almost every order and was read by nobody. What genuinely needs a
+         person is the customer's note, and that has the bar at the top.
+
+         Shift totals -->
+    <div class="stat">
+      <span class="stat-label" id="lblToday">Hôm nay</span>
+      <strong class="stat-value" id="statToday">—</strong>
+    </div>
+    <div class="stat stat-avg">
+      <span class="stat-label" id="lblAvg">TB mỗi ly</span>
+      <strong class="stat-value" id="statAvg">—</strong>
+    </div>
+    <div class="stat stat-last">
+      <span class="stat-label" id="lblLast">Ly gần nhất</span>
+      <strong class="stat-value" id="statLast">—</strong>
+    </div>
+
+    <div class="statusbar-end">
+      <div class="stat">
+        <span class="stat-label" id="lblMode">Chế độ</span>
+        <strong class="stat-value" id="statMode">—</strong>
+      </div>
+      <div class="stat stat-clock">
+        <span class="stat-label" id="lblClock">Bây giờ</span>
+        <strong class="stat-value" id="statClock">--:--</strong>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       CANCEL — staff stopping an order that is already pouring.
+       Deliberately small and in a corner: it stops a drink mid-pour,
+       so it should take a decision to reach, not a stray thumb.
+       ============================================================ -->
+  <button type="button" class="cancel-btn" id="cancelBtn" hidden>
+    Hủy đơn
+  </button>
+
+  <!-- ============================================================
+       CHOOSING THE GLASS
+
+       The first thing that happens on an order, before the machine is let
+       anywhere near it. It is a screen-local step: the recipe knows grams
+       and pumps, not glassware, and nothing downstream reads the answer.
+       What it buys is the illustrations -- once the glass is known, every
+       later step can be drawn in the glass actually standing on the
+       machine instead of a generic one.
+
+       Blocking on purpose. The machine has not started, so it costs
+       nothing to wait here, and a glass chosen halfway through would
+       leave the first steps drawn wrong.
+       ============================================================ -->
+  <div class="gate" id="glassGate" hidden data-kind="glass" role="dialog"
+       aria-modal="true" aria-labelledby="glassTitle">
+    <!-- Landscape, not the stacked card the other gates use. The picture
+         and the words are two different questions -- "which object do I
+         pick up" and "what do I need to know about it" -- and side by side
+         they are read at the same time instead of one scrolling the other
+         off a 1024x600 panel. It collapses back to a column under 860px. -->
+    <div class="gate-card gate-card-wide">
+      <div class="glass-called">
+        <!-- LEFT — the object to fetch, and nothing else. No caption:
+             the glass is named in the LY fact opposite, and naming it
+             under the picture as well put the same two words on screen
+             three times over. -->
+        <figure class="glass-visual">
+          <span class="glass-art" id="glassArt" aria-hidden="true"></span>
+        </figure>
+
+        <!-- RIGHT — everything that has to be true before the pour -->
+        <div class="glass-info">
+          <span class="gate-badge" id="glassBadge">Trước khi pha</span>
+          <h2 class="gate-title" id="glassTitle">Lấy đúng ly này</h2>
+          <p class="gate-detail" id="glassDetail">
+            Món này được phục vụ trong ly bên cạnh. Lấy ly, đặt lên máy, rồi xác nhận.
+          </p>
+
+          <!-- How the drink is assembled: the build method's name and its
+               one-line description, from drink_type. Hidden when the drink
+               has no type set. -->
+          <p class="serve-method" id="glassMethod" hidden>
+            <strong class="serve-method-name" id="glassMethodName"></strong>
+            <span class="serve-method-detail" id="glassMethodDetail"></span>
+          </p>
+
+          <!-- The prep facts: glass, ice, garnish. Filled by
+               js/guide.js from the drink row; a fact with no data set is
+               left out rather than shown empty. -->
+          <ul class="serve-facts" id="glassFacts"></ul>
+
+          <button type="button" class="gate-confirm glass-confirm" id="glassConfirm">
+            <span class="gate-confirm-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
+              </svg>
+            </span>
+            <span class="gate-confirm-label" id="glassConfirmLabel">Đã lấy ly này</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gate" id="cancelGate" hidden data-kind="retry" role="dialog"
+       aria-modal="true" aria-labelledby="cancelTitle">
+    <div class="gate-card">
+      <span class="gate-badge" id="cancelBadge">Hủy đơn</span>
+      <div class="gate-body">
+        <div class="gate-copy">
+          <h2 class="gate-title" id="cancelTitle">Đang dừng máy...</h2>
+          <p class="gate-detail" id="cancelDetail">
+            Máy sẽ dừng khi xong bước hiện tại.
+          </p>
+          <!-- A short list, because a free-text box alone gets filled with
+               "loi" and nothing can be counted later. The note is for the
+               detail that does not fit a category. -->
+          <p class="reason-hint" id="cancelHint">
+            Chọn lý do nếu muốn hủy hẳn đơn này:
+          </p>
+          <div class="reasons" id="cancelReasons"></div>
+          <input class="reason-note" id="cancelNote" type="text"
+                 maxlength="200" placeholder="Ghi chú thêm (không bắt buộc)" />
+        </div>
+      </div>
+      <div class="cancel-actions">
+        <!-- Resume first and visually dominant: after a pause, carrying on
+             is the common outcome, and the destructive choice should not be
+             the one under a thumb reaching for the obvious button. -->
+        <button type="button" class="cancel-back" id="cancelBack">
+          Tiếp tục pha
+        </button>
+        <button type="button" class="cancel-go" id="cancelConfirm" disabled>
+          Hủy đơn
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       HUMAN GATE — blocks the screen until the bartender confirms
+       ============================================================ -->
+  <!-- ============================================================
+       THANK YOU — shown once the machine reports the drink finished,
+       then returns to the store screen on its own.
+       ============================================================ -->
+  <div class="gate" id="thanks" hidden data-kind="start" role="dialog"
+       aria-modal="true" aria-labelledby="thanksTitle">
+    <div class="gate-card">
+      <span class="gate-badge" id="thanksBadge">Hoàn tất</span>
+      <div class="gate-body">
+        <div class="gate-art" id="thanksArt" aria-hidden="true"></div>
+        <div class="gate-copy">
+          <h2 class="gate-title" id="thanksTitle">Cảm ơn quý khách!</h2>
+          <p class="gate-detail" id="thanksDetail">—</p>
+        </div>
+      </div>
+      <p class="thanks-count" id="thanksCount">—</p>
+    </div>
+  </div>
+
+  <div class="gate" id="gate" hidden role="dialog" aria-modal="true"
+       aria-labelledby="gateTitle">
+    <div class="gate-card">
+      <span class="gate-badge" id="gateBadge">Cần thao tác</span>
+
+      <div class="gate-body">
+        <div class="gate-art" id="gateArt" aria-hidden="true"></div>
+
+        <!-- ACTION STEP: a clip loops here showing how to do the thing.
+             Shares the card with gateArt because an action step is a
+             confirm gate underneath -- only wider, and with a moving
+             picture where the icon would be. Filled by js/guide.js with
+             a <video> or an <img>, whichever the file needs. -->
+        <div class="gate-media" id="gateMedia" hidden aria-hidden="true"></div>
+
+        <div class="gate-copy">
+          <p class="gate-step" id="gateStep">Bước —</p>
+          <h2 class="gate-title" id="gateTitle">—</h2>
+          <p class="gate-detail" id="gateDetail">—</p>
+          <ul class="gate-checks" id="gateChecks"></ul>
+        </div>
+      </div>
+
+      <!-- HARDWARE GATE: the machine is waiting for a physical button.
+           No on-screen action; these tiles mirror the panel buttons. -->
+      <div class="gate-hardware" id="gateHardware" hidden>
+        <p class="gate-wait" id="gateWait">
+          <span class="gate-wait-dot" aria-hidden="true"></span>
+          <span id="gateWaitLabel">Máy đang chờ bạn bấm nút trên máy</span>
+        </p>
+        <div class="hw-buttons" id="gateButtons"></div>
+        <p class="hw-sim-note" id="hwSimNote" hidden>
+          Mô phỏng — bấm vào một nút ở trên để giả lập nút cứng.
+        </p>
+      </div>
+
+      <!-- CONFIRM GATE: released by the on-screen button. -->
+      <button type="button" class="gate-confirm" id="gateConfirm">
+        <!-- The disc animates while the machine is working: the arrow
+             rises and repeats. Not a spinner, because a spinner that stops
+             before the machine does reads as "finished" when it is not. -->
+        <span class="gate-confirm-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
+          </svg>
+        </span>
+        <span class="gate-confirm-label" id="gateConfirmLabel">Xác nhận</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SIMULATION DOCK — collapsed by default, floats clear of the
+       layout so the screen looks like the shipped product.
+       Delete bartender-sim.js and this whole block disappears.
+       ============================================================ -->
+  <div class="simdock" id="simbar" hidden>
+    <div class="simdock-panel" id="simPanel" hidden>
+      <label class="simdock-field">
+        <span id="simDrinkLabel">Món</span>
+        <select id="simDrink"></select>
+      </label>
+      <label class="simdock-field">
+        <span id="simSpeedLabel">Tốc độ</span>
+        <select id="simSpeed">
+          <option value="1">1x</option>
+          <option value="3" selected>3x</option>
+          <option value="8">8x</option>
+        </select>
+      </label>
+      <div class="simdock-actions">
+        <button type="button" class="primary-btn" id="simStart">Đơn mới</button>
+        <button type="button" class="ghost-btn" id="simFail">Giả lập lỗi</button>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="simdock-toggle"
+      id="simToggle"
+      aria-expanded="false"
+      aria-controls="simPanel"
+      title="Mô phỏng"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round">
+        <path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3" />
+        <path d="M8 3h8M7.5 15h9" />
+      </svg>
+    </button>
+  </div>
+
+  <noscript>
+    <p class="noscript-message">Cần bật JavaScript để dùng màn hình này.</p>
+  </noscript>
+
+  <!-- Live machine: the page polls ../order/current_recipe.json, the file
+       order/process_runner.py writes as it works. Re-add the line below to
+       run the built-in simulator instead, with no hardware attached.
+  <script src="js/sim.js"></script>
+  -->
+  <script src="js/guide.js"></script>
+</body>
+</html>

@@ -1,9 +1,9 @@
 """HTTP của chia sẻ máy: nhận POST từ app, đọc body, gọi flow, gửi JSON trả lời.
 
-    POST /app/tao-ma-chia-se  {token, machine_id}            chủ tạo mã mời
-    POST /app/nhan-chia-se    {token, code}                  nhân viên nhận mã
-    POST /app/nhan-vien-may   {token, machine_id}            chủ xem nhân viên
-    POST /app/thu-hoi-quyen   {token, machine_id, user_id}   chủ thu hồi quyền
+    POST /app/machine/share/create  {token, machine_id}           chủ tạo mã mời
+    POST /app/machine/share/accept  {token, code}                 nhân viên nhận mã
+    POST /app/machine/staff/list    {token, machine_id}           chủ xem nhân viên
+    POST /app/machine/staff/revoke  {token, machine_id, user_id}  chủ thu hồi quyền
 """
 
 # Routing tập trung và HTTP dùng chung

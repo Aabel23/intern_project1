@@ -8,15 +8,15 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /app/dang-ky-nguoi-dung | App | request_id, full_name, username, email, password | valid, registration_id, message; retry_after tùy kết quả |
-| POST | /app/gui-ma-otp | App | registration_id | valid, registration_id, retry_after, message |
-| POST | /app/xac-minh-otp | App | registration_id, code | valid, verified, account_created, message |
+| POST | /app/user/account/register | App | request_id, full_name, username, email, password | valid, registration_id, message; retry_after tùy kết quả |
+| POST | /app/user/otp/send | App | registration_id | valid, registration_id, retry_after, message |
+| POST | /app/user/otp/verify | App | registration_id, code | valid, verified, account_created, message |
 
 ## A. Tạo tài khoản
 
 ### 1. App gửi thông tin đăng ký
 
-POST `/app/dang-ky-nguoi-dung` với `{request_id, full_name, username, email, password}`. request_id là mã 32 ký tự hex của lần đăng ký.
+POST `/app/user/account/register` với `{request_id, full_name, username, email, password}`. request_id là mã 32 ký tự hex của lần đăng ký.
 
 Hàm tham gia:
 
@@ -34,7 +34,7 @@ Hàm tham gia:
 
 ### 3. App nhập OTP và gửi xác minh
 
-POST `/app/xac-minh-otp` với `{registration_id, code}`. Server kiểm phiên, mã, hạn và số lần thử. Nếu sai, app nhận `{valid: false, message}`.
+POST `/app/user/otp/verify` với `{registration_id, code}`. Server kiểm phiên, mã, hạn và số lần thử. Nếu sai, app nhận `{valid: false, message}`.
 
 Hàm tham gia:
 
@@ -56,7 +56,7 @@ Hàm tham gia:
 
 ### 1. App xin mã mới
 
-POST `/app/gui-ma-otp` với `{registration_id}`. Server kiểm thời gian chờ và hạn phiên; đủ điều kiện thì gửi email mới. Response có message và retry_after để app đếm thời gian chờ.
+POST `/app/user/otp/send` với `{registration_id}`. Server kiểm thời gian chờ và hạn phiên; đủ điều kiện thì gửi email mới. Response có message và retry_after để app đếm thời gian chờ.
 
 Hàm tham gia:
 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRẠM RÓT · Admin — Báo cáo</title>
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body data-page="report">
+<div class="admin">
+  <aside class="sidebar" id="sidebar-mount"></aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Báo cáo</h1>
+        <div class="sub">Số ly đã bán, doanh thu và chi tiết theo từng món</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="modechip" id="modeChip"></div>
+      <button class="btn ghost" id="csvBtn" title="Tải bảng này về dạng CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v13M6 11l6 6 6-6"/></svg> Xuất CSV
+      </button>
+    </div>
+
+    <!-- ============================================================
+         FILTERS — a date range and a category. The range is two date
+         inputs plus presets, because "last 7 days" is the question
+         actually being asked most of the time.
+         ============================================================ -->
+    <div class="card">
+      <div class="cbody filterbar">
+        <div class="daterange">
+          <label class="datefield">
+            <span>Từ ngày</span>
+            <input type="date" id="fromDate" />
+          </label>
+          <label class="datefield">
+            <span>Đến ngày</span>
+            <input type="date" id="toDate" />
+          </label>
+        </div>
+
+        <div class="presets" id="presets">
+          <button class="pill" data-preset="today">Hôm nay</button>
+          <button class="pill" data-preset="7">7 ngày</button>
+          <button class="pill" data-preset="30">30 ngày</button>
+          <button class="pill" data-preset="month">Tháng này</button>
+        </div>
+
+        <div class="spacer"></div>
+        <button class="btn primary" id="applyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Xem báo cáo</button>
+      </div>
+
+      <div class="cbody" style="padding-top:0">
+        <div class="csub" style="margin-bottom:8px">Danh mục</div>
+        <div class="filterpills" id="catPills"></div>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-top:16px">
+      <div class="stat"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z"/><path d="M6.6 12.4h10.8"/><path d="M12 8V4.6"/><path d="M12 4.6c0-1 .9-1.8 2-1.8"/></svg> Đã bán</div><div class="v" id="stSold">0</div></div>
+      <div class="stat ok"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10v4M18 10v4"/></svg> Doanh thu</div><div class="v" id="stRevenue">$0.00</div></div>
+      <div class="stat"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 21h18"/><path d="m4 15 5-5 4 4 6.5-7"/><path d="M20 7h-4.5V11"/></svg> TB mỗi ly</div><div class="v" id="stAvg">$0.00</div></div>
+      <div class="stat out"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 3.9 1.8 18.1A2 2 0 0 0 3.5 21h17a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Đơn lỗi</div><div class="v" id="stFailed">0</div></div>
+    </div>
+
+    <!-- Only shown when some rows had no stored price. -->
+    <p class="estimate-note" id="estimateNote" hidden></p>
+
+    <div class="card" style="margin-top:16px">
+      <div class="chd">
+        <div>
+          <h2>Theo món</h2>
+          <div class="csub" id="rangeSub">—</div>
+        </div>
+        <div class="spacer"></div>
+        <span class="csub" id="topSub"></span>
+      </div>
+      <div class="cbody" style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width:32%">Món</th>
+              <th style="text-align:right">Số ly</th>
+              <th style="text-align:right">Giá bán</th>
+              <th style="text-align:right">Doanh thu</th>
+              <th style="width:26%">Tỉ trọng</th>
+            </tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EVERY SALE, one row per drink. The cards above say how many;
+         this says which, which is the view somebody checks a till
+         against. Paged from the server, ten at a time.
+         ============================================================ -->
+    <div class="card" style="margin-top:16px">
+      <div class="chd">
+        <div>
+          <h2>Đơn hàng</h2>
+          <div class="csub" id="ordersSub">—</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="pager" id="pager"></div>
+      </div>
+      <div class="cbody">
+        <div class="orderlist" id="orderList"></div>
+        <div class="pager pager-bottom" id="pagerBottom"></div>
+      </div>
+    </div>
+
+    <p class="csub" style="margin-top:16px;color:var(--muted);font-size:12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6 6 0 0 1 3.6 10.8c-.5.4-.8 1-.8 1.6V18H9.2v-3.1c0-.6-.3-1.2-.8-1.6A6 6 0 0 1 12 2.5Z"/></svg> Một ly được tính là đã bán khi máy pha xong (vé QR chuyển sang
+      <b>used</b>). Đơn bị lỗi hoặc bị hủy được đếm riêng ở ô “Đơn lỗi”.
+    </p>
+  </main>
+</div>
+
+<script src="admin-guard.js"></script>
+<script src="menu-store.js"></script>
+<script src="report.js"></script>
+</body>
+</html>

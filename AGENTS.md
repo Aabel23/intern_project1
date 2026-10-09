@@ -37,7 +37,9 @@ khi người dùng yêu cầu thay đổi đó; các sửa lỗi và bổ sung t
 tiếp tục theo cấu trúc dưới đây.
 
 - Biến routing theo `đối_tượng_lớn_mục_tiêu_chính_hành_động`: Python
-  `MACHINE_MENU_UPDATE`, Dart `machineMenuUpdate`. Chi tiết trong MODULE_PATTERN.md.
+  `MACHINE_MENU_UPDATE`, Dart `machineMenuUpdate`; path tiếng Anh cùng thứ tự
+  `/<app|machine>/<đối_tượng>/<mục_tiêu>/<hành_động>`: `/app/machine/menu/update`.
+  Chi tiết trong MODULE_PATTERN.md.
 - Route HTTP nằm trong `server/config/routing.py`, chia nhóm bằng comment.
 - `server/main.py` import trực tiếp các module và mặc định chạy toàn bộ.
   Không thêm registry import động hoặc cơ chế chọn/tháo module.

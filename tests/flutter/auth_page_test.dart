@@ -50,10 +50,10 @@ void main() {
         contentLength = request.contentLength;
         final body = await utf8.decoder.bind(request).join();
         bodyLength = utf8.encode(body).length;
-        if (request.uri.path == '/app/dang-ky-nguoi-dung') {
+        if (request.uri.path == '/app/user/account/register') {
           received = jsonDecode(body);
         }
-        if (request.uri.path == '/app/xac-minh-otp') {
+        if (request.uri.path == '/app/user/otp/verify') {
           otpRequest = jsonDecode(body);
         }
         request.response.headers.contentType = ContentType.json;
@@ -61,7 +61,7 @@ void main() {
           jsonEncode({
             'valid': true,
             'registration_id': 'test-session',
-            'message': request.uri.path == '/app/xac-minh-otp'
+            'message': request.uri.path == '/app/user/otp/verify'
                 ? 'Tạo tài khoản thành công'
                 : 'Đã gửi mã xác minh tới email',
           }),
@@ -95,7 +95,7 @@ void main() {
             break;
           }
         }
-        expect(paths, ['/app/dang-ky-nguoi-dung']);
+        expect(paths, ['/app/user/account/register']);
         expect(contentLength, bodyLength);
         expect(contentLength, greaterThan(0));
         expect(received!['request_id'], matches(RegExp(r'^[a-f0-9]{32}$')));
@@ -118,7 +118,7 @@ void main() {
             break;
           }
         }
-        expect(paths, ['/app/dang-ky-nguoi-dung', '/app/xac-minh-otp']);
+        expect(paths, ['/app/user/account/register', '/app/user/otp/verify']);
         expect(otpRequest, {
           'registration_id': 'test-session',
           'code': '012345',
@@ -190,9 +190,9 @@ void main() {
       server.listen((request) async {
         final body = jsonDecode(await utf8.decoder.bind(request).join());
         received[request.uri.path] = body as Map<String, dynamic>;
-        final reply = request.uri.path == '/app/dang-nhap'
+        final reply = request.uri.path == '/app/user/session/login'
             ? {'valid': true, 'login_id': 'phien-1'}
-            : request.uri.path == '/app/may-cua-toi'
+            : request.uri.path == '/app/user/machine/list'
             ? {'valid': true, 'machines': []}
             : accept
             ? {
@@ -229,10 +229,10 @@ void main() {
         );
 
         await submit();
-        expect(received['/app/dang-nhap']!['username'], 'an');
-        expect(received['/app/dang-nhap']!['password'], 'matkhau');
-        final verify = received['/app/xac-minh-dang-nhap']!;
-        expect(verify['request_id'], received['/app/dang-nhap']!['request_id']);
+        expect(received['/app/user/session/login']!['username'], 'an');
+        expect(received['/app/user/session/login']!['password'], 'matkhau');
+        final verify = received['/app/user/session/verify']!;
+        expect(verify['request_id'], received['/app/user/session/login']!['request_id']);
         expect(verify['login_id'], 'phien-1');
         expect(find.text('Sai mật khẩu'), findsOneWidget);
         expect(find.byType(AuthPage), findsOneWidget);
@@ -242,11 +242,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(MainDashboard), findsOneWidget);
         // Dashboard gọi API bằng đúng token vừa đăng nhập.
-        for (var i = 0; i < 100 && received['/app/may-cua-toi'] == null; i++) {
+        for (var i = 0; i < 100 && received['/app/user/machine/list'] == null; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 20));
           await tester.pump();
         }
-        expect(received['/app/may-cua-toi']!['token'], 'token-1');
+        expect(received['/app/user/machine/list']!['token'], 'token-1');
       } finally {
         await server.close(force: true);
         HttpOverrides.global = previous;
