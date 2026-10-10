@@ -20,7 +20,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-MACHINE_DIR = Path(__file__).resolve().parents[2] / "machine"
+MACHINE_DIR = Path(__file__).resolve().parents[2] / "version1.1" / "machine"
 MACHINE_PACKAGES = ("config", "server_connection", "menu_sync", "ingredient_sync")
 INGREDIENTS = {"ingredients": [{"ingredient_id": 1, "name": "Sữa", "amount": 500, "max_gram": 1000,
                                 "max_set": True, "pump_no": 1, "in_stock": True}]}

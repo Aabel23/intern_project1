@@ -54,7 +54,7 @@ class StartpointTest(unittest.TestCase):
 
     def test_services_share_one_port(self):
         for path in ('/app/user/account/register', '/app/user/otp/send', '/app/user/otp/verify',
-                     '/app/user/session/login', '/app/user/session/verify'):
+                     '/app/user/session/login'):
             status, data = self.request(path, {})
             self.assertEqual(status, 400)
             self.assertFalse(data['valid'])

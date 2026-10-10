@@ -38,13 +38,11 @@ class SecurityScenarioTest(unittest.TestCase):
             p.start()
             self.addCleanup(p.stop)
         init_db()
-        user_login_process.LOGIN_STATES.clear()
         rate_limit.IP_REQUESTS.clear()
         self.server = main.create_server(("127.0.0.1", 0))
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
-        self.addCleanup(user_login_process.LOGIN_STATES.clear)
         self.addCleanup(rate_limit.IP_REQUESTS.clear)
 
     # ---------- tiện ích ----------

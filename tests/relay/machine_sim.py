@@ -20,7 +20,7 @@ import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MACHINE_DIR = ROOT / "machine"
+MACHINE_DIR = ROOT / "version1.1" / "machine"
 
 # Hai bảng tối giản: drink theo cột của machine/database/database.db (tab Menu đọc
 # thẳng SQLite qua menu_sync/machine_menu_store.py), ingredient theo database máy thật (MySQL).

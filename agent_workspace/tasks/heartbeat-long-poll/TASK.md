@@ -430,10 +430,10 @@ Gỡ mọi worktree (`git worktree list` chỉ còn cây chính). Vault: `STATUS
 
 | ID | Phụ thuộc | Agent | Trạng thái + bằng chứng |
 |---|---|---|---|
-| HB-00 | — | operator | ○ |
-| HB-01 | HB-00 | T1 | ○ |
-| HB-02 | HB-01 | C1 | ○ |
-| HB-03 | HB-01 | T1 | ○ |
+| HB-00 | — | operator | ✓ 10/10: nhánh `refactor/heartbeat-long-poll`, plan commit `3994f09`; baseline `91c8cdd` 70 test, failures=1, errors=25. Push lỗi: máy chưa có credential GitHub |
+| HB-01 | HB-00 | T1 | ✓ 10/10: 4 file đúng bảng; operator chạy lại G0: 70 test, `errors=7, expected failures=6`, không failure |
+| HB-02 | HB-01 | C1 | → đang làm (lane-c1) |
+| HB-03 | HB-01 | T1 | → đang làm (lane-t1) |
 | HB-04 | HB-02, HB-03 | operator | ○ |
 | HB-05 | HB-04 | T2 | ○ |
 | HB-06 | HB-04 (+HB-05 cho phần S13) | R1, K1 | ○ |
