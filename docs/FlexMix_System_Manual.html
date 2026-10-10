@@ -27,7 +27,7 @@
       <h1>Manual hệ thống FlexMix</h1>
       <p class="lead">Cách vận hành và luồng dữ liệu giữa app Android, server và máy pha trong phiên bản hiện tại của dự án.</p>
     </div>
-    <div class="meta"><strong>Đối tượng:</strong> người dùng, người vận hành, người phát triển<br><strong>Cập nhật:</strong> 06/10/2026 · <strong>Nguồn:</strong> mã nguồn và README trong repo</div>
+    <div class="meta"><strong>Đối tượng:</strong> người dùng, người vận hành, người phát triển<br><strong>Cập nhật:</strong> 10/10/2026 · <strong>Nguồn:</strong> mã nguồn và README trong repo</div>
   </header>
 
   <section class="overview" id="tong-quan">
@@ -61,6 +61,16 @@ python machine_qr.py --from-env
 cd machine
 python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>python3 -m machine.pairing.machine_bluetooth_pair</code> trên Raspberry Pi.</p><div class="src"><a href="machine/README.md">machine/README.md</a> · <a href="machine/pairing/README.md">machine/pairing/README.md</a></div></article>
           <article class="card full"><h3>3. Cài và kết nối app</h3><p>Build từ <code>app/flutter_app</code> với địa chỉ server mà điện thoại truy cập được. Sau khi mở app: đăng ký tài khoản và xác minh OTP, đăng nhập, vào tab <strong>Máy</strong> để quét QR hoặc ghép Bluetooth. Nếu không có Raspberry Pi, các công cụ mô phỏng nằm trong <a href="tests/README.md">tests/README.md</a>.</p><pre><code>flutter build apk --release --dart-define=SERVER_URL=http://&lt;IP server&gt;:8000</code></pre><div class="src"><a href="app/flutter_app/README.md">app/flutter_app/README.md</a></div></article>
+          <article class="card full"><h3>4. Nạp app lên điện thoại qua USB</h3><p>Dùng cho điện thoại Android. Máy tính cần <code>adb</code> (có sẵn trong Android SDK <code>platform-tools</code>).</p><ol><li>Trên điện thoại, vào <strong>Cài đặt → Thông tin điện thoại</strong>, chạm 7 lần vào <strong>Số hiệu bản tạo</strong> để bật Tùy chọn nhà phát triển.</li><li>Vào <strong>Tùy chọn nhà phát triển</strong> rồi bật <strong>Gỡ lỗi USB</strong>.</li><li>Cắm cáp USB (loại truyền dữ liệu, không phải cáp chỉ sạc). Khi điện thoại hỏi có cho phép gỡ lỗi USB không, chọn <strong>Cho phép</strong>.</li><li>Kiểm tra kết nối: máy phải hiện với trạng thái <code>device</code>. Nếu hiện <code>unauthorized</code>, mở khóa điện thoại và chấp nhận lại hộp thoại.</li><li>Cài APK đã build, hoặc để Flutter tự build và cài.</li></ol><pre><code>adb devices
+
+# cài file APK đã build (chạy trong app/flutter_app)
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+
+# hoặc: build rồi cài bản release lên máy đang cắm
+flutter install
+
+# hoặc: chạy bản debug, có hot reload và log
+flutter run --dart-define=SERVER_URL=http://&lt;IP server&gt;:8000</code></pre><p>Không có cáp thì có thể gửi file APK sang điện thoại (Zalo, Drive, email…), mở file và cho phép <strong>cài ứng dụng không rõ nguồn gốc</strong>.</p><div class="note"><strong>Lỗi thường gặp</strong><code>INSTALL_FAILED_UPDATE_INCOMPATIBLE</code>: điện thoại đang có bản app ký bằng khóa khác (ví dụ bản debug và bản release). Gỡ app cũ bằng <code>adb uninstall com.example.simple_app</code> hoặc gỡ trên điện thoại, rồi cài lại. Nếu <code>adb devices</code> không thấy máy, thử đổi cáp hoặc cổng USB, rồi chạy <code>adb kill-server</code> và <code>adb devices</code>.</div><div class="src"><a href="app/flutter_app/README.md">app/flutter_app/README.md</a></div></article>
         </div>
         <div class="note red"><strong>Bí mật máy</strong>Product key là thông tin đăng ký và xác thực của máy. Giữ file <code>machine.env</code> ngoài git; không chia sẻ key hoặc ảnh QR đăng ký công khai.</div>
       </section>
