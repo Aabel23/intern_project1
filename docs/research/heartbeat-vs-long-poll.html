@@ -1,0 +1,768 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heartbeat hay long-poll</title>
+<meta name="description" content="So sánh hai cách server biết máy pha còn online: heartbeat riêng và suy từ long-poll, kèm case study và khuyến nghị.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.9143)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<style>
+  .pill.g{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+  .verdict{display:grid; gap:4px}
+  ul.pc{margin:0; padding-left:1.2em; display:grid; gap:6px; max-width:74ch}
+  ul.pc li::marker{color:var(--accent-ink)}
+  .pc-box{border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:14px 18px; display:grid; gap:8px; align-content:start}
+  .dg-main{align-content:start}
+  .pc-box h4{margin:0}
+  .pc-box.plus{border-color:var(--ok)}
+  .pc-box.minus{border-color:var(--red)}
+  .src-list{font-family:var(--sans); font-size:13px; margin:0; padding-left:1.2em; display:grid; gap:4px; color:var(--ink-2)}
+  .src-list a{word-break:break-all}
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">So sánh thiết kế · project1_app</div>
+      <h1>Máy pha báo “còn sống” thế nào: heartbeat riêng hay suy ra từ long-poll</h1>
+      <p class="lead">Hai cách để server biết máy online. Cách A (đang chạy) dùng một thread heartbeat 5 s chạy song song. Cách B bỏ heartbeat, suy online từ chính vòng long-poll và lệnh máy đang làm. Trang này đặt hai cách cạnh nhau trên code thật, đối chiếu với các hệ thống ngoài và đưa ra lựa chọn.</p>
+    </div>
+    <div class="meta">
+      <span><b>Nguồn:</b> <code>project1_app</code> · <code>07a54d0</code> + nhánh <code>feature/menu-image-cache</code></span>
+      <span><b>Phân tích:</b> 10/10/2026</span>
+      <span><b>Phạm vi:</b> server <code>machine_link</code>, <code>machine_transport</code> · máy <code>version1.1/machine</code></span>
+    </div>
+  </header>
+
+  <!-- 1 · Bức tranh toàn cục -->
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>App</span>
+        <span><i class="sw proc"></i>Tiến trình</span>
+        <span><i class="sw hot"></i>Điểm nóng</span>
+        <span><i class="sw store"></i>Trạng thái RAM</span>
+        <span><i class="ln"></i>Đường đi chính (số = thứ tự)</span>
+        <span><i class="ln g"></i>Gọi nội bộ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1000 300" role="img" aria-label="Máy có hai luồng: thread heartbeat và vòng lệnh; server ghi giờ heartbeat vào RAM, is_online quyết định app có gửi được lệnh hay không">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+<rect class="zn" x="16" y="40" width="290" height="250" rx="12"/>
+<text x="18" y="30" class="zt">MÁY PHA · version1.1/machine</text>
+<g class="nd proc"><rect x="40" y="70" width="240" height="56" rx="8"/>
+<text x="160" y="94" class="tt" text-anchor="middle">Thread heartbeat</text>
+<text x="160" y="111" class="tmono" text-anchor="middle">machine_server_heartbeat.py · 5 s</text></g>
+<g class="nd hot"><rect x="40" y="170" width="240" height="90" rx="8"/>
+<text x="160" y="194" class="tt" text-anchor="middle">Vòng lệnh tuần tự</text>
+<text x="160" y="212" class="tmono" text-anchor="middle">poll() → handle_command() → reply()</text>
+<text x="160" y="232" class="thot" text-anchor="middle">không poll khi đang chạy lệnh</text>
+<text x="160" y="249" class="tn" text-anchor="middle">main.py:57-62</text></g>
+
+<rect class="zn" x="350" y="40" width="330" height="250" rx="12"/>
+<text x="352" y="30" class="zt">SERVER · project1_app/server</text>
+<g class="nd proc"><rect x="375" y="70" width="280" height="56" rx="8"/>
+<text x="515" y="94" class="tt" text-anchor="middle">machine_link</text>
+<text x="515" y="111" class="tmono" text-anchor="middle">heartbeat · poll · send_result</text></g>
+<g class="nd store"><rect x="375" y="150" width="280" height="56" rx="8"/>
+<text x="515" y="174" class="tt" text-anchor="middle">machine_transport (RAM)</text>
+<text x="515" y="191" class="tmono" text-anchor="middle">LAN_HEARTBEAT_CUOI · HOP_THU · DANG_CHO</text></g>
+<g class="nd hot"><rect x="375" y="226" width="280" height="54" rx="8"/>
+<text x="515" y="248" class="tt" text-anchor="middle">is_online()</text>
+<text x="515" y="265" class="ts" text-anchor="middle">seen &lt; 15 s · cổng chặn của send()</text></g>
+
+<rect class="zn" x="724" y="40" width="260" height="250" rx="12"/>
+<text x="726" y="30" class="zt">APP FLUTTER</text>
+<g class="nd ui"><rect x="748" y="70" width="212" height="56" rx="8"/>
+<text x="854" y="94" class="tt" text-anchor="middle">Danh sách máy</text>
+<text x="854" y="111" class="ts" text-anchor="middle">status/get cho từng máy</text></g>
+<g class="nd ui"><rect x="748" y="214" width="212" height="56" rx="8"/>
+<text x="854" y="238" class="tt" text-anchor="middle">Lệnh menu · kho · ảnh</text>
+<text x="854" y="255" class="ts" text-anchor="middle">send() · chờ ≤ 20 s</text></g>
+
+<path class="e main" d="M280,98 L375,98" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="327" cy="98" r="9.5"/><text x="327" y="101.8" text-anchor="middle">1</text></g>
+<path class="e" d="M515,126 L515,150" marker-end="url(#ag)"/>
+<text x="522" y="142" class="tmono2">mark_seen()</text>
+<path class="e" d="M515,206 L515,226" marker-end="url(#ag)"/>
+<path class="e dash" d="M748,112 L705,112 L705,236 L655,236" marker-end="url(#ag)"/>
+<path class="e main" d="M748,262 L655,262" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="690" cy="262" r="9.5"/><text x="690" y="265.8" text-anchor="middle">2</text></g>
+<path class="e main" d="M375,198 L280,198" marker-start="url(#aa)" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="327" cy="198" r="9.5"/><text x="327" y="201.8" text-anchor="middle">3</text></g>
+<text x="327" y="186" class="tl" text-anchor="middle">take / result</text>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Máy nằm sau router nên chỉ máy gọi lên server được. ① Thread heartbeat gửi mỗi 5 s; server ghi giờ vào <code>LAN_HEARTBEAT_CUOI</code>. ② App gửi lệnh; <code>send()</code> hỏi <code>is_online()</code> trước, máy “offline” thì trả 503 ngay. ③ Vòng lệnh của máy long-poll lấy lệnh, chạy xong thì trả kết quả. Điểm nóng: hiện chỉ đường ① quyết định online, còn đường ③ (thứ thực sự nhận lệnh) không được tính. Cách B đảo lại: ③ quyết định, ① bỏ đi.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Ba tình huống trên dòng thời gian</a></li>
+        <li><a href="#hai-cach">3. Hai phương thức</a></li>
+        <li class="sub"><a href="#c-hb">3.1 A · Heartbeat riêng</a></li>
+        <li class="sub"><a href="#c-lp">3.2 B · Suy từ long-poll</a></li>
+        <li><a href="#so-sanh">4. So sánh theo tình huống</a></li>
+        <li><a href="#case">5. Case study</a></li>
+        <li><a href="#khuyen-nghi">6. Khuyến nghị</a></li>
+        <li><a href="#ghi-chu">7. Thông số và ghi chú</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <!-- 2 · Dòng thời gian -->
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Ba tình huống trên dòng thời gian (cách A, hiện trạng)</h2></div>
+      <p class="prose">Sơ đồ đi qua ba giai đoạn theo thứ tự: máy rảnh, máy chạy một lệnh bình thường, và vòng lệnh bị treo. Mũi tên liền là request; mũi tên đứt là response. Chú ý cột “Thread heartbeat” không đổi gì giữa ba giai đoạn. Đó chính là vấn đề.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant HB as Thread heartbeat
+  participant L as Vòng lệnh
+  participant S as Server (transport)
+  participant A as App
+  Note over HB,A: Giai đoạn 1 · máy rảnh
+  L->>S: poll() · server giữ ≤ 8 s
+  HB->>S: heartbeat → mark_seen()
+  S-->>L: lenh = null · poll lại ngay
+  Note over HB,A: Giai đoạn 2 · lệnh bình thường
+  A->>S: nhan_menu
+  S->>S: is_online()? có heartbeat < 15 s → được
+  S-->>L: take() trả lệnh
+  Note over L: chạy lệnh · không poll
+  HB->>S: heartbeat (vẫn đều 5 s)
+  L->>S: send_result()
+  S-->>A: 200 + menu
+  Note over HB,A: Giai đoạn 3 · vòng lệnh treo (vd MySQL lock trong nap_kho)
+  A->>S: nap_kho
+  S-->>L: take() trả lệnh
+  Note over L: treo, không bao giờ trả
+  HB->>S: heartbeat → máy vẫn “online”
+  A->>S: lệnh tiếp theo → vẫn xếp hàng
+  S-->>A: 502 sau 20 s · lặp lại mãi
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: <code>version1.1/machine/main.py</code> (<code>run()</code> khởi thread heartbeat rồi chạy vòng lệnh), <code>server/lib/machine/machine_transport.py</code> (<code>send</code>, <code>take</code>, <code>is_online</code>). Ở giai đoạn 2 heartbeat có ích: nó lấp khoảng máy không poll. Ở giai đoạn 3 nó gây hại: báo online cho một máy không còn nhận lệnh.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>Thread heartbeat</td><td><code>version1.1/machine/server_connection/machine_server_heartbeat.py</code></td><td>Gửi <code>{product_key}</code> tới <code>/machine/heartbeat/send</code> mỗi 5 s, timeout 5 s, lỗi thì in log rồi thử lại</td></tr>
+            <tr><td>Vòng lệnh</td><td><code>version1.1/machine/main.py</code> · <code>poll()</code>, <code>handle_command()</code>, <code>reply()</code></td><td>Lấy một lệnh, chạy tuần tự, gửi kết quả; lỗi kết nối thì ngủ 1 s</td></tr>
+            <tr><td>heartbeat / poll / send_result</td><td><code>server/service/machine_link/machine_link_process.py</code></td><td>Cả ba đều xác minh <code>product_key</code>; chỉ <code>heartbeat()</code> gọi <code>mark_seen()</code></td></tr>
+            <tr><td>is_online, send, take</td><td><code>server/lib/machine/machine_transport.py</code></td><td><code>send()</code> trả 503 nếu offline, ngược lại xếp lệnh vào <code>HOP_THU</code> và chờ ≤ 20 s</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="hai-cach">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Hai phương thức</h2></div>
+
+      <article class="comp" id="c-hb">
+        <header><h3>3.1 · A · Heartbeat riêng (hiện trạng)</h3><div class="src"><code>machine_server_heartbeat.py</code> · <code>machine_link_process.py:28-35</code> · <code>machine_transport.py:30-42</code> · Sơ đồ: luồng quyết định · 1 câu hỏi</div></header>
+        <h4>Làm gì</h4>
+        <p>Máy chạy một thread riêng, độc lập với vòng lệnh, gửi request mỗi 5 s. Server ghi thời điểm nhận. Máy “online” nếu lần heartbeat cuối cách đây dưới 15 s (bỏ lỡ tối đa 2 nhịp). Online ở đây có nghĩa là <b>process máy còn sống và có mạng</b>, không có nghĩa là máy đang nhận được lệnh.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  Q["is_online()"] --> D1{"heartbeat cuối<br/>dưới 15 s?"}
+  D1 -- "có" --> ON["online<br/>send() xếp lệnh"]
+  D1 -- "không" --> OFF["offline<br/>send() trả 503"]
+  class Q proc
+  class D1 dec
+  class ON ok
+  class OFF bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>is_online()</code> tại <code>machine_transport.py:40-42</code>. Chỉ một tín hiệu được dùng; poll và send_result không đóng góp gì dù đã xác minh cùng một <code>product_key</code>.</figcaption>
+        </figure>
+        <div class="two">
+          <div class="pc-box plus"><h4>Điểm mạnh</h4>
+            <ul class="pc">
+              <li>Đơn giản, đã chạy và có test. Ý nghĩa dễ giải thích: “có tin trong 15 s”.</li>
+              <li>Không phụ thuộc lệnh dài hay ngắn: máy đang bận vẫn hiện online.</li>
+              <li>Tách được “process sống” khỏi “vòng lệnh”, nếu sau này muốn chẩn đoán máy treo.</li>
+            </ul>
+          </div>
+          <div class="pc-box minus"><h4>Điểm yếu</h4>
+            <ul class="pc">
+              <li><b>Báo sai đúng ca nguy hiểm:</b> vòng lệnh treo mà thread heartbeat vẫn chạy, nên máy hiện online, <code>send()</code> vẫn nhận lệnh và mỗi lệnh chờ đủ 20 s rồi 502.</li>
+              <li>Thêm khoảng 0,2 req/s mỗi máy (60% lưu lượng lúc rảnh). Mỗi heartbeat tốn một thread server, một SHA-256 và một truy vấn SQLite.</li>
+              <li>Thêm một thread thường trực trên máy, thêm route, thêm cấu hình phải giữ đồng bộ hai phía.</li>
+              <li>Bỏ phí tín hiệu sẵn có: poll đã chứng minh máy sống mỗi ≤ 8 s.</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="comp" id="c-lp">
+        <header><h3>3.2 · B · Suy online từ long-poll và lệnh đã lấy (đề xuất)</h3><div class="src">sửa <code>machine_transport.py</code>, <code>machine_link_process.py</code> · Sơ đồ: luồng quyết định + vòng đời trạng thái · 3 câu hỏi</div></header>
+        <h4>Làm gì</h4>
+        <p>Không cần request riêng. Server tự biết máy còn sống qua ba dấu vết đã có: máy đang treo một poll, máy vừa poll hoặc vừa trả kết quả, hoặc máy đang chạy một lệnh nó đã lấy. Online lúc này có nghĩa là <b>vòng lệnh của máy đang chạy</b>, đúng thứ <code>send()</code> cần biết.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  Q["is_online()"] --> D1{"① Có poll<br/>đang mở?"}
+  D1 -- "có" --> ON1["online · rảnh"]
+  D1 -- "không" --> D2{"② poll/result cuối<br/>dưới 15 s?"}
+  D2 -- "có" --> ON2["online · rảnh"]
+  D2 -- "không" --> D3{"③ Có lệnh đã take<br/>dưới 20 s?"}
+  D3 -- "có" --> BUSY["online · bận"]
+  D3 -- "không" --> OFF["offline · 503"]
+  class Q proc
+  class D1,D2,D3 dec
+  class ON1,ON2 ok
+  class BUSY proc
+  class OFF bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các câu hỏi</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Có poll đang mở?</td></tr>
+                <tr><td>Ghi</td><td>Đếm số poll đang chờ trong <code>take()</code>, tăng khi vào, giảm trong <code>finally</code></td></tr>
+                <tr><td>Vì sao</td><td>Lúc rảnh máy gần như luôn treo một poll; đây là bằng chứng mạnh nhất</td></tr>
+                <tr class="grp"><td colspan="2">② poll/result cuối &lt; 15 s?</td></tr>
+                <tr><td>Ghi</td><td><code>mark_seen()</code> trong <code>poll()</code> ngay sau xác minh key, và trong <code>send_result()</code></td></tr>
+                <tr><td>Không ghi</td><td>Lúc poll trả về: đó là đồng hồ server, máy có thể đã chết giữa 8 s chờ</td></tr>
+                <tr class="grp"><td colspan="2">③ Có lệnh đã take &lt; 20 s?</td></tr>
+                <tr><td>Ghi</td><td>Chỉ mục mới <code>machine_id → lệnh đang chạy</code>, ghi trong <code>take()</code>, xoá khi có kết quả hoặc hết <code>COMMAND_TIMEOUT</code></td></tr>
+                <tr><td>Bẫy</td><td>Không dùng thẳng <code>DANG_CHO</code>: nó ghi lệnh <i>trước khi</i> máy lấy, nên máy chết mà app cứ gửi lệnh thì vẫn “online”</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: đề xuất dựa trên <code>machine_transport.py</code> (<code>take</code>, <code>send</code>, <code>DANG_CHO</code>) và <code>machine_link_process.py</code> (<code>poll</code>, <code>send_result</code>). “Đã take” nghĩa là máy đã thực sự nhận lệnh qua long-poll, khác với lệnh mới nằm trong hộp thư.</figcaption>
+        </figure>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> unknown: server khởi động<br/>RAM trống
+  unknown --> ranh: poll()<br/>máy hỏi lệnh
+  ranh --> ban: take() trả lệnh<br/>máy bắt đầu chạy
+  ban --> ranh: send_result()<br/>rồi poll lại
+  ranh --> offline: quá 15 s<br/>không poll
+  ban --> offline: quá 20 s<br/>không có kết quả
+  offline --> ranh: poll()<br/>máy quay lại
+  unknown --> offline: quá 15 s<br/>không poll
+  class unknown muted
+  class ranh ok
+  class ban proc
+  class offline bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: vòng đời đề xuất. <code>unknown</code> là tuỳ chọn (gợi ý từ nghiên cứu ngoài): 15 s đầu sau khi server khởi động chưa đủ dữ liệu, nên không vội báo offline. Hai trạng thái <code>ranh</code> và <code>ban</code> đều tính là online với <code>send()</code>.</figcaption>
+        </figure>
+        <div class="two">
+          <div class="pc-box plus"><h4>Điểm mạnh</h4>
+            <ul class="pc">
+              <li><b>Online trung thực:</b> chỉ online khi vòng lệnh thật sự chạy. Vòng treo thì offline sau ≤ 20 s, lệnh sau bị 503 ngay thay vì chờ 20 s.</li>
+              <li>Bớt khoảng 62% request lúc rảnh (0,325 → 0,125 req/s mỗi máy; 100 máy bớt ~20 req/s). Máy bớt một thread.</li>
+              <li>Phục hồi nhanh sau khi server restart (~1 s thay vì ≤ 5 s), vì poll lỗi thì thử lại sau 1 s.</li>
+              <li>Phân biệt được rảnh và bận, mở đường cho app hiển thị “đang pha”.</li>
+              <li>Net bớt ~30 dòng code (ước lượng).</li>
+            </ul>
+          </div>
+          <div class="pc-box minus"><h4>Điểm yếu</h4>
+            <ul class="pc">
+              <li>Logic online phức tạp hơn: ba điều kiện, thêm bộ đếm poll và chỉ mục lệnh, phải đúng khoá (<code>mark_seen</code> không được gọi khi đang giữ <code>CO_LENH</code>).</li>
+              <li>Lệnh dài hơn 20 s sẽ thành offline. Hiện chưa có lệnh như vậy (lệnh đó cũng đã 502 với app), nhưng nếu sau này có thì phải thêm heartbeat theo lệnh.</li>
+              <li>Đổi ngữ nghĩa cổng của <code>send()</code>: 5 tính năng (<code>nhan_kho</code>, <code>nap_kho</code>, <code>nhan_menu</code>, <code>cap_nhat_menu</code>, <code>nhan_anh</code>) đều phụ thuộc. Sai là hỏng tính năng, không chỉ sai chấm xanh.</li>
+              <li>Phải triển khai theo thứ tự: server trước, máy sau. Máy mới gặp server cũ thì mọi lệnh 503.</li>
+              <li>~13 vị trí test dựa vào heartbeat phải sửa.</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="so-sanh">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>So sánh theo tình huống</h2></div>
+      <p class="prose">Mỗi hàng là một tình huống có thật hoặc có thể xảy ra. <span class="pill g">Đúng</span> nghĩa là trạng thái online khớp với việc máy nhận được lệnh; <span class="pill h">Chậm</span> là đúng nhưng trễ; <span class="pill r">Sai</span> là báo ngược thực tế.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tình huống</th><th>A · Heartbeat riêng</th><th>B · Suy từ long-poll</th></tr></thead>
+          <tbody>
+            <tr><td>Máy rảnh</td><td><span class="pill g">Đúng</span> heartbeat mỗi 5 s</td><td><span class="pill g">Đúng</span> luôn có poll đang mở</td></tr>
+            <tr><td>Lệnh ≤ 20 s (mọi lệnh hiện có)</td><td><span class="pill g">Đúng</span> thread riêng vẫn gửi</td><td><span class="pill g">Đúng</span> nhờ điều kiện ③ “lệnh đã take”</td></tr>
+            <tr><td>Lệnh &gt; 20 s (chưa có)</td><td><span class="pill g">Đúng</span> online, nhưng app đã nhận 502</td><td><span class="pill h">Offline</span> chủ ý, nhất quán với 502; cần heartbeat theo lệnh nếu có lệnh dài hợp lệ</td></tr>
+            <tr><td>Vòng lệnh treo, process còn sống</td><td><span class="pill r">Sai</span> online mãi; mọi lệnh chờ 20 s rồi 502</td><td><span class="pill g">Đúng</span> offline sau ≤ 20 s; lệnh sau 503 ngay</td></tr>
+            <tr><td>Mất điện / mất mạng</td><td><span class="pill h">≤ 15 s</span></td><td><span class="pill h">≤ 15 s</span> khi rảnh, ≤ 20 s khi đang chạy lệnh</td></tr>
+            <tr><td>Mạng chập chờn</td><td>Cần 1/3 heartbeat qua trong 15 s</td><td>Poll lỗi thử lại sau 1 s, mẫu dày hơn; nhấp nháy tương đương</td></tr>
+            <tr><td>Server restart</td><td>Online lại sau ≤ 5 s</td><td>Online lại sau ~1 s</td></tr>
+            <tr><td>Máy cũ (còn heartbeat) + server mới</td><td>—</td><td>Chạy được. Nếu đã xoá route: 404, máy in log mỗi 5 s, không crash</td></tr>
+            <tr><td>Máy mới (bỏ heartbeat) + server cũ</td><td>—</td><td><span class="pill r">Hỏng</span> mọi lệnh 503 → bắt buộc nâng server trước</td></tr>
+            <tr><td>Request lúc rảnh / máy</td><td class="num">0,325 req/s</td><td class="num">0,125 req/s (−62%)</td></tr>
+            <tr><td>“Online” nghĩa là</td><td>Process máy sống và có mạng</td><td>Vòng lệnh của máy đang chạy</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="case">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Case study: các hệ thống khác làm thế nào</h2></div>
+      <p class="prose">Hệ thống của ta là một dạng <b>worker long-poll</b>: thiết bị tự đi hỏi việc, làm xong thì báo kết quả. Ba hệ lớn cùng dạng này (Step Functions, Temporal, GitHub Actions runner) có cùng một mẫu, và mẫu đó gần với cách B hơn cách A.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hệ thống</th><th>Lấy việc</th><th>Báo còn sống</th><th>Bài học cho ta</th></tr></thead>
+          <tbody>
+            <tr><td><b>AWS Step Functions</b><br/>activity worker</td><td><code>GetActivityTask</code> long-poll, giữ ≤ 60 s</td><td><code>SendTaskHeartbeat</code> chỉ gửi <b>khi đang làm task</b>, theo <code>HeartbeatSeconds</code>. Heartbeat không kéo dài <code>Timeout</code> tổng.</td><td>Lúc rảnh, poll là đủ. Heartbeat gắn với một task cụ thể, không gắn với process.</td></tr>
+            <tr><td><b>Temporal</b><br/>activity worker</td><td>Poller long-poll task queue (~60 s)</td><td><code>RecordHeartbeat()</code> gọi <b>từ bên trong code activity</b>, có thể kèm tiến độ. Heartbeat timeout phát hiện activity kẹt nhanh hơn start-to-close. Huỷ task cũng đi qua heartbeat.</td><td>Heartbeat phát ra từ chính công việc nên treo là im. Thread riêng như cách A không làm được điều này.</td></tr>
+            <tr><td><b>GitHub Actions</b><br/>self-hosted runner</td><td>Long-poll ~50 s rồi nối lại</td><td>Khi đang chạy job: tác vụ nền gia hạn job lock mỗi phút (theo phân tích của Depot, không phải tài liệu chính thức).</td><td>Rảnh: poll. Bận: một “lease” gắn với job.</td></tr>
+            <tr><td><b>Engine.IO / Socket.IO</b></td><td>Long-polling hoặc WebSocket</td><td>Server ping, client pong (mặc định 25 s / 20 s), <b>trên cả transport long-polling</b>.</td><td>Ping đi trong cùng kênh với dữ liệu, không phải thread song song. Kênh của họ không có “lệnh đã giao” để suy ra, nên cần ping.</td></tr>
+            <tr><td><b>MQTT</b><br/>keepalive + LWT</td><td>Subscribe qua kết nối liên tục</td><td>PINGREQ chỉ gửi khi trong chu kỳ keepalive không có gói nào khác; broker cắt sau 1,5 × keepalive và phát Last Will.</td><td>Mọi lưu lượng đều là dấu hiệu sống; ping chỉ lấp lúc kênh im.</td></tr>
+            <tr><td><b>ThingsBoard</b></td><td>MQTT / HTTP / CoAP</td><td>Mọi telemetry, attribute, RPC đều là “activity”; inactive sau <code>inactivityTimeout</code>.</td><td>Như trên: không tách heartbeat thành kênh riêng.</td></tr>
+            <tr><td><b>Azure IoT Hub</b></td><td>MQTT / AMQP</td><td>Khuyên dùng “heartbeat pattern” ở tầng ứng dụng thay cho <code>connectionState</code> (có thể trễ tới 5 phút).</td><td>Heartbeat riêng hợp lý khi kênh sẵn có không cho tín hiệu sống đủ nhanh. Long-poll của ta thì có (≤ 8 s).</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Mẫu chung rút ra</b>Ở các hệ worker long-poll: <b>lúc rảnh, chính poll là tín hiệu sống</b>; <b>lúc bận, tín hiệu gắn với việc đang làm</b> (heartbeat theo task, gia hạn lease), phát ra từ chính công việc. Không hệ nào trong bảng dùng một thread heartbeat mù chạy song song với vòng xử lý, vì như vậy treo vẫn báo sống. Cách B là phiên bản tối giản của mẫu này: “lệnh đã take &lt; 20 s” thay cho heartbeat theo task, vì mọi lệnh hiện tại đều ngắn.</div>
+    </section>
+
+    <section id="khuyen-nghi">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Khuyến nghị</h2></div>
+      <p class="prose"><b>Chọn B cho <code>project1_app</code>.</b> Lý do chính không phải tiết kiệm tải, vốn khiêm tốn, mà là online sẽ khớp với việc máy nhận được lệnh, và <code>send()</code> dùng đúng câu đó làm cổng chặn. Triển khai theo ba pha để không lúc nào máy và server lệch nhau.</p>
+      <div class="phases"><span>Pha 1 · server</span><i>→</i><span>Pha 2 · máy</span><i>→</i><span class="x">Pha 3 · dọn route</span></div>
+      <ol class="steps">
+        <li><b>Pha 1, chỉ sửa server.</b> Thêm bộ đếm poll đang mở và chỉ mục lệnh đã take; gọi <code>mark_seen()</code> trong <code>poll()</code> (sau xác minh key) và <code>send_result()</code>; viết lại <code>is_online()</code> theo ba điều kiện. <b>Giữ nguyên route heartbeat</b>, vì máy cũ vẫn gửi và vẫn được tính. Bước này không đổi hợp đồng gói tin nào.</li>
+        <li><b>Sửa test cùng pha 1.</b> Các test gọi app trước khi máy poll phải đổi sang “poll trước”. Hai test <code>expectedFailure</code> SEC-02 và SEC-08 sẽ <b>pass giả</b> (404 làm assert đúng dù lỗ vẫn còn), phải viết lại. Harness <code>menu_crc_stress</code> đang dùng <code>self.machine.heartbeat</code>. Thêm test: lệnh chưa take không làm máy online; vòng treo thì offline sau 20 s; không deadlock khi poll và send song song.</li>
+        <li><b>Pha 2, sửa máy</b> (<code>version1.1/machine</code>, cần chủ dự án đồng ý vì nằm ngoài phạm vi giao thức): xoá thread heartbeat và hằng số. Nhờ pha 1, máy mới chạy được ngay với server đã nâng.</li>
+        <li><b>Pha 3:</b> xoá route <code>/machine/heartbeat/send</code> khi log không còn request heartbeat từ máy cũ. Cập nhật tài liệu (khoảng 18 file nhắc heartbeat, gồm <code>FlexMix_System_Manual.html</code>, các <code>*_FLOW.html</code>, README của <code>machine_link</code>).</li>
+        <li><b>Đi kèm, độc lập:</b> đưa <code>online</code>/<code>last_seen</code> vào gói <code>/app/user/machine/list</code> rồi đóng route status công khai (SEC-08). Tuỳ chọn: lưu <code>last_seen</code> vào DB tối đa 60 s một lần để app thấy “online X phút trước” sau khi server restart.</li>
+      </ol>
+      <div class="two">
+        <div class="pc-box"><h4>Khi nào vẫn nên dùng heartbeat</h4>
+          <ul class="pc">
+            <li>Có lệnh dài hợp lệ vượt <code>COMMAND_TIMEOUT</code>, vd pha cả mẻ mất vài phút. Khi đó dùng <b>heartbeat theo lệnh</b>: <code>handle_command</code> tự gửi <code>{id, tien_do}</code> trong lúc chạy, giống <code>SendTaskHeartbeat</code> của Step Functions. Đừng quay lại thread mù.</li>
+            <li>Kênh không cho tín hiệu sống đủ nhanh (poll giữ quá lâu, hoặc chuyển sang kênh khác không có lưu lượng định kỳ).</li>
+            <li>Cần phân biệt “process sống nhưng vòng treo” để chẩn đoán. Khi đó giữ heartbeat như một trạng thái riêng (“treo”), không gộp vào online.</li>
+          </ul>
+        </div>
+        <div class="pc-box"><h4>Khi nào nên nghĩ tới phương án nặng hơn</h4>
+          <ul class="pc">
+            <li>Chạy nhiều process server: trạng thái RAM bị chia cắt, cần Redis (last_seen + pub/sub đánh thức poll) hoặc sticky routing.</li>
+            <li>Hàng nghìn máy, cần lệnh dưới 1 s hoặc đẩy trạng thái realtime tới app: cân nhắc MQTT broker với keepalive + Last Will. Phải đổi firmware và vận hành broker.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Thông số và ghi chú</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Giá trị</th><th>Nơi khai báo</th><th>Dùng cho</th></tr></thead>
+          <tbody>
+            <tr><td><code>HEARTBEAT_INTERVAL_SECONDS</code></td><td class="num">5 s</td><td><code>version1.1/machine/config/routing.py:7</code></td><td>Nhịp heartbeat của máy (bỏ ở pha 2)</td></tr>
+            <tr><td><code>HEARTBEAT_TIMEOUT_SECONDS</code></td><td class="num">15 s</td><td><code>server/config/config.py:5</code></td><td>Ngưỡng online; cách B dùng lại cho điều kiện ②, nên đổi tên</td></tr>
+            <tr><td><code>POLL_WAIT_SECONDS</code></td><td class="num">8 s</td><td><code>server/config/config.py:8</code></td><td>Server giữ một poll tối đa; phải nhỏ hơn ngưỡng ②</td></tr>
+            <tr><td><code>COMMAND_TIMEOUT_SECONDS</code></td><td class="num">20 s</td><td><code>server/config/config.py:6</code></td><td><code>send()</code> chờ kết quả; giới hạn điều kiện ③</td></tr>
+            <tr><td>Timeout HTTP heartbeat</td><td class="num">5 s</td><td><code>machine_server_heartbeat.py</code></td><td><code>urlopen(..., timeout=5)</code></td></tr>
+            <tr><td>Nghỉ khi poll lỗi</td><td class="num">1 s</td><td><code>version1.1/machine/main.py</code> · <code>poll()</code></td><td>Tốc độ phục hồi sau khi server restart</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note crit"><b>Nghiêm trọng</b>Với cách A hiện tại, máy có vòng lệnh treo vẫn hiện online vô thời hạn, và mọi thao tác của app (đọc menu, nạp kho, ảnh) đều chờ đủ 20 s rồi báo “Máy chưa trả kết quả”. Người dùng không có cách nào biết máy đã treo.</div>
+      <div class="note"><b>Lưu ý</b>Không lấy “có lệnh trong <code>DANG_CHO</code>” làm điều kiện online. <code>send()</code> ghi lệnh vào đó <i>trước khi</i> máy lấy (<code>machine_transport.py:55-58</code>), nên máy chết mà app gửi lệnh liên tục thì máy vẫn “online” và request chờ 20 s thay vì 503 ngay.</div>
+      <div class="note"><b>Lưu ý</b>Các con số tải (0,325 → 0,125 req/s, −62%), số dòng code và số vị trí test là ước lượng từ hằng số và đọc code, chưa đo. Các mô tả về GitHub Actions runner lấy từ phân tích của bên thứ ba.</div>
+      <div class="note"><b>Ngoài phạm vi</b>Server đã gửi lệnh <code>nhan_anh</code> (nhánh ảnh món) nhưng bảng <code>COMMANDS</code> của máy chưa có lệnh này, nên máy sẽ trả “Lệnh không hợp lệ”.</div>
+      <h3 style="font-size:18px;margin-top:8px">Nguồn tham khảo</h3>
+      <ul class="src-list">
+        <li>AWS Step Functions · <a href="https://docs.aws.amazon.com/step-functions/latest/apireference/API_GetActivityTask.html">GetActivityTask</a> · <a href="https://docs.aws.amazon.com/step-functions/latest/apireference/API_SendTaskHeartbeat.html">SendTaskHeartbeat</a></li>
+        <li>Temporal · <a href="https://docs.temporal.io/design-patterns/long-running-activity">Long-running activity &amp; heartbeats</a> · <a href="https://temporal.io/blog/activity-timeouts">4 loại activity timeout</a></li>
+        <li>GitHub Actions · <a href="https://docs.github.com/en/enterprise-server@3.13/actions/concepts/runners/communicating-with-self-hosted-runners">Communicating with self-hosted runners</a> · <a href="https://depot.dev/blog/github-actions-runner-architecture-part-1-the-listener">Depot: runner listener (bên thứ ba)</a></li>
+        <li>Socket.IO · <a href="https://socket.io/docs/v4/engine-io-protocol/">Engine.IO protocol</a> · <a href="https://socket.io/docs/v3/how-it-works/">How it works</a></li>
+        <li>MQTT · <a href="https://www.hivemq.com/mqtt-essentials-part-9-last-will-and-testament">HiveMQ: Last Will and Testament</a> · <a href="https://www.emqx.com/blog/use-of-mqtt-will-message">EMQX: Will Delay Interval</a></li>
+        <li>ThingsBoard · <a href="https://thingsboard.io/docs/user-guide/device-connectivity-status">Device connectivity status</a></li>
+        <li>Azure IoT Hub · <a href="https://learn.microsoft.com/azure/iot-hub/monitor-device-connection-state">Monitor device connection state</a></li>
+        <li>OWASP · <a href="https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/">API1:2023 Broken Object Level Authorization</a> (route status không token)</li>
+      </ul>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. “Mã nguồn” chép mã; “Phóng to” mở kích thước thật. Phân tích dựa trên ba báo cáo agent ngày 10/10/2026 và đọc code trực tiếp.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>
