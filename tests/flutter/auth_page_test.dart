@@ -178,7 +178,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Đăng nhập gửi username/password rồi hỏi kết quả xác minh', (
+  testWidgets('Đăng nhập gửi username/password, nhận token ngay', (
     tester,
   ) async {
     await tester.runAsync(() async {
@@ -190,9 +190,7 @@ void main() {
       server.listen((request) async {
         final body = jsonDecode(await utf8.decoder.bind(request).join());
         received[request.uri.path] = body as Map<String, dynamic>;
-        final reply = request.uri.path == '/app/user/session/login'
-            ? {'valid': true, 'login_id': 'phien-1'}
-            : request.uri.path == '/app/user/machine/list'
+        final reply = request.uri.path == '/app/user/machine/list'
             ? {'valid': true, 'machines': []}
             : accept
             ? {
@@ -231,9 +229,7 @@ void main() {
         await submit();
         expect(received['/app/user/session/login']!['username'], 'an');
         expect(received['/app/user/session/login']!['password'], 'matkhau');
-        final verify = received['/app/user/session/verify']!;
-        expect(verify['request_id'], received['/app/user/session/login']!['request_id']);
-        expect(verify['login_id'], 'phien-1');
+        expect(received.containsKey('/app/user/session/verify'), isFalse);
         expect(find.text('Sai mật khẩu'), findsOneWidget);
         expect(find.byType(AuthPage), findsOneWidget);
 

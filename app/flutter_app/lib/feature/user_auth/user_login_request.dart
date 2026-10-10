@@ -1,29 +1,16 @@
 import 'package:simple_app/config/routing.dart';
 
-import 'dart:math';
-
 import 'package:simple_app/core/http_json.dart';
 
-// Đăng nhập hai bước: gửi username/password tới /app/user/session/login, rồi hỏi
-// kết quả xác minh của server tại /app/user/session/verify.
+// Đăng nhập một bước: gửi username/password tới /app/user/session/login, server
+// kiểm rồi trả token ngay trong cùng response.
 Future<Map<String, dynamic>> requestLogin(
   String serverUrl, {
   required String username,
   required String password,
-}) async {
-  final random = Random.secure();
-  final requestId = List.generate(
-    16,
-    (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
-  ).join();
-  final sent = await postJson(serverUrl, Routes.userSessionLogin, {
-    'request_id': requestId,
+}) {
+  return postJson(serverUrl, Routes.userSessionLogin, {
     'username': username,
     'password': password,
-  });
-  if (sent['valid'] == false) return sent;
-  return postJson(serverUrl, Routes.userSessionVerify, {
-    'request_id': requestId,
-    if (sent['login_id'] is String) 'login_id': sent['login_id'] as String,
   });
 }

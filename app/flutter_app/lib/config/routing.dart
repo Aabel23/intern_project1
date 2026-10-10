@@ -7,7 +7,6 @@ abstract final class Routes {
   static const userOtpSend = '/app/user/otp/send';
   static const userOtpVerify = '/app/user/otp/verify';
   static const userSessionLogin = '/app/user/session/login';
-  static const userSessionVerify = '/app/user/session/verify';
   static const userSessionLogout = '/app/user/session/logout';
 
   // Machine registration
