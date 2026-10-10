@@ -38,9 +38,9 @@
         <div class="arrow" aria-hidden="true">↔</div>
         <div class="node server"><small>HTTP :8000</small><h3>Server Python</h3><p>Kiểm phiên và quyền; nhận request; chuyển lệnh, chờ kết quả.</p></div>
         <div class="arrow" aria-hidden="true">↔</div>
-        <div class="node machine"><small>RASPBERRY PI</small><h3>Máy FlexMix</h3><p>Chủ động heartbeat, hỏi lệnh, xử lý menu/kho và trả kết quả.</p></div>
+        <div class="node machine"><small>RASPBERRY PI</small><h3>Máy FlexMix</h3><p>Chủ động hỏi lệnh (long-poll), xử lý menu/kho và trả kết quả.</p></div>
       </div>
-      <div class="map-stores"><span><strong>Ở server:</strong> SQLite lưu tài khoản, phiên, máy, quyền và mã mời; RAM giữ heartbeat và hộp thư lệnh.</span><span><strong>Ở máy:</strong> lưu menu và kho; xử lý lệnh rồi trả kết quả cho server.</span></div>
+      <div class="map-stores"><span><strong>Ở server:</strong> SQLite lưu tài khoản, phiên, máy, quyền và mã mời; RAM giữ trạng thái online và hộp thư lệnh.</span><span><strong>Ở máy:</strong> lưu menu và kho; xử lý lệnh rồi trả kết quả cho server.</span></div>
       <p class="map-note">App dùng token của người dùng. Máy dùng product key. Server không lưu menu/kho của máy; máy chủ động kết nối tới server, không cần mở API trên máy.</p>
     </div>
     <div class="legend"><span class="l-app">Giao diện</span><span class="l-server">Điều phối</span><span class="l-store">Dữ liệu</span><span class="l-machine">Thiết bị</span></div>
@@ -94,7 +94,7 @@ python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>pytho
         </figure>
         <figure class="diagram">
           <h3>3.2 · Một request Menu/Kho đi qua relay</h3>
-          <div class="diagram-scroll"><svg viewBox="0 0 950 610" width="950" role="img" aria-label="Biểu đồ tuần tự: máy heartbeat; app gửi yêu cầu menu hoặc kho; server kiểm quyền, xếp lệnh; máy long-poll nhận lệnh và trả kết quả; server phản hồi app. Nhánh offline hoặc timeout trả lỗi.">
+          <div class="diagram-scroll"><svg viewBox="0 0 950 610" width="950" role="img" aria-label="Biểu đồ tuần tự: máy hỏi lệnh; app gửi yêu cầu menu hoặc kho; server kiểm quyền, xếp lệnh; máy long-poll nhận lệnh và trả kết quả; server phản hồi app. Nhánh offline hoặc timeout trả lỗi.">
             <defs><marker id="relay-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="var(--accent)"/></marker></defs>
             <rect class="ui" x="25" y="10" width="170" height="42" rx="7"/><text class="head" x="110" y="37" text-anchor="middle">App</text>
             <rect class="proc" x="276" y="10" width="170" height="42" rx="7"/><text class="head" x="361" y="37" text-anchor="middle">Feature server</text>
@@ -102,7 +102,7 @@ python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>pytho
             <rect class="device" x="778" y="10" width="145" height="42" rx="7"/><text class="head" x="850" y="37" text-anchor="middle">Máy</text>
             <path class="line dash" d="M110 52V590 M361 52V590 M612 52V590 M850 52V590"/>
             <rect class="phase" x="25" y="67" width="898" height="26" rx="4"/><text class="phase-text" x="474" y="85" text-anchor="middle">KẾT NỐI · XÁC THỰC MÁY BẰNG PRODUCT KEY</text>
-            <path class="edge" d="M846 124H365" marker-end="url(#relay-arrow)"/><text class="edge-text" x="604" y="116" text-anchor="middle">1 · heartbeat mỗi 5 giây</text>
+            <path class="edge" d="M846 124H365" marker-end="url(#relay-arrow)"/><text class="edge-text" x="604" y="116" text-anchor="middle">1 · máy hỏi lệnh (long-poll), server ghi đã thấy</text>
             <rect class="phase" x="25" y="151" width="898" height="26" rx="4"/><text class="phase-text" x="474" y="169" text-anchor="middle">YÊU CẦU NGHIỆP VỤ · TOKEN APP + MACHINE_ID</text>
             <path class="edge" d="M110 211H357" marker-end="url(#relay-arrow)"/><text class="edge-text" x="234" y="202" text-anchor="middle">2 · nhận menu/kho, cập nhật hoặc nạp</text>
             <rect class="proc" x="280" y="229" width="162" height="42" rx="6"/><text class="small" x="361" y="246" text-anchor="middle">kiểm phiên, quyền,</text><text class="small" x="361" y="261" text-anchor="middle">dạng gói</text>
@@ -142,7 +142,7 @@ python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>pytho
             <rect class="data" x="482" y="232" width="103" height="64" rx="7"/><text x="533" y="257" text-anchor="middle">RAM</text><text class="small" x="533" y="276" text-anchor="middle">lệnh / online</text>
             <text class="small" x="475" y="344" text-anchor="middle">lib/machine/machine_transport.py</text>
             <rect class="device" x="675" y="10" width="260" height="370" rx="12"/><text class="head" x="805" y="38" text-anchor="middle">MÁY RASPBERRY PI</text>
-            <rect class="box" x="695" y="62" width="220" height="54" rx="7"/><text x="805" y="84" text-anchor="middle">machine/main.py</text><text class="small" x="805" y="103" text-anchor="middle">heartbeat · poll · result</text>
+            <rect class="box" x="695" y="62" width="220" height="54" rx="7"/><text x="805" y="84" text-anchor="middle">machine/main.py</text><text class="small" x="805" y="103" text-anchor="middle">poll · result</text>
             <rect class="box" x="695" y="138" width="220" height="72" rx="7"/><text x="805" y="164" text-anchor="middle">menu_sync + ingredient_sync</text><text class="small" x="805" y="184" text-anchor="middle">nhận lệnh · xử lý · đóng gói</text><text class="small" x="805" y="200" text-anchor="middle">menu SQLite · kho MySQL</text>
             <rect class="box" x="695" y="232" width="220" height="56" rx="7"/><text x="805" y="254" text-anchor="middle">pairing Bluetooth</text><text class="small" x="805" y="273" text-anchor="middle">tiến trình chạy riêng</text>
             <text class="small" x="805" y="344" text-anchor="middle">machine.env: tên · key · URL</text>
@@ -155,7 +155,7 @@ python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>pytho
         <div class="cards">
           <article class="card"><h3>App Android</h3><p><code>lib/app</code> lắp ghép màn hình; <code>lib/config</code> giữ URL/route; <code>lib/core</code> giữ HTTP, phiên, gói QR/Bluetooth; mỗi <code>lib/feature</code> giữ request, state và UI của mình.</p><p>Dashboard có năm tab: Tổng quan, Đơn hàng, Sản phẩm, Kho, Máy. Chuyển máy sẽ bỏ dữ liệu menu/kho cũ.</p><div class="src"><a href="app/flutter_app/README.md">Cấu trúc app</a></div></article>
           <article class="card"><h3>Server Python</h3><p><code>server/main.py</code> nạp trực tiếp tám module và mở HTTP. Route tập trung tại <code>server/config/routing.py</code>. Tài khoản, phiên, máy, quyền và mã mời nằm trong SQLite; các luồng Menu/Kho chỉ kiểm quyền và chuyển lệnh.</p><div class="src"><a href="server/START.md">Cách chạy server</a> · <a href="MODULE_PATTERN.md">Quy ước module</a></div></article>
-          <article class="card"><h3>Relay và hộp thư</h3><p><code>machine/main.py</code> chạy heartbeat và vòng hỏi lệnh. Hộp thư lệnh, heartbeat và kết quả chờ ở RAM server, trong <code>server/lib/machine/machine_transport.py</code>. Máy không cần biết ID được server cấp.</p><div class="src"><a href="server/service/machine_link/README.md">Luồng relay</a></div></article>
+          <article class="card"><h3>Relay và hộp thư</h3><p><code>machine/main.py</code> chỉ chạy một vòng hỏi lệnh → xử lý → trả kết quả (không còn thread heartbeat). Hộp thư lệnh, trạng thái online và kết quả chờ ở RAM server, trong <code>server/lib/machine/machine_transport.py</code>. Máy không cần biết ID được server cấp.</p><div class="src"><a href="server/service/machine_link/README.md">Luồng relay</a></div></article>
           <article class="card"><h3>Dữ liệu trên máy</h3><p>Menu dùng dữ liệu tại <code>machine/database/database.db</code>. Kho dùng tầng MySQL của phần mềm máy pha <code>version1.0</code>, không nằm trong repo này. Pairing Bluetooth là tiến trình riêng, không tự khởi chạy cùng relay.</p><div class="src"><a href="machine/README.md">Cấu trúc máy</a> · <a href="machine/pairing/README.md">Pairing</a></div></article>
         </div>
         <div class="note"><strong>Phạm vi</strong>Manual này mô tả hệ thống quản lý Android ↔ server ↔ máy trong repo <code>androidv0.1</code>. Logic pha đồ uống, phần cứng và giao diện kiosk của <code>version1.0</code> thuộc tài liệu riêng.</div>
@@ -168,10 +168,10 @@ python main.py</code></pre><p>Pairing Bluetooth chạy riêng bằng <code>pytho
           <tr><td>Tài khoản</td><td><code>/app/user/account/register</code><br><code>/app/user/otp/send</code><br><code>/app/user/otp/verify</code><br><code>/app/user/session/login</code><br><code>/app/user/session/logout</code></td><td>Thông tin đăng ký, OTP hoặc token</td><td>Tạo tài khoản; cấp hoặc xóa phiên</td></tr>
           <tr><td>Đăng ký máy</td><td><code>/app/user/machine/register</code></td><td><code>token, machine_name, product_key</code></td><td><code>machine_id</code> và quyền chủ</td></tr>
           <tr><td>Chia sẻ</td><td><code>/app/machine/share/create</code><br><code>/app/machine/share/accept</code><br><code>/app/machine/staff/list</code><br><code>/app/machine/staff/revoke</code></td><td>Token, máy, mã mời hoặc user_id</td><td>Tạo/nhận mã, xem/thu hồi quyền</td></tr>
-          <tr><td>Danh sách máy</td><td><code>/app/user/machine/list</code><br><code>/app/machine/name/update</code><br><code>/app/user/machine/remove</code><br><code>GET /app/machine/status/get</code></td><td>Token và machine_id; GET dùng query</td><td>Danh sách, tên, quyền, trạng thái heartbeat</td></tr>
+          <tr><td>Danh sách máy</td><td><code>/app/user/machine/list</code><br><code>/app/machine/name/update</code><br><code>/app/user/machine/remove</code><br><code>GET /app/machine/status/get</code></td><td>Token và machine_id; GET dùng query</td><td>Danh sách, tên, quyền, trạng thái online</td></tr>
           <tr><td>Menu</td><td><code>/app/machine/menu/get</code><br><code>/app/machine/menu/update</code></td><td>Token, máy, <code>menu_version</code>, thay đổi</td><td><code>ok</code>, <code>up_to_date</code> hoặc <code>conflict</code></td></tr>
           <tr><td>Kho</td><td><code>/app/machine/ingredient/get</code><br><code>/app/machine/ingredient/refill</code></td><td>Token, máy, version hoặc target/value</td><td>Nguyên liệu hoặc kết quả nạp</td></tr>
-          <tr><td>Cổng máy</td><td><code>/machine/heartbeat/send</code><br><code>/machine/command/poll</code><br><code>/machine/result/send</code></td><td><code>product_key</code>; ID và kết quả khi trả lời</td><td>Báo sống, nhận lệnh, chuyển kết quả</td></tr>
+          <tr><td>Cổng máy</td><td><code>/machine/command/poll</code><br><code>/machine/result/send</code></td><td><code>product_key</code>; ID và kết quả khi trả lời</td><td>Nhận lệnh (đồng thời báo còn hoạt động), chuyển kết quả</td></tr>
         </tbody></table></div>
         <div class="flow"><span>App POST + token</span><b>→</b><span>Kiểm phiên/quyền</span><b>→</b><span>Hộp thư máy</span><b>→</b><span>Máy POST kết quả</span><b>→</b><span>Response cho app</span></div>
       </section>
@@ -185,7 +185,7 @@ cd app/flutter_app
 flutter analyze
 flutter test ../../tests/flutter</code></pre><p>Kiểm tra end-to-end trên điện thoại: <code>python tests/e2e/run_e2e.py</code>. Bộ này cần ADB và môi trường theo <a href="tests/README.md">hướng dẫn test</a>.</p></article>
         </div>
-        <p class="prose">Sau khi server khởi động lại, phiên token trong SQLite vẫn còn. OTP đang chờ, heartbeat và lệnh trong RAM mất; máy phải heartbeat lại. Máy online theo heartbeat chỉ là dấu hiệu còn kết nối, chưa bảo đảm tác vụ tiếp theo thành công.</p>
+        <p class="prose">Sau khi server khởi động lại, phiên token trong SQLite vẫn còn. OTP đang chờ, trạng thái online và lệnh trong RAM mất; máy tự poll lại là online trở lại. Máy online theo long-poll chỉ là dấu hiệu còn kết nối, chưa bảo đảm tác vụ tiếp theo thành công.</p>
       </section>
 
       <section id="gioi-han">
@@ -194,12 +194,12 @@ flutter test ../../tests/flutter</code></pre><p>Kiểm tra end-to-end trên đi�
           <tr><td>OTP không đến</td><td>Thiếu/sai SMTP hoặc email chậm</td><td>Kiểm tra <code>server/config/.env</code> và thông báo trả về; dùng nút gửi lại khi hết thời gian chờ.</td></tr>
           <tr><td>Phiên hết hạn</td><td>Token không còn hợp lệ</td><td>Đăng nhập lại; app sẽ quay về màn đăng nhập khi API báo <code>login_required</code>.</td></tr>
           <tr><td>Không có quyền máy</td><td>Người dùng không phải chủ/nhân viên hoặc tác vụ chỉ dành cho chủ</td><td>Kiểm tra máy đang chọn và quyền chia sẻ. Chỉ chủ đổi tên, tạo mã mời và thu hồi nhân viên.</td></tr>
-          <tr><td>Máy offline / HTTP 503</td><td>Server chưa thấy heartbeat gần đây</td><td>Kiểm tra relay, product key, <code>SERVER_URL</code> của máy và kết nối mạng.</td></tr>
+          <tr><td>Máy offline / HTTP 503</td><td>Server chưa thấy máy poll/gửi kết quả trong 15 giây (hoặc máy lấy lệnh rồi treo quá 20 giây)</td><td>Kiểm tra relay, product key, <code>SERVER_URL</code> của máy và kết nối mạng.</td></tr>
           <tr><td>HTTP 502 / timeout</td><td>Máy báo lỗi hoặc không trả kết quả kịp</td><td>Tải lại menu/kho để xác định trạng thái. Nếu máy đã lấy lệnh, tác vụ có thể đã chạy.</td></tr>
           <tr><td>Menu <code>conflict</code></td><td>Phiên bản menu đã thay đổi</td><td>App tải menu mới; thực hiện lại sửa đổi trên bản mới.</td></tr>
           <tr><td>Đơn hàng / doanh thu</td><td><span class="tag demo">Dữ liệu demo / trống</span></td><td>Tab Đơn hàng dùng dữ liệu demo; Tổng quan chưa có API doanh thu, số đơn hay giá trị trung bình.</td></tr>
         </tbody></table></div>
-        <div class="note"><strong>Ranh giới xác thực</strong>Route <code>GET /app/machine/status/get</code> hiện không yêu cầu token. Nó phản ánh heartbeat, không phải quyền điều khiển máy.</div>
+        <div class="note"><strong>Ranh giới xác thực</strong>Route <code>GET /app/machine/status/get</code> hiện không yêu cầu token. Nó phản ánh vòng lệnh của máy (poll/kết quả), không phải quyền điều khiển máy.</div>
       </section>
 
       <footer>Manual đối chiếu theo mã nguồn và README của <code>androidv0.1</code>. Trang HTML tự chứa CSS, dùng được offline và có bố cục in. Tài liệu chi tiết từng luồng: <a href="server/service/README.md">server/service/README.md</a>.</footer>

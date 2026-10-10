@@ -340,7 +340,7 @@ def menu_version_of(drinks):
             <tr><td>Gói sai dạng</td><td>400 <code>{loi}</code></td><td>Không đổi</td><td>Sửa app, đây là bug</td></tr>
             <tr><td>Phiên hết hạn</td><td>401 <code>login_required</code></td><td>Không đổi</td><td>App tự quay về màn đăng nhập</td></tr>
             <tr><td>Không có quyền với máy</td><td>403</td><td>Không đổi</td><td>—</td></tr>
-            <tr><td>Máy không heartbeat quá 15 giây</td><td>503 "Máy đang offline"</td><td>Không đổi</td><td>Thử lại sau</td></tr>
+            <tr><td>Máy không poll/gửi kết quả quá 15 giây và không có lệnh đang làm</td><td>503 "Máy đang offline"</td><td>Không đổi</td><td>Thử lại sau</td></tr>
             <tr><td>Hết 20 giây, máy <em>chưa lấy</em> lệnh</td><td>502 "lệnh đã được hủy"</td><td>Không đổi: lệnh bị rút khỏi hộp thư</td><td>Thử lại</td></tr>
             <tr><td>Hết 20 giây, máy <em>đã lấy</em> lệnh</td><td>502 "hãy tải lại để kiểm tra"</td><td><strong>Có thể đã ghi</strong></td><td>Tải lại menu. Phiên bản sẽ cho biết bản đã đổi hay chưa</td></tr>
             <tr><td>Máy báo lỗi (món không có, DB lỗi)</td><td>502 <code>{loi}</code></td><td>Không đổi (rollback)</td><td>Xem câu lỗi</td></tr>
@@ -382,7 +382,7 @@ def menu_version_of(drinks):
         <details><summary>Nguồn đã đối chiếu cho trang này</summary><ul class="source-list">
           <li><a href="../server/service/dashboard_sync/menu_sync/README.md">server/service/dashboard_sync/menu_sync/README.md</a>: luồng chi tiết từng hàm</li>
           <li><a href="../server/service/dashboard_sync/menu_sync/machine_menu_get.py">machine_menu_get.py</a>, <a href="../server/service/dashboard_sync/menu_sync/machine_menu_update.py">machine_menu_update.py</a>: kiểm phía server</li>
-          <li><a href="../server/lib/machine/machine_transport.py">server/lib/machine/machine_transport.py</a>, <a href="../server/config/config.py">config.py</a>: hộp thư, timeout 20s, poll 8s, heartbeat 15s</li>
+          <li><a href="../server/lib/machine/machine_transport.py">server/lib/machine/machine_transport.py</a>, <a href="../server/config/config.py">config.py</a>: hộp thư, timeout 20s, poll 8s, online 15s</li>
           <li><a href="../version1.1/machine/menu_sync/machine_menu_sync.py">version1.1/machine/menu_sync/</a>: sync, validate, store, pack</li>
           <li><a href="../version1.1/machine/ingredient_sync/machine_ingredient_sync.py">version1.1/machine/ingredient_sync/</a>: kho trên máy</li>
           <li><a href="../server/service/dashboard_sync/ingredient_sync/README.md">server/service/dashboard_sync/ingredient_sync/</a>: kho phía server</li>

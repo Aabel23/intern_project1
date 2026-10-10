@@ -441,10 +441,10 @@ Gỡ mọi worktree (`git worktree list` chỉ còn cây chính). Vault: `STATUS
 | HB-04 | HB-02, HB-03 | operator | ✓ 10/10: G1a 70 test `errors=7, expected failures=6`; lặp 3 lần nhóm S1/S11/X1/S8: chỉ `test_cleanup_callbacks` |
 | HB-05 | HB-04 | T2 | ✓ 10/10: 13 test (12 theo bảng + `test_result_before_take_leaves_no_busy_entry` cho N1), OK ×2 (~10 s); sabotage 1–9 đều đỏ đúng test. ⚠ Bản đầu chép từ file tham chiếu operator để lộ trong scratchpad (đã xoá); R1 soi kỹ, đạt |
 | HB-06 | HB-04, HB-05 | R1, K1 | ✓ 10/10: R1 Pha 1 + S13 + N1 không Chặn/Nên sửa (3 gợi ý: nâng timeout 1 s nếu flaky, assert `last_seen` None ở test heartbeat → đưa vào HB-10b, `patch.stopall`). K1 N1 đã sửa, F1/F2 có sẵn ghi ngoài phạm vi. G1: 83 test `errors=7, expected failures=6`; stress 300 vòng PASS |
-| HB-07 | HB-04 | C2 | → lane-c2 đạt: grep chỉ còn 2 comment, S8+S12 OK, stress 300 vòng PASS (208 menu, 0 va chạm), discover 70 `errors=7, xfail=6`. Chờ hợp nhất sau G1 |
-| HB-08 | thiết kế chốt | D1 | → chờ review R2: 19 file Phụ lục C (operator mở sớm cùng HB-02/03; commit sau G2) |
-| HB-09 | HB-07, HB-08, HB-10 | R2 | ○ |
-| HB-10 | HB-04 | C3, T2 | → HB-10a lane-p3 đạt (70 test: đúng 2 failure chờ HB-10b). HB-10b làm ở cây chính sau hợp nhất |
+| HB-07 | HB-04 | C2 | ✓ 10/10: lane-c2 đạt; chép vào cây chính sau G1 (diff từng file chỉ gồm phần của C2); R2 đạt |
+| HB-08 | thiết kế chốt | D1 | ✓ 10/10: 19 file Phụ lục C + `agent_workspace/agents/hacker.md`; sửa xong 1 Nên sửa và 2 gợi ý của R2 (operator đã kiểm diff) |
+| HB-09 | HB-07, HB-08, HB-10 | R2 | ✓ 10/10: không Chặn; grep code sạch; HTML cân bằng thẻ (MENU_SYNC_FLOW lệch có sẵn ở HEAD); R2 tự chạy 83 test `errors=7, xfail=6` |
+| HB-10 | HB-04 | C3, T2 | ✓ 10/10: ✗ lần 1 do operator chép nhầm lane (đã ghi); C3 làm lại ở cây chính, khớp từng dòng diff lane-p3; HB-10b T2: 37 test chỉ `test_cleanup_callbacks`; thêm assert `last_seen` None (gợi ý R1); sửa chuỗi `run_e2e.py:257`. G2: 83 test `errors=7, xfail=6`, stress 300 PASS, grep chỉ còn 2 assertion 404 |
 | HB-11 | G2 | T3 | ○ tuỳ chọn |
 | HB-12 | G2 | operator | ○ |
 

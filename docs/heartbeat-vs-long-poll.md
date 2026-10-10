@@ -1,11 +1,27 @@
 # Máy pha báo "còn sống" thế nào: heartbeat riêng hay suy ra từ long-poll
 
 > So sánh thiết kế · `project1_app` · nguồn `07a54d0` + nhánh `feature/menu-image-cache` · phân tích 10/10/2026
-> Bản HTML có sơ đồ: [heartbeat-vs-long-poll.html](heartbeat-vs-long-poll.html)
+> Bản HTML có sơ đồ: [heartbeat-vs-long-poll.html](research/heartbeat-vs-long-poll.html)
 
 Có hai cách để server biết máy online:
 - **Cách A** (đang chạy): một thread heartbeat gửi request mỗi 5 s, chạy song song với vòng lệnh.
 - **Cách B** (đề xuất): bỏ heartbeat, suy online từ chính vòng long-poll và lệnh máy đang làm.
+
+## Trạng thái triển khai
+
+Cách B đã được triển khai đủ ba pha ngày 10/10/2026 trên nhánh `refactor/heartbeat-long-poll`. Các mục 1–7 bên dưới giữ nguyên phần phân tích ban đầu: "hiện trạng" và "cách A" là code lúc phân tích, nay đã bỏ.
+
+- **Pha 1 (server):** `mark_seen()` gọi trong `poll()` (sau khi xác minh key, trước khi chờ lệnh) và `send_result()`. Trạng thái RAM là `LAN_THAY_CUOI` và `DANG_LAM` trong `server/lib/machine/machine_transport.py`. Online là vòng lệnh của máy còn chạy: rảnh khi poll hoặc gửi kết quả cuối cách đây dưới `MACHINE_SEEN_TIMEOUT_SECONDS` (15 s); bận khi có lệnh máy đã lấy mà chưa có kết quả và chưa quá `COMMAND_TIMEOUT_SECONDS` (20 s). Lệnh xếp hàng mà máy chưa lấy không làm máy online. Vòng treo thì offline sau khi `send()` hết 20 s, lệnh sau nhận 503 ngay.
+- **Pha 2 (máy):** `version1.1/machine/main.py` không còn thread heartbeat; `machine_server_heartbeat.py` và các hằng `HEARTBEAT_INTERVAL_SECONDS`, `MACHINE_HEARTBEAT_SEND` đã xoá.
+- **Pha 3:** route `/machine/heartbeat/send` đã bỏ, gọi vào trả 404. Cổng máy chỉ còn `/machine/command/poll` và `/machine/result/send`. `GET /app/machine/status/get` vẫn trả `{machine_id, online, last_seen}`, nay `last_seen` là lần poll/kết quả cuối; route này vẫn công khai (SEC-08 chưa sửa).
+- **Thứ tự nâng:** server trước, máy sau. Máy mới với server cũ thì mọi lệnh nhận 503.
+
+Hai chỗ khác với khuyến nghị ở mục 6:
+
+- **QĐ1, bỏ điều kiện ① (đếm poll đang mở).** `mark_seen` ghi lúc mở poll và poll giữ tối đa `POLL_WAIT_SECONDS` (8 s) nhỏ hơn 15 s, nên poll đang mở luôn đã được tính. Thay bằng test bất biến `POLL_WAIT_SECONDS < MACHINE_SEEN_TIMEOUT_SECONDS ≤ COMMAND_TIMEOUT_SECONDS`; nếu sau này tăng `POLL_WAIT_SECONDS` lên từ 15 s thì test đỏ và lúc đó mới cần thêm ①.
+- **QĐ5, chưa làm heartbeat theo lệnh.** Thay vào đó có test chốt danh sách lệnh máy (`nhan_menu`, `cap_nhat_menu`, `nhan_kho`, `nap_kho`). Lệnh máy mới dài hơn 20 s thì test đỏ và phải làm heartbeat theo lệnh (`{id, tien_do}`), không quay lại thread heartbeat mù.
+
+Tên mới: `MACHINE_SEEN_TIMEOUT_SECONDS` thay `HEARTBEAT_TIMEOUT_SECONDS`. Cột DB `machines.last_seen` và `heartbeat_interval_seconds` không đổi và không được code nào dùng.
 
 ## 1. Bức tranh toàn cục
 

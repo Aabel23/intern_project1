@@ -36,7 +36,6 @@ td code{background:#f3f1ea;color:#3d3929;padding:2px 7px;border-radius:5px;font-
 <tbody>
 <tr><td><code>POST</code></td><td><code>/app/machine/menu/get</code></td><td>App</td><td>token, machine_id, menu_version (thiếu thì mặc định 0)</td><td>status, menu_version; có packet khi status là ok. up_to_date không có packet.</td></tr>
 <tr><td><code>POST</code></td><td><code>/app/machine/menu/update</code></td><td>App</td><td>token, machine_id, menu_version, thay_doi: [{drink_id, available?, price?}]</td><td>status: ok hoặc conflict, menu_version, packet. conflict nghĩa là chưa ghi thay đổi.</td></tr>
-<tr><td><code>POST</code></td><td><code>/machine/heartbeat/send</code></td><td>Máy</td><td>product_key</td><td>da_nhan: true; giúp server biết máy đang hoạt động.</td></tr>
 <tr><td><code>POST</code></td><td><code>/machine/command/poll</code></td><td>Máy</td><td>product_key</td><td>lenh: {id, instruction, data}, hoặc null nếu chưa có lệnh.</td></tr>
 <tr><td><code>POST</code></td><td><code>/machine/result/send</code></td><td>Máy</td><td>product_key, id, ket_qua (kết quả menu hoặc lỗi)</td><td>da_nhan: true; server chuyển kết quả đến request app đang chờ nếu khớp lệnh/máy.</td></tr>
 </tbody></table></div>

@@ -13,7 +13,7 @@ Lib không import server/service.
 | Security | `security/user_password.py` | Băm và kiểm mật khẩu |
 | Security | `security/data_hash.py` | SHA-256 và fingerprint request |
 | Machine | `machine/machine_access.py` | Kiểm quyền truy cập máy |
-| Machine | `machine/machine_transport.py` | Hộp thư lệnh, kết quả và heartbeat |
+| Machine | `machine/machine_transport.py` | Hộp thư lệnh, kết quả và trạng thái online |
 | Validation | `validation/identifier_validate.py` | Kiểm định dạng request_id/machine_id |
 | Validation | `validation/state_expire.py` | Dọn trạng thái RAM hết hạn |
 

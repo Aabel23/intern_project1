@@ -242,6 +242,21 @@
     </div>
   </header>
 
+  <!-- Trạng thái triển khai -->
+  <section id="trien-khai">
+    <div class="sec-head"><span class="sec-no">Cập nhật</span><h2>Trạng thái triển khai</h2></div>
+    <p class="prose">Cách B đã được triển khai đủ ba pha ngày 10/10/2026 trên nhánh <code>refactor/heartbeat-long-poll</code>. Các mục 1–7 bên dưới giữ nguyên phần phân tích ban đầu: “hiện trạng” và “cách A” là code lúc phân tích, nay đã bỏ.</p>
+    <ol class="steps">
+      <li><b>Pha 1 (server).</b> <code>mark_seen()</code> gọi trong <code>poll()</code> (sau xác minh key, trước khi chờ lệnh) và <code>send_result()</code>. Trạng thái RAM là <code>LAN_THAY_CUOI</code> và <code>DANG_LAM</code> trong <code>server/lib/machine/machine_transport.py</code>. Online là vòng lệnh của máy còn chạy: rảnh khi poll hoặc gửi kết quả cuối cách đây dưới <code>MACHINE_SEEN_TIMEOUT_SECONDS</code> (15 s); bận khi có lệnh máy đã lấy mà chưa có kết quả và chưa quá <code>COMMAND_TIMEOUT_SECONDS</code> (20 s). Lệnh xếp hàng mà máy chưa lấy không làm máy online. Vòng treo thì offline sau khi <code>send()</code> hết 20 s, lệnh sau nhận 503 ngay.</li>
+      <li><b>Pha 2 (máy).</b> <code>version1.1/machine/main.py</code> không còn thread heartbeat; <code>machine_server_heartbeat.py</code> và các hằng <code>HEARTBEAT_INTERVAL_SECONDS</code>, <code>MACHINE_HEARTBEAT_SEND</code> đã xoá.</li>
+      <li><b>Pha 3.</b> Route <code>/machine/heartbeat/send</code> đã bỏ, gọi vào trả 404. Cổng máy chỉ còn <code>/machine/command/poll</code> và <code>/machine/result/send</code>. <code>GET /app/machine/status/get</code> vẫn trả <code>{machine_id, online, last_seen}</code>, nay <code>last_seen</code> là lần poll/kết quả cuối; route này vẫn công khai (SEC-08 chưa sửa).</li>
+      <li><b>Thứ tự nâng:</b> server trước, máy sau. Máy mới với server cũ thì mọi lệnh nhận 503.</li>
+    </ol>
+    <div class="note"><b>QĐ1 · bỏ điều kiện ①</b>Không đếm poll đang mở. <code>mark_seen</code> ghi lúc mở poll và poll giữ tối đa <code>POLL_WAIT_SECONDS</code> (8 s) nhỏ hơn 15 s, nên poll đang mở luôn đã được tính. Thay bằng test bất biến <code>POLL_WAIT_SECONDS &lt; MACHINE_SEEN_TIMEOUT_SECONDS ≤ COMMAND_TIMEOUT_SECONDS</code>; nếu sau này tăng <code>POLL_WAIT_SECONDS</code> lên từ 15 s thì test đỏ và lúc đó mới cần thêm ①.</div>
+    <div class="note"><b>QĐ5 · chưa làm heartbeat theo lệnh</b>Thay vào đó có test chốt danh sách lệnh máy (<code>nhan_menu</code>, <code>cap_nhat_menu</code>, <code>nhan_kho</code>, <code>nap_kho</code>). Lệnh máy mới dài hơn 20 s thì test đỏ và phải làm heartbeat theo lệnh (<code>{id, tien_do}</code>), không quay lại thread heartbeat mù.</div>
+    <p class="prose">Tên mới: <code>MACHINE_SEEN_TIMEOUT_SECONDS</code> thay <code>HEARTBEAT_TIMEOUT_SECONDS</code>. Cột DB <code>machines.last_seen</code> và <code>heartbeat_interval_seconds</code> không đổi và không được code nào dùng.</p>
+  </section>
+
   <!-- 1 · Bức tranh toàn cục -->
   <section class="overview" id="tong-quan">
     <div class="ov-head">
@@ -314,6 +329,7 @@
     <nav class="toc" aria-label="Mục lục">
       <div class="lbl">Mục lục</div>
       <ol>
+        <li><a href="#trien-khai">Trạng thái triển khai</a></li>
         <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
         <li><a href="#luong-chinh">2. Ba tình huống trên dòng thời gian</a></li>
         <li><a href="#hai-cach">3. Hai phương thức</a></li>

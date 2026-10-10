@@ -41,7 +41,7 @@ nên đọc một bên suy ra được bên kia.
   làm đối tượng. `user/machine/...` là tập máy của tài khoản (đăng ký, liệt kê, gỡ);
   `machine/...` là thao tác trên một máy cụ thể.
 - **Mục tiêu** là danh từ số ít chỉ dữ liệu hoặc tính năng: `account`, `otp`, `session`,
-  `share`, `staff`, `name`, `status`, `menu`, `ingredient`, `heartbeat`, `command`, `result`.
+  `share`, `staff`, `name`, `status`, `menu`, `ingredient`, `command`, `result`.
 - **Hành động** là động từ đứng cuối, lấy từ bộ: `get`, `list`, `create`, `update`,
   `remove`, `register`, `send`, `verify`, `accept`, `revoke`, `refill`, `poll`,
   `login`, `logout`. `get`/`update` diễn tả nghiệp vụ, không bắt buộc trùng HTTP method.
@@ -71,7 +71,6 @@ nên đọc một bên suy ra được bên kia.
 | `MACHINE_MENU_UPDATE` | `machineMenuUpdate` | `/app/machine/menu/update` |
 | `MACHINE_INGREDIENT_GET` | `machineIngredientGet` | `/app/machine/ingredient/get` |
 | `MACHINE_INGREDIENT_REFILL` | `machineIngredientRefill` | `/app/machine/ingredient/refill` |
-| `MACHINE_HEARTBEAT_SEND` | (máy) | `/machine/heartbeat/send` |
 | `MACHINE_COMMAND_POLL` | (máy) | `/machine/command/poll` |
 | `MACHINE_RESULT_SEND` | (máy) | `/machine/result/send` |
 
@@ -119,7 +118,6 @@ vị trí thư mục cho biết nơi chạy.
 | `pack` | Đóng gói/encode dữ liệu | `machine_menu_pack.py` |
 | `generate`, `send` | Sinh/gửi mã | `user_otp_generate.py`, `user_otp_send.py` |
 | `pair`, `serve` | Ghép đôi, nhận kết nối Bluetooth | `machine_bluetooth_pair.py`, `machine_bluetooth_serve.py` |
-| `heartbeat` | Báo máy còn hoạt động | `machine_server_heartbeat.py` |
 
 Schema riêng dùng `<đối_tượng>_<thành_phần>_schema.sql`, ví dụ
 `machine_share_schema.sql`. Test dùng `test_<đối_tượng>_<thành_phần>.py` để
@@ -155,7 +153,7 @@ Hiện tại:
 | `dashboard_sync/machinelist_sync` | Cửa vào main; kiểm tra và SQL riêng trong get/rename/remove |
 | `dashboard_sync/menu_sync` | Hai file luồng lấy/cập nhật menu; main là cửa vào HTTP |
 | `dashboard_sync/ingredient_sync` | Quyền Kho/nạp Kho, kiểm gói Kho, tạo lệnh Kho và trả kết quả |
-| `machine_link` | Cửa vào machine_link_main; process xác minh máy và điều phối heartbeat/hỏi lệnh/trả kết quả qua transport chung |
+| `machine_link` | Cửa vào machine_link_main; process xác minh máy và điều phối hỏi lệnh/trả kết quả (và ghi đã thấy) qua transport chung |
 
 Tên thư mục hiện tại được giữ để tránh trộn đổi tên với thay đổi ranh giới trách nhiệm.
 
@@ -168,7 +166,7 @@ Tên thư mục hiện tại được giữ để tránh trộn đổi tên vớ
 | Tài khoản, máy, quyền quản lý | `server/database/` | Cùng một danh tính và quyền trên toàn hệ thống |
 | Kết nối SQLite | `server/database/connection.py` | Transaction, commit/rollback và foreign key thống nhất |
 | Tra quyền từ token/máy | `server/lib/machine/machine_access.py` | Cơ chế chung; danh sách vai trò được phép do từng module giữ |
-| Hộp thư lệnh và heartbeat | `server/lib/machine/machine_transport.py` | Máy long-poll một chỗ; các tính năng gửi qua cùng kết nối máy |
+| Hộp thư lệnh và trạng thái online | `server/lib/machine/machine_transport.py` | Máy long-poll một chỗ; các tính năng gửi qua cùng kết nối máy |
 | HTTP JSON, rate limit | `server/lib/` | Cơ chế vận chuyển và giới hạn request dùng chung |
 
 Các file dùng chung không import `server.service`. Không đưa quy tắc riêng của
@@ -237,7 +235,7 @@ Các file nghiệp vụ giữ hậu tố tác vụ get/update; chỉ đổi modu
 ## Cấu trúc các submodule dashboard còn lại
 
 `machinelist_sync`: `machine_list_main.py` → `machine_list_get.py`,
-`machine_list_rename.py`, `machine_list_remove.py`. Trạng thái heartbeat nằm trong
+`machine_list_rename.py`, `machine_list_remove.py`. Trạng thái online nằm trong
 get; SQL riêng nằm cùng tác vụ. Kiểm quyền dùng `machine_read`, bỏ quyền nhân viên
 dùng `machine_write.remove_manager`; gỡ máy giữ khóa ghi trước bước kiểm quyền.
 

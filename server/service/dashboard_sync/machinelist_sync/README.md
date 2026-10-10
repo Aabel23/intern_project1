@@ -1,6 +1,6 @@
 # Danh sách, tên và quyền quản lý máy
 
-App lấy danh sách máy thuộc tài khoản, đổi tên hoặc gỡ quyền. Cổng trạng thái đọc heartbeat của máy.
+App lấy danh sách máy thuộc tài khoản, đổi tên hoặc gỡ quyền. Cổng trạng thái đọc trạng thái online của máy (suy từ long-poll).
 
 Xem [bốn sơ đồ luồng của machine list](MACHINE_LIST_DECISION_TREE.html) để theo dõi từng request giữa app, server và máy.
 
@@ -13,7 +13,7 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 | POST | /app/user/machine/list | App | token | valid, machines |
 | POST | /app/machine/name/update | Chủ máy | token, machine_id, name | valid, name, message |
 | POST | /app/user/machine/remove | Chủ hoặc nhân viên | token, machine_id | valid, deleted, message |
-| GET | /app/machine/status/get | App | machine_id trong query URL | trạng thái máy theo heartbeat |
+| GET | /app/machine/status/get | App | machine_id trong query URL | trạng thái máy theo long-poll |
 
 ## A. Hiển thị danh sách
 
@@ -28,12 +28,12 @@ Hàm tham gia:
 
 ### 2. App xem máy đang online hay offline
 
-GET `/app/machine/status/get?machine_id=...`. Server đọc giờ heartbeat gần nhất để trả trạng thái; không gửi lệnh mới xuống máy.
+GET `/app/machine/status/get?machine_id=...`. Server suy online từ lần poll/gửi kết quả cuối và lệnh máy đang làm (`last_seen` là lần poll/kết quả cuối) rồi trả `{machine_id, online, last_seen}`; không gửi lệnh mới xuống máy.
 
 Hàm tham gia:
 
 - App status(): hỏi trạng thái.
-- Server handle_get() / is_online() / last_seen_of(): đọc trạng thái heartbeat.
+- Server handle_get() / is_online() / last_seen_of(): đọc trạng thái online.
 
 
 ## B. Đổi tên
@@ -69,7 +69,7 @@ Hàm tham gia:
 
 ### 2. App bỏ máy khỏi giao diện
 
-App làm mới danh sách. Nếu máy đang chọn bị gỡ, app bỏ chọn và xóa menu/kho đang hiển thị. Máy bị chủ xóa cần đăng ký lại trước khi heartbeat được chấp nhận.
+App làm mới danh sách. Nếu máy đang chọn bị gỡ, app bỏ chọn và xóa menu/kho đang hiển thị. Máy bị chủ xóa cần đăng ký lại trước khi hỏi lệnh được chấp nhận.
 
 Hàm tham gia:
 
@@ -85,7 +85,7 @@ Nhân viên không đổi tên được dù tự gọi API. Gỡ máy bởi ch�
 ```text
 machinelist_sync/
     machine_list_main.py     nhận HTTP, chọn luồng, trả response
-    machine_list_get.py      danh sách máy và trạng thái heartbeat
+    machine_list_get.py      danh sách máy và trạng thái online
     machine_list_rename.py   chủ máy đổi tên
     machine_list_remove.py   chủ xóa máy hoặc nhân viên bỏ quyền
     README.md
@@ -115,7 +115,7 @@ Gỡ máy khóa ghi trước khi đọc quyền, cascade xóa quyền và mã m�
 cách kiểm quyền rồi UPDATE qua cùng conn, không thêm BEGIN IMMEDIATE.
 
 Phiên dùng `server/lib/security/user_session.py`; mã máy dùng
-`server/lib/validation/identifier_validate.py`; HTTP và heartbeat dùng lib chung.
+`server/lib/validation/identifier_validate.py`; HTTP và trạng thái online dùng lib chung.
 Module không chờ máy online; danh sách, đổi tên và gỡ máy đều xử lý trên server.
 
 ## Kiểm tra

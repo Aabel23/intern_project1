@@ -18,15 +18,15 @@ Lệnh chạy lại được, không xóa dữ liệu; cũng tạo bảng tài k
 | `firmware_version` | Phiên bản phần mềm trên máy |
 | `location` | Vị trí lắp đặt |
 | `status` | `active`: sử dụng, `maintenance`: bảo trì, `disabled`: ngừng sử dụng |
-| `last_seen` | Unix timestamp của heartbeat gần nhất, NULL nếu chưa liên lạc |
-| `heartbeat_interval_seconds` | Chu kỳ heartbeat, mặc định 5 giây, phải lớn hơn 0 |
+| `last_seen` | Unix timestamp lần liên lạc gần nhất, NULL nếu chưa liên lạc; chưa được code nào đọc/ghi |
+| `heartbeat_interval_seconds` | Chu kỳ báo cũ (thiết kế heartbeat), mặc định 5 giây, phải lớn hơn 0; chưa được code nào đọc/ghi |
 | `notes` | Ghi chú |
 | `created_at`, `updated_at` | Thời gian UTC; trigger tự cập nhật `updated_at` khi sửa thông tin máy |
 
 Chưa có bảng cửa hàng nên `store_id` chưa đặt khóa ngoại.
-Online/offline được suy ra từ `last_seen` và ngưỡng timeout (server hiện dùng 15 giây),
-không phải cột `status`. Hiện endpoint heartbeat vẫn lưu trong bộ nhớ;
-bảng này chưa được nối với endpoint, nên `last_seen` chưa tự nhận heartbeat.
+Online/offline không dùng database: server suy ra từ lần poll/gửi kết quả cuối và lệnh máy đang làm,
+lưu trong bộ nhớ (`LAN_THAY_CUOI`, `DANG_LAM`, ngưỡng 15 giây), không phải cột `status`.
+Hai cột `last_seen` và `heartbeat_interval_seconds` chưa được nối với code nên không tự cập nhật.
 
 Ví dụ thêm máy (không chạy tự động khi khởi tạo):
 

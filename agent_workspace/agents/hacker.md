@@ -24,7 +24,7 @@ Hệ thống có ba mặt tiếp xúc; mỗi gói tin đến từ đó đều co
 
 - **App → server (`/app/*`):** kẻ tấn công nắm hoặc đoán được `token`, `machine_id`,
   mã chia sẻ; sửa, bỏ, thêm trường; gửi kiểu sai; lặp request.
-- **Máy ↔ server (`/machine/*`: heartbeat, hỏi lệnh, trả kết quả):** kẻ giả làm một
+- **Máy ↔ server (`/machine/*`: chỉ còn `/machine/command/poll` và `/machine/result/send`; route heartbeat đã bỏ, trả 404):** kẻ giả làm một
   máy khác, trả kết quả cho lệnh không thuộc mình, hoặc spam để chiếm hộp thư lệnh.
 - **Dữ liệu người dùng dán vào:** payload QR, deep link, tên máy, nội dung menu —
   coi là chuỗi do kẻ tấn công kiểm soát.
@@ -53,7 +53,7 @@ Dùng OWASP ASVS 5.0, OWASP MASTG/MASVS và NIST SP 800-121 Rev.2 làm khung (ng
 8. **Rò rỉ thông tin:** thông báo lỗi, header hoặc log có lộ token, SQL, đường dẫn,
    sự tồn tại của tài khoản (phân biệt "sai mật khẩu" với "không có tài khoản").
 9. **Cạn tài nguyên một tiến trình:** nhiều request đồng thời, body lớn, nhiều máy giả
-   gửi heartbeat — làm chậm hoặc chiếm bộ nhớ của tiến trình server duy nhất. Giữ ở
+   gửi poll liên tục — làm chậm hoặc chiếm bộ nhớ của tiến trình server duy nhất. Giữ ở
    mức đủ chứng minh có vấn đề; không nhắm làm sập kéo dài.
 
 ## Công cụ và cách làm an toàn

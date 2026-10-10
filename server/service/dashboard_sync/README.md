@@ -9,7 +9,7 @@ Các gói gửi bằng POST là JSON. GET dùng query trên URL. Token thuộc a
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
 | POST | /app/user/machine/list | App | token | valid, machines |
-| GET | /app/machine/status/get | App | machine_id trong query | trạng thái heartbeat |
+| GET | /app/machine/status/get | App | machine_id trong query | trạng thái online (long-poll) |
 | POST | /app/machine/name/update | Chủ máy | token, machine_id, name | valid, name, message |
 | POST | /app/user/machine/remove | App | token, machine_id | valid, deleted, message |
 | POST | /app/machine/menu/get | App | token, machine_id, menu_version | status, menu_version, packet khi có dữ liệu mới |
@@ -30,12 +30,12 @@ Hàm tham gia:
 
 ### 2. App xem trạng thái kết nối
 
-GET `/app/machine/status/get?machine_id=...`. Trạng thái được tính từ heartbeat, không bảo đảm request nghiệp vụ tiếp theo sẽ thành công.
+GET `/app/machine/status/get?machine_id=...`. Trạng thái online được suy từ lần máy poll/gửi kết quả cuối (không có heartbeat riêng), không bảo đảm request nghiệp vụ tiếp theo sẽ thành công.
 
 Hàm tham gia:
 
 - App status(): hỏi trạng thái.
-- Server handle_get() / is_online(): đọc heartbeat.
+- Server handle_get() / is_online(): đọc trạng thái online.
 
 
 ## B. Đọc menu và kho
@@ -103,7 +103,7 @@ Mỗi tab dashboard của app là một folder, **chia theo tab, không chia the
 | --- | --- | --- | --- |
 | `menu_sync/` | Menu | `/app/machine/menu/get`, `/app/machine/menu/update` | của máy, hỏi xuống qua hộp thư |
 | `ingredient_sync/` | Kho | `/app/machine/ingredient/get`, `/app/machine/ingredient/refill` | của máy, hỏi xuống qua hộp thư |
-| `machinelist_sync/` | Máy | `/app/user/machine/list`, `/app/machine/name/update`, `/app/user/machine/remove`, GET `/app/machine/status/get` | của server (bảng `machines`, giờ heartbeat) |
+| `machinelist_sync/` | Máy | `/app/user/machine/list`, `/app/machine/name/update`, `/app/user/machine/remove`, GET `/app/machine/status/get` | của server (bảng `machines` cho danh sách/tên/quyền; trạng thái online lấy từ RAM của `machine_transport`) |
 
 Vai trò được phép nằm trong flow của mỗi module (`QUYEN_MENU`, `QUYEN_KHO`,
 `QUYEN_NAP_KHO`). `server/lib/machine/machine_access.py` cung cấp `check_access(data, roles)`:
@@ -151,7 +151,7 @@ Thân lỗi `{"loi": ...}`:
 | 400 | gói sai dạng (version âm, `thay_doi` rỗng hoặc có cột lạ, `target`/`value` sai) |
 | 401 | token sai/hết hạn (kèm `login_required: true`) |
 | 403 | không quản lý máy này, hoặc vai trò không đủ quyền |
-| 503 | máy offline (không heartbeat trong 15 giây) |
+| 503 | máy offline (không poll/gửi kết quả trong 15 giây và không có lệnh đang làm) |
 | 502 | máy báo lỗi (MySQL, món không có trên máy...) hoặc không trả kết quả trong 20 giây |
 
 ## Mã nguồn

@@ -21,7 +21,7 @@ Module chia sẻ tự tạo bảng mã mời. SMTP đọc từ `server/config/.e
 qua `service/user_register/otp/user_otp_send.py`.
 
 Mỗi request có thread riêng để app chờ lệnh không chặn máy long-poll. Hộp thư
-và heartbeat ở `lib/machine_transport.py`; dữ liệu đó, OTP và yêu cầu đăng nhập
+và trạng thái online ở `lib/machine_transport.py`; dữ liệu đó, OTP và yêu cầu đăng nhập
 đang chờ sẽ mất khi tiến trình dừng. Phiên token đã lưu trong SQLite vẫn còn.
 
 Các module dùng chung một tiến trình và tài nguyên nền. Quy ước chi tiết:

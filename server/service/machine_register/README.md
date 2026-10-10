@@ -87,7 +87,7 @@ Trường `type` có thể gửi kèm, không bắt buộc.
 Response trả trên request POST ban đầu: thành công HTTP 200; lỗi dữ liệu/phiên/quyền
 HTTP 400; lỗi SQLite HTTP 503. Không có request xác minh đăng ký thứ hai.
 Route `/app/xac-minh-dang-ky-may` đã bỏ. Không gửi ID hoặc lệnh xuống máy;
-máy dùng product key khi heartbeat/nhận lệnh.
+máy dùng product key khi hỏi lệnh/trả kết quả.
 
 Hiện chưa đối chiếu key với danh sách key nhà máy, chưa gán cửa hàng hoặc cấp credential.
 Đây là giới hạn hiện tại, không thay đổi trong refactor.

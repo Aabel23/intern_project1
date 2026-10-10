@@ -1,27 +1,33 @@
-# Cổng máy: heartbeat, nhận lệnh và trả kết quả
+# Cổng máy: nhận lệnh và trả kết quả
 
 Máy chủ động gọi server. Server dùng chung hộp thư lệnh để kết nối các feature app với máy; không mở endpoint riêng trên máy.
 
 ## API và gói tin
 
-Cả ba route nhận POST JSON từ máy, kèm product_key; không dùng token app.
+Cả hai route nhận POST JSON từ máy, kèm product_key; không dùng token app.
 
 | Phương thức | Route | Ai gọi | Gửi lên | Nhận về |
 | --- | --- | --- | --- | --- |
-| POST | /machine/heartbeat/send | Máy | product_key | da_nhan: true |
 | POST | /machine/command/poll | Máy | product_key | lenh: {id, instruction, data} hoặc null |
 | POST | /machine/result/send | Máy | product_key, id, ket_qua | da_nhan: true |
 
-## A. Duy trì kết nối
+## A. Trạng thái online suy từ vòng lệnh
 
-### 1. Máy báo còn hoạt động
+### 1. Server ghi "đã thấy" khi máy hỏi lệnh hoặc trả kết quả
 
-Máy định kỳ POST `/machine/heartbeat/send` với `{product_key}`. Server xác thực key, ghi thời gian rồi trả `{da_nhan: true}`.
+Máy không gửi tín hiệu riêng. Mỗi lần POST `/machine/command/poll` (trước khi chờ lệnh) hoặc `/machine/result/send`, server xác thực key rồi ghi thời gian "đã thấy" của máy (`LAN_THAY_CUOI`). Online nghĩa là vòng lệnh của máy còn chạy:
+
+- Rảnh: poll hoặc gửi kết quả cuối cách đây dưới `MACHINE_SEEN_TIMEOUT_SECONDS` (15 giây). Poll giữ tối đa `POLL_WAIT_SECONDS` (8 giây).
+- Bận: có lệnh máy đã lấy (`take()`) mà chưa có kết quả và chưa quá `COMMAND_TIMEOUT_SECONDS` (20 giây).
+- Lệnh mới xếp hàng mà máy chưa lấy không làm máy online.
+- Máy lấy lệnh rồi treo: sau khi `send()` hết 20 giây máy là offline; lệnh sau nhận HTTP 503 ngay.
+
+Route `/machine/heartbeat/send` đã bỏ; gọi vào trả 404.
 
 Hàm tham gia:
 
-- Máy run_heartbeat(): gửi heartbeat.
-- Server heartbeat() / machine_from_key() / mark_seen(): xác thực và ghi thời gian.
+- Server poll() / send_result() / machine_from_key() / mark_seen(): xác thực và ghi thời gian đã thấy.
+- Server is_online() / last_seen_of(): suy ra online và lần thấy cuối từ `LAN_THAY_CUOI` và `DANG_LAM`.
 
 
 ## B. Một lệnh đi từ app đến máy
@@ -71,15 +77,15 @@ Hàm tham gia:
 
 ## Nhánh lỗi và lưu ý
 
-Key sai trả HTTP 403. Hộp thư và heartbeat nằm trong RAM; restart mất trạng thái chờ. Máy khác gửi ID không thuộc mình không được chuyển kết quả. Response da_nhan=true không bảo đảm có lệnh đang chờ tương ứng.
+Key sai trả HTTP 403. Hộp thư, `LAN_THAY_CUOI` và `DANG_LAM` nằm trong RAM; restart mất trạng thái chờ. Máy khác gửi ID không thuộc mình không được chuyển kết quả. Response da_nhan=true không bảo đảm có lệnh đang chờ tương ứng.
 
 ## Cấu trúc và ranh giới
 
 | File | Trách nhiệm |
 | --- | --- |
-| `machine_link_main.py` | Cửa vào `handle(request)`, ánh xạ ba route, đọc JSON và trả HTTP |
-| `machine_link_process.py` | Xác minh máy rồi điều phối heartbeat/hỏi lệnh/trả kết quả |
-| `server/lib/machine/machine_transport.py` | Hộp thư, ID lệnh, hàng chờ kết quả, khóa, heartbeat và timeout dùng chung |
+| `machine_link_main.py` | Cửa vào `handle(request)`, ánh xạ hai route, đọc JSON và trả HTTP |
+| `machine_link_process.py` | Xác minh máy rồi điều phối hỏi lệnh/trả kết quả và ghi đã thấy |
+| `server/lib/machine/machine_transport.py` | Hộp thư, ID lệnh, hàng chờ kết quả, khóa, trạng thái online (`LAN_THAY_CUOI`, `DANG_LAM`) và timeout dùng chung |
 | `server/database/machine/machine_read.py` | SQL tìm ID máy theo hash product key |
 
 `machine_from_key()` chấp nhận key là chuỗi không trắng, tối đa 1024 ký tự;
@@ -88,16 +94,16 @@ trả 403, lỗi SQLite trả 503. Giới hạn body chung là 1 MB để nhận
 
 ### Ai gọi hỏi lệnh và trả kết quả?
 
-`machine/main.py → run()` chạy heartbeat ở thread riêng, còn vòng lặp chính
-hỏi lệnh → thực hiện → gửi kết quả. `poll_command()` và `send_result()` trong
+`machine/main.py → run()` chỉ có một vòng lặp:
+hỏi lệnh → thực hiện → gửi kết quả (không còn thread heartbeat). `poll_command()` và `send_result()` trong
 `machine/server_connection/machine_server_request.py` gọi hai route này.
-Hỏi lệnh và gửi kết quả không cập nhật heartbeat.
+Hỏi lệnh và gửi kết quả chính là thứ cập nhật trạng thái online (`mark_seen`).
 
 Các tác vụ Menu/Kho phía server gọi `machine_transport.send()`:
 `nhan_menu`, `cap_nhat_menu`, `nhan_kho`, `nap_kho`. Máy dùng `take()` qua route
 hỏi lệnh để nhận việc; dùng `deliver()` qua route trả kết quả để đánh thức
 `send()` đang chờ. Máy mở request mới để gửi kết quả; server trả dữ liệu cho app
-trên request nghiệp vụ ban đầu. Machinelist chỉ đọc trạng thái heartbeat.
+trên request nghiệp vụ ban đầu. Machinelist chỉ đọc trạng thái online (`is_online`, `last_seen_of`).
 
 ```text
 App → module sync → send() → hộp thư

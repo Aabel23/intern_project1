@@ -40,7 +40,8 @@ và đánh thức màn hình trước khi chạy).
 | S5 | `server.service.machine_share.test_flow` | Mã mời dùng một lần, hết hạn; chỉ chủ tạo mã, xem và thu hồi nhân viên |
 | S6 | `server.service.machine_manage.test_flow` | Chủ đổi tên, gỡ máy (xóa quyền nhân viên); nhân viên chỉ bỏ quyền của mình |
 | S7 | `machine.pairing.test_bluetooth_pairing` | Gói pairing Bluetooth đúng định dạng dòng JSON |
-| S8 | `machine.test_relay` | Máy heartbeat, nhận lệnh, trả kết quả và gói đồng bộ gzip/ETag qua relay; sai quyền bị chặn |
+| S8 | `machine.test_relay` | Máy chạy một vòng lệnh (không còn thread báo online), nhận lệnh, trả kết quả và gói đồng bộ gzip/ETag qua relay; sai quyền bị chặn |
+| S13 | `tests.python.test_machine_online` | Online suy từ long-poll: rảnh/bận/treo, lệnh chưa lấy, không deadlock |
 | X1 | `server.test_security` | Kịch bản tấn công: phần "đã an toàn" phải đạt; lỗ hổng còn mở là `expectedFailure` (xem `SECURITY_NOTES.md`). "Unexpected success" = lỗ hổng đã được sửa, cập nhật ghi chú |
 
 ## Nhóm 2 — App tĩnh, `analyze`

@@ -33,22 +33,22 @@ Mức: **Cao** = mất quyền điều khiển máy hoặc tài khoản; **TB** 
 
 ## SEC-01 — Không mã hóa đường truyền (Cao)
 - **Kịch bản:** cùng Wi-Fi quán (hoặc Wi-Fi giả mạo), kẻ tấn công bắt gói tới cổng 8000. App gửi
-  `password` khi đăng nhập, `token` mỗi request; máy gửi `product_key` mỗi 5 giây (heartbeat) và mỗi lần hỏi lệnh.
+  `password` khi đăng nhập, `token` mỗi request; máy gửi `product_key` mỗi lần hỏi lệnh (long-poll) và mỗi lần trả kết quả.
 - **Tác hại:** chiếm tài khoản (token dùng 30 ngày), chiếm máy (xem SEC-02).
 - **Hiện trạng:** `usesCleartextTraffic="true"` trong `AndroidManifest.xml`, server `http.server` thuần.
 - **Đề xuất:** đặt server sau reverse proxy HTTPS (Caddy/nginx), app bỏ cleartext cho bản phát hành;
   máy gọi `https://`. Không đổi giao thức JSON.
 
 ## SEC-02 — Product key trên tem là thông tin xác thực duy nhất của máy (Cao)
-- **Kịch bản:** khách ngồi quán chụp tem QR dán trên máy (JSON rõ: `product_key`). Kẻ tấn công gọi
-  `/machine/heartbeat` và `/machine/hoi-lenh` bằng key đó. Server giao lệnh của chủ cho ai hỏi trước,
+- **Kịch bản:** khách ngồi quán chụp tem QR dán trên máy (JSON rõ: `product_key`). Kẻ tấn công giả máy bằng cách
+  gọi `/machine/command/poll` bằng key đó (poll cũng làm máy giả được tính là online; route cũ `/machine/heartbeat` đã bỏ). Server giao lệnh của chủ cho ai hỏi trước,
   kẻ tấn công lấy lệnh (máy thật không nhận), trả kết quả giả (menu/kho giả) qua `/machine/tra-ket-qua`.
   Test X1 `test_SEC02_…` chứng minh kẻ giữ key nhận được lệnh `doi_gia_mon` của chủ.
 - **Thêm:** máy chưa ai đăng ký thì người đầu tiên quét tem thành chủ (cố ý), nên tem phải được bảo vệ
   tới khi chủ thật quét.
 - **Đề xuất (đổi flow):** tách "mã đăng ký trên tem" khỏi "bí mật máy dùng với server": khi đăng ký thành công,
   server cấp cho máy một `machine_secret` mới (qua kênh máy đã có) và từ đó chỉ chấp nhận secret đó
-  cho heartbeat/lệnh. Tem chỉ còn dùng để nhận quyền chủ. Hoặc tối thiểu: không in key lên tem, chỉ pair
+  cho hỏi lệnh/trả kết quả. Tem chỉ còn dùng để nhận quyền chủ. Hoặc tối thiểu: không in key lên tem, chỉ pair
   qua Bluetooth có xác nhận (xem SEC-09).
 
 ## SEC-03 — Bảng giới hạn IP dùng chung trần 1000 (TB)

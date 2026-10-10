@@ -78,7 +78,7 @@ tiếp tục theo cấu trúc dưới đây.
 - Ingredient_sync phía server: `machine_ingredient_main.py` → get/refill.
 - Machinelist_sync phía server: `machine_list_main.py` → get/rename/remove;
   cửa vào có `handle(request)` cho POST và `handle_get(request)` cho trạng thái GET.
-- Mỗi luồng giữ kiểm tra và SQL riêng tại file tác vụ; quyền/phiên/heartbeat dùng
+- Mỗi luồng giữ kiểm tra và SQL riêng tại file tác vụ; quyền/phiên/trạng thái online dùng
   helper chung. Gỡ máy giữ `BEGIN IMMEDIATE` trước khi đọc quyền.
 
 - Machine_share đã chốt: cửa vào `machine_share_main.py`, các tác vụ create/accept/list/revoke
@@ -89,6 +89,6 @@ tiếp tục theo cấu trúc dưới đây.
   `machine_register_process.py`; SQL tạo máy/gán chủ ở database/machine/machine_write.py.
 
 - Machine_link: `machine_link_main.py` là cửa vào HTTP, process điều phối ba tác vụ;
-  hộp thư/heartbeat/timeout dùng chung giữ trong lib/machine/machine_transport.py.
+  hộp thư/trạng thái online/timeout dùng chung giữ trong lib/machine/machine_transport.py.
 
 - Cửa vào HTTP user_login/user_register dùng hậu tố main; giữ nghiệp vụ hiện tại.
