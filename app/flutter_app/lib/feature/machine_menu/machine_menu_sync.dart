@@ -1,5 +1,7 @@
+import 'package:simple_app/feature/machine_menu/machine_menu_image.dart';
 import 'package:simple_app/feature/machine_menu/machine_menu_request.dart';
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,6 +17,7 @@ class Drink {
     required this.price,
     required this.available,
     required this.inStock,
+    this.imageHash = 0,
   });
 
   factory Drink.fromRow(Map<String, Object?> row) => Drink(
@@ -23,13 +26,19 @@ class Drink {
     price: (row['price'] as num?)?.toDouble() ?? 0,
     available: row['available'] == 1 || row['available'] == true,
     inStock: row['in_stock'] != 0 && row['in_stock'] != false,
+    imageHash: _imageHash(row['image_hash']),
   );
+
+  // CRC32 byte ảnh; 0 khi món không có ảnh hoặc máy cũ chưa gửi cột này.
+  static int _imageHash(Object? value) =>
+      value is int && value > 0 && value <= 0xffffffff ? value : 0;
 
   final int id;
   final String name;
   final double price;
   final bool available;
   final bool inStock;
+  final int imageHash;
 }
 
 // Gói menu: base64(zlib(JSON)) với "fields" là tên cột và mỗi món là một mảng
@@ -61,10 +70,13 @@ class Drink {
 
 // Tab Menu: nhận gói menu và gửi thay đổi món; tab chỉ đọc drinks/loading/error để vẽ.
 class ProductsSync extends ChangeNotifier {
-  ProductsSync(this.api, this.machineId);
+  ProductsSync(this.api, this.machineId)
+    : images = MenuImageCache(api, machineId);
   final ServerClient api;
   // Đọc máy đang chọn từ DashboardController, không giữ bản riêng.
   final String? Function() machineId;
+  // Ảnh món tải sau menu, tab nghe riêng để vẽ lại khi ảnh về.
+  final MenuImageCache images;
 
   List<Drink> drinks = const [];
   String? error;
@@ -77,6 +89,7 @@ class ProductsSync extends ChangeNotifier {
 
   void reset() {
     _session++;
+    images.reset();
     drinks = const [];
     menuVersion = 0;
     error = null;
@@ -135,12 +148,17 @@ class ProductsSync extends ChangeNotifier {
     final menu = decodeMenuPacket(packet);
     drinks = menu.drinks;
     menuVersion = menu.version;
+    // Không chờ ảnh: danh sách hiện ngay, ảnh về dần.
+    unawaited(
+      images.sync([for (final d in drinks) (id: d.id, imageHash: d.imageHash)]),
+    );
   }
 
   @override
   void dispose() {
     _session++;
     _disposed = true;
+    images.dispose();
     super.dispose();
   }
 }

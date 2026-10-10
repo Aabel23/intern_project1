@@ -2,17 +2,20 @@
 
 POST /app/machine/menu/get: {token, machine_id, menu_version}
 POST /app/machine/menu/update: {token, machine_id, menu_version, thay_doi}
+POST /app/machine/image/get: {token, machine_id, anh: [{drink_id, image_hash}]}
 """
 
-from server.config.routing import MACHINE_MENU_GET, MACHINE_MENU_UPDATE
+from server.config.routing import MACHINE_IMAGE_GET, MACHINE_MENU_GET, MACHINE_MENU_UPDATE
 from server.lib.http.http_json import handle_routes
 
 from .machine_menu_get import nhan_menu
+from .machine_menu_image import nhan_anh
 from .machine_menu_update import cap_nhat_menu
 
 ROUTES = {
     MACHINE_MENU_GET: nhan_menu,
     MACHINE_MENU_UPDATE: cap_nhat_menu,
+    MACHINE_IMAGE_GET: nhan_anh,
 }
 MAX_BODY = 64_000
 

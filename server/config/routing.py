@@ -32,6 +32,7 @@ MACHINE_STATUS_GET = "/app/machine/status/get"  # GET, app gọi
 # Dashboard — đồng bộ Menu
 MACHINE_MENU_GET = "/app/machine/menu/get"
 MACHINE_MENU_UPDATE = "/app/machine/menu/update"
+MACHINE_IMAGE_GET = "/app/machine/image/get"
 
 # Dashboard — đồng bộ và nạp Kho
 MACHINE_INGREDIENT_GET = "/app/machine/ingredient/get"

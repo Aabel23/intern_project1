@@ -17,4 +17,13 @@ extension MachineMenuRequests on ServerClient {
     'menu_version': menuVersion,
     'thay_doi': changes,
   });
+
+  // anh: [{drink_id, image_hash}], tối đa 20 dòng; máy trả {status, anh, con_lai}.
+  Future<Map<String, dynamic>> receiveImages(
+    String machineId,
+    List<Map<String, int>> images,
+  ) => machineData(Routes.machineImageGet, {
+    'machine_id': machineId,
+    'anh': images,
+  });
 }

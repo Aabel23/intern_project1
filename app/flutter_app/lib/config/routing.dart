@@ -28,6 +28,7 @@ abstract final class Routes {
   // Machine menu
   static const machineMenuGet = '/app/machine/menu/get';
   static const machineMenuUpdate = '/app/machine/menu/update';
+  static const machineImageGet = '/app/machine/image/get';
 
   // Machine ingredients
   static const machineIngredientGet = '/app/machine/ingredient/get';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:simple_app/feature/machine_menu/machine_menu_image.dart';
 import 'package:simple_app/feature/machine_menu/machine_menu_sync.dart';
 import 'package:simple_app/shared/ui/app_theme.dart';
 import 'package:simple_app/shared/ui/list_widgets.dart';
@@ -19,7 +20,7 @@ class ProductsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: products,
+    listenable: Listenable.merge([products, products.images]),
     builder: (context, _) => RefreshIndicator(
       onRefresh: products.load,
       child: ListView(
@@ -45,15 +46,7 @@ class ProductsTab extends StatelessWidget {
                     horizontal: 14,
                     vertical: 6,
                   ),
-                  leading: InitialsTile(
-                    initialsOf(p.name),
-                    background: p.inStock
-                        ? AppColors.greenTint
-                        : AppColors.orangeTint,
-                    foreground: p.inStock
-                        ? AppColors.green
-                        : AppColors.orangeText,
-                  ),
+                  leading: _DrinkImage(products.images, p),
                   title: Text(
                     p.name,
                     style: const TextStyle(
@@ -96,4 +89,33 @@ class ProductsTab extends StatelessWidget {
       ),
     ),
   );
+}
+
+// Ảnh món từ cache; chưa có hoặc lỗi đọc thì vẽ chữ cái đầu như trước.
+class _DrinkImage extends StatelessWidget {
+  const _DrinkImage(this.images, this.drink);
+  final MenuImageCache images;
+  final Drink drink;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = InitialsTile(
+      initialsOf(drink.name),
+      background: drink.inStock ? AppColors.greenTint : AppColors.orangeTint,
+      foreground: drink.inStock ? AppColors.green : AppColors.orangeText,
+    );
+    final file = images.fileOf(drink.id);
+    if (file == null) return initials;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.file(
+        file,
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+        cacheWidth: 120,
+        errorBuilder: (_, _, _) => initials,
+      ),
+    );
+  }
 }
