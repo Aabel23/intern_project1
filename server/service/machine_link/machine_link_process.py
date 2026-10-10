@@ -1,6 +1,5 @@
-"""Luồng phía máy: máy xưng key → báo còn sống / lấy lệnh / trả kết quả.
+"""Luồng phía máy: máy xưng key → lấy lệnh / trả kết quả.
 
-    heartbeat:   key → giữ cho máy cũ, không ghi gì
     poll:        key → ghi đã thấy → chờ lệnh trong hộp thư của chính máy đó
     send_result: key → ghi đã thấy → chuyển kết quả cho request app đang chờ lệnh id đó
 
@@ -22,16 +21,6 @@ def machine_from_key(data):
     if not isinstance(key, str) or not key.strip() or len(key) > 1024:
         return None
     return find_id_by_key_hash(sha256_hex(key))
-
-
-# Heartbeat: máy báo đang hoạt động, không lấy hoặc thực hiện lệnh.
-def heartbeat(data):
-    # 1. Xác minh product key trước khi cập nhật trạng thái.
-    machine_id = machine_from_key(data)
-    if machine_id is None:
-        return MACHINE_UNKNOWN, 403
-    # 2. Giữ route cho máy cũ; online nay suy từ poll và kết quả, không ghi gì ở đây.
-    return {"da_nhan": True}, 200
 
 
 # Hỏi lệnh: máy chủ động lấy việc từ hộp thư của chính nó.

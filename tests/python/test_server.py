@@ -149,7 +149,9 @@ class StartpointTest(unittest.TestCase):
             'token': other, 'machine_id': machine_id, 'version': 0,
         })
         self.assertEqual(status, 403)
-        self.assertEqual(self.request('/machine/heartbeat/send', {'product_key': 'sai-key'})[0], 403)
+        self.assertEqual(self.request('/machine/command/poll', {'product_key': 'sai-key'})[0], 403)
+        # Route heartbeat đã bỏ: online suy từ poll và kết quả.
+        self.assertEqual(self.request('/machine/heartbeat/send', {'product_key': 'relay-key'})[0], 404)
         self.assertEqual(self.request('/machine/command/poll', {})[0], 403)
         # Máy chưa poll lần nào thì báo offline ngay, không để app chờ.
         status, data = self.request('/app/machine/ingredient/get', {

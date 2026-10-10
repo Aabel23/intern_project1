@@ -136,10 +136,11 @@ class MachineOnlineTest(unittest.TestCase):
 
     # ---------- máy rảnh ----------
 
-    def test_heartbeat_alone_is_not_online(self):
-        self.assertEqual(self.request("/machine/heartbeat/send", {"product_key": KEY}), (200, {"da_nhan": True}))
-        self.assertFalse(self.online())
-        self.assertEqual(self.ask_app(), (503, {"loi": "Máy đang offline"}))
+    def test_heartbeat_route_is_gone(self):
+        # Route heartbeat đã bỏ: gọi với key đúng cũng không làm máy online hay ghi "đã thấy".
+        self.assertEqual(self.request("/machine/heartbeat/send", {"product_key": KEY})[0], 404)
+        status, reply = self.request(f"/app/machine/status/get?machine_id={self.machine_id}")
+        self.assertEqual((status, reply["online"], reply["last_seen"]), (200, False, None))
 
     def test_poll_marks_online_until_seen_window_ends(self):
         self.assertFalse(self.online())

@@ -1,4 +1,4 @@
-"""Laptop chạy vòng lặp thật của machine/main.py (heartbeat, nhận lệnh, trả kết quả)
+"""Laptop chạy vòng lặp thật của machine/main.py (poll nhận lệnh, trả kết quả)
 với database máy giả, để app thấy máy online và đọc/sửa menu, kho.
 
 Database giả là một file SQLite tạm, tạo mới mỗi lần chạy và xóa khi dừng; đường

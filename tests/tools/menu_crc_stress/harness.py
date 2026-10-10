@@ -170,9 +170,9 @@ class Harness:
         conn.close()
         from menu_sync import machine_menu_store
         self._start_patch(patch.object(machine_menu_store, "DB_PATH", self.machine_db))
-        # main.run() là vòng while True không có cờ dừng: bọc poll()/heartbeat để ném _Stop khi
+        # main.run() là vòng while True không có cờ dừng: bọc poll() để ném _Stop khi
         # stop() bật cờ, rồi join luồng TRƯỚC khi gỡ patch (tránh luồng sót đụng DB máy thật).
-        real_poll, hb = self.machine.poll, self.machine.heartbeat
+        real_poll = self.machine.poll
         stop_event = self._stop_event
 
         def poll():
@@ -180,16 +180,7 @@ class Harness:
                 raise _Stop
             return real_poll()
 
-        def run_heartbeat():
-            while not stop_event.is_set():
-                try:
-                    hb.send_heartbeat()
-                except (OSError, ValueError) as error:
-                    print("Khong gui duoc heartbeat:", error, flush=True)
-                stop_event.wait(hb.HEARTBEAT_INTERVAL_SECONDS)
-
         self.machine.poll = poll
-        self.machine.heartbeat = types.SimpleNamespace(run_heartbeat=run_heartbeat)
 
         def loop():
             try:

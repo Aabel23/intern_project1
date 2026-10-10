@@ -254,7 +254,7 @@ def scenario(run, phone, owner, staff, machine_name, hostname):
     t = step("E3 Máy online qua relay, đọc menu, bật/tắt món, xem kho")
     run.spawn("machine_sim", "tests/relay/machine_sim.py", "--env", str(run.env_file))
     wait_for(lambda: machine_online(machine_id), 30,
-             "Máy giả không heartbeat được, xem machine_sim.log")
+             "Máy giả không online (chưa poll được), xem machine_sim.log")
     # Chọn máy khi đã online thì app tải luôn menu và kho.
     phone.tap(machine_row(phone, machine_name))
     machine_row(phone, machine_name, "Online", 30)

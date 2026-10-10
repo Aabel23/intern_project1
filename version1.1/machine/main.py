@@ -4,12 +4,11 @@ main chỉ tra bảng COMMANDS của các module; module tự kiểm lệnh và 
 """
 
 # Thư viện chuẩn
-import threading
 import time
 import urllib.error
 
 # Kết nối server
-from server_connection import machine_server_heartbeat as heartbeat, machine_server_request
+from server_connection import machine_server_request
 
 # Các module: instruction → hàm xử lý
 from ingredient_sync.machine_ingredient_request import COMMANDS as INGREDIENT_COMMANDS
@@ -52,8 +51,8 @@ def reply(lenh, ket_qua):
 
 
 def run():
-    # Heartbeat chạy riêng để vẫn báo máy đang hoạt động khi xử lý lệnh lâu.
-    threading.Thread(target=heartbeat.run_heartbeat, daemon=True).start()
+    # Không có thread heartbeat: server suy online từ chính poll và kết quả của vòng này,
+    # nên vòng treo thì máy hiện offline (docs/heartbeat-vs-long-poll.md).
     while True:
         lenh = poll()
         if lenh is None:

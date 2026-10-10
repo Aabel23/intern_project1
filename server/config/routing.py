@@ -38,7 +38,6 @@ MACHINE_IMAGE_GET = "/app/machine/image/get"
 MACHINE_INGREDIENT_GET = "/app/machine/ingredient/get"
 MACHINE_INGREDIENT_REFILL = "/app/machine/ingredient/refill"
 
-# Cổng máy — heartbeat, long-poll nhận lệnh và trả kết quả
-MACHINE_HEARTBEAT_SEND = "/machine/heartbeat/send"
+# Cổng máy — long-poll nhận lệnh và trả kết quả
 MACHINE_COMMAND_POLL = "/machine/command/poll"
 MACHINE_RESULT_SEND = "/machine/result/send"

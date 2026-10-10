@@ -257,7 +257,7 @@ class SecurityScenarioTest(unittest.TestCase):
                 % (("a" * 32,) + (text,) * 7)).encode()
         for path in ("/app/user/session/login", "/app/user/account/register", "/app/user/session/logout", "/app/user/machine/register",
                      "/app/machine/share/accept", "/app/user/machine/list", "/app/machine/menu/get", "/app/machine/ingredient/get",
-                     "/machine/heartbeat/send"):
+                     "/machine/command/poll"):
             with self.subTest(path=path):
                 conn = HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
                 conn.request("POST", path, body=body, headers={"Content-Type": "application/json"})
