@@ -1,4 +1,4 @@
-"""Đọc danh sách máy từ SQLite và trạng thái từ heartbeat trong RAM."""
+"""Đọc danh sách máy từ SQLite và trạng thái online suy từ long-poll trong RAM."""
 
 from server.database.connection import get_connection
 from server.lib.machine.machine_transport import is_online, last_seen_of
@@ -24,5 +24,5 @@ def list_my_machines(data):
 
 
 def machine_status(machine_id):
-    """Không cần token: trả trạng thái heartbeat, không gửi lệnh xuống máy."""
+    """Không cần token: trả trạng thái online suy từ long-poll, không gửi lệnh xuống máy."""
     return {"machine_id": machine_id, "online": is_online(machine_id), "last_seen": last_seen_of(machine_id)}

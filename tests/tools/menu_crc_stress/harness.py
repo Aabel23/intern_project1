@@ -210,7 +210,7 @@ class Harness:
             except (HTTPError, OSError, ValueError):
                 pass
             time.sleep(0.05)
-        raise RuntimeError("Máy không heartbeat được trong thời gian chờ")
+        raise RuntimeError("Máy không online (chưa poll được) trong thời gian chờ")
 
     def stop(self):
         if not self._started:

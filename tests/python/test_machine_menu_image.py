@@ -53,7 +53,7 @@ class MachineMenuImageTest(unittest.TestCase):
             "machine_name": "FlexMix-Image", "product_key": KEY, "token": self.token,
         })
         self.machine_id = machine["machine_id"]
-        self.request("/machine/heartbeat/send", {"product_key": KEY})
+        self.request("/machine/command/poll", {"product_key": KEY})
 
     def request(self, path, data):
         url = f"http://127.0.0.1:{self.server.server_port}{path}"

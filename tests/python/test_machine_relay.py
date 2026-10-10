@@ -1,7 +1,7 @@
 """Chạy: python -m unittest tests.python.test_machine_relay
 
 Chạy vòng lặp thật của machine/main.py với server thật (SQLite tạm) và
-database máy giả, kiểm tra heartbeat + nhận lệnh + trả kết quả cho tab Menu và Kho.
+database máy giả, kiểm tra poll (máy online) + nhận lệnh + trả kết quả cho tab Menu và Kho.
 """
 
 import base64
@@ -122,7 +122,7 @@ class MachineRelayTest(unittest.TestCase):
                 return error.code, json.loads(error.read())
 
     def test_machine_serves_app_commands(self):
-        # Máy chưa chạy (chưa heartbeat) thì server báo offline ngay.
+        # Máy chưa chạy (chưa poll) thì server báo offline ngay.
         self.assertEqual(self.call("/app/machine/ingredient/get", {"version": 0})[0], 503)
         threading.Thread(target=self.machine.run, daemon=True).start()
         for _ in range(100):
@@ -131,7 +131,7 @@ class MachineRelayTest(unittest.TestCase):
                     break
             threading.Event().wait(0.05)
         else:
-            self.fail("Máy không heartbeat được bằng product key")
+            self.fail("Máy không poll được bằng product key")
         self.check_menu_tab()
         self.check_ingredient_tab()
         # Các route cũ đã bỏ.

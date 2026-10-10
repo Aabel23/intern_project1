@@ -1,8 +1,8 @@
 """Luồng phía máy: máy xưng key → báo còn sống / lấy lệnh / trả kết quả.
 
-    heartbeat:   key → ghi giờ heartbeat
-    poll:        key → chờ lệnh trong hộp thư của chính máy đó
-    send_result: key → chuyển kết quả cho request app đang chờ lệnh id đó
+    heartbeat:   key → giữ cho máy cũ, không ghi gì
+    poll:        key → ghi đã thấy → chờ lệnh trong hộp thư của chính máy đó
+    send_result: key → ghi đã thấy → chuyển kết quả cho request app đang chờ lệnh id đó
 
 Mỗi hàm nhận body JSON đã parse, trả (kết quả, HTTP status).
 """
@@ -30,8 +30,7 @@ def heartbeat(data):
     machine_id = machine_from_key(data)
     if machine_id is None:
         return MACHINE_UNKNOWN, 403
-    # 2. Ghi heartbeat vào trạng thái RAM dùng chung.
-    mark_seen(machine_id)
+    # 2. Giữ route cho máy cũ; online nay suy từ poll và kết quả, không ghi gì ở đây.
     return {"da_nhan": True}, 200
 
 
@@ -41,7 +40,9 @@ def poll(data):
     machine_id = machine_from_key(data)
     if machine_id is None:
         return MACHINE_UNKNOWN, 403
-    # 2. Long-poll chờ một lệnh; hết thời gian chờ thì trả lenh=null.
+    # 2. Máy đang hỏi lệnh là vòng lệnh còn chạy; ghi trước khi chờ, không ghi lúc trả về.
+    mark_seen(machine_id)
+    # 3. Long-poll chờ một lệnh; hết thời gian chờ thì trả lenh=null.
     return {"lenh": take(machine_id)}, 200
 
 
@@ -51,6 +52,8 @@ def send_result(data):
     machine_id = machine_from_key(data)
     if machine_id is None:
         return MACHINE_UNKNOWN, 403
-    # 2. Transport ghép kết quả bằng machine_id và ID lệnh.
+    # 2. Key đúng nghĩa là máy còn sống, kể cả khi id không khớp lệnh nào.
+    mark_seen(machine_id)
+    # 3. Transport ghép kết quả bằng machine_id và ID lệnh.
     deliver(machine_id, data.get("id"), data.get("ket_qua"))
     return {"da_nhan": True}, 200

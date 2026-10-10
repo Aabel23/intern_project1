@@ -44,6 +44,7 @@ FLOWS = [
     ("S9", "py", "Khởi tạo module: route trùng, khởi động lại giữ dữ liệu", "tests.python.test_server_modules"),
     ("S11", "py", "Ảnh món: kiểm gói, lệnh nhan_anh qua relay", "tests.python.test_machine_menu_image"),
     ("S12", "py", "Stress menu: đổi menu liên tục, CRC luồng thật == oracle, khôi phục", "tests.python.test_menu_crc_stress"),
+    ("S13", "py", "Online suy từ long-poll: rảnh/bận/treo, lệnh chưa lấy, không deadlock", "tests.python.test_machine_online"),
     ("X1", "py", "Kịch bản tấn công server (lỗ hổng đã biết = expectedFailure, xem SECURITY_NOTES)",
      "tests.python.test_server_security"),
     ("A1", "app", "flutter analyze sạch", "analyze"),

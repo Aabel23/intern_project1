@@ -163,7 +163,7 @@ class SecurityScenarioTest(unittest.TestCase):
         machine_id = self.machine(owner)
         _, other_owner = self.user("chu2")
         self.machine(other_owner, key="fm_may_khac")
-        self.post("/machine/heartbeat/send", {"product_key": "fm_tem_may_that"})
+        self.post("/machine/command/poll", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
             app = pool.submit(self.post, "/app/machine/ingredient/get", {"token": owner, "machine_id": machine_id,
                                                            "version": 0})
@@ -184,8 +184,8 @@ class SecurityScenarioTest(unittest.TestCase):
         """SEC-02: ai chụp được tem QR (product key) giả được máy và lấy lệnh của chủ."""
         _, owner = self.user("chu")
         machine_id = self.machine(owner)
-        # Kẻ tấn công chỉ có key trên tem: heartbeat + hỏi lệnh như máy thật.
-        self.post("/machine/heartbeat/send", {"product_key": "fm_tem_may_that"})
+        # Kẻ tấn công chỉ có key trên tem: hỏi lệnh như máy thật (poll làm máy online).
+        self.post("/machine/command/poll", {"product_key": "fm_tem_may_that"})
         with ThreadPoolExecutor(1) as pool:
             pool.submit(self.post, "/app/machine/ingredient/refill", {"token": owner, "machine_id": machine_id,
                                                     "target": 1, "value": 1})
@@ -289,7 +289,7 @@ class SecurityScenarioTest(unittest.TestCase):
         """SEC-08: /app/machine/status/get không cần token, ai biết machine_id đều xem được online/last_seen."""
         _, owner = self.user("chu")
         machine_id = self.machine(owner)
-        self.post("/machine/heartbeat/send", {"product_key": "fm_tem_may_that"})
+        self.post("/machine/command/poll", {"product_key": "fm_tem_may_that"})
         with urlopen(f"http://127.0.0.1:{self.server.server_port}/app/machine/status/get?machine_id={machine_id}") as r:
             data = json.loads(r.read())
         self.assertIsNone(data.get("last_seen"))

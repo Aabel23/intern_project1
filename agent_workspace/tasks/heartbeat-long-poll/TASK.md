@@ -63,6 +63,9 @@ poll/result ; bận → offline khi `send()` hết 20 s mà chưa có kết qu�
   vì lỗ hổng; cần viết lại ở task login.
 - Phát hiện F1 (có sẵn, không do refactor): `/machine/result/send` với `id` không băm được (`[]`, `{}`) làm
   `DANG_CHO.get()` ném `TypeError`, `handle_routes` không bắt, kết nối bị cắt. Chỉ người có key gây ra được.
+- Phát hiện F2 (có sẵn): kết quả tới trước khi máy lấy lệnh (chỉ kẻ giữ key làm được, đoán id vì `DEM_LENH` tuần tự)
+  thì `send()` trả nhưng lệnh vẫn nằm trong `HOP_THU`, máy vẫn chạy lệnh cũ. Refactor chỉ chặn phần mới sinh ra
+  (N1: mục `DANG_LAM` không ai dọn) bằng điều kiện `in DANG_CHO` trong `take()`.
 - Trường `busy` trong status; lưu `last_seen` vào DB; lệnh `nhan_anh` phía máy.
 
 ## Hợp đồng code Pha 1 (coder làm đúng như dưới, không tự thiết kế)
@@ -123,8 +126,9 @@ def _finish(machine_id, lenh_id):
 - `send()`: trong khối `finally: with KHOA:` thêm `_finish(machine_id, lenh["id"])` ngay sau `DANG_CHO.pop(...)`.
   Không đổi gì khác (cổng `is_online`, thông báo lỗi, status 503/502 giữ nguyên).
 - `take()`: khi `hop_thu` rỗng trả `None` sớm; khi có lệnh: `lenh = hop_thu.pop(0)`, ghi
-  `DANG_LAM.setdefault(machine_id, {})[lenh["id"]] = time.time()` (comment: máy đã lấy, tính là bận tới khi có kết quả
-  hoặc `send()` hết giờ), rồi `return lenh`. Vẫn nằm trong `with CO_LENH:`.
+  `DANG_LAM.setdefault(machine_id, {})[lenh["id"]] = time.time()` **chỉ khi `lenh["id"] in DANG_CHO`** (comment: máy đã
+  lấy, tính là bận tới khi có kết quả hoặc `send()` hết giờ; lệnh không còn `send()` chờ thì không ghi vì không ai dọn),
+  rồi `return lenh`. Vẫn nằm trong `with CO_LENH:`. Điều kiện `in DANG_CHO` bổ sung sau review K1 (N1, xem dưới).
 - `deliver()`: trong khối `with KHOA:` sẵn có, sau `cho = DANG_CHO.get(lenh_id)` thêm
   `if cho is not None and cho[0] == machine_id: _finish(machine_id, lenh_id)`. Phần còn lại giữ nguyên.
 - Luôn đọc hằng số qua tên module (`MACHINE_SEEN_TIMEOUT_SECONDS`, `COMMAND_TIMEOUT_SECONDS`) lúc gọi hàm, không gán vào
@@ -340,7 +344,7 @@ K1 kiểm: race giữa `send`/`take`/`deliver` (thứ tự khoá, lệnh bị l�
 (`LAN_THAY_CUOI` chỉ có khoá sau xác minh key; `DANG_LAM` dọn trong `finally`), máy khác không gỡ được trạng thái bận,
 SEC-02 không nặng thêm. Ghi F1 là có sẵn. Mức theo `CODE_STYLE.md` §6.
 
-Cổng **G1**: R1 và K1 không còn mục "Chặn"; `discover` → `Ran 82 tests`, `FAILED (errors=7, expected failures=6)`;
+Cổng **G1**: R1 và K1 không còn mục "Chặn"; `discover` → `Ran 83 tests` (82 + test N1), `FAILED (errors=7, expected failures=6)`;
 `python -m tests.tools.menu_crc_stress --iterations 300 --seed 42` → `KẾT QUẢ: PASS`. Operator commit
 `Derive machine online state from long-poll (phase 1)`.
 
@@ -380,7 +384,7 @@ Kiểm: `grep -rn -i heartbeat <file Phụ lục C>` chỉ còn câu nói route 
 Operator hợp nhất `lane-c2.patch` và `lane-p3.patch` vào cây chính (đã có tài liệu của D1) rồi giao R2. Như HB-06
 mục 6–9, thêm: tài liệu khớp code thật (route, tên hằng, ngưỡng 15/20/8 s), không còn mô tả "thread heartbeat mỗi 5 s"
 hay route heartbeat như hiện trạng. Cổng **G2**: R2 không còn "Chặn"; `discover` → `Ran 82 tests`,
-`FAILED (errors=7, expected failures=6)`; stress 300 vòng PASS;
+`FAILED (errors=7, expected failures=6)` (83 test); stress 300 vòng PASS;
 `grep -rn "heartbeat/send\|HEARTBEAT" server version1.1/machine tests --include=*.py` chỉ còn assertion 404.
 Operator commit + push `Remove machine heartbeat thread and heartbeat route (phases 2-3)`.
 
@@ -432,15 +436,15 @@ Gỡ mọi worktree (`git worktree list` chỉ còn cây chính). Vault: `STATUS
 |---|---|---|---|
 | HB-00 | — | operator | ✓ 10/10: nhánh `refactor/heartbeat-long-poll`, plan commit `3994f09`; baseline `91c8cdd` 70 test, failures=1, errors=25. Push lỗi: máy chưa có credential GitHub |
 | HB-01 | HB-00 | T1 | ✓ 10/10: 4 file đúng bảng; operator chạy lại G0: 70 test, `errors=7, expected failures=6`, không failure |
-| HB-02 | HB-01 | C1 | → đang làm (lane-c1) |
-| HB-03 | HB-01 | T1 | → đang làm (lane-t1) |
-| HB-04 | HB-02, HB-03 | operator | ○ |
-| HB-05 | HB-04 | T2 | ○ |
-| HB-06 | HB-04 (+HB-05 cho phần S13) | R1, K1 | ○ |
-| HB-07 | G1 | C2 | ○ |
-| HB-08 | G1 | D1 | ○ |
+| HB-02 | HB-01 | C1 | ✓ 10/10: lane check khớp (70 test, failures=2, errors=9, xfail=4, unexpected=2); `machine_transport.py`, `config.py` trùng từng byte bản thử của operator |
+| HB-03 | HB-01 | T1 | ✓ 10/10: lane check trên server cũ khớp (failures=4, errors=10, xfail=4, unexpected=2) |
+| HB-04 | HB-02, HB-03 | operator | ✓ 10/10: G1a 70 test `errors=7, expected failures=6`; lặp 3 lần nhóm S1/S11/X1/S8: chỉ `test_cleanup_callbacks` |
+| HB-05 | HB-04 | T2 | ✓ 10/10: 13 test (12 theo bảng + `test_result_before_take_leaves_no_busy_entry` cho N1), OK ×2 (~10 s); sabotage 1–9 đều đỏ đúng test. ⚠ Bản đầu chép từ file tham chiếu operator để lộ trong scratchpad (đã xoá); R1 soi kỹ, đạt |
+| HB-06 | HB-04, HB-05 | R1, K1 | ✓ 10/10: R1 Pha 1 + S13 + N1 không Chặn/Nên sửa (3 gợi ý: nâng timeout 1 s nếu flaky, assert `last_seen` None ở test heartbeat → đưa vào HB-10b, `patch.stopall`). K1 N1 đã sửa, F1/F2 có sẵn ghi ngoài phạm vi. G1: 83 test `errors=7, expected failures=6`; stress 300 vòng PASS |
+| HB-07 | HB-04 | C2 | → lane-c2 đạt: grep chỉ còn 2 comment, S8+S12 OK, stress 300 vòng PASS (208 menu, 0 va chạm), discover 70 `errors=7, xfail=6`. Chờ hợp nhất sau G1 |
+| HB-08 | thiết kế chốt | D1 | → chờ review R2: 19 file Phụ lục C (operator mở sớm cùng HB-02/03; commit sau G2) |
 | HB-09 | HB-07, HB-08, HB-10 | R2 | ○ |
-| HB-10 | G1 | C3, T2 | ○ |
+| HB-10 | HB-04 | C3, T2 | → HB-10a lane-p3 đạt (70 test: đúng 2 failure chờ HB-10b). HB-10b làm ở cây chính sau hợp nhất |
 | HB-11 | G2 | T3 | ○ tuỳ chọn |
 | HB-12 | G2 | operator | ○ |
 

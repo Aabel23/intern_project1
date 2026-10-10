@@ -75,7 +75,7 @@ class StartpointTest(unittest.TestCase):
         status, mine = self.request('/app/user/machine/list', {'token': token})
         self.assertEqual(mine['machines'][0]['role'], 'owner')
         # Máy xưng danh bằng product key, server tự tra machine_id đã cấp.
-        status, _ = self.request('/machine/heartbeat/send', {'product_key': 'test-key'})
+        status, _ = self.request('/machine/command/poll', {'product_key': 'test-key'})
         self.assertEqual(status, 200)
         status, result = self.request(f"/app/machine/status/get?machine_id={machine['machine_id']}")
         self.assertTrue(result['online'])
@@ -96,7 +96,7 @@ class StartpointTest(unittest.TestCase):
     def test_waiting_app_does_not_block_machine(self):
         from server.lib.machine import machine_transport as relay
         token, machine_id = self.make_owner_machine()
-        self.request('/machine/heartbeat/send', {'product_key': 'relay-key'})
+        self.request('/machine/command/poll', {'product_key': 'relay-key'})
         with ThreadPoolExecutor(max_workers=1) as pool:
             app = pool.submit(self.request, '/app/machine/ingredient/get', {
                 'token': token, 'machine_id': machine_id, 'version': 0,
@@ -120,7 +120,7 @@ class StartpointTest(unittest.TestCase):
     def test_long_poll_returns_as_soon_as_command_arrives(self):
         import time
         token, machine_id = self.make_owner_machine()
-        self.request('/machine/heartbeat/send', {'product_key': 'relay-key'})
+        self.request('/machine/command/poll', {'product_key': 'relay-key'})
         with patch('server.lib.machine.machine_transport.POLL_WAIT_SECONDS', 4), ThreadPoolExecutor(max_workers=1) as pool:
             started = time.monotonic()
             poll = pool.submit(self.request, '/machine/command/poll', {'product_key': 'relay-key'})
@@ -151,13 +151,13 @@ class StartpointTest(unittest.TestCase):
         self.assertEqual(status, 403)
         self.assertEqual(self.request('/machine/heartbeat/send', {'product_key': 'sai-key'})[0], 403)
         self.assertEqual(self.request('/machine/command/poll', {})[0], 403)
-        # Máy chưa heartbeat thì báo offline ngay, không để app chờ.
+        # Máy chưa poll lần nào thì báo offline ngay, không để app chờ.
         status, data = self.request('/app/machine/ingredient/get', {
             'token': token, 'machine_id': machine_id, 'version': 0,
         })
         self.assertEqual((status, data), (503, {'loi': 'Máy đang offline'}))
         # Máy khác không lấy được hay trả kết quả cho lệnh không thuộc về nó.
-        self.request('/machine/heartbeat/send', {'product_key': 'relay-key'})
+        self.request('/machine/command/poll', {'product_key': 'relay-key'})
         with ThreadPoolExecutor(max_workers=1) as pool:
             app = pool.submit(self.request, '/app/machine/ingredient/get', {
                 'token': token, 'machine_id': machine_id, 'version': 0,
@@ -181,7 +181,7 @@ class StartpointTest(unittest.TestCase):
 
     def test_timed_out_command_is_not_run_or_answered_later(self):
         token, machine_id = self.make_owner_machine()
-        self.request('/machine/heartbeat/send', {'product_key': 'relay-key'})
+        self.request('/machine/command/poll', {'product_key': 'relay-key'})
         refill = {'token': token, 'machine_id': machine_id, 'target': 'all', 'value': 'full'}
 
         def take():
@@ -192,7 +192,7 @@ class StartpointTest(unittest.TestCase):
             self.fail('Máy không nhận được lệnh')
 
         with patch('server.lib.machine.machine_transport.COMMAND_TIMEOUT_SECONDS', 1):
-            # Máy còn heartbeat nhưng chưa lấy lệnh: hết giờ thì hủy, online lại không nạp kho lần nữa.
+            # Máy đã poll (online) nhưng chưa lấy lệnh: hết giờ thì hủy, online lại không nạp kho lần nữa.
             status, data = self.request('/app/machine/ingredient/refill', refill)
             self.assertEqual((status, data), (502, {'loi': 'Máy không phản hồi, lệnh đã được hủy'}))
             self.assertIsNone(self.request('/machine/command/poll', {'product_key': 'relay-key'})[1]['lenh'])

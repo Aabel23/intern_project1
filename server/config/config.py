@@ -2,7 +2,9 @@
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8000
-HEARTBEAT_TIMEOUT_SECONDS = 15
+# Máy rảnh: poll hoặc gửi kết quả cuối cách đây dưới chừng này giây thì còn online.
+# Phải lớn hơn POLL_WAIT_SECONDS để máy đang treo một poll luôn được tính là online.
+MACHINE_SEEN_TIMEOUT_SECONDS = 15
 COMMAND_TIMEOUT_SECONDS = 20
 # Máy hỏi lệnh được giữ tối đa chừng này giây (long-poll); nhỏ hơn timeout 10s của máy.
 POLL_WAIT_SECONDS = 8
