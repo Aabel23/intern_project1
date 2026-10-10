@@ -177,7 +177,7 @@ Triển khai theo ba pha: **server → máy → dọn route**.
 
 - ⛔ **Nghiêm trọng:** với cách A, máy có vòng lệnh treo hiện online vô thời hạn. Mọi thao tác trên app chờ 20 s rồi báo "Máy chưa trả kết quả", và người dùng không có cách nào biết máy đã treo.
 - ⚠️ Không lấy "có lệnh trong `DANG_CHO`" làm điều kiện online. Nó được ghi trước khi máy lấy lệnh (`machine_transport.py:55-58`).
-- ⚠️ Các con số về tải, số dòng code và số vị trí test là ước lượng, chưa đo. Mô tả về GitHub runner lấy từ bên thứ ba.
+- Tải lúc rảnh đã đo ngày 10/10/2026 (một máy, localhost, 120 s, lặp 3 lần như nhau): trước refactor 0,325 req/s (poll 0,125 + heartbeat 0,200), sau 0,125 req/s, giảm 61,5%. Số dòng code và số vị trí test ở trên là ước lượng lúc phân tích. Mô tả về GitHub runner lấy từ bên thứ ba.
 - Ngoài phạm vi: server đã gửi `nhan_anh` nhưng `COMMANDS` của máy chưa có lệnh này.
 
 ## Nguồn tham khảo

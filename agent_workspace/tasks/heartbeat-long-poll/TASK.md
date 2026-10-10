@@ -17,7 +17,7 @@
   (đã commit nhánh ảnh, tài liệu so sánh và việc xoá stub ngày 10/10/2026).
 - Thiết kế nguồn: [docs/heartbeat-vs-long-poll.md](../../../docs/heartbeat-vs-long-poll.md), cách B. Plan này chốt các
   chi tiết còn để ngỏ trong tài liệu đó (mục "Quyết định").
-- Trạng thái: **ĐANG LÀM.** User đã chốt U1–U4 ngày 10/10/2026 (mục "Quyết định của user"); Pha 2 và Pha 3 chạy
+- Trạng thái: **XONG** (chưa push). User đã chốt U1–U4 ngày 10/10/2026 (mục "Quyết định của user"); Pha 2 và Pha 3 chạy
   cùng một đợt sau cổng G1.
 - Kiểm chứng plan: operator đã dựng thử cả 3 pha trên worktree tạm (đã xoá), đo test nào vỡ, lặp lại, chạy 8 kiểu
   sabotage và stress 200 vòng. Số liệu ở mục "Bằng chứng nghiên cứu"; mọi con số ở các cổng bên dưới lấy từ đó.
@@ -445,8 +445,8 @@ Gỡ mọi worktree (`git worktree list` chỉ còn cây chính). Vault: `STATUS
 | HB-08 | thiết kế chốt | D1 | ✓ 10/10: 19 file Phụ lục C + `agent_workspace/agents/hacker.md`; sửa xong 1 Nên sửa và 2 gợi ý của R2 (operator đã kiểm diff) |
 | HB-09 | HB-07, HB-08, HB-10 | R2 | ✓ 10/10: không Chặn; grep code sạch; HTML cân bằng thẻ (MENU_SYNC_FLOW lệch có sẵn ở HEAD); R2 tự chạy 83 test `errors=7, xfail=6` |
 | HB-10 | HB-04 | C3, T2 | ✓ 10/10: ✗ lần 1 do operator chép nhầm lane (đã ghi); C3 làm lại ở cây chính, khớp từng dòng diff lane-p3; HB-10b T2: 37 test chỉ `test_cleanup_callbacks`; thêm assert `last_seen` None (gợi ý R1); sửa chuỗi `run_e2e.py:257`. G2: 83 test `errors=7, xfail=6`, stress 300 PASS, grep chỉ còn 2 assertion 404 |
-| HB-11 | G2 | T3 | ○ tuỳ chọn |
-| HB-12 | G2 | operator | ○ |
+| HB-11 | G2 | T3 | ✓ 10/10: máy thật + server thật, rảnh 120 s, lặp 3 lần giống nhau: `91c8cdd` poll 15 + heartbeat 24 = 0,325 req/s; `8f62ba7` poll 15 = 0,125 req/s (−61,5%) |
+| HB-12 | G2 | operator | ✓ 10/10: worktree đã gỡ hết; vault STATUS/ARCHITECTURE/archive cập nhật. Push nhánh chưa được: máy chưa có credential GitHub |
 
 Ký hiệu theo `agent_workspace/TEAM.md`: ○ chưa làm, → đang làm, ✓ đạt (có bằng chứng), ✗ lỗi (ghi nguyên nhân), ⏸ chờ.
 
