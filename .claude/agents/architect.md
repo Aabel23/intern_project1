@@ -28,7 +28,7 @@ Bàn giao Markdown nội bộ phải cung cấp đủ nội dung để operator 
 chuẩn này; không sinh HTML cho từng phase hoặc biến nhật ký agent thành báo cáo.
 
 **Mẫu chính:** `FexMix_Munual.html` tại gốc repo. Mẫu bổ sung:
-`FlexMix_System_Manual.html`. Dùng đường dẫn tương đối theo repo, không khóa vào
+`docs/manual/system-manual.html`. Dùng đường dẫn tương đối theo repo, không khóa vào
 đường dẫn máy hiện tại. `packet-security.html` là một lần áp dụng, không thay mẫu gốc.
 
 Trước khi đề xuất bố cục, đọc trực tiếp mẫu chính: CSS/bố cục, bức tranh toàn cục,

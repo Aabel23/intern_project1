@@ -32,7 +32,7 @@ hướng dẫn trước đây yêu cầu mỗi chuyên đề, phase lớn và ph
 Mọi báo cáo thiết kế HTML trong quy trình team lấy `FexMix_Munual.html` tại gốc
 repo làm mẫu chính về bố cục và cách dẫn dắt: tổng quan khối lớn trước → mục lục
 trái/nội dung phải → từng thành phần theo Làm gì, sơ đồ, nguồn, bước/tham số.
-`FlexMix_System_Manual.html` là mẫu bổ sung. Phải đọc mẫu trực tiếp trước khi dựng;
+`docs/manual/system-manual.html` là mẫu bổ sung. Phải đọc mẫu trực tiếp trước khi dựng;
 không chỉ yêu cầu chung “giống manual” hoặc bắt đầu bằng pipeline kỹ thuật dài.
 
 Khuôn thành phần, nguyên tắc diễn đạt và cổng chất lượng dùng chung nằm tại
@@ -53,7 +53,7 @@ sơ đồ thiết kế chỉ nêu mục tiêu và điều kiện nghiệm thu ch
 
 ## Tiêu chí sơ đồ trực quan
 
-- Tham chiếu hình thức: `../FexMix_Munual.html` và `../FlexMix_System_Manual.html`,
+- Tham chiếu hình thức: `../FexMix_Munual.html` và `../docs/manual/system-manual.html`,
   cùng ảnh mẫu người dùng cung cấp. Chỉ mượn hình thức, không chép nghiệp vụ.
 - Nền giấy ấm/than chì theo chế độ sáng/tối; app xanh lam, xử lý cam san hô,
   thiết bị tím, quyết định vàng, kết quả thành công xanh lá. Không chỉ dùng màu:

@@ -52,7 +52,7 @@ def reply(lenh, ket_qua):
 
 def run():
     # Không có thread heartbeat: server suy online từ chính poll và kết quả của vòng này,
-    # nên vòng treo thì máy hiện offline (docs/heartbeat-vs-long-poll.md).
+    # nên vòng treo thì máy hiện offline (docs/design/heartbeat-vs-long-poll.md).
     while True:
         lenh = poll()
         if lenh is None:

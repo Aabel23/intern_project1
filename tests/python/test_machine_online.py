@@ -132,7 +132,7 @@ class MachineOnlineTest(unittest.TestCase):
                     commands |= {key.value for key in node.value.keys}
         self.assertEqual(commands, SHORT_COMMANDS,
                          "Lệnh máy mới: đo thời lượng; dài hơn COMMAND_TIMEOUT_SECONDS thì cần heartbeat theo lệnh "
-                         "(docs/heartbeat-vs-long-poll.md mục 6) trước khi thêm vào SHORT_COMMANDS")
+                         "(docs/design/heartbeat-vs-long-poll.md mục 6) trước khi thêm vào SHORT_COMMANDS")
 
     # ---------- máy rảnh ----------
 

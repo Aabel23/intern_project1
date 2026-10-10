@@ -1,0 +1,906 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chia sẻ và quản lý máy</title>
+<link rel="stylesheet" href="../assets/fonts.css">
+<meta name="description" content="Luồng mã mời chia sẻ máy, danh sách máy, đổi tên, gỡ máy và trạng thái online trong project1_app.">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.9143)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:60px}
+  main section, main section > *{min-width:0}
+  @media (max-width:700px){ code{white-space:normal; overflow-wrap:anywhere} }
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu luồng · project1_app</div>
+      <h1>Chủ máy trao quyền bằng mã mời một lần, rồi mọi người cùng thấy, đổi tên và gỡ máy theo đúng vai owner/manager</h1>
+    </div>
+    <div class="meta">
+      <span><b>Nguồn:</b> <code>refactor/heartbeat-long-poll</code> · <code>16dab0e</code></span>
+      <span><b>Phân tích:</b> 10/10/2026</span>
+      <span><b>Quy mô:</b> 8 route · 9 file server · 5 file app</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Màn hình app</span>
+        <span><i class="sw proc"></i>Xử lý server</span>
+        <span><i class="sw hot"></i>Điểm nóng</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw hw"></i>Máy</span>
+        <span><i class="ln"></i>Đường đi chính (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1000 330" role="img" aria-label="App chủ tạo mã mời, nhân viên nhận mã qua QR hoặc Bluetooth rồi gửi lên server, dashboard đọc danh sách máy và hỏi trạng thái từng máy">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="40" width="300" height="270" rx="12"/>
+<text x="18" y="30" class="zt">APP FLUTTER</text>
+<rect class="zn" x="346" y="40" width="400" height="270" rx="12"/>
+<text x="348" y="30" class="zt">SERVER :8080</text>
+<rect class="zn" x="776" y="40" width="208" height="270" rx="12"/>
+<text x="778" y="30" class="zt">MÁY</text>
+<g class="nd ui"><rect x="40" y="60" width="240" height="50" rx="8"/>
+<text x="160" y="82" class="tt" text-anchor="middle">machine_share_page</text>
+<text x="160" y="98" class="ts" text-anchor="middle">chủ: tạo QR, xem/thu hồi nhân viên</text></g>
+<g class="nd ui"><rect x="40" y="150" width="240" height="50" rx="8"/>
+<text x="160" y="172" class="tt" text-anchor="middle">machine_qr_page · Bluetooth</text>
+<text x="160" y="188" class="ts" text-anchor="middle">nhân viên nhận mã</text></g>
+<g class="nd ui"><rect x="40" y="240" width="240" height="50" rx="8"/>
+<text x="160" y="262" class="tt" text-anchor="middle">dashboard_controller</text>
+<text x="160" y="278" class="ts" text-anchor="middle">tab Máy: list, đổi tên, gỡ</text></g>
+<g class="nd proc"><rect x="380" y="60" width="200" height="50" rx="8"/>
+<text x="480" y="82" class="tt" text-anchor="middle">machine_share_main</text>
+<text x="480" y="98" class="tm" text-anchor="middle">create · accept · staff</text></g>
+<g class="nd proc"><rect x="380" y="240" width="200" height="50" rx="8"/>
+<text x="480" y="262" class="tt" text-anchor="middle">machine_list_main</text>
+<text x="480" y="278" class="tm" text-anchor="middle">list · rename · remove</text></g>
+<g class="nd store"><rect x="620" y="60" width="110" height="110" rx="8"/>
+<text x="675" y="84" class="tt" text-anchor="middle">SQLite</text>
+<text x="675" y="104" class="tmono" text-anchor="middle">machines</text>
+<text x="675" y="120" class="tmono" text-anchor="middle">machine_managers</text>
+<text x="675" y="136" class="tmono" text-anchor="middle">machine_invites</text></g>
+<g class="nd hot"><rect x="620" y="240" width="110" height="50" rx="8"/>
+<text x="675" y="262" class="tt" text-anchor="middle">is_online()</text>
+<text x="675" y="278" class="ts" text-anchor="middle">RAM, không token</text></g>
+<g class="nd hw"><rect x="800" y="240" width="160" height="50" rx="8"/>
+<text x="880" y="262" class="tt" text-anchor="middle">vòng long-poll</text>
+<text x="880" y="278" class="ts" text-anchor="middle">xem machine-link</text></g>
+<path class="e main" d="M280,85 L380,85" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="330" cy="85" r="9.5"/><text x="330" y="88.8" text-anchor="middle">1</text></g>
+<path class="e main" d="M580,85 L620,85" marker-end="url(#aa)"/>
+<path class="e main" d="M160,110 L160,150" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="160" cy="130" r="9.5"/><text x="160" y="133.8" text-anchor="middle">2</text></g>
+<text x="174" y="134" class="tl">QR hoặc RFCOMM</text>
+<path class="e main" d="M280,175 L480,175 L480,110" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="380" cy="175" r="9.5"/><text x="380" y="178.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M280,255 L380,255" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="330" cy="255" r="9.5"/><text x="330" y="258.8" text-anchor="middle">4</text></g>
+<path class="e main" d="M580,250 L600,250 L600,150 L620,150" marker-end="url(#aa)"/>
+<path class="e dash" d="M280,280 L380,280" marker-end="url(#ag)"/>
+<text x="290" y="302" class="thot">5 · GET status × N</text>
+<path class="e" d="M580,275 L620,275" marker-end="url(#ag)"/>
+<path class="e" d="M800,265 L730,265" marker-end="url(#ag)"/>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>① Chủ máy mở màn chia sẻ, app gọi <code>/app/machine/share/create</code>, server lưu <b>hash</b> của mã vào <code>machine_invites</code>. ② Mã thô đi sang điện thoại nhân viên bằng QR hoặc Bluetooth RFCOMM, không qua server. ③ App nhân viên gửi mã tới <code>/app/machine/share/accept</code>, server ghi một dòng <code>manager</code> vào <code>machine_managers</code>. ④ Dashboard gọi <code>/app/user/machine/list</code> để thấy máy mới. ⑤ (xám đứt, viền đỏ) Danh sách <b>không</b> có trạng thái online, nên app gọi thêm <code>GET /app/machine/status/get</code> cho từng máy, không kèm token (SEC-08). Trạng thái online chỉ nằm trong RAM, do vòng long-poll của máy cập nhật — xem <a href="machine-link.html">machine-link.html</a>. Máy vào bảng <code>machines</code> qua <a href="machine-register.html">machine-register.html</a>.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-invite">3.1 Vòng đời mã mời</a></li>
+        <li class="sub"><a href="#c-accept">3.2 Nhận mã (accept)</a></li>
+        <li class="sub"><a href="#c-channel">3.3 Kênh QR và Bluetooth</a></li>
+        <li class="sub"><a href="#c-staff">3.4 Xem và thu hồi nhân viên</a></li>
+        <li class="sub"><a href="#c-list">3.5 Danh sách và trạng thái online</a></li>
+        <li class="sub"><a href="#c-manage">3.6 Đổi tên và gỡ máy</a></li>
+        <li class="sub"><a href="#c-db">3.7 Bảng SQLite</a></li>
+        <li><a href="#hop-dong">4. Hợp đồng gói tin</a></li>
+        <li><a href="#loi">5. Lỗi và giới hạn</a></li>
+        <li><a href="#khi-sua">6. Khi sửa code</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: chủ chia sẻ máy cho nhân viên qua QR</h2></div>
+      <p class="prose">Ví dụ đại diện: chủ tạo mã, nhân viên quét QR, rồi dashboard nhân viên tải lại danh sách. Mũi tên liền là request, mũi tên đứt là trả lời. Máy không tham gia: chia sẻ và quản lý chỉ đụng SQLite trên server, nên chạy được cả khi máy offline.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor O as Chủ máy
+  participant OA as App chủ
+  participant S as machine_share_main
+  participant DB as SQLite
+  participant SA as App nhân viên
+  actor N as Nhân viên
+  O->>OA: Chia sẻ cho nhân viên
+  OA->>S: POST share/create {token, machine_id}
+  S->>DB: is_owner() rồi replace_invite(sha256(code))
+  S-->>OA: {valid, code, expires_in: 300}
+  OA-->>N: hiện QR {"type":"share","code"}
+  N->>SA: quét QR
+  SA->>S: POST share/accept {token, code}
+  S->>DB: BEGIN IMMEDIATE, find_valid_invite()
+  S->>DB: mark_used() + add_manager()
+  S-->>SA: {valid, machine_id, machine_name}
+  SA->>S: POST user/machine/list {token}
+  S-->>SA: {valid, machines:[{machine_id, name, role}]}
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: <code>machine_share_create.create_invite()</code>, <code>machine_share_accept.accept_invite()</code>, <code>machine_list_get.list_my_machines()</code> (bước 11 thực ra đi qua <code>machine_list_main</code>). Kênh Bluetooth thay bước 5–6 bằng gói RFCOMM, các bước còn lại giống hệt.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>App chủ</td><td><code>app/flutter_app/lib/feature/machine_share/ui/machine_share_page.dart</code> · <code>createCode()</code></td><td>Gọi <code>createShare()</code>, mã hóa bằng <code>encodeShareQr()</code>, đếm ngược hạn</td></tr>
+            <tr><td>machine_share_main</td><td><code>server/service/machine_share/machine_share_main.py</code> · <code>handle()</code></td><td>Tra route, đọc body ≤ 4096 byte, suy status HTTP từ <code>valid</code></td></tr>
+            <tr><td>SQLite</td><td><code>server/database/machine/machine_share_store.py</code>, <code>machine_read.py</code></td><td>SQL mã mời và quyền, không tự commit</td></tr>
+            <tr><td>App nhân viên</td><td><code>lib/feature/dashboard/ui/machine_qr_page.dart</code> (dòng 45)</td><td>Cùng màn quét tem máy, phân biệt bằng <code>type == 'share'</code></td></tr>
+            <tr><td>user/machine/list</td><td><code>server/service/dashboard_sync/machinelist_sync/machine_list_get.py</code></td><td>Đọc máy theo <code>machine_managers.user_id</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <article class="comp" id="c-invite">
+        <header><h3>3.1 · Vòng đời mã mời</h3><div class="src"><code>machine_share_create.py</code>, <code>machine_share_store.py</code> · Sơ đồ: trạng thái · 4 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Mã mời là chuỗi <code>secrets.token_urlsafe(24)</code> (24 byte ngẫu nhiên, ~32 ký tự). Server chỉ lưu <code>sha256_hex(code)</code> trong <code>machine_invites.code_hash</code>, hạn <code>INVITE_TTL_SECONDS = 5 * 60</code> giây (<code>machine_share_create.py:13</code>). Mã dùng một lần. Mỗi máy chỉ có tối đa một mã chưa dùng: tạo mã mới xóa mã cũ.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> pending: replace_invite()<br/>chủ tạo, lưu hash
+  pending --> used: mark_used()<br/>nhân viên nhận
+  pending --> replaced: replace_invite()<br/>chủ tạo mã khác
+  pending --> expired: quá expires_at<br/>sau 300 giây
+  expired --> purged: replace_invite()<br/>lần tạo kế tiếp
+  used --> purged: replace_invite()<br/>khi đã hết hạn
+  replaced --> [*]
+  purged --> [*]
+  class pending ui
+  class used ok
+  class expired muted
+  class replaced muted
+  class purged store
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>replace_invite()</code> (xóa <code>expires_at &lt;= now</code> và mã <code>used_at IS NULL</code> của cùng máy), <code>find_valid_invite()</code> (chỉ nhận <code>used_at IS NULL AND expires_at &gt; now</code>), <code>mark_used()</code>. Xóa máy thì mọi mã của máy bị xóa theo <code>ON DELETE CASCADE</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>check_login(data)</code> trước tiên: không có token hợp lệ thì trả <code>NOT_LOGGED_IN</code> (có <code>login_required: true</code>) để app đưa về màn đăng nhập.</li>
+          <li><code>is_machine_id()</code> chỉ kiểm chuỗi dài 1–100. Vì quyền mới là chốt chặn thật, không cần kiểm định dạng <code>fm_…</code>.</li>
+          <li>Sinh mã <b>trước</b> khi mở kết nối để transaction ngắn. Kiểm <code>is_owner()</code> và ghi trong cùng <code>conn</code>: nhân viên (manager) không tạo được mã, tránh nhân viên tự nhân bản quyền.</li>
+          <li>Chỉ lưu hash: lộ file SQLite không lộ mã còn hạn. Hạn tính bằng <code>time.time()</code> (giây epoch, REAL), còn <code>used_at</code> là chuỗi <code>datetime('now')</code> — hai kiểu thời gian khác nhau trong một bảng.</li>
+          <li>Trả <code>expires_in</code> thay vì mốc giờ tuyệt đối, để app không phụ thuộc đồng hồ server. App tự cộng vào <code>DateTime.now()</code>, mặc định 300 nếu thiếu.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-accept">
+        <header><h3>3.2 · Nhận mã (accept)</h3><div class="src"><code>server/service/machine_share/machine_share_accept.py</code> · Sơ đồ: luồng · 3 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Đổi một mã còn hạn thành quyền <code>manager</code> trên máy. Không gửi gì xuống máy, không báo cho chủ (chủ chỉ thấy khi tải lại danh sách nhân viên).</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  A1["① check_login + is_code"] --> A2["② BEGIN IMMEDIATE"]
+  A2 --> D1{"find_valid_invite()"}
+  D1 -- "có" --> A3["③ mark_used + add_manager"]
+  A3 --> OK["valid: true"]
+  D1 -- "không" --> ER["đã dùng hoặc hết hạn"]
+  A1 -- "sai" --> ER2["400 / login_required"]
+  class A1,A2,A3 proc
+  class D1 dec
+  class OK ok
+  class ER,ER2 bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① check_login + is_code</td></tr>
+                <tr><td>độ dài</td><td><code>INVITE_CODE_MIN_LENGTH = 20</code> … <code>MAX = 100</code></td></tr>
+                <tr class="grp"><td colspan="2">② BEGIN IMMEDIATE</td></tr>
+                <tr><td>khóa</td><td>Giữ khóa ghi SQLite từ lúc đọc tới commit</td></tr>
+                <tr class="grp"><td colspan="2">③ mark_used + add_manager</td></tr>
+                <tr><td>1</td><td><code>UPDATE … used_by, used_at</code></td></tr>
+                <tr><td>2</td><td><code>INSERT OR IGNORE … 'manager'</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>accept_invite()</code>, <code>store.find_valid_invite/mark_used/add_manager</code>. Test: <code>test_invite_has_only_one_winner_under_concurrent_accepts</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Kiểm độ dài trước khi băm: mã quá ngắn/dài bị loại mà không tốn truy vấn.</li>
+          <li><code>BEGIN IMMEDIATE</code> trước khi đọc: hai người quét cùng một QR thì người sau phải chờ, đọc lại thấy <code>used_at</code> đã có và nhận lỗi. Không có khóa này, cả hai đều thấy mã hợp lệ.</li>
+          <li><code>mark_used</code> và <code>add_manager</code> chung transaction: lỗi giữa chừng thì rollback cả hai, không có mã "đã dùng" mà không ai được quyền.</li>
+          <li><code>INSERT OR IGNORE</code>: người đã có dòng trong <code>machine_managers</code> (kể cả chủ quét mã của mình) giữ nguyên vai. Mã vẫn bị tiêu.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-channel">
+        <header><h3>3.3 · Kênh nhận mã: QR hoặc Bluetooth</h3><div class="src"><code>lib/feature/machine_share/ui/*.dart</code>, <code>lib/feature/dashboard/ui/machine_qr_page.dart</code> · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Đưa mã thô từ app chủ sang app nhân viên mà không qua server. Cả hai kênh dùng cùng chuỗi <code>encodeShareQr(code)</code> = <code>{"type":"share","code":"…"}</code>, và cùng <code>parseMachineQr()</code> ở đầu nhận.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  C1["① createCode()"] --> D1{"Kênh?"}
+  D1 -- "QR" --> Q1["② MobileScanner"]
+  D1 -- "Bluetooth" --> B1["③ sendShare / receiveShare"]
+  Q1 --> P1["④ parseMachineQr + acceptShare"]
+  B1 --> P1
+  class C1,P1 proc
+  class Q1 ui
+  class B1 hot
+  class D1 dec
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① createCode()</td></tr>
+                <tr><td>file</td><td><code>machine_share_page.dart:57</code></td></tr>
+                <tr class="grp"><td colspan="2">② MobileScanner</td></tr>
+                <tr><td>file</td><td><code>machine_qr_page.dart</code>, khóa <code>scanning=false</code> trước await</td></tr>
+                <tr class="grp"><td colspan="2">③ sendShare / receiveShare</td></tr>
+                <tr><td>kênh</td><td><code>MethodChannel('flexmix/bluetooth_pairing')</code> → <code>BluetoothPairing.kt</code></td></tr>
+                <tr><td>gói</td><td>identify → ready → share → ack, mỗi dòng JSON ≤ 4096 byte (theo <code>QR.md</code>)</td></tr>
+                <tr class="grp"><td colspan="2">④ parseMachineQr + acceptShare</td></tr>
+                <tr><td>file</td><td><code>machine_share_bluetooth_page.dart:181–188</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>machine_share_page.dart</code> (<code>createCode</code>, <code>sendBluetooth</code>), <code>machine_share_bluetooth_page.dart</code> (<code>scan</code>, <code>send</code>, <code>receiveShare</code>), <code>machine_share/QR.md</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Chủ tạo mã một lần, QR và Bluetooth gửi cùng payload. Vì vậy đổi định dạng ở <code>core/machine_packet.dart</code> là đổi cho cả hai kênh.</li>
+          <li>Màn quét QR dùng chung với đăng ký máy: <code>type == 'share'</code> đi <code>acceptShare</code>, còn lại đi <code>registerMachine</code>. Khóa quét ngay trước <code>await</code> để một QR không bắn nhiều request.</li>
+          <li>Bluetooth: nhân viên mở RFCOMM server (UUID <code>e53b1694-…-00e228b8164e</code>, hiện điện thoại 120 giây), chủ quét rồi chọn thiết bị theo <b>tên</b>. Đây là chỗ SEC-10.</li>
+          <li>Gửi Bluetooth xong, app chủ gọi lại <code>loadStaff()</code> để nhân viên mới hiện ngay.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-staff">
+        <header><h3>3.4 · Xem và thu hồi nhân viên</h3><div class="src"><code>machine_staff_list.py</code>, <code>machine_staff_revoke.py</code> · Sơ đồ: luồng · 3 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Chỉ chủ máy xem được danh sách <code>manager</code> và xóa một người. Không xóa được chủ: SQL có <code>AND role='manager'</code>.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  R1["① check_login + is_machine_id"] --> D1{"is_owner()"}
+  D1 -- "có" --> R2["② list_staff()"]
+  D1 -- "có" --> R3["③ remove_manager()"]
+  D1 -- "không" --> ER["Chỉ chủ máy..."]
+  R2 --> OK["staff[]"]
+  R3 --> OK2["valid: true"]
+  class R1,R2,R3 proc
+  class D1 dec
+  class OK,OK2 ok
+  class ER bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① check_login + is_machine_id</td></tr>
+                <tr><td>revoke</td><td>thêm <code>is_staff_id()</code>: int, không phải bool</td></tr>
+                <tr class="grp"><td colspan="2">② list_staff()</td></tr>
+                <tr><td>trả</td><td><code>user_id, username, full_name</code>, xếp theo <code>created_at</code></td></tr>
+                <tr class="grp"><td colspan="2">③ remove_manager()</td></tr>
+                <tr><td>SQL</td><td><code>DELETE … AND role='manager'</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>list_staff()</code>, <code>revoke_staff()</code>, <code>machine_write.remove_manager()</code>. Test: <code>test_owner_lists_and_revokes_staff</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>is_staff_id</code> loại <code>bool</code> vì trong Python <code>True</code> là <code>int</code>: <code>user_id: true</code> sẽ thành id 1.</li>
+          <li>Kiểm quyền chủ trước khi đọc: nhân viên không xem được đồng nghiệp.</li>
+          <li>Thu hồi không kiểm số dòng bị xóa: <code>user_id</code> không phải manager vẫn nhận <code>valid: true</code>. Lặp lại an toàn, nhưng app không biết đã gõ sai.</li>
+          <li>Thu hồi chỉ xóa quyền, không đóng phiên đang mở. Request kế tiếp của nhân viên bị chặn ở <code>can_manage()</code>; dashboard của họ chỉ bỏ máy khi tải lại danh sách.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-list">
+        <header><h3>3.5 · Danh sách máy và trạng thái online</h3><div class="src"><code>machine_list_get.py</code>, <code>dashboard_controller.dart</code> · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p><code>list_my_machines()</code> trả <code>machine_id, name, role</code> của mọi máy có dòng trong <code>machine_managers</code> với user hiện tại. <b>Không</b> trả <code>online</code> hay <code>last_seen</code>. App vì thế gọi thêm <code>GET /app/machine/status/get</code> cho từng máy trong <code>refreshStatuses()</code>. Route này vẫn đang được dùng.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  L1["① loadMyMachines()"] --> L2["② list_my_machines()"]
+  L2 --> L3["③ đồng bộ machines/names/roles"]
+  L3 --> L4["④ refreshStatuses()"]
+  L4 --> S1["handle_get / machine_status"]
+  S1 --> OK["online[id]"]
+  S1 -- "lỗi mạng" --> OFF["online = false"]
+  class L1,L3 ui
+  class L2 proc
+  class L4,S1 hot
+  class OK ok
+  class OFF muted
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">② list_my_machines()</td></tr>
+                <tr><td>SQL</td><td>JOIN <code>machine_managers</code>/<code>machines</code>, <code>ORDER BY mm.created_at, m.name</code></td></tr>
+                <tr class="grp"><td colspan="2">③ đồng bộ</td></tr>
+                <tr><td>vì sao</td><td>Server là bản đúng: máy bị thu hồi/gỡ ở nơi khác biến mất</td></tr>
+                <tr class="grp"><td colspan="2">④ refreshStatuses()</td></tr>
+                <tr><td>N+1</td><td><code>Future.wait</code> một GET mỗi máy, không token</td></tr>
+                <tr><td>khi nào</td><td>sau list và khi chọn máy, không có Timer định kỳ</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>dashboard_controller.dart:35–131</code>, <code>machine_list_main.handle_get()</code>, <code>machine_transport.is_online()</code> / <code>last_seen_of()</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><code>_listRequest</code> tăng mỗi lượt tải: kết quả về muộn của lượt cũ bị bỏ, tránh danh sách nhảy ngược.</li>
+          <li>Máy đang chọn không còn trong danh sách thì <code>_session++</code> và reset Menu/Kho: nhân viên vừa bị thu hồi không nhìn tiếp dữ liệu cũ.</li>
+          <li><code>is_online()</code> đọc RAM: online nếu lần poll cuối cách hiện tại dưới <code>MACHINE_SEEN_TIMEOUT_SECONDS = 15</code>, hoặc máy đang giữ lệnh chưa quá <code>COMMAND_TIMEOUT_SECONDS = 20</code>. Server khởi động lại thì mọi máy offline tới lần poll kế.</li>
+          <li><code>handle_get</code> không gọi <code>check_login</code> và không kiểm <code>machine_id</code>: ai biết id đều đọc được <code>online/last_seen</code> (SEC-08). Lỗi request thì app coi là offline.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-manage">
+        <header><h3>3.6 · Đổi tên và gỡ máy</h3><div class="src"><code>machine_list_rename.py</code>, <code>machine_list_remove.py</code> · Sơ đồ: luồng · 3 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Đổi tên: chỉ owner. Gỡ: owner xóa hẳn máy khỏi server, manager chỉ bỏ quyền của chính mình. Cùng một route <code>/app/user/machine/remove</code>, khác nhau ở <code>deleted</code>.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  M1["① check_login + is_machine_id"] --> M2["② BEGIN IMMEDIATE"]
+  M2 --> D1{"is_owner()"}
+  D1 -- "có" --> M3["③a DELETE machines"]
+  D1 -- "không" --> D2{"can_manage()"}
+  D2 -- "có" --> M4["③b remove_manager()"]
+  D2 -- "không" --> ER["Bạn không quản lý máy này"]
+  M3 --> OK["deleted: true"]
+  M4 --> OK2["deleted: false"]
+  class M1,M2 proc
+  class M3 hot
+  class M4 proc
+  class D1,D2 dec
+  class OK,OK2 ok
+  class ER bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">② BEGIN IMMEDIATE</td></tr>
+                <tr><td>vì sao</td><td>Vai trò không đổi giữa lúc kiểm và lúc xóa</td></tr>
+                <tr class="grp"><td colspan="2">③a DELETE machines</td></tr>
+                <tr><td>cascade</td><td><code>machine_managers</code>, <code>machine_invites</code> mất theo</td></tr>
+                <tr class="grp"><td colspan="2">③b remove_manager()</td></tr>
+                <tr><td>SQL</td><td>chỉ dòng của chính user, <code>role='manager'</code></td></tr>
+                <tr class="grp"><td colspan="2">Đổi tên (không vẽ)</td></tr>
+                <tr><td>kiểm</td><td><code>clean_name()</code> 1–150 ký tự sau strip, rồi <code>is_owner()</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>remove_machine()</code>, <code>rename_machine()</code>. App: <code>machines_tab.dart:53</code> (đổi tên), <code>:87</code> (gỡ). Test: <code>test_only_owner_renames</code>, <code>test_staff_removes_only_own_access</code>, <code>test_owner_deletes_machine_and_manager_records</code>.</figcaption>
+        </figure>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Hành động</th><th>owner</th><th>manager</th><th>Người ngoài</th></tr></thead>
+            <tbody>
+              <tr><td>Xem trong list</td><td>có</td><td>có</td><td>không</td></tr>
+              <tr><td>Đổi tên</td><td>có</td><td>400 "Chỉ chủ máy mới đổi tên được"</td><td>400</td></tr>
+              <tr><td>Gỡ máy</td><td>xóa hẳn máy</td><td>chỉ bỏ quyền mình</td><td>400</td></tr>
+              <tr><td>Tạo mã mời, xem/thu hồi nhân viên</td><td>có</td><td>400</td><td>400</td></tr>
+              <tr><td>Nhận mã mời</td><td>giữ owner, mã bị tiêu</td><td>giữ manager</td><td>thành manager</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Đổi tên kiểm tên <b>trước</b> quyền: tên sai thì trả lỗi tên, không lộ máy có tồn tại hay không.</li>
+          <li>Owner gỡ máy là xóa vĩnh viễn: mọi nhân viên mất máy, máy phải đăng ký lại bằng product key (xem <a href="machine-register.html">machine-register.html</a>). App nên xác nhận trước khi gọi.</li>
+          <li>Owner không có đường "chỉ bỏ quyền của mình": owner luôn đi nhánh ③a. Chưa có chuyển quyền chủ.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-db">
+        <header><h3>3.7 · Bảng SQLite</h3><div class="src"><code>server/database/machine/schema.sql</code>, <code>machine_share_schema.sql</code>, <code>init_db.py</code> · 3 bảng</div></header>
+        <h4>Làm gì</h4>
+        <p><code>init_db()</code> chạy <code>user/schema.sql</code>, <code>schema.sql</code>, rồi <code>machine_share_schema.sql</code> (thứ tự vì khóa ngoại).</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Bảng</th><th>Cột dùng trong luồng</th><th>Ràng buộc đáng chú ý</th></tr></thead>
+            <tbody>
+              <tr><td><code>machines</code></td><td><code>machine_id</code> (PK, <code>fm_</code>+uuid4), <code>name</code></td><td><code>name</code> không rỗng. Cột <code>last_seen</code>, <code>status</code> có nhưng luồng này không đọc: online lấy từ RAM</td></tr>
+              <tr><td><code>machine_managers</code></td><td><code>machine_id, user_id, role, created_at</code></td><td>PK <code>(machine_id, user_id)</code>, <code>role IN ('owner','manager')</code>, chỉ mục duy nhất <code>machine_managers_one_owner</code>: tối đa một owner mỗi máy. <code>ON DELETE CASCADE</code></td></tr>
+              <tr><td><code>machine_invites</code></td><td><code>code_hash</code> (PK), <code>machine_id, created_by, expires_at</code> (REAL), <code>used_by, used_at</code></td><td>Cascade theo máy, <code>used_by ON DELETE SET NULL</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="hop-dong">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Hợp đồng gói tin</h2></div>
+      <p class="prose">Mọi route POST đi qua <code>with_valid_status()</code>: <code>valid: true</code> → 200, có <code>retry_after</code> → 429, còn lại → 400. Lỗi luôn có dạng <code>{valid:false, message}</code>. Token sai/hết hạn thêm <code>login_required: true</code>. Body tối đa <code>MAX_BODY = 4096</code> byte ở cả hai module.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Route</th><th>Request</th><th>Response thành công</th><th>Lỗi (message)</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /app/machine/share/create</code></td><td><code>token</code>: str, <code>machine_id</code>: str 1–100</td><td><code>{valid, code: str, machine_id, expires_in: 300, message}</code></td><td>"Thiếu mã máy hợp lệ", "Chỉ chủ máy mới chia sẻ được máy này"</td></tr>
+            <tr><td><code>POST /app/machine/share/accept</code></td><td><code>token</code>, <code>code</code>: str 20–100</td><td><code>{valid, machine_id, machine_name, message}</code></td><td>"Mã chia sẻ không hợp lệ", "Mã chia sẻ đã dùng hoặc hết hạn. Nhờ chủ máy tạo mã mới."</td></tr>
+            <tr><td><code>POST /app/machine/staff/list</code></td><td><code>token</code>, <code>machine_id</code></td><td><code>{valid, staff: [{user_id: int, username, full_name}]}</code></td><td>"Thiếu mã máy hợp lệ", "Chỉ chủ máy mới xem được nhân viên"</td></tr>
+            <tr><td><code>POST /app/machine/staff/revoke</code></td><td><code>token</code>, <code>machine_id</code>, <code>user_id</code>: int</td><td><code>{valid, message}</code></td><td>"Thiếu mã máy hoặc nhân viên", "Chỉ chủ máy mới thu hồi được quyền"</td></tr>
+            <tr><td><code>POST /app/user/machine/list</code></td><td><code>token</code></td><td><code>{valid, machines: [{machine_id, name, role}]}</code></td><td>chỉ lỗi phiên</td></tr>
+            <tr><td><code>POST /app/machine/name/update</code></td><td><code>token</code>, <code>machine_id</code>, <code>name</code>: str</td><td><code>{valid, name, message}</code> (tên đã strip)</td><td>"Tên máy phải có 1-150 ký tự", "Chỉ chủ máy mới đổi tên được"</td></tr>
+            <tr><td><code>POST /app/user/machine/remove</code></td><td><code>token</code>, <code>machine_id</code></td><td><code>{valid, deleted: bool, message}</code></td><td>"Bạn không quản lý máy này"</td></tr>
+            <tr><td><code>GET /app/machine/status/get?machine_id=</code></td><td>query, <b>không token</b></td><td><code>{machine_id, online: bool, last_seen: float|null}</code>, luôn 200</td><td>không có, id lạ vẫn trả <code>online: false</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="loi">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Lỗi và giới hạn</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tình huống</th><th>App thấy gì</th><th>Nên làm gì</th></tr></thead>
+          <tbody>
+            <tr><td>QR quá 5 phút</td><td>App chủ hiện hết hạn theo đồng hồ máy, accept trả "đã dùng hoặc hết hạn"</td><td>Chủ bấm tạo mã mới</td></tr>
+            <tr><td>Chủ bấm tạo mã hai lần</td><td>QR cũ hết hiệu lực ngay (<code>test_new_invite_replaces_unused_one</code>)</td><td>Chỉ dùng QR đang hiện</td></tr>
+            <tr><td>Hai người quét cùng QR</td><td>Một người được, người kia nhận lỗi</td><td>Tạo mã riêng cho từng người</td></tr>
+            <tr><td>Chủ quét QR của mình</td><td><code>valid: true</code>, vẫn là owner, mã bị tiêu</td><td>Không cần làm gì</td></tr>
+            <tr><td>Nhân viên vừa bị thu hồi</td><td>Request máy đó bị từ chối, máy biến mất ở lần list kế</td><td>Kéo để tải lại</td></tr>
+            <tr><td>Server mất kết nối khi hỏi status</td><td>Máy hiện offline</td><td>Thử lại, không kết luận máy hỏng</td></tr>
+            <tr><td>Phiên hết hạn</td><td><code>login_required: true</code></td><td>Về màn đăng nhập</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Giá trị</th><th>Nguồn</th></tr></thead>
+          <tbody>
+            <tr><td>Hạn mã mời</td><td class="num">300 s</td><td><code>machine_share_create.INVITE_TTL_SECONDS</code></td></tr>
+            <tr><td>Byte ngẫu nhiên của mã</td><td class="num">24</td><td><code>INVITE_CODE_BYTES</code></td></tr>
+            <tr><td>Độ dài mã chấp nhận</td><td class="num">20–100</td><td><code>machine_share_accept.INVITE_CODE_MIN/MAX_LENGTH</code></td></tr>
+            <tr><td>Độ dài <code>machine_id</code></td><td class="num">1–100</td><td><code>identifier_validate.is_machine_id</code></td></tr>
+            <tr><td>Tên máy</td><td class="num">1–150</td><td><code>machine_list_rename.NAME_MAX_LENGTH</code></td></tr>
+            <tr><td>Body POST tối đa</td><td class="num">4096 B</td><td><code>MAX_BODY</code> ở hai <code>*_main.py</code></td></tr>
+            <tr><td>Online nếu poll cuối trong</td><td class="num">15 s</td><td><code>config.MACHINE_SEEN_TIMEOUT_SECONDS</code></td></tr>
+            <tr><td>Hoặc đang giữ lệnh dưới</td><td class="num">20 s</td><td><code>config.COMMAND_TIMEOUT_SECONDS</code></td></tr>
+            <tr><td>Hạn phiên đăng nhập</td><td class="num">30 ngày</td><td><code>config.SESSION_TTL_SECONDS</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note crit"><b>SEC còn mở</b>
+        <b>SEC-08</b> (Thấp): <code>GET /app/machine/status/get</code> không cần token, lộ <code>online/last_seen</code>. <code>SECURITY_NOTES.md</code> vẫn ghi tên route cũ <code>/machine/trang-thai</code>. Thêm vào đó, list không trả online nên app gửi N request status sau mỗi lần list.<br>
+        <b>SEC-10</b> (TB): Bluetooth chọn thiết bị theo tên; màn nhận chấp nhận mã từ bất kỳ ai.<br>
+        <b>SEC-11</b> (TB): manager có mọi quyền lệnh như owner; chia sẻ là trao gần toàn quyền vận hành.<br>
+        <b>SEC-16</b> (TB): QR mời giả có thể giao cho nhân viên một máy của kẻ lạ.<br>
+        <b>SEC-01</b> (Cao): HTTP rõ, mã mời và token đi không mã hóa.
+      </div>
+      <div class="note crit"><b>Lệch tài liệu cũ</b>
+        <code>log/SECURITY_NOTES.md</code> nhắc test ở <code>server/test_security.py</code> — file này không còn, test bảo mật nằm ở <code>tests/python/test_server_security.py</code>. <code>machine_share/README.md</code> nói đúng hạn 5 phút và thay mã cũ. <code>machine_share_schema.sql</code> ghi "để nhân viên quét QR" nhưng code còn kênh Bluetooth.
+      </div>
+    </section>
+
+    <section id="khi-sua">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Khi sửa code</h2></div>
+      <ol class="steps">
+        <li><b>Đổi path route:</b> <code>server/config/routing.py</code> và <code>app/flutter_app/lib/config/routing.dart</code> cùng lúc, cùng tên biến theo <code>MODULE_PATTERN.md</code>.</li>
+        <li><b>Đổi trường response list/status:</b> <code>machine_list_get.py</code>, <code>machine_list_request.dart</code>, <code>dashboard_controller.dart</code>, <code>tests/python/test_machine_list.py</code>, <code>tests/flutter/dashboard_controller_test.dart</code>.</li>
+        <li><b>Gộp online vào list (đóng N+1, SEC-08):</b> thêm <code>online/last_seen</code> trong <code>list_my_machines()</code> qua <code>is_online()</code>, sửa <code>refreshStatuses()</code> đọc từ list, rồi mới bỏ hoặc thêm token cho <code>handle_get</code>. Kiểm <code>tests/python/test_machine_online.py</code>, <code>tests/e2e/run_e2e.py</code> đang gọi <code>status/get</code>.</li>
+        <li><b>Đổi định dạng mã/QR:</b> <code>core/machine_packet.dart</code> (<code>encodeShareQr</code>, <code>parseMachineQr</code>), giới hạn <code>INVITE_CODE_MIN/MAX_LENGTH</code>, <code>tests/bluetooth_pair/app2app_pair.py</code>.</li>
+        <li><b>Đổi quyền owner/manager:</b> giữ <code>BEGIN IMMEDIATE</code> trước khi đọc quyền ở accept/remove. Chạy <code>test_machine_share.py</code>, <code>test_machine_list.py</code>.</li>
+        <li><b>Đổi schema:</b> bảng tạo bằng <code>CREATE TABLE IF NOT EXISTS</code>, nên cột mới cho DB cũ phải thêm <code>ALTER TABLE</code> trong <code>init_db()</code> như đã làm với <code>product_key_hash</code>.</li>
+      </ol>
+    </section>
+
+          <footer class="end">Font chạy offline; sơ đồ Mermaid cần mạng, không có mạng sẽ hiện mã nguồn sơ đồ. Sơ đồ toàn cục là SVG tĩnh. "Mã nguồn" chép mã, "Phóng to" mở kích thước thật. Liên quan: <a href="machine-register.html">đăng ký máy</a> · <a href="machine-link.html">kết nối máy</a>.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

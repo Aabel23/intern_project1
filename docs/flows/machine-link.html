@@ -1,0 +1,860 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relay lệnh và online · Tài liệu luồng</title>
+<meta name="description" content="Lệnh app đi qua hộp thư server tới máy bằng long-poll, kết quả quay về, và cách server suy trạng thái online.">
+<link rel="stylesheet" href="../assets/fonts.css">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.9143)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:60px}
+  main section, main section > *{min-width:0}
+  @media (max-width:700px){ code{white-space:normal; overflow-wrap:anywhere} }
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu luồng · project1_app</div>
+      <h1>Server giữ lệnh của app trong hộp thư, máy long-poll lên lấy, chạy rồi gửi kết quả về đúng request đang chờ</h1>
+    </div>
+    <div class="meta">
+      <span><b>Nguồn:</b> <code>refactor/heartbeat-long-poll</code> · <code>16dab0e</code></span>
+      <span><b>Phân tích:</b> 10/10/2026</span>
+      <span><b>Quy mô:</b> 2 route máy · 6 file (~300 dòng)</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Màn hình app</span>
+        <span><i class="sw proc"></i>Xử lý</span>
+        <span><i class="sw hot"></i>Điểm nóng (RAM, khóa)</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw hw"></i>Máy pha chế</span>
+        <span><i class="ln"></i>Đường đi của một lệnh (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1000 330" role="img" aria-label="Lệnh đi từ app vào hộp thư trên server, máy long-poll lấy lệnh, chạy và gửi kết quả về để server trả cho app">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="40" width="200" height="270" rx="12"/>
+<text x="18" y="30" class="zt">APP</text>
+<rect class="zn" x="250" y="40" width="500" height="270" rx="12"/>
+<text x="252" y="30" class="zt">SERVER (một process, RAM)</text>
+<rect class="zn" x="784" y="40" width="200" height="270" rx="12"/>
+<text x="786" y="30" class="zt">MÁY (sau router quán)</text>
+<g class="nd ui"><rect x="36" y="80" width="160" height="58" rx="8"/>
+<text x="116" y="104" class="tt" text-anchor="middle">Màn Menu / Kho</text>
+<text x="116" y="122" class="tm" text-anchor="middle">server_client.dart</text></g>
+<g class="nd proc"><rect x="276" y="80" width="190" height="58" rx="8"/>
+<text x="371" y="104" class="tt" text-anchor="middle">send()</text>
+<text x="371" y="122" class="tm" text-anchor="middle">machine_transport.py</text></g>
+<g class="nd hot"><rect x="530" y="80" width="190" height="58" rx="8"/>
+<text x="625" y="104" class="tt" text-anchor="middle">HOP_THU</text>
+<text x="625" y="122" class="tm" text-anchor="middle">DANG_CHO · DANG_LAM</text></g>
+<g class="nd proc"><rect x="530" y="210" width="190" height="58" rx="8"/>
+<text x="625" y="234" class="tt" text-anchor="middle">poll() / send_result()</text>
+<text x="625" y="252" class="tm" text-anchor="middle">machine_link_process.py</text></g>
+<g class="nd proc"><rect x="276" y="210" width="190" height="58" rx="8"/>
+<text x="371" y="234" class="tt" text-anchor="middle">LAN_THAY_CUOI</text>
+<text x="371" y="252" class="tm" text-anchor="middle">mark_seen · is_online</text></g>
+<g class="nd hw"><rect x="804" y="145" width="160" height="58" rx="8"/>
+<text x="884" y="169" class="tt" text-anchor="middle">run()</text>
+<text x="884" y="187" class="tm" text-anchor="middle">version1.1/machine/main.py</text></g>
+<path class="e main" d="M196,100 L276,100" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="236" cy="100" r="9.5"/><text x="236" y="103.8" text-anchor="middle">1</text></g>
+<path class="e main" d="M466,100 L530,100" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="498" cy="100" r="9.5"/><text x="498" y="103.8" text-anchor="middle">2</text></g>
+<path class="e main" d="M625,138 L625,210" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="625" cy="174" r="9.5"/><text x="625" y="177.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M720,225 L804,225 L804,190" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="762" cy="225" r="9.5"/><text x="762" y="228.8" text-anchor="middle">4</text></g>
+<path class="e main" d="M884,203 L884,255 L720,255" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="840" cy="255" r="9.5"/><text x="840" y="258.8" text-anchor="middle">5</text></g>
+<path class="e main" d="M276,128 L196,128" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="236" cy="128" r="9.5"/><text x="236" y="131.8" text-anchor="middle">6</text></g>
+<path class="e" d="M530,239 L466,239" marker-end="url(#ag)"/>
+<path class="e" d="M371,210 L371,138" marker-end="url(#ag)"/>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Máy nằm sau router của quán nên server không gọi xuống được. ① App gọi route nghiệp vụ (ví dụ <code>/app/machine/menu/get</code>), module nghiệp vụ gọi <code>send()</code>. ② <code>send()</code> xếp lệnh vào <code>HOP_THU</code> rồi chờ. ③ Máy đang treo <code>/machine/command/poll</code> được đánh thức và nhận lệnh. ④ <code>run()</code> chạy lệnh. ⑤ Máy gửi <code>/machine/result/send</code>, <code>deliver()</code> chuyển kết quả cho <code>send()</code>. ⑥ Server trả kết quả trên chính request ban đầu của app. Mũi tên xám: mỗi poll và mỗi kết quả ghi <code>LAN_THAY_CUOI</code>, <code>send()</code> đọc nó qua <code>is_online()</code> trước khi xếp lệnh.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính: lấy menu</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-send">3.1 send() phía server</a></li>
+        <li class="sub"><a href="#c-poll">3.2 Long-poll và take()</a></li>
+        <li class="sub"><a href="#c-result">3.3 Gửi kết quả và deliver()</a></li>
+        <li class="sub"><a href="#c-machine">3.4 Vòng lệnh của máy</a></li>
+        <li class="sub"><a href="#c-life">3.5 Vòng đời một lệnh</a></li>
+        <li class="sub"><a href="#c-online">3.6 Trạng thái online</a></li>
+        <li><a href="#hop-dong">4. Hợp đồng gói tin</a></li>
+        <li><a href="#loi">5. Lỗi và giới hạn</a></li>
+        <li><a href="#khi-sua">6. Khi sửa code</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: app lấy menu qua hộp thư</h2></div>
+      <p class="prose">Ví dụ: chủ máy mở màn Menu. App gửi <code>/app/machine/menu/get</code>, server gửi lệnh <code>nhan_menu</code> xuống máy. Sơ đồ có hai request HTTP chạy song song: request của app (chờ tới 20 giây) và long-poll của máy (giữ tới 8 giây). Mũi tên liền là request, mũi tên đứt là trả lời.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor U as App
+  participant G as nhan_menu()
+  participant T as machine_transport
+  participant L as machine_link_process
+  participant M as Máy run()
+  M->>L: POST /machine/command/poll
+  L->>T: mark_seen() rồi take()
+  Note over T: chờ CO_LENH tối đa 8 giây
+  U->>G: POST /app/machine/menu/get
+  G->>T: check_access() rồi send(nhan_menu)
+  T->>T: is_online() đúng, ghi DANG_CHO và HOP_THU, notify_all()
+  T-->>L: take() lấy lệnh, ghi DANG_LAM
+  L-->>M: 200 lenh id, instruction, data
+  M->>M: handle_command(lenh)
+  M->>L: POST /machine/result/send id, ket_qua
+  L->>T: mark_seen() rồi deliver()
+  T-->>G: put_nowait(ket_qua), xóa DANG_LAM
+  L-->>M: 200 da_nhan true
+  G-->>U: 200 ket_qua hoặc 502 nếu có loi
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: <code style="white-space:normal;overflow-wrap:anywhere">server/service/dashboard_sync/menu_sync/machine_menu_get.py → nhan_menu()</code>, <code style="white-space:normal;overflow-wrap:anywhere">server/lib/machine/machine_transport.py → send() / take() / deliver()</code>, <code style="white-space:normal;overflow-wrap:anywhere">server/service/machine_link/machine_link_process.py → poll() / send_result()</code>, <code style="white-space:normal;overflow-wrap:anywhere">version1.1/machine/main.py → run()</code>. Nhánh lỗi: máy offline thì dừng ở bước 5 với 503. Hết 20 giây không có kết quả thì 502 (mục 3.1).</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>App</td><td><code style="white-space:normal;overflow-wrap:anywhere">app/flutter_app/lib/feature/machine_menu/machine_menu_request.dart</code>, <code>lib/core/server_client.dart</code></td><td>Gửi request, chờ tối đa 25 giây, hiện câu trong <code>loi</code> khi status khác 2xx</td></tr>
+            <tr><td>nhan_menu()</td><td><code style="white-space:normal;overflow-wrap:anywhere">server/service/dashboard_sync/menu_sync/machine_menu_get.py</code></td><td>Kiểm phiên/quyền, kiểm <code>menu_version</code>, gọi <code>send()</code></td></tr>
+            <tr><td>machine_transport</td><td><code style="white-space:normal;overflow-wrap:anywhere">server/lib/machine/machine_transport.py</code></td><td>Hộp thư, ghép kết quả, timeout, trạng thái online. Dùng chung cho mọi module</td></tr>
+            <tr><td>machine_link_process</td><td><code style="white-space:normal;overflow-wrap:anywhere">server/service/machine_link/machine_link_process.py</code>, cửa vào <code style="white-space:normal;overflow-wrap:anywhere">machine_link_main.py → handle()</code></td><td>Xác minh <code>product_key</code>, ghi đã thấy, gọi <code>take()</code>/<code>deliver()</code></td></tr>
+            <tr><td>Máy run()</td><td><code>version1.1/machine/main.py</code>, <code style="white-space:normal;overflow-wrap:anywhere">server_connection/machine_server_request.py</code></td><td>Một vòng lặp: poll → chạy → gửi kết quả. Không còn thread heartbeat</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <article class="comp" id="c-send">
+        <header><h3>3.1 · send() — gửi lệnh và chờ</h3><div class="src"><code style="white-space:normal;overflow-wrap:anywhere">server/lib/machine/machine_transport.py → send(), timeout_message()</code> · Sơ đồ: luồng · 5 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Module nghiệp vụ (menu, kho, ảnh) gọi <code style="white-space:normal;overflow-wrap:anywhere">send(machine_id, instruction, data)</code> và nhận về <code>(thân JSON, HTTP status)</code> để trả thẳng cho app. <code>send()</code> không hiểu nghiệp vụ. Nó không kiểm quyền (module gọi phải tự <code>check_access()</code>) và không thử lại.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S1["① is_online()"] --> D1{"online?"}
+  D1 -- "có" --> S2["② xếp HOP_THU"]
+  D1 -- "không" --> E503["503"]
+  S2 --> S3["③ chờ hop_ket_qua"]
+  S3 --> D2{"có kết quả?"}
+  D2 -- "có" --> S5["⑤ dọn DANG_CHO"]
+  D2 -- "hết 20s" --> S4["④ timeout_message()"]
+  S4 --> E502["502"]
+  S5 --> D3{"có khóa loi?"}
+  D3 -- "không" --> OK["200"]
+  D3 -- "có" --> E502
+  class S1,S2,S4,S5 proc
+  class S3 hot
+  class D1,D2,D3 dec
+  class OK ok
+  class E503,E502 bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① is_online()</td></tr>
+                <tr><td>503</td><td><code>{"loi": "Máy đang offline"}</code>, không xếp lệnh</td></tr>
+                <tr class="grp"><td colspan="2">② xếp HOP_THU</td></tr>
+                <tr><td>id</td><td><code>next(DEM_LENH)</code>, tăng từ 1, reset khi server khởi động lại</td></tr>
+                <tr><td>ghi</td><td><code style="white-space:normal;overflow-wrap:anywhere">DANG_CHO[id] = (machine_id, Queue(1))</code>, nối vào <code>HOP_THU[machine_id]</code>, <code>CO_LENH.notify_all()</code></td></tr>
+                <tr class="grp"><td colspan="2">③ chờ hop_ket_qua</td></tr>
+                <tr><td>timeout</td><td><code>COMMAND_TIMEOUT_SECONDS</code> = 20, giữ một thread HTTP của server</td></tr>
+                <tr class="grp"><td colspan="2">④ timeout_message()</td></tr>
+                <tr><td>chưa lấy</td><td>gỡ lệnh khỏi hộp thư: "Máy không phản hồi, lệnh đã được hủy"</td></tr>
+                <tr><td>đã lấy</td><td>"Máy chưa trả kết quả, hãy tải lại để kiểm tra"</td></tr>
+                <tr class="grp"><td colspan="2">⑤ dọn DANG_CHO</td></tr>
+                <tr><td>finally</td><td>luôn xóa <code>DANG_CHO[id]</code> và <code>_finish()</code> mục <code>DANG_LAM</code></td></tr>
+                <tr><td>dạng</td><td>kết quả không phải dict → 502 "Máy trả kết quả không đúng dạng"</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>machine_transport.py → send()</code> (dòng 65–89), <code>timeout_message()</code> (dòng 92–101). "loi" là khóa lỗi mà máy và server cùng dùng.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Kiểm online trước khi xếp. Máy offline thì không ai lấy lệnh, chờ 20 giây là phí thread và làm app treo. Trả 503 ngay.</li>
+          <li>Ghi <code>DANG_CHO</code> trước, rồi mới nối vào <code>HOP_THU</code>, cả hai trong cùng <code>KHOA</code>. Nhờ vậy, lúc máy <code>take()</code> thì lệnh luôn đã có người chờ.</li>
+          <li>Chờ trên <code>queue.Queue(maxsize=1)</code> riêng của lệnh này. Mỗi request app có hàng riêng, nên kết quả không đi nhầm request.</li>
+          <li>Hết giờ mà máy chưa lấy: gỡ lệnh khỏi hộp thư. Nếu không gỡ, máy online lại sẽ chạy một lệnh cũ không còn ai nhận (ví dụ <code>nap_kho</code> chạy trễ). Máy đã lấy thì không hủy được, nên câu báo lỗi khuyên tải lại thay vì hứa lệnh chưa chạy.</li>
+          <li><code>finally</code> dọn <code>DANG_CHO</code> và <code>DANG_LAM</code> ở mọi nhánh. Đây là chỗ duy nhất kết thúc trạng thái "bận" khi máy treo (mục 3.6).</li>
+          <li>Có khóa <code>loi</code> trong kết quả máy trả thì status 502. Thân lỗi vẫn là nguyên kết quả máy, app hiện câu đó.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-poll">
+        <header><h3>3.2 · Long-poll và take()</h3><div class="src"><code style="white-space:normal;overflow-wrap:anywhere">machine_link_process.py → poll()</code>, <code>machine_transport.py → take()</code> · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Máy hỏi "có việc không?". Server giữ request tối đa <code>POLL_WAIT_SECONDS</code> = 8 giây. Có lệnh là trả ngay, hết giờ thì trả <code>{"lenh": null}</code>. Mỗi máy chỉ có một long-poll dùng cho mọi loại lệnh, và mỗi lần chỉ lấy một lệnh.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  P1["① machine_from_key()"] --> D1{"key hợp lệ?"}
+  D1 -- "có" --> P2["② mark_seen()"]
+  D1 -- "không" --> E403["403"]
+  P2 --> P3["③ CO_LENH.wait_for()"]
+  P3 --> D2{"có lệnh?"}
+  D2 -- "có" --> P4["④ pop lệnh đầu"]
+  D2 -- "hết 8s" --> NUL["lenh null"]
+  P4 --> OK["lenh"]
+  class P1,P2,P4 proc
+  class P3 hot
+  class D1,D2 dec
+  class OK ok
+  class NUL muted
+  class E403 bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① machine_from_key()</td></tr>
+                <tr><td>kiểm</td><td>chuỗi, không trắng, ≤ 1024 ký tự, <code>sha256_hex</code> rồi <code>find_id_by_key_hash()</code></td></tr>
+                <tr class="grp"><td colspan="2">② mark_seen()</td></tr>
+                <tr><td>ghi</td><td><code style="white-space:normal;overflow-wrap:anywhere">LAN_THAY_CUOI[id] = time.time()</code> lúc <b>mở</b> poll</td></tr>
+                <tr class="grp"><td colspan="2">③ CO_LENH.wait_for()</td></tr>
+                <tr><td>khóa</td><td><code>CO_LENH</code> dùng chung <code>KHOA</code>. <code>send()</code> gọi <code>notify_all()</code></td></tr>
+                <tr class="grp"><td colspan="2">④ pop lệnh đầu</td></tr>
+                <tr><td>FIFO</td><td><code>hop_thu.pop(0)</code></td></tr>
+                <tr><td>bận</td><td>chỉ ghi <code>DANG_LAM[id][lenh_id]</code> khi lệnh còn trong <code>DANG_CHO</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code style="white-space:normal;overflow-wrap:anywhere">machine_link_process.py → poll()</code> (dòng 27–35), <code>machine_transport.py → take()</code> (dòng 104–116).</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Xác minh key trước để chọn đúng hộp thư. Máy không gửi <code>machine_id</code>, nên máy khác không đọc trộm hộp thư bằng cách đổi id.</li>
+          <li><code>mark_seen()</code> ghi giờ lúc mở poll, không ghi lúc trả. Nếu máy chết khi poll đang treo, đồng hồ vẫn tính từ lúc mở (test <code style="white-space:normal;overflow-wrap:anywhere">test_online_counts_from_poll_start_not_poll_end</code>). <code>mark_seen()</code> tự lấy <code>KHOA</code>, vì vậy phải gọi trước <code>take()</code>: <code>KHOA</code> không reentrant.</li>
+          <li><code>wait_for</code> nhả khóa trong lúc chờ, nên <code>send()</code> của request khác vẫn xếp lệnh được. 8 giây phải nhỏ hơn timeout urlopen 10 giây của máy (<code style="white-space:normal;overflow-wrap:anywhere">machine_server_request.post_json</code>) và nhỏ hơn cửa sổ 15 giây của <code>MACHINE_SEEN_TIMEOUT_SECONDS</code>.</li>
+          <li>Chỉ ghi "bận" cho lệnh còn người chờ. Đây là bản sửa N1, xem mục 3.6.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-result">
+        <header><h3>3.3 · Gửi kết quả và deliver()</h3><div class="src"><code style="white-space:normal;overflow-wrap:anywhere">machine_link_process.py → send_result()</code>, <code style="white-space:normal;overflow-wrap:anywhere">machine_transport.py → deliver()</code> · Sơ đồ: luồng · 3 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Máy gửi <code>{id, ket_qua}</code>. Server ghép kết quả theo <b>cả</b> <code>machine_id</code> lẫn id lệnh, rồi đưa vào hàng chờ của <code>send()</code>. Server luôn trả <code>{"da_nhan": true}</code> khi key đúng, kể cả khi id không khớp lệnh nào. Máy không biết kết quả có tới app hay không.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  R1["① machine_from_key()"] --> D1{"key hợp lệ?"}
+  D1 -- "có" --> R2["② mark_seen()"]
+  D1 -- "không" --> E403["403"]
+  R2 --> D2{"DANG_CHO có id<br/>của đúng máy?"}
+  D2 -- "có" --> R3["③ _finish() và put_nowait()"]
+  D2 -- "không" --> IGN["bỏ qua"]
+  R3 --> OK["da_nhan true"]
+  IGN --> OK
+  class R1,R2,R3 proc
+  class D1,D2 dec
+  class OK ok
+  class IGN muted
+  class E403 bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">② mark_seen()</td></tr>
+                <tr><td>vì sao</td><td>key đúng nghĩa là vòng lệnh còn sống</td></tr>
+                <tr class="grp"><td colspan="2">③ _finish() và put_nowait()</td></tr>
+                <tr><td>khóa</td><td><code>_finish()</code> trong <code>KHOA</code>, <code>put_nowait</code> ngoài khóa</td></tr>
+                <tr><td>trùng</td><td>kết quả thứ hai gặp <code>queue.Full</code>, bị bỏ</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code style="white-space:normal;overflow-wrap:anywhere">machine_link_process.py → send_result()</code> (dòng 39–48), <code style="white-space:normal;overflow-wrap:anywhere">machine_transport.py → deliver()</code> (dòng 119–130).</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>So <code>cho[0] == machine_id</code> để máy B không trả kết quả giả cho lệnh của máy A dù đoán được id. Id là số tăng dần nên đoán dễ (test <code style="white-space:normal;overflow-wrap:anywhere">test_other_machine_result_does_not_end_busy_state</code>).</li>
+          <li>Kết quả tới sau khi <code>send()</code> hết giờ thì <code>DANG_CHO</code> đã bị xóa. Kết quả bị bỏ, không lỗi.</li>
+          <li>Thân kết quả tối đa <code>MAX_BODY</code> = 1 000 000 byte (<code>machine_link_main.py</code>), lớn hơn các module tài khoản vì gói menu và danh sách kho nặng.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-machine">
+        <header><h3>3.4 · Vòng lệnh của máy</h3><div class="src"><code style="white-space:normal;overflow-wrap:anywhere">version1.1/machine/main.py → run(), poll(), handle_command(), reply()</code> · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Một vòng <code>while True</code> duy nhất. <code>main.py</code> chỉ tra bảng <code>COMMANDS</code> gộp từ <code>menu_sync</code> và <code>ingredient_sync</code>. Mọi request gửi kèm <code>product_key</code> qua <code>post_json()</code>.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  M1["① poll()"] --> D1{"có lệnh?"}
+  D1 -- "có" --> M2["② handle_command()"]
+  M2 --> M3["③ reply()"]
+  M3 --> M1
+  D1 -- "không" --> M4["④ chờ 1s nếu trả nhanh"]
+  M4 --> M1
+  class M1,M3 hw
+  class M2 proc
+  class D1 dec
+  class M4 muted
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① poll()</td></tr>
+                <tr><td>lỗi mạng</td><td>URLError/OSError/ValueError: in log, ngủ 1 giây, trả None</td></tr>
+                <tr class="grp"><td colspan="2">② handle_command()</td></tr>
+                <tr><td>lạ</td><td>instruction không có trong <code>COMMANDS</code> → <code>{"loi": "Lệnh không hợp lệ"}</code></td></tr>
+                <tr><td>ngoại lệ</td><td>bắt mọi <code>Exception</code> → <code>{"loi": str(error)}</code></td></tr>
+                <tr class="grp"><td colspan="2">③ reply()</td></tr>
+                <tr><td>lỗi mạng</td><td>chỉ in log, không gửi lại</td></tr>
+                <tr class="grp"><td colspan="2">④ chờ 1s</td></tr>
+                <tr><td>vì sao</td><td>server trả ngay dưới 1 giây (không giữ poll) thì tránh vòng quay nóng</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>version1.1/machine/main.py</code> (dòng 20–61), <code style="white-space:normal;overflow-wrap:anywhere">server_connection/machine_server_request.py → poll_command(), send_result()</code>. Lệnh hiện có: <code>nhan_menu</code>, <code>cap_nhat_menu</code>, <code>nhan_kho</code>, <code>nap_kho</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Máy chạy từng lệnh tuần tự. Trong lúc chạy, máy không poll, nên server dựa vào <code>DANG_LAM</code> để vẫn coi máy là online (mục 3.6).</li>
+          <li>Lỗi trong một lệnh trả về <code>loi</code> cho app chứ không làm chết vòng. Vòng chết đồng nghĩa máy offline với mọi người dùng.</li>
+          <li>Không có thread heartbeat (bỏ ở commit <code>a662e34</code>). Online suy từ chính vòng này, nên vòng treo thì máy hiện offline. Đó là chủ đích thiết kế, xem <a href="../design/heartbeat-vs-long-poll.html">so sánh heartbeat và long-poll</a>.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-life">
+        <header><h3>3.5 · Vòng đời một lệnh</h3><div class="src"><code>machine_transport.py</code>: <code>HOP_THU</code>, <code>DANG_CHO</code>, <code>DANG_LAM</code> · Sơ đồ: trạng thái · 6 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Một lệnh tồn tại trong RAM, chia ra 3 dict. <code>HOP_THU</code> giữ lệnh chưa lấy. <code>DANG_CHO</code> giữ <code>send()</code> còn chờ. <code>DANG_LAM</code> giữ lệnh máy đã lấy mà <code>send()</code> còn chờ. Mọi chuyển trạng thái xảy ra trong <code>KHOA</code>.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> queued: send()<br/>ghi DANG_CHO và HOP_THU
+  [*] --> rejected: send()<br/>is_online sai, 503
+  queued --> taken: take()<br/>ghi DANG_LAM
+  queued --> cancelled: hết 20s<br/>gỡ khỏi HOP_THU, 502
+  taken --> done: deliver()<br/>_finish rồi put
+  taken --> lost: hết 20s<br/>finally dọn, 502
+  done --> [*]
+  cancelled --> [*]
+  lost --> [*]
+  rejected --> [*]
+  class queued ui
+  class taken proc
+  class done ok
+  class lost bad
+  class rejected bad
+  class cancelled muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code style="white-space:normal;overflow-wrap:anywhere">machine_transport.py → send(), take(), deliver(), timeout_message(), _finish()</code>. <code>lost</code> nghĩa là máy có thể đã chạy lệnh nhưng app không biết kết quả.</figcaption>
+        </figure>
+        <h4>Ca hiếm: kết quả tới trước khi máy lấy lệnh (lỗi N1, đã sửa)</h4>
+        <ol class="steps">
+          <li>Kịch bản: lệnh còn trong <code>HOP_THU</code>, nhưng một <code>/machine/result/send</code> mang đúng id và đúng key tới trước. <code>deliver()</code> trả kết quả, <code>send()</code> kết thúc và xóa <code>DANG_CHO</code>. Lệnh vẫn nằm trong hộp thư.</li>
+          <li>Trước khi sửa: lần poll sau <code>take()</code> lấy lệnh đó và ghi <code>DANG_LAM</code>. Không còn <code>send()</code> nào chờ để <code>finally</code> dọn, nên mục rò mãi mãi. Hậu quả: máy bị coi là "bận" và online thêm 20 giây dù đã chết.</li>
+          <li>Cách chống hiện hành: <code>take()</code> chỉ ghi <code>DANG_LAM</code> khi <code>lenh["id"] in DANG_CHO</code>, kiểm ngay trong cùng <code>KHOA</code>. Test: <code style="white-space:normal;overflow-wrap:anywhere">test_result_before_take_leaves_no_busy_entry</code>.</li>
+          <li>Còn lại: máy vẫn nhận và chạy lệnh mồ côi đó, rồi kết quả bị bỏ. Với lệnh có tác dụng phụ như <code>nap_kho</code>, lệnh đã chạy mà app không thấy kết quả (xem mục 5).</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-online">
+        <header><h3>3.6 · Trạng thái online: rảnh, bận, offline</h3><div class="src"><code style="white-space:normal;overflow-wrap:anywhere">machine_transport.py → is_online(), mark_seen(), last_seen_of()</code> · Sơ đồ: trạng thái · 3 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Máy không gửi tín hiệu riêng. Server suy online từ hai nguồn. <b>Rảnh</b>: <code>LAN_THAY_CUOI</code> cách hiện tại dưới 15 giây. <b>Bận</b>: có mục trong <code>DANG_LAM</code> lấy cách đây dưới 20 giây. Không thỏa điều nào thì <b>offline</b>. <code>/app/machine/status/get</code> (<code>machine_list_get.py</code>) trả <code>online</code> và <code>last_seen</code> từ đây.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> offline
+  offline --> idle: mark_seen()<br/>poll hoặc result
+  idle --> idle: mark_seen()<br/>poll mới, dưới 15s
+  idle --> busy: take()<br/>ghi DANG_LAM
+  busy --> idle: deliver()<br/>_finish và mark_seen
+  busy --> offline: send() hết 20s<br/>finally dọn DANG_LAM
+  idle --> offline: quá 15s<br/>không poll
+  class idle ok
+  class busy proc
+  class offline muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>is_online()</code> (dòng 44–52). Ngưỡng ở <code>server/config/config.py</code>. <code>busy</code> vẫn online dù đã quá 15 giây kể từ poll cuối. <code>busy → offline</code> chỉ xảy ra khi đã quá 15 giây kể từ <code>LAN_THAY_CUOI</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Vì sao cần "bận": máy đang chạy lệnh thì không poll. Nếu chỉ dựa vào poll, máy làm lệnh dài sẽ hiện offline. Lệnh thứ hai từ app khác sẽ bị 503 oan.</li>
+          <li>Vì sao "bận" không tính lệnh chưa lấy: lệnh nằm trong hộp thư không chứng minh máy sống. Test <code style="white-space:normal;overflow-wrap:anywhere">test_queued_untaken_command_does_not_keep_machine_online</code>.</li>
+          <li>Giả định lệnh ngắn: mọi lệnh phải xong dưới <code>COMMAND_TIMEOUT_SECONDS</code>. Test <code style="white-space:normal;overflow-wrap:anywhere">test_machine_commands_are_known_short_commands</code> so bảng <code>COMMANDS</code> của máy với <code style="white-space:normal;overflow-wrap:anywhere">SHORT_COMMANDS = {"nhan_menu", "cap_nhat_menu", "nhan_kho", "nap_kho"}</code>. Thêm lệnh máy mới thì test đỏ, buộc người sửa đo thời lượng trước.</li>
+          <li>Ràng buộc cấu hình được test giữ: <code style="white-space:normal;overflow-wrap:anywhere">POLL_WAIT_SECONDS &lt; MACHINE_SEEN_TIMEOUT_SECONDS ≤ COMMAND_TIMEOUT_SECONDS</code> (<code style="white-space:normal;overflow-wrap:anywhere">test_poll_wait_shorter_than_seen_window</code>).</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="hop-dong">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Hợp đồng gói tin</h2></div>
+      <p class="prose">Cả hai route là <code>POST</code>, body JSON object, 1 ≤ Content-Length ≤ 1 000 000. Route khai báo ở <code>server/config/routing.py</code> (<code>MACHINE_COMMAND_POLL</code>, <code>MACHINE_RESULT_SEND</code>) và <code style="white-space:normal;overflow-wrap:anywhere">version1.1/machine/config/routing.py</code>. Hai route này không bị giới hạn theo IP (<code style="white-space:normal;overflow-wrap:anywhere">handle_routes(..., limited=False)</code>).</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Route</th><th>Request</th><th>Response 200</th><th>Lỗi</th></tr></thead>
+          <tbody>
+            <tr><td><code>/machine/command/poll</code></td><td><code>product_key</code>: string ≤ 1024</td><td><code>{"lenh": null}</code> hoặc <code style="white-space:normal;overflow-wrap:anywhere">{"lenh": {"id": int, "instruction": string, "data": object}}</code></td><td>400 JSON sai/sai kích thước · 403 key sai · 503 lỗi SQLite</td></tr>
+            <tr><td><code>/machine/result/send</code></td><td><code>product_key</code>, <code>id</code>: int, <code>ket_qua</code>: object (có <code>loi</code> khi lỗi)</td><td><code>{"da_nhan": true}</code>, kể cả khi id không khớp</td><td>400 · 403 · 503 như trên</td></tr>
+            <tr><td>Route app gọi <code>send()</code><br/>(menu, kho, ảnh)</td><td>theo module nghiệp vụ</td><td>nguyên <code>ket_qua</code> máy trả</td><td>503 <code>"Máy đang offline"</code> · 502 kết quả có <code>loi</code>, sai dạng, hoặc timeout (2 câu, mục 3.1)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="loi">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Lỗi và giới hạn</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tình huống</th><th>App thấy gì</th><th>Nên làm gì</th></tr></thead>
+          <tbody>
+            <tr><td>Máy tắt / mất mạng quá 15 giây</td><td>503 "Máy đang offline", trả ngay</td><td>Kiểm nguồn, mạng máy</td></tr>
+            <tr><td>Máy online nhưng không lấy lệnh trong 20 giây</td><td>502 "Máy không phản hồi, lệnh đã được hủy"</td><td>Thử lại. Lệnh chắc chắn chưa chạy</td></tr>
+            <tr><td>Máy lấy lệnh rồi treo hoặc chạy quá 20 giây</td><td>502 "Máy chưa trả kết quả, hãy tải lại để kiểm tra"</td><td>Tải lại để xem lệnh đã có tác dụng chưa. Sau 15 giây máy thành offline</td></tr>
+            <tr><td>Lệnh lỗi trên máy (DB, tham số)</td><td>502 với câu <code>loi</code> của máy</td><td>Đọc log máy</td></tr>
+            <tr><td>Server khởi động lại</td><td>Request đang chờ đứt. Máy offline tới poll kế tiếp (≤ ~10 giây)</td><td>Thử lại</td></tr>
+            <tr><td>Server không trả trong 25 giây</td><td>"Không kết nối được server" (timeout app)</td><td>Kiểm server</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Giá trị</th><th>Nguồn</th></tr></thead>
+          <tbody>
+            <tr><td><code>POLL_WAIT_SECONDS</code> (giữ long-poll)</td><td class="num">8 s</td><td><code>server/config/config.py</code></td></tr>
+            <tr><td><code>MACHINE_SEEN_TIMEOUT_SECONDS</code> (cửa sổ rảnh)</td><td class="num">15 s</td><td><code>server/config/config.py</code></td></tr>
+            <tr><td><code>COMMAND_TIMEOUT_SECONDS</code> (chờ kết quả, cửa sổ bận)</td><td class="num">20 s</td><td><code>server/config/config.py</code></td></tr>
+            <tr><td>Timeout urlopen của máy</td><td class="num">10 s</td><td><code style="white-space:normal;overflow-wrap:anywhere">machine_server_request.py → post_json()</code></td></tr>
+            <tr><td>Nghỉ khi lỗi mạng / poll trả nhanh</td><td class="num">1 s</td><td><code style="white-space:normal;overflow-wrap:anywhere">version1.1/machine/main.py → poll()</code></td></tr>
+            <tr><td>Timeout request app</td><td class="num">25 s</td><td><code style="white-space:normal;overflow-wrap:anywhere">app/flutter_app/lib/core/server_client.dart</code></td></tr>
+            <tr><td><code>MAX_BODY</code> route máy</td><td class="num">1 000 000 B</td><td><code>machine_link_main.py</code></td></tr>
+            <tr><td>Độ dài <code>product_key</code></td><td class="num">≤ 1024</td><td><code style="white-space:normal;overflow-wrap:anywhere">machine_link_process.py → machine_from_key()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Giới hạn thiết kế</b>Mọi trạng thái (<code>HOP_THU</code>, <code>DANG_CHO</code>, <code>DANG_LAM</code>, <code>LAN_THAY_CUOI</code>) nằm trong RAM của <b>một</b> process. Chạy nhiều worker hay nhiều server thì app và máy có thể rơi vào hai process khác nhau, và lệnh không bao giờ gặp máy. Mỗi long-poll và mỗi <code>send()</code> giữ một thread HTTP tới 8 giây và 20 giây.</div>
+      <div class="note crit"><b>Rủi ro trong code (chỉ báo, chưa sửa)</b>
+        1) <code style="white-space:normal;overflow-wrap:anywhere">machine_menu_image.py → nhan_anh()</code> gửi lệnh <code>nhan_anh</code>, nhưng <code>COMMANDS</code> của máy (<code style="white-space:normal;overflow-wrap:anywhere">version1.1/machine/*/machine_*_request.py</code>) không có lệnh này. Máy thật trả "Lệnh không hợp lệ", app nhận 502. <code>SHORT_COMMANDS</code> trong test cũng không liệt kê nó.
+        2) Lệnh mồ côi (ca N1, hoặc máy đã lấy rồi <code>send()</code> hết giờ) vẫn được máy chạy. Không có cơ chế hủy hay chống chạy lặp cho <code>nap_kho</code>.
+        3) Không giới hạn số poll đồng thời theo máy hay IP. Người có key (SEC-02) có thể mở nhiều poll để giữ thread, hoặc cướp lệnh của máy thật.
+        4) <code>DEM_LENH</code> reset về 1 khi khởi động lại. Kết quả trễ của phiên trước có thể trùng id với lệnh mới của cùng máy.</div>
+      <div class="note crit"><b>Lệch tài liệu cũ</b>Đặc tả giao việc nhắc <code>poll()</code> và <code>send_result()</code> nằm trong <code>machine_transport.py</code>. Thực tế transport có <code>take()</code>/<code>deliver()</code>, còn <code>poll()</code>/<code>send_result()</code> ở <code>machine_link_process.py</code>. <code>SHORT_COMMANDS</code> chỉ có trong test, không phải hằng của server. <code>LINK_FLOW.html</code> và <code>README.md</code> của module khớp code hiện hành về heartbeat (đã bỏ, route trả 404).</div>
+      <p class="prose">SEC liên quan còn mở (<code>log/SECURITY_NOTES.md</code>): <b>SEC-01</b> HTTP không mã hóa, <code>product_key</code> đi dạng rõ trong mọi poll. SEC-02 (giả máy bằng key) đã xử lý ở X1 bằng ràng buộc <code>machine_id</code> trong <code>deliver()</code>, nhưng key vẫn là danh tính duy nhất.</p>
+    </section>
+
+    <section id="khi-sua">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Khi sửa code</h2></div>
+      <ol class="steps">
+        <li>Đổi path route: sửa cùng lúc <code>server/config/routing.py</code> và <code style="white-space:normal;overflow-wrap:anywhere">version1.1/machine/config/routing.py</code>. Test <code style="white-space:normal;overflow-wrap:anywhere">tests/python/test_machine_online.py</code> và <code>test_server.py</code> dùng path cứng.</li>
+        <li>Đổi tên trường (<code>lenh</code>, <code>id</code>, <code>instruction</code>, <code>data</code>, <code>ket_qua</code>, <code>loi</code>, <code>da_nhan</code>): sửa <code>machine_link_process.py</code>, <code>machine_transport.py</code>, <code>machine_server_request.py</code>, <code>main.py</code>. App đọc khóa <code>loi</code> trong <code>server_client.dart</code>.</li>
+        <li>Thêm lệnh máy: thêm vào <code>COMMANDS</code> của module máy, đo thời lượng, rồi cập nhật <code>SHORT_COMMANDS</code>. Lệnh dài hơn 20 giây cần heartbeat theo lệnh (mục 6 của <a href="../design/heartbeat-vs-long-poll.html">tài liệu thiết kế</a>).</li>
+        <li>Đổi timeout: giữ <code>POLL_WAIT &lt; 10 s</code> (urlopen máy), <code>POLL_WAIT &lt; SEEN ≤ COMMAND</code>, và <code>COMMAND &lt; 25 s</code> (timeout app).</li>
+        <li>Sửa <code>take()</code>/<code>deliver()</code>/<code>send()</code>: chạy <code style="white-space:normal;overflow-wrap:anywhere">python -m unittest tests.python.test_machine_online tests.python.test_machine_relay tests.python.test_server -v</code>. Đừng gọi <code>mark_seen()</code> khi đang giữ <code>KHOA</code>.</li>
+      </ol>
+    </section>
+
+          <footer class="end">Sơ đồ toàn cục là SVG tĩnh. Font chạy offline. Sơ đồ Mermaid cần mạng, không có mạng sẽ hiện mã nguồn sơ đồ. "Mã nguồn" chép mã, "Phóng to" mở kích thước thật. Đối chiếu code nhánh <code>refactor/heartbeat-long-poll</code> @ <code>16dab0e</code>.</footer>
+    </main>
+  </div>
+</div>
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

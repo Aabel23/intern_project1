@@ -15,7 +15,7 @@
 
 - Repo `project1_app`. Nhánh thực thi `refactor/heartbeat-long-poll`, tách từ `feature/menu-image-cache` @ `91c8cdd`
   (đã commit nhánh ảnh, tài liệu so sánh và việc xoá stub ngày 10/10/2026).
-- Thiết kế nguồn: [docs/heartbeat-vs-long-poll.md](../../../docs/heartbeat-vs-long-poll.md), cách B. Plan này chốt các
+- Thiết kế nguồn: [docs/design/heartbeat-vs-long-poll.md](../../../docs/design/heartbeat-vs-long-poll.md), cách B. Plan này chốt các
   chi tiết còn để ngỏ trong tài liệu đó (mục "Quyết định").
 - Trạng thái: **XONG** (chưa push). User đã chốt U1–U4 ngày 10/10/2026 (mục "Quyết định của user"); Pha 2 và Pha 3 chạy
   cùng một đợt sau cổng G1.
@@ -354,7 +354,7 @@ User cho sửa `version1.1/machine` (U1, 10/10/2026).
 
 | File | Sửa |
 |---|---|
-| `version1.1/machine/main.py` | Bỏ `import threading` (dòng 7) và `machine_server_heartbeat as heartbeat` ở dòng 12 (giữ `machine_server_request`). Dòng 55–56 thay bằng comment: `# Không có thread heartbeat: server suy online từ chính poll và kết quả của vòng này,` / `# nên vòng treo thì máy hiện offline (docs/heartbeat-vs-long-poll.md).` |
+| `version1.1/machine/main.py` | Bỏ `import threading` (dòng 7) và `machine_server_heartbeat as heartbeat` ở dòng 12 (giữ `machine_server_request`). Dòng 55–56 thay bằng comment: `# Không có thread heartbeat: server suy online từ chính poll và kết quả của vòng này,` / `# nên vòng treo thì máy hiện offline (docs/design/heartbeat-vs-long-poll.md).` |
 | `version1.1/machine/config/routing.py` | Docstring: `"""Đường dẫn API mà machine gọi lên server."""`; xoá `MACHINE_HEARTBEAT_SEND` và `HEARTBEAT_INTERVAL_SECONDS` |
 | `version1.1/machine/server_connection/machine_server_heartbeat.py` | `git rm` |
 | `tests/tools/menu_crc_stress/harness.py:173-192` | Chỉ bọc `poll`; bỏ `hb`, `run_heartbeat` và `self.machine.heartbeat = ...`. Comment: `# main.run() là vòng while True không có cờ dừng: bọc poll() để ném _Stop khi stop() bật cờ, ...`. Giữ `import types` (còn dùng ở `fake_database`) |
@@ -372,7 +372,7 @@ poll/result/lệnh đã lấy; máy không còn thread heartbeat; route `/machin
 sơ đồ; chỉ sửa chữ và nhãn). Không tạo file mới. Không sửa `agent_workspace/tasks/middleware/**` (plan tương lai, ghi
 heartbeat như baseline cũ) và `version1.1/store_gui`, `version1.1/test_gui` (chữ "heartbeat" ở đó là việc khác).
 
-Riêng `docs/heartbeat-vs-long-poll.md` và `docs/research/heartbeat-vs-long-poll.html`: thêm mục "Trạng thái triển khai"
+Riêng `docs/design/heartbeat-vs-long-poll.md` và `docs/design/heartbeat-vs-long-poll.html`: thêm mục "Trạng thái triển khai"
 (cả 3 pha đã làm ngày 10/10/2026), ghi QĐ1 (bỏ ①) và QĐ5; sửa link HTML gãy ở dòng 4 của bản `.md`
 (`heartbeat-vs-long-poll.html` → `research/heartbeat-vs-long-poll.html`). `log/TIEU_CHI_TEST.md`: thêm dòng S13, sửa S8.
 
@@ -539,10 +539,10 @@ Số dòng có chữ "heartbeat" tại `91c8cdd`:
 | `server/START.md` | 24 |
 | `server/database/machine/README.md` | 21, 22, 28, 29 (giữ mô tả cột; nói rõ online không dùng DB, QĐ8) |
 | `server/service/machine_register/README.md` | 90 |
-| `docs/FlexMix_System_Manual.html` | 41, 43, 97, 105, 145, 158, 171, 174, 188, 197, 202 |
-| `docs/dong-bo-du-lieu.html` | 343, 385 |
+| `docs/manual/system-manual.html` | 41, 43, 97, 105, 145, 158, 171, 174, 188, 197, 202 |
+| `docs/flows/menu-ingredient-sync.html` | 343, 385 |
 | `MODULE_PATTERN.md` | 44 (bỏ `heartbeat` khỏi danh sách mục tiêu), 74 (bỏ hàng `MACHINE_HEARTBEAT_SEND`), 122 (bỏ hàng hậu tố `heartbeat`), 158, 171, 240 |
 | `AGENTS.md` | 81, 92 (chỉ đổi chữ "heartbeat" thành "trạng thái online"; không đổi quy ước khác) |
 | `log/SECURITY_NOTES.md` | 36, 44, 51 (SEC-02: kẻ giữ key giả máy bằng poll) |
 | `log/TIEU_CHI_TEST.md` | 43 (S8), thêm S13 |
-| `docs/heartbeat-vs-long-poll.md`, `docs/research/heartbeat-vs-long-poll.html` | Mục "Trạng thái triển khai", QĐ1, QĐ5, sửa link |
+| `docs/design/heartbeat-vs-long-poll.md`, `docs/design/heartbeat-vs-long-poll.html` | Mục "Trạng thái triển khai", QĐ1, QĐ5, sửa link |

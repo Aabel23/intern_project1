@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="description" content="Cách app và máy FlexMix giữ menu và kho khớp nhau: phiên bản CRC32, tải lại có điều kiện, khóa lạc quan, đóng gói và nén.">
   <title>Đồng bộ menu và kho · FlexMix</title>
-  <link rel="stylesheet" href="fonts.css">
-  <link rel="stylesheet" href="document.css">
+  <link rel="stylesheet" href="../assets/fonts.css">
+  <link rel="stylesheet" href="../assets/document.css">
 </head>
 <body>
 <div class="page">
@@ -380,14 +380,14 @@ def menu_version_of(drinks):
           <li><strong>Đổi cách tính phiên bản:</strong> không cần sửa app. App chỉ coi phiên bản là một con số để gửi lại.</li>
         </ol></div>
         <details><summary>Nguồn đã đối chiếu cho trang này</summary><ul class="source-list">
-          <li><a href="../server/service/dashboard_sync/menu_sync/README.md">server/service/dashboard_sync/menu_sync/README.md</a>: luồng chi tiết từng hàm</li>
-          <li><a href="../server/service/dashboard_sync/menu_sync/machine_menu_get.py">machine_menu_get.py</a>, <a href="../server/service/dashboard_sync/menu_sync/machine_menu_update.py">machine_menu_update.py</a>: kiểm phía server</li>
-          <li><a href="../server/lib/machine/machine_transport.py">server/lib/machine/machine_transport.py</a>, <a href="../server/config/config.py">config.py</a>: hộp thư, timeout 20s, poll 8s, online 15s</li>
-          <li><a href="../version1.1/machine/menu_sync/machine_menu_sync.py">version1.1/machine/menu_sync/</a>: sync, validate, store, pack</li>
-          <li><a href="../version1.1/machine/ingredient_sync/machine_ingredient_sync.py">version1.1/machine/ingredient_sync/</a>: kho trên máy</li>
-          <li><a href="../server/service/dashboard_sync/ingredient_sync/README.md">server/service/dashboard_sync/ingredient_sync/</a>: kho phía server</li>
-          <li><a href="../app/flutter_app/lib/feature/machine_menu/machine_menu_sync.dart">app/…/machine_menu/machine_menu_sync.dart</a>, <a href="../app/flutter_app/lib/feature/machine_ingredient/machine_ingredient_sync.dart">machine_ingredient_sync.dart</a>: phía app</li>
-          <li><a href="../version1.1/database/sqlite_reference/machine.sql">version1.1/database/sqlite_reference/machine.sql</a>, <code>version1.1/database/database.sql</code>: schema và trigger <code>in_stock</code></li>
+          <li><a href="../../server/service/dashboard_sync/menu_sync/README.md">server/service/dashboard_sync/menu_sync/README.md</a>: luồng chi tiết từng hàm</li>
+          <li><a href="../../server/service/dashboard_sync/menu_sync/machine_menu_get.py">machine_menu_get.py</a>, <a href="../../server/service/dashboard_sync/menu_sync/machine_menu_update.py">machine_menu_update.py</a>: kiểm phía server</li>
+          <li><a href="../../server/lib/machine/machine_transport.py">server/lib/machine/machine_transport.py</a>, <a href="../../server/config/config.py">config.py</a>: hộp thư, timeout 20s, poll 8s, online 15s</li>
+          <li><a href="../../version1.1/machine/menu_sync/machine_menu_sync.py">version1.1/machine/menu_sync/</a>: sync, validate, store, pack</li>
+          <li><a href="../../version1.1/machine/ingredient_sync/machine_ingredient_sync.py">version1.1/machine/ingredient_sync/</a>: kho trên máy</li>
+          <li><a href="../../server/service/dashboard_sync/ingredient_sync/README.md">server/service/dashboard_sync/ingredient_sync/</a>: kho phía server</li>
+          <li><a href="../../app/flutter_app/lib/feature/machine_menu/machine_menu_sync.dart">app/…/machine_menu/machine_menu_sync.dart</a>, <a href="../../app/flutter_app/lib/feature/machine_ingredient/machine_ingredient_sync.dart">machine_ingredient_sync.dart</a>: phía app</li>
+          <li><a href="../../version1.1/database/sqlite_reference/machine.sql">version1.1/database/sqlite_reference/machine.sql</a>, <code>version1.1/database/database.sql</code>: schema và trigger <code>in_stock</code></li>
         </ul></details>
       </section>
     </main>

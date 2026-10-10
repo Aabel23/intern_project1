@@ -1,7 +1,7 @@
 # Máy pha báo "còn sống" thế nào: heartbeat riêng hay suy ra từ long-poll
 
 > So sánh thiết kế · `project1_app` · nguồn `07a54d0` + nhánh `feature/menu-image-cache` · phân tích 10/10/2026
-> Bản HTML có sơ đồ: [heartbeat-vs-long-poll.html](research/heartbeat-vs-long-poll.html)
+> Bản HTML có sơ đồ: [heartbeat-vs-long-poll.html](heartbeat-vs-long-poll.html)
 
 Có hai cách để server biết máy online:
 - **Cách A** (đang chạy): một thread heartbeat gửi request mỗi 5 s, chạy song song với vòng lệnh.

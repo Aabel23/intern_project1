@@ -1,0 +1,860 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tài khoản và phiên</title>
+<meta name="description" content="Luồng đăng ký, OTP qua email, đăng nhập một bước và vòng đời token phiên của project1_app.">
+<link rel="stylesheet" href="../assets/fonts.css">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.9143)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:60px}
+  main section, main section > *{min-width:0}
+  @media (max-width:700px){ code{white-space:normal; overflow-wrap:anywhere} }
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+</style>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu luồng · project1_app</div>
+      <h1>Tài khoản: email OTP chứng minh người đăng ký, mật khẩu đổi lấy token phiên 30 ngày</h1>
+    </div>
+    <div class="meta">
+      <span><b>Nguồn:</b> <code>refactor/heartbeat-long-poll</code> · <code>16dab0e</code></span>
+      <span><b>Phân tích:</b> 10/10/2026</span>
+      <span><b>Quy mô:</b> 5 route · 20 file mã (server 11, app 7, dùng chung 2)</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Màn hình</span>
+        <span><i class="sw proc"></i>Xử lý</span>
+        <span><i class="sw hot"></i>Điểm rủi ro</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw file"></i>RAM / cấu hình</span>
+        <span><i class="ln"></i>Đường đi chính (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1000 400" role="img" aria-label="App gửi đăng ký, OTP và đăng nhập tới server, server giữ phiên đăng ký trong RAM, gửi email, ghi users và app_sessions vào SQLite. Máy không tham gia.">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="40" width="230" height="340" rx="12"/>
+<text x="18" y="30" class="zt">APP (FLUTTER)</text>
+<rect class="zn" x="300" y="40" width="530" height="340" rx="12"/>
+<text x="302" y="30" class="zt">SERVER :8000</text>
+<rect class="zn" x="860" y="40" width="124" height="340" rx="12"/>
+<text x="862" y="30" class="zt">MÁY</text>
+<text x="922" y="200" class="ts" text-anchor="middle">không tham gia</text>
+
+<g class="nd ui"><rect x="36" y="70" width="190" height="52" rx="8"/>
+<text x="131" y="92" class="tt" text-anchor="middle">AuthPage</text>
+<text x="131" y="110" class="tm" text-anchor="middle">auth_page.dart</text></g>
+<g class="nd ui"><rect x="36" y="180" width="190" height="52" rx="8"/>
+<text x="131" y="202" class="tt" text-anchor="middle">OtpPage</text>
+<text x="131" y="220" class="tm" text-anchor="middle">otp_page.dart</text></g>
+<g class="nd ui"><rect x="36" y="300" width="190" height="52" rx="8"/>
+<text x="131" y="322" class="tt" text-anchor="middle">MainDashboard</text>
+<text x="131" y="340" class="tm" text-anchor="middle">ServerClient.token</text></g>
+
+<g class="nd proc"><rect x="330" y="70" width="200" height="52" rx="8"/>
+<text x="430" y="92" class="tt" text-anchor="middle">user_register</text>
+<text x="430" y="110" class="tm" text-anchor="middle">receive_register()</text></g>
+<g class="nd proc"><rect x="330" y="180" width="200" height="52" rx="8"/>
+<text x="430" y="202" class="tt" text-anchor="middle">otp</text>
+<text x="430" y="220" class="tm" text-anchor="middle">confirm_otp()</text></g>
+<g class="nd proc"><rect x="330" y="300" width="200" height="52" rx="8"/>
+<text x="430" y="322" class="tt" text-anchor="middle">user_login</text>
+<text x="430" y="340" class="tm" text-anchor="middle">receive_login()</text></g>
+
+<g class="nd file"><rect x="600" y="70" width="210" height="52" rx="8"/>
+<text x="705" y="92" class="tt" text-anchor="middle">RAM</text>
+<text x="705" y="110" class="tm" text-anchor="middle">REGISTRATIONS · SESSIONS</text></g>
+<g class="nd hot"><rect x="600" y="180" width="210" height="52" rx="8"/>
+<text x="705" y="202" class="tt" text-anchor="middle">SMTP Gmail</text>
+<text x="705" y="220" class="tm" text-anchor="middle">send_otp() :465</text></g>
+<g class="nd store"><rect x="600" y="300" width="210" height="52" rx="8"/>
+<text x="705" y="322" class="tt" text-anchor="middle">SQLite</text>
+<text x="705" y="340" class="tm" text-anchor="middle">users · app_sessions</text></g>
+
+<path class="e main" d="M226,96 L330,96" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="278" cy="96" r="9.5"/><text x="278" y="99.8" text-anchor="middle">1</text></g>
+<path class="e" d="M530,96 L600,96" marker-end="url(#ag)"/>
+<path class="e" d="M430,122 L430,180" marker-end="url(#ag)"/>
+<path class="e" d="M530,206 L600,206" marker-end="url(#ag)"/>
+<path class="e main" d="M226,206 L330,206" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="278" cy="206" r="9.5"/><text x="278" y="209.8" text-anchor="middle">2</text></g>
+<path class="e" d="M500,232 L500,270 L705,270 L705,300" marker-end="url(#ag)"/>
+<path class="e main" d="M226,326 L330,326" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="278" cy="326" r="9.5"/><text x="278" y="329.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M530,326 L600,326" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="565" cy="326" r="9.5"/><text x="565" y="329.8" text-anchor="middle">4</text></g>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>① <code>AuthPage</code> gửi form đăng ký. <code>user_register</code> kiểm dữ liệu, băm mật khẩu, giữ phiên trong RAM rồi nhờ <code>otp</code> gửi mã 6 số qua Gmail SMTP. ② <code>OtpPage</code> gửi mã. Mã đúng thì server mới ghi dòng vào bảng <code>users</code>. ③ Đăng nhập là một request: đúng mật khẩu thì server ghi băm token vào <code>app_sessions</code> ④ và trả token. App giữ token trong RAM của <code>MainDashboard</code>, gắn vào mọi request sau. Máy pha chế không tham gia luồng này. Ô SMTP viền đỏ vì là điểm phụ thuộc bên ngoài duy nhất (cần mạng và <code>config/.env</code>).</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-register">3.1 Nhận form đăng ký</a></li>
+        <li class="sub"><a href="#c-reg-life">3.2 Vòng đời phiên đăng ký</a></li>
+        <li class="sub"><a href="#c-otp">3.3 Gửi và xác minh OTP</a></li>
+        <li class="sub"><a href="#c-login">3.4 Đăng nhập một bước</a></li>
+        <li class="sub"><a href="#c-session">3.5 Vòng đời phiên đăng nhập</a></li>
+        <li><a href="#hop-dong">4. Hợp đồng gói tin</a></li>
+        <li><a href="#loi">5. Lỗi và giới hạn</a></li>
+        <li><a href="#khi-sua">6. Khi sửa code</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: từ form đăng ký tới request đầu tiên có token</h2></div>
+      <p class="prose">Ví dụ: một chủ quán mới đăng ký, nhập OTP, rồi đăng nhập. Sơ đồ chia ba giai đoạn: đăng ký (1–6), xác minh (7–10), đăng nhập (11–15). Mũi tên liền là request. Mũi tên đứt là trả lời. Mọi route đều là POST JSON, chưa cần token, và bị giới hạn 30 request/phút/IP, trừ logout.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor U as Người dùng
+  participant A as AuthPage / OtpPage
+  participant R as user_register
+  participant O as otp
+  participant L as user_login
+  participant M as SMTP Gmail
+  participant D as SQLite
+  U->>A: điền form, bấm Đăng ký
+  A->>R: POST /app/user/account/register
+  R->>D: verify_user() đọc trùng username/email
+  R->>O: create_session() rồi start_otp()
+  O->>M: send_otp(email, code)
+  R-->>A: valid, registration_id, retry_after 60
+  U->>A: nhập mã 6 số
+  A->>O: POST /app/user/otp/verify
+  O->>R: mã đúng, finish_registration()
+  R->>D: INSERT users
+  U->>A: đăng nhập
+  A->>L: POST /app/user/session/login
+  L->>D: get_credentials(), INSERT app_sessions
+  L-->>A: valid, token
+  A->>A: MainDashboard giữ token
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: <code>auth_page.dart</code> <code>_submit()</code> (dòng 63), <code>otp_page.dart</code> <code>_verify()</code> (dòng 79), <code>user_register_process.py</code> <code>receive_register()</code>/<code>confirm_otp()</code>, <code>user_login_process.py</code> <code>receive_login()</code>. Sau bước 15, mọi request gắn token và server kiểm bằng <code>check_login()</code> (mục 3.5). Nhánh phụ: gửi lại mã qua <code>/app/user/otp/send</code> (mục 3.3), đăng xuất (mục 3.5).</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>AuthPage</td><td><code>app/flutter_app/lib/feature/user_auth/ui/auth_page.dart</code></td><td>Form chung cho đăng nhập và đăng ký. Sinh <code>request_id</code>.</td></tr>
+            <tr><td>OtpPage</td><td><code>.../user_auth/ui/otp_page.dart</code></td><td>Nhập mã, đếm ngược nút "Gửi lại".</td></tr>
+            <tr><td>Hàm gửi</td><td><code>user_register_request.dart</code>, <code>user_login_request.dart</code>, <code>core/http_json.dart</code> <code>postJson()</code></td><td>POST JSON. Đọc body cả khi status khác 2xx.</td></tr>
+            <tr><td>user_register</td><td><code>server/service/user_register/user_register_main.py</code>, <code>user_register_process.py</code></td><td>Route đăng ký. Giữ <code>REGISTRATIONS</code>. Ghi tài khoản khi đủ hai cờ.</td></tr>
+            <tr><td>otp</td><td><code>server/service/user_register/otp/</code></td><td>Sinh, gửi, đếm lần thử mã. Giữ <code>SESSIONS</code>, <code>EMAIL_LIMITS</code>.</td></tr>
+            <tr><td>SMTP Gmail</td><td><code>otp/user_otp_send.py</code></td><td><code>smtp.gmail.com:465</code>, tài khoản đọc từ <code>config/.env</code>.</td></tr>
+            <tr><td>SQLite</td><td><code>server/database/user/schema.sql</code></td><td>Bảng <code>users</code> và <code>app_sessions</code>.</td></tr>
+            <tr><td>Kiểm token</td><td><code>server/lib/security/user_session.py</code></td><td><code>create_session()</code>, <code>check_login()</code>, <code>end_session()</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <article class="comp" id="c-register">
+        <header><h3>3.1 · Nhận form đăng ký</h3><div class="src"><code>server/service/user_register/user_register_process.py</code> · Sơ đồ: luồng · 6 bước</div></header>
+        <h4>Làm gì</h4>
+        <p><code>receive_register()</code> biến form thành một phiên đăng ký trong RAM và kích gửi OTP. Nó <b>không</b> ghi database. Tài khoản chỉ được tạo ở <code>finish_registration()</code>, sau khi email đã được chứng minh.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S1["① receive_register"] --> D1{"② find_registration"}
+  D1 -- "mới" --> S2["③ prepare_registration"]
+  D1 -- "đã có" --> S3["④ resume_registration"]
+  S2 --> S4["⑤ start_otp"]
+  S3 --> S4
+  S4 --> OK["registration_id"]
+  S1 --> ER["400 · 429"]
+  class S1,S2,S3 proc
+  class S4 hot
+  class D1 dec
+  class OK ok
+  class ER bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① receive_register</td></tr>
+                <tr><td>1</td><td>Kiểm <code>request_id</code> đúng 32 hex (<code>is_request_id</code>)</td></tr>
+                <tr><td>2</td><td><code>request_fingerprint(data)</code>: HMAC cả body</td></tr>
+                <tr class="grp"><td colspan="2">② find_registration</td></tr>
+                <tr><td>1</td><td>Dọn phiên hết hạn, tìm theo <code>request_id</code> dưới <code>FLOW_LOCK</code></td></tr>
+                <tr class="grp"><td colspan="2">③ prepare_registration</td></tr>
+                <tr><td>1</td><td>Trần <code>MAX_SESSIONS</code> = 1000 → 429</td></tr>
+                <tr><td>2</td><td><code>verify_user()</code>: độ dài, regex email, trùng</td></tr>
+                <tr><td>3</td><td><code>hash_password()</code> PBKDF2 200 000 vòng</td></tr>
+                <tr><td>4</td><td><code>registration_id = token_urlsafe(32)</code></td></tr>
+                <tr class="grp"><td colspan="2">④ resume_registration</td></tr>
+                <tr><td>1</td><td>Fingerprint khác → "Dữ liệu đã thay đổi"</td></tr>
+                <tr class="grp"><td colspan="2">⑤ start_otp</td></tr>
+                <tr><td>1</td><td>Đã có mã → không gửi lại email</td></tr>
+                <tr><td>2</td><td>Chưa có → <code>resend_otp()</code>, gọi SMTP</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>user_register_process.py</code> dòng 50–108, <code>user_register_validate.py</code> <code>verify_user()</code>. "đã có" = cùng <code>request_id</code> đã gửi trước đó (app thử lại). Khối ③ ④ cũng có thể trả 400/429, xem bảng bên.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>App sinh <code>request_id</code> 16 byte ngẫu nhiên (<code>auth_page.dart</code> dòng 105) và giữ nguyên khi người dùng bấm lại với cùng dữ liệu. Vì sao: mạng chập chờn làm app gửi lại. Không có ID thì mỗi lần gửi tạo một phiên và một email mới.</li>
+          <li>Server tính fingerprint của <b>cả body</b>, kể cả mật khẩu. Vì sao: cùng <code>request_id</code> mà nội dung khác thì đó không phải lần thử lại, phải từ chối. Khóa HMAC <code>FINGERPRINT_KEY</code> sinh mới mỗi lần chạy server (<code>data_hash.py</code> dòng 9).</li>
+          <li><code>verify_user()</code> chặn mật khẩu &lt; 8 hoặc &gt; 1024 ký tự, username/họ tên &gt; 150, email &gt; 254. Giới hạn 1024 và 150 khớp với <code>verify_login()</code>. Vì sao: lệch thì tạo được tài khoản không đăng nhập được (chú thích dòng 33).</li>
+          <li>Mật khẩu được băm ngay, phiên trong RAM chỉ giữ <code>password_hash</code>. Vì sao: mật khẩu rõ không nằm lại trong RAM suốt 15 phút chờ OTP.</li>
+          <li>Phần chuẩn bị chạy trong <code>FLOW_LOCK</code>. Gửi email chạy <b>sau</b> khi thả khóa. Vì sao: SMTP mất tới 10 giây, giữ khóa thì mọi đăng ký khác phải chờ.</li>
+          <li>Nếu phiên cũ đã <code>account_created</code>, trả luôn <code>verified: true</code>. App mở <code>OtpPage</code> ở trạng thái đã xác minh (<code>initiallyVerified</code>).</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-reg-life">
+        <header><h3>3.2 · Vòng đời phiên đăng ký</h3><div class="src"><code>REGISTRATIONS</code> (<code>user_register_process.py</code>) + <code>SESSIONS</code> (<code>otp/user_otp_process.py</code>) · Sơ đồ: trạng thái · 5 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Một lần đăng ký sống trong <b>hai</b> dict RAM cùng khóa <code>registration_id</code>: <code>REGISTRATIONS</code> giữ dữ liệu người dùng và ba cờ, <code>SESSIONS</code> giữ băm mã OTP và số lần thử. Cả hai hết hạn sau <code>SESSION_SECONDS</code> = 900 giây. Vì sao trong RAM: chưa xác minh thì chưa đáng ghi đĩa, và server tắt thì phiên mất là chấp nhận được (người dùng đăng ký lại).</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> waiting: prepare_registration()<br/>data_valid, chưa có mã
+  waiting --> sending: resend_otp()<br/>sending = True
+  sending --> code_sent: send_otp() ok<br/>otp_hash, hạn 300 s
+  sending --> waiting: SMTP lỗi<br/>giữ lượt gửi
+  code_sent --> sending: gửi lại<br/>sau cooldown 60 s
+  code_sent --> locked: sai 5 lần<br/>otp_hash = None
+  locked --> sending: gửi lại<br/>attempts = 0
+  code_sent --> verified: confirm_otp()<br/>mã đúng
+  verified --> created: finish_registration()<br/>INSERT users
+  waiting --> expired: quá 900 s<br/>cleanup()
+  code_sent --> expired: quá 900 s<br/>cleanup()
+  created --> [*]
+  expired --> [*]
+  class waiting human
+  class sending hot
+  class code_sent human
+  class locked bad
+  class verified proc
+  class created ok
+  class expired muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>user_otp_process.py</code> <code>create_session()</code>, <code>resend_otp()</code> dòng 70–119, <code>confirm_otp()</code> dòng 122–148, <code>user_register_process.py</code> <code>finish_registration()</code>. Tên trạng thái là quy ước của tài liệu, code chỉ có các cờ <code>otp_hash</code>, <code>sending</code>, <code>verified</code>, <code>attempts</code>, <code>account_created</code>. "created" vẫn nằm trong RAM tới hết 900 s để lần thử lại trả đúng kết quả.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Dọn hết hạn chạy ở hai nơi: đầu mỗi request và trong <code>tick = cleanup</code> mà <code>http_server.py</code> gọi khoảng mỗi 0,5 giây. Vì sao: không có request mới thì RAM vẫn phải được trả lại.</li>
+          <li>Phiên đang <code>sending</code> không bị dọn (<code>cleanup_locked()</code> dòng 30). Vì sao: luồng SMTP ngoài khóa vẫn giữ tham chiếu, xóa giữa chừng sẽ ghi mã vào phiên mồ côi.</li>
+          <li>Mã hết hạn sau 300 giây, phiên sau 900 giây. Mã hết hạn thì gửi lại được. Phiên hết hạn thì phải đăng ký lại từ đầu.</li>
+          <li><code>finish_registration()</code> bắt <code>ValueError</code> từ <code>add_user_with_hash()</code>. Hai người đăng ký cùng username song song thì người sau nhận "Tên đăng nhập hoặc email đã tồn tại" ở bước này, dù đã nhập OTP đúng.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-otp">
+        <header><h3>3.3 · Gửi và xác minh OTP</h3><div class="src"><code>server/service/user_register/otp/</code> · Sơ đồ: luồng · 5 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Sinh mã 6 số, gửi email, đối chiếu mã. Module này <b>không</b> biết tài khoản là gì. Nó chỉ nhận <code>registration_id</code> và email. Việc tạo tài khoản nằm ở <code>user_register_process.py</code>.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S1["① resend_otp"] --> D1{"② EMAIL_LIMITS"}
+  D1 -- "còn lượt" --> S2["③ send_otp"]
+  D1 -- "hết" --> ER["429 retry_after"]
+  S2 --> OK1["mã đã gửi"]
+  S2 --> ER
+  V1["④ confirm_otp"] --> D2{"⑤ matches_code"}
+  D2 -- "đúng" --> OK2["verified"]
+  D2 -- "sai" --> ER2["400"]
+  class S1,V1 proc
+  class S2 hot
+  class D1,D2 dec
+  class OK1,OK2 ok
+  class ER,ER2 bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① resend_otp</td></tr>
+                <tr><td>1</td><td>Phiên còn hạn, chưa <code>verified</code>, không đang <code>sending</code></td></tr>
+                <tr class="grp"><td colspan="2">② EMAIL_LIMITS</td></tr>
+                <tr><td>1</td><td>Cooldown 60 s giữa hai lần gửi</td></tr>
+                <tr><td>2</td><td>Tối đa 5 email / giờ / địa chỉ</td></tr>
+                <tr><td>3</td><td>Trừ lượt <b>trước</b> khi gửi</td></tr>
+                <tr class="grp"><td colspan="2">③ send_otp</td></tr>
+                <tr><td>1</td><td><code>SMTP_SSL smtp.gmail.com:465</code>, timeout 10 s</td></tr>
+                <tr><td>2</td><td><code>SERVICE_EMAIL</code>, <code>SMTP_PASSWORD</code> từ <code>EMAIL_ENV_PATH</code></td></tr>
+                <tr><td>3</td><td>Lưu <code>sha256(registration_id:code)</code>, không lưu mã rõ</td></tr>
+                <tr class="grp"><td colspan="2">④ confirm_otp</td></tr>
+                <tr><td>1</td><td><code>check_request()</code>: mã đúng 6 chữ số</td></tr>
+                <tr><td>2</td><td>Đã sai 5 lần hoặc mã hết hạn → báo xin mã mới</td></tr>
+                <tr class="grp"><td colspan="2">⑤ matches_code</td></tr>
+                <tr><td>1</td><td><code>hmac.compare_digest</code>: so thời gian hằng</td></tr>
+                <tr><td>2</td><td>Đúng: xóa <code>otp_hash</code>, đặt <code>verified</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>user_otp_process.py</code>, <code>user_otp_generate.py</code> (hằng dòng 6–9), <code>user_otp_send.py</code> (dòng 10–12), <code>user_otp_validate.py</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Giới hạn tính theo <b>email</b>, không theo phiên. Vì sao: kẻ xấu tạo nhiều phiên cho cùng một email nạn nhân vẫn chỉ gửi được 5 thư/giờ.</li>
+          <li>Lượt gửi bị trừ cả khi SMTP lỗi (chú thích dòng 95). Vì sao: nếu hoàn lượt, lỗi SMTP giả có thể dùng để gửi vô hạn.</li>
+          <li>SMTP chạy ngoài <code>LOCK</code>. Cờ <code>sending</code> chặn gửi trùng và chặn xác minh trong lúc đó (trả 429, <code>retry_after</code> 3).</li>
+          <li>Mã băm kèm <code>registration_id</code>. Vì sao: cùng mã 6 số ở hai phiên cho ra băm khác nhau.</li>
+          <li>Sai lần thứ 5 thì xóa <code>otp_hash</code>. Vì sao: 6 chữ số chỉ có 10<sup>6</sup> khả năng, phải khóa sớm. Gửi mã mới đặt lại <code>attempts</code> = 0.</li>
+          <li>App: <code>OtpPage</code> bắt đầu đếm ngược 60 s và dùng <code>retry_after</code> server trả để đặt lại bộ đếm (<code>_resend()</code> dòng 46).</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-login">
+        <header><h3>3.4 · Đăng nhập một bước</h3><div class="src"><code>server/service/user_login/user_login_process.py</code> · <code>user_login_request.dart</code> · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Một request mang <code>username</code>/<code>password</code>, một response mang <code>token</code>. Không còn phiên đăng nhập chờ, không còn <code>request_id</code>/<code>login_id</code>. Commit <code>bb82f53</code> chuyển app sang luồng này: trước đó app gọi thêm <code>/app/user/session/verify</code>, route mà server đã bỏ từ <code>37a58c0</code>, nên đăng nhập trả 404.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S1["① requestLogin"] --> S2["② verify_login"]
+  S2 --> D1{"③ matches_password"}
+  D1 -- "đúng" --> S3["④ create_session"]
+  D1 -- "sai" --> ER["400 thông báo chung"]
+  S3 --> OK["token"]
+  class S1 ui
+  class S2,S3 proc
+  class D1 dec
+  class OK ok
+  class ER bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① requestLogin</td></tr>
+                <tr><td>1</td><td><code>postJson()</code>: connect 5 s, tổng 25 s</td></tr>
+                <tr class="grp"><td colspan="2">② verify_login</td></tr>
+                <tr><td>1</td><td>username ≤ 150, password ≤ 1024</td></tr>
+                <tr><td>2</td><td><code>get_credentials()</code> so <code>COLLATE NOCASE</code></td></tr>
+                <tr class="grp"><td colspan="2">③ matches_password</td></tr>
+                <tr><td>1</td><td>Không có user → băm <code>DUMMY_PASSWORD</code></td></tr>
+                <tr><td>2</td><td>Số vòng phải trong 1…1 000 000</td></tr>
+                <tr class="grp"><td colspan="2">④ create_session</td></tr>
+                <tr><td>1</td><td>Xóa mọi phiên hết hạn</td></tr>
+                <tr><td>2</td><td>INSERT <code>sha256(token)</code>, hạn +30 ngày</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>user_login_process.py</code> dòng 20–47, <code>user_password.py</code> <code>matches_password()</code>, <code>user_session.py</code> <code>create_session()</code> dòng 23–32.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>Sai username và sai mật khẩu trả cùng câu <code>INVALID_LOGIN</code>. Không có user vẫn chạy PBKDF2 trên <code>DUMMY_PASSWORD</code>. Vì sao: thời gian trả lời không lộ tên nào tồn tại.</li>
+          <li>Token là <code>token_urlsafe(32)</code> (43 ký tự). DB chỉ giữ SHA-256. Vì sao: lộ file DB không dùng được token.</li>
+          <li>Gửi lại khi mạng lỗi tạo thêm một token mới. Token cũ vẫn sống tới hạn. Chấp nhận được vì không có phiên chờ để khớp.</li>
+          <li>App: <code>_submit()</code> đọc <code>result['valid']</code>. Sai thì hiện <code>message</code>. Đúng thì gọi <code>onAuthenticated(context, token)</code>, <code>app_navigation.dart</code> thay màn hình bằng <code>MainDashboard</code>.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-session">
+        <header><h3>3.5 · Vòng đời phiên đăng nhập</h3><div class="src"><code>server/lib/security/user_session.py</code> · <code>core/server_client.dart</code> · Sơ đồ: trạng thái · 4 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Phiên là một dòng <code>app_sessions</code> (<code>token_hash</code>, <code>user_id</code>, <code>expires_at</code>). Mọi module cần biết người gọi đều đi qua <code>check_login()</code>. Token sai hoặc hết hạn thì trả <code>NOT_LOGGED_IN</code> có <code>login_required: true</code>. App bắt cờ này ở một chỗ duy nhất: <code>ServerClient.request()</code>.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> active: create_session()<br/>hạn 30 ngày
+  active --> active: check_login()<br/>token hợp lệ
+  active --> ended: end_session()<br/>người dùng đăng xuất
+  active --> expired: expires_at qua<br/>không gia hạn
+  expired --> required: check_login()<br/>login_required
+  ended --> required: check_login()<br/>login_required
+  required --> [*]: _sessionExpired()<br/>về AuthPage
+  class active proc
+  class ended ok
+  class expired muted
+  class required human
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>user_session.py</code> <code>check_login()</code> dòng 48, <code>end_session()</code> dòng 56, <code>server_client.dart</code> dòng 98, <code>dashboard_page.dart</code> <code>_sessionExpired()</code> dòng 53. Dòng hết hạn chỉ bị xóa khi có lần đăng nhập mới (<code>create_session()</code> dòng 27).</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li>App giữ token trong RAM: tham số <code>token</code> của <code>MainDashboard</code> và <code>ServerClient</code>. Không có <code>SharedPreferences</code> hay secure storage. Vì vậy tắt app là phải đăng nhập lại.</li>
+          <li><code>ServerClient.account()</code>/<code>machineData()</code> tự gắn <code>'token': ?token</code> vào body. Feature mới chỉ cần dùng <code>ServerClient</code>, không tự thêm token.</li>
+          <li>Status khác 2xx mà body có <code>login_required == true</code> thì gọi <code>onLoginRequired</code> và ném <code>LoginRequiredException</code>. Dashboard hiện SnackBar rồi về <code>AuthPage</code>. Cờ <code>_leaving</code> chặn điều hướng hai lần khi nhiều request cùng hỏng.</li>
+          <li>Đăng xuất: <code>_logout()</code> gọi <code>onLoggedOut(context, true)</code>. <code>app_navigation.dart</code> bắn <code>logout()</code> không chờ rồi về <code>AuthPage</code>. Lỗi mạng bị nuốt (<code>user_auth_request.dart</code>): token cũ tự hết hạn trên server.</li>
+          <li>Logout không bị giới hạn IP (<code>user_login_main.py</code> dòng 28). Vì sao: kẻ dò mật khẩu cùng IP không chặn được người dùng xóa phiên.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="hop-dong">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Hợp đồng gói tin</h2></div>
+      <p class="prose">Tất cả là POST, body JSON tối đa <code>MAX_BODY</code> = 4096 byte. Status suy từ thân bằng <code>valid_status()</code> (<code>http_json.py</code> dòng 85): <code>valid: true</code> → 200, có <code>retry_after</code> → 429, còn lại → 400. Lỗi SQLite → 503. JSON hỏng → 400 "JSON không hợp lệ". Mọi lỗi có dạng <code>{valid: false, message}</code>.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Route</th><th>Gửi lên</th><th>Nhận về khi thành công</th><th>Lỗi có thể gặp</th></tr></thead>
+          <tbody>
+            <tr><td><code>/app/user/account/register</code></td><td><code>request_id</code> str 32 hex · <code>full_name</code> str ≤150 · <code>username</code> str ≤150 · <code>email</code> str ≤254 · <code>password</code> str 8–1024</td><td>200 <code>{valid, registration_id, retry_after: 60, message}</code>. Thử lại: <code>{valid, registration_id, message}</code> hoặc thêm <code>verified</code>, <code>account_created</code></td><td>400 thiếu/sai trường, trùng username/email, "Dữ liệu đã thay đổi" · 429 IP quá 30/phút, server bận, đang gửi email, hết lượt email</td></tr>
+            <tr><td><code>/app/user/otp/send</code></td><td><code>registration_id</code> str</td><td>200 <code>{valid, registration_id, retry_after: 60, message}</code></td><td>400 phiên hết hạn, "Email đã được xác minh" · 429 cooldown, 5 thư/giờ, lỗi SMTP</td></tr>
+            <tr><td><code>/app/user/otp/verify</code></td><td><code>registration_id</code> str · <code>code</code> str đúng 6 chữ số</td><td>200 <code>{valid, verified: true, account_created: true, message}</code></td><td>400 mã sai, sai 5 lần, mã hết hạn, phiên hết hạn, trùng tài khoản khi INSERT · 429 đang gửi mã mới</td></tr>
+            <tr><td><code>/app/user/session/login</code></td><td><code>username</code> str ≤150 · <code>password</code> str ≤1024</td><td>200 <code>{valid, token, message}</code></td><td>400 thiếu trường, <code>INVALID_LOGIN</code> · 429 IP quá 30/phút · 503 DB</td></tr>
+            <tr><td><code>/app/user/session/logout</code></td><td><code>token</code> str</td><td>200 <code>{valid, message}</code>, kể cả token không tồn tại</td><td>400 JSON hỏng · 503 DB</td></tr>
+            <tr><td>Mọi route khác cần token</td><td><code>token</code> str 20–100 ký tự</td><td>Theo module</td><td><code>{valid: false, login_required: true, message}</code> (<code>NOT_LOGGED_IN</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="loi">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Lỗi và giới hạn</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tình huống</th><th>App thấy gì</th><th>Nên làm gì</th></tr></thead>
+          <tbody>
+            <tr><td>Server tắt hoặc sai IP</td><td>"Không kết nối được server…" (<code>_submit()</code> catch)</td><td>Kiểm <code>--dart-define=SERVER_URL</code> và cổng 8000</td></tr>
+            <tr><td>Thiếu <code>config/.env</code> hoặc sai mật khẩu ứng dụng Gmail</td><td>"Không gửi được email, vui lòng thử lại", 429</td><td>Điền <code>SERVICE_EMAIL</code>, <code>SMTP_PASSWORD</code>. Lượt gửi đã bị trừ.</td></tr>
+            <tr><td>Không nhận được mail</td><td>Nút "Gửi lại" đếm ngược 60 s</td><td>Chờ, gửi lại. Tối đa 5 lần/giờ/email.</td></tr>
+            <tr><td>Nhập sai mã 5 lần</td><td>"Nhập sai quá 5 lần, hãy yêu cầu mã mới"</td><td>Gửi lại mã, bộ đếm về 0</td></tr>
+            <tr><td>Để quá 15 phút</td><td>"Phiên đăng ký đã hết hạn"</td><td>Quay lại form và đăng ký lại</td></tr>
+            <tr><td>Server khởi động lại giữa chừng</td><td>"Phiên đăng ký đã hết hạn" (RAM mất)</td><td>Đăng ký lại. Lần đăng ký lại cùng <code>request_id</code> cũng tạo phiên mới.</td></tr>
+            <tr><td>Sửa form rồi bấm lại</td><td>Bình thường: app sinh <code>request_id</code> mới</td><td>Nếu thấy "Dữ liệu đã thay đổi", app đã gửi body khác với cùng ID: lỗi phía app</td></tr>
+            <tr><td>Token hết hạn hoặc đã logout</td><td>SnackBar "Phiên đăng nhập hết hạn", về AuthPage</td><td>Đăng nhập lại</td></tr>
+            <tr><td>Tắt và mở lại app</td><td>Màn đăng nhập</td><td>Thiết kế hiện tại, token không lưu đĩa</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Giá trị</th><th>Nguồn</th></tr></thead>
+          <tbody>
+            <tr><td>Hạn phiên đăng nhập</td><td class="num">2 592 000 s (30 ngày)</td><td><code>config.py</code> <code>SESSION_TTL_SECONDS</code></td></tr>
+            <tr><td>Độ dài token / lọc thô</td><td class="num">32 byte · 20–100 ký tự</td><td><code>config.py</code> <code>TOKEN_BYTES</code>, <code>TOKEN_MIN/MAX_LENGTH</code></td></tr>
+            <tr><td>Hạn phiên đăng ký và phiên OTP</td><td class="num">900 s</td><td><code>user_otp_process.py</code> <code>SESSION_SECONDS</code></td></tr>
+            <tr><td>Số phiên đăng ký tối đa / số email theo dõi</td><td class="num">1000</td><td><code>user_otp_process.py</code> <code>MAX_SESSIONS</code></td></tr>
+            <tr><td>Hạn mã OTP</td><td class="num">300 s</td><td><code>user_otp_generate.py</code> <code>OTP_TTL_SECONDS</code></td></tr>
+            <tr><td>Số chữ số / số lần nhập sai</td><td class="num">6 / 5</td><td><code>OTP_DIGITS</code>, <code>OTP_MAX_ATTEMPTS</code></td></tr>
+            <tr><td>Cooldown gửi lại</td><td class="num">60 s</td><td><code>user_otp_process.py</code> dòng 97 (hằng <code>OTP_RESEND_COOLDOWN_SECONDS</code> không được dùng)</td></tr>
+            <tr><td>Email tối đa mỗi giờ mỗi địa chỉ</td><td class="num">5 / 3600 s</td><td><code>user_otp_process.py</code> dòng 91, 93</td></tr>
+            <tr><td>Timeout SMTP</td><td class="num">10 s</td><td><code>user_otp_send.py</code> <code>SMTP_TIMEOUT_SECONDS</code></td></tr>
+            <tr><td>Giới hạn IP (route chưa cần token)</td><td class="num">30 req / 60 s · 1000 IP</td><td><code>http_rate_limit.py</code></td></tr>
+            <tr><td>Body tối đa</td><td class="num">4096 byte</td><td><code>user_register_main.py</code>, <code>user_login_main.py</code> <code>MAX_BODY</code></td></tr>
+            <tr><td>Số vòng PBKDF2-SHA256 / salt</td><td class="num">200 000 / 16 byte</td><td><code>user_password.py</code> <code>hash_password()</code></td></tr>
+            <tr><td>Timeout app (kết nối / tổng)</td><td class="num">5 s / 25 s</td><td><code>core/http_json.dart</code>, <code>core/server_client.dart</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>SEC còn mở liên quan</b>SEC-01 (Cao): HTTP không mã hóa, mật khẩu và token đi dạng rõ. SEC-03: bảng giới hạn IP đầy 1000 thì mọi IP mới bị 429 ở đăng nhập/đăng ký. SEC-05: đăng ký trả "Email đã tồn tại" nên dò được email. SEC-14: kiểm trùng username không phân biệt hoa/thường nhưng cột <code>UNIQUE</code> thì có. SEC-15: phiên 30 ngày không hết hạn khi không dùng, không có "đăng xuất mọi thiết bị". Chi tiết: <code>log/SECURITY_NOTES.md</code>.</div>
+      <div class="note crit"><b>Tài liệu cũ lệch code</b>SEC-04 ("trần 1000 phiên đăng nhập chờ", <code>/app/dang-nhap</code>) mô tả luồng hai bước đã bỏ. Server hiện không giữ phiên đăng nhập chờ nên kịch bản này không còn. Test <code>test_SEC04_...</code> vẫn "expected failure" chỉ vì <code>user_login_process.LOGIN_STATES</code> không còn tồn tại (AttributeError). <code>tests/python/test_user_login.py</code> có 5 test ERROR vì cùng lý do. <code>server/service/user_login/README.md</code> dòng 48 ghi "App xóa token đã lưu", nhưng app không lưu token ra đĩa.</div>
+    </section>
+
+    <section id="khi-sua">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Khi sửa code</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Đổi gì</th><th>Phải đổi cùng lúc</th></tr></thead>
+          <tbody>
+            <tr><td>Thêm/đổi route</td><td><code>server/config/routing.py</code> dòng 9–15 · <code>app/flutter_app/lib/config/routing.dart</code> dòng 6–10 · <code>ROUTES</code> trong <code>*_main.py</code> · test Python và <code>tests/flutter/auth_page_test.dart</code>. Bài học <code>bb82f53</code>: server bỏ route mà app chưa đổi thì đăng nhập 404.</td></tr>
+            <tr><td>Giới hạn độ dài username/mật khẩu</td><td><code>verify_user()</code> và <code>verify_login()</code> cùng lúc, cả validator trong <code>auth_page.dart</code></td></tr>
+            <tr><td>Trường trả về (<code>token</code>, <code>registration_id</code>, <code>verified</code>, <code>retry_after</code>)</td><td><code>auth_page.dart</code> <code>_submit()</code>, <code>otp_page.dart</code> <code>_resend()</code>/<code>_verify()</code></td></tr>
+            <tr><td>Định dạng băm mật khẩu</td><td><code>hash_password()</code>, <code>matches_password()</code> và <code>DUMMY_PASSWORD</code> phải cùng định dạng, nếu không thời gian trả lời lại lộ user</td></tr>
+            <tr><td>Cờ <code>login_required</code> hoặc <code>NOT_LOGGED_IN</code></td><td><code>server_client.dart</code> dòng 98 và mọi module gọi <code>check_login()</code></td></tr>
+            <tr><td>Muốn lưu token qua lần mở app</td><td>Thêm storage ở <code>app_navigation.dart</code>, xóa khi <code>onLoggedOut</code>. Nhớ SEC-15 (token 30 ngày).</td></tr>
+            <tr><td>Chạy nhiều worker</td><td><code>REGISTRATIONS</code>, <code>SESSIONS</code>, <code>EMAIL_LIMITS</code>, <code>IP_REQUESTS</code> là dict trong một tiến trình (chú thích <code>user_otp_process.py</code> dòng 15). Phải chuyển sang kho chung.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+          <footer class="end">Tài liệu luồng tài khoản, đối chiếu code nhánh <code>refactor/heartbeat-long-poll</code> commit <code>16dab0e</code>, ngày 10/10/2026. Font chạy offline; sơ đồ Mermaid cần mạng, không có mạng sẽ hiện mã nguồn sơ đồ. Sơ đồ toàn cục là SVG tĩnh. "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>
+
