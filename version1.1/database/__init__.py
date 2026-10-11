@@ -1,30 +1,15 @@
-# ============================================================
-# PUBLIC DATABASE API
-# ============================================================
+"""FlexMix database package.
 
-from .db_core import apply_database_sql, recalculate_thresholds_in_database
-from .inventory_service import (
-    add_inventory,
-    check_inventory,
-    consume_drink,
-    consume_recipe_usage,
-    set_inventory,
-    subtract_inventory,
-    update_drinks_inventory,
-    update_inventory_batch,
-    update_ingredient_inventory,
-)
+    core/       config, MySQL connection, shared helpers
+    schema/     schema.sql + seed.sql and the code that applies them
+    services/   one module per business area: inventory, order_ticket,
+                error_log, recipe_export
+"""
+
+from database.schema.apply import apply_database_sql
+from database.services.inventory import check_inventory
 
 __all__ = [
     "apply_database_sql",
-    "recalculate_thresholds_in_database",
-    "update_drinks_inventory",
-    "add_inventory",
     "check_inventory",
-    "consume_drink",
-    "consume_recipe_usage",
-    "set_inventory",
-    "subtract_inventory",
-    "update_inventory_batch",
-    "update_ingredient_inventory",
 ]

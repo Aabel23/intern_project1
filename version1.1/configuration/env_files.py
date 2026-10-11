@@ -5,9 +5,7 @@ VẤN ĐỀ NÓ GIẢI QUYẾT
     EnvironmentFile=, nên service luôn có đủ biến. Nhưng mọi lệnh chạy
     tay thì KHÔNG đi qua systemd:
 
-        python3 -m database.main
         python3 -m pump_control.calib_pump
-        python3 -m admin_gui.auth --list
 
     Trước đây chúng chỉ đọc được <dự án>/.env, nên máy nào gom hết cấu
     hình vào /etc là mất sạch công cụ dòng lệnh -- triệu chứng khó hiểu

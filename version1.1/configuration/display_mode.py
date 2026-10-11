@@ -43,8 +43,7 @@ THE MODE LIST IS NEVER TYPED
     Only what `xrandr --query` reports for the connected output is
     offered, and write() refuses anything else. A mode a panel cannot do
     is a black screen, and this machine has no keyboard or mouse to
-    recover one with. The admin page pairs that with a 20-second revert
-    for the same reason: see admin_gui/serve.py.
+    recover one with.
 """
 
 from __future__ import annotations
@@ -60,7 +59,7 @@ from configuration.configuration import runtime_path
 # why. Note that write() below calls mkdir() on this file's parent, so
 # /var/lib/flexmix has to exist already AND be owned by the service user:
 # /var/lib is not writable by flexxource, so saving a mode into a directory
-# nobody created raises PermissionError from the admin page. It is
+# nobody created raises PermissionError. It is
 # deploy/install.sh that creates it.
 MODE_FILE = runtime_path("display_mode.json")
 
@@ -71,7 +70,7 @@ DISPLAY = ":0"
 
 # How long xrandr is given before we stop waiting for it. It normally
 # answers in milliseconds; a hang means X is gone, and a request that
-# blocks the admin API forever is worse than one that fails.
+# blocks its caller forever is worse than one that fails.
 TIMEOUT = 10
 
 
@@ -184,7 +183,7 @@ def read() -> dict:
 def write(mode: str | None) -> dict:
     """Save a mode. Does NOT apply it -- see apply().
 
-    Refuses anything the connected output did not report. The admin page
+    Refuses anything the connected output did not report. The management app
     only ever offers what query() returned, so a rejection here means the
     request did not come from that page, or the panel changed underneath
     it. Either way a mode this screen cannot show is a screen nobody in
@@ -219,7 +218,7 @@ def write(mode: str | None) -> dict:
 def apply(mode: str | None) -> dict:
     """Switch the panel now. Does NOT save -- see write().
 
-    Applying and saving are separate on purpose. The admin page applies
+    Applying and saving are separate on purpose. The management app applies
     first, waits for a human to confirm they can still see the screen,
     and only then saves; a mode that turns out to be unreadable is
     reverted having left nothing behind to come back after a reboot.

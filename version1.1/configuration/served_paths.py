@@ -1,20 +1,17 @@
 """Which parts of the project are web content, and which are not.
 
 WHY THIS EXISTS
-    Every one of this project's four HTTP servers hands the PROJECT
+    Every one of this project's three HTTP servers hands the PROJECT
     DIRECTORY to SimpleHTTPRequestHandler:
 
         store_gui/serve.py      StoreHandler
-        admin_gui/serve.py      AdminHandler
         test_gui/serve.py       TestHandler
         order/process_runner.py GuiHandler
 
     That class blocks `..` and nothing else. It has no notion of a private
     file, and it does not skip dotfiles -- so with the repository root as
-    its document root, `GET /.env` returns the MySQL password and
-    `GET /configuration/admin_account.json` returns the key every session
-    token is signed with. Both were confirmed answering 200 on the live
-    machine before this file existed.
+    its document root, `GET /.env` returns the MySQL password. That was
+    confirmed answering 200 on the live machine before this file existed.
 
     Nothing served a page ever needed them. They were reachable only
     because they happen to sit in the same parent folder as the HTML.
@@ -32,11 +29,10 @@ AN ALLOWLIST, NOT A DENYLIST
 
 WHAT IS ON THE LIST
     Derived from what the pages actually request (`src=`/`href=` across the
-    four GUIs, plus the resource paths built in their JavaScript), not from
+    three GUIs, plus the resource paths built in their JavaScript), not from
     what looked plausible:
 
         store_gui/       the shop screen
-        admin_gui/       the console
         bartender_gui/   the preparation screen, incl. images/guide/
         test_gui/        the manual hardware screen
         recipe/          drink photos, and the clips an `action` step loops
@@ -71,7 +67,6 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 # anyone who can reach the port.
 SERVE_DIRS = frozenset({
     "store_gui",
-    "admin_gui",
     "bartender_gui",
     "test_gui",
     "recipe",

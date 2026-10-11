@@ -1,0 +1,958 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bảo mật hai chặng</title>
+<meta name="description" content="Lớp trong, định danh người dùng và máy, đường đi của một lệnh qua app, server hãng và máy pha">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 3.125)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+  sup.fn{font-family:var(--sans); font-size:.62em; line-height:0; font-weight:600; margin-left:1px}
+  sup.fn a{text-decoration:none; color:var(--accent-ink); padding:0 1px}
+  ol.fnotes{margin:0; padding-left:1.8em; display:grid; gap:6px; font-family:var(--sans); font-size:13.5px; line-height:1.5; max-width:90ch; color:var(--ink-2)}
+  ol.fnotes li::marker{color:var(--accent-ink); font-weight:600}
+  ol.fnotes b{color:var(--ink); font-weight:600}
+  ol.fnotes li:target{background:var(--accent-soft); border-radius:6px}
+  .fn-back{text-decoration:none; font-size:12px}
+  sup.fn, ol.fnotes li{scroll-margin-top:80px}
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Thiết kế bảo mật · project1_app v1.1</div>
+      <h1>Bảo mật hai chặng: lớp trong, định danh và đường đi của một lệnh</h1>
+      <p class="lead">App ↔ server hãng ↔ máy pha. Mỗi chặng có hai lớp: TLS<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> bên ngoài, phong bì mã hóa bên trong. Server mở phong bì để kiểm quyền rồi đóng phong bì mới cho chặng sau. Tài liệu này nói từng lớp làm gì, ai giữ khóa nào, và người dùng lẫn máy được nhận diện ra sao.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>project1_server@07b892c</code></span>
+      <span><b>Phân tích:</b> 11/10/2026</span>
+      <span><b>Trạng thái:</b> đề xuất, chờ chốt</span>
+    </div>
+  </header>
+
+  <!-- 1 · Bức tranh toàn cục -->
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>App</span>
+        <span><i class="sw proc"></i>Tiến trình</span>
+        <span><i class="sw hot"></i>Điểm nóng</span>
+        <span><i class="sw store"></i>Dữ liệu bền · khóa</span>
+        <span><i class="sw hw"></i>Phần cứng</span>
+        <span><i class="ln"></i>Đường đi của lệnh (số = thứ tự)</span>
+        <span><i class="ln g"></i>Quan hệ tin cậy</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 100 1000 320" role="img" aria-label="App gửi lệnh qua TLS và lớp trong tới server hãng, server kiểm quyền rồi gửi qua mTLS và lớp trong tới máy pha; root CA hãng và khóa phát hành giữ offline">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+<rect class="zn" x="16" y="130" width="180" height="186" rx="12"/>
+<text x="18" y="122" class="zt">APP</text>
+<g class="nd ui"><rect x="31" y="160" width="150" height="56" rx="8"/>
+<text x="106" y="183" class="tt" text-anchor="middle">App</text>
+<text x="106" y="200" class="ts" text-anchor="middle">session token · Keystore</text></g>
+<text x="106" y="252" class="tn" text-anchor="middle">email + mật khẩu</text>
+<text x="106" y="268" class="tn" text-anchor="middle">phiên 30 ngày</text>
+
+<rect class="zn" x="300" y="130" width="400" height="186" rx="12"/>
+<text x="302" y="122" class="zt">SERVER HÃNG · LOCAL → CLOUD</text>
+<g class="nd proc"><rect x="316" y="160" width="104" height="56" rx="8"/>
+<text x="368" y="183" class="tt" text-anchor="middle">Cổng app</text>
+<text x="368" y="200" class="ts" text-anchor="middle">mở lớp trong</text></g>
+<g class="nd hot"><rect x="448" y="160" width="104" height="56" rx="8"/>
+<text x="500" y="183" class="tt" text-anchor="middle">Gác cổng</text>
+<text x="500" y="200" class="ts" text-anchor="middle">kiểm quyền</text></g>
+<g class="nd proc"><rect x="580" y="160" width="104" height="56" rx="8"/>
+<text x="632" y="183" class="tt" text-anchor="middle">Cổng máy</text>
+<text x="632" y="200" class="ts" text-anchor="middle">đóng lớp trong</text></g>
+<g class="nd store"><rect x="448" y="250" width="104" height="50" rx="8"/>
+<text x="500" y="271" class="tt" text-anchor="middle">DB</text>
+<text x="500" y="287" class="ts" text-anchor="middle">tài khoản · máy</text></g>
+
+<rect class="zn" x="804" y="130" width="180" height="186" rx="12"/>
+<text x="806" y="122" class="zt">MÁY PHA</text>
+<g class="nd proc"><rect x="819" y="160" width="150" height="56" rx="8"/>
+<text x="894" y="183" class="tt" text-anchor="middle">Agent máy</text>
+<text x="894" y="200" class="ts" text-anchor="middle">sổ lệnh · giới hạn cứng</text></g>
+<g class="nd hw"><rect x="819" y="250" width="150" height="50" rx="8"/>
+<text x="894" y="271" class="tt" text-anchor="middle">Phần cứng</text>
+<text x="894" y="287" class="ts" text-anchor="middle">bơm · van · cân</text></g>
+
+<rect class="zn" x="300" y="346" width="400" height="62" rx="12"/>
+<text x="382" y="338" class="zt">GỐC TIN CẬY · GIỮ OFFLINE</text>
+<g class="nd store"><rect x="316" y="356" width="150" height="42" rx="8"/>
+<text x="391" y="374" class="tt" text-anchor="middle">Root CA hãng</text>
+<text x="391" y="389" class="ts" text-anchor="middle">ký giấy khai sinh máy</text></g>
+<g class="nd store"><rect x="534" y="356" width="150" height="42" rx="8"/>
+<text x="609" y="374" class="tt" text-anchor="middle">Khóa phát hành</text>
+<text x="609" y="389" class="ts" text-anchor="middle">ký gói cập nhật</text></g>
+
+<path class="e main" d="M181,188 L316,188" marker-end="url(#aa)"/>
+<path class="e main" d="M420,188 L448,188" marker-end="url(#aa)"/>
+<path class="e main" d="M552,188 L580,188" marker-end="url(#aa)"/>
+<path class="e main" d="M684,188 L819,188" marker-end="url(#aa)"/>
+<path class="e main" d="M894,216 L894,250" marker-end="url(#aa)"/>
+<path class="e" d="M500,216 L500,250" marker-start="url(#ag)" marker-end="url(#ag)"/>
+<path class="e dash" d="M368,356 L368,216" marker-end="url(#ag)"/>
+<path class="e dash" d="M632,356 L632,216" marker-end="url(#ag)"/>
+<text x="376" y="300" class="tn">tin root hãng</text>
+<text x="640" y="300" class="tn">gói đã ký</text>
+
+<rect class="chip" x="200" y="200" width="96" height="18" rx="4"/>
+<text x="248" y="213" class="tchip" text-anchor="middle">TLS + lớp trong</text>
+<rect class="chip" x="704" y="200" width="96" height="18" rx="4"/>
+<text x="752" y="213" class="tchip" text-anchor="middle">mTLS + lớp trong</text>
+
+<g class="bd"><circle cx="248" cy="188" r="9.5"/><text x="248" y="191.8" text-anchor="middle">1</text></g>
+<g class="bd"><circle cx="434" cy="188" r="9.5"/><text x="434" y="191.8" text-anchor="middle">2</text></g>
+<g class="bd"><circle cx="566" cy="188" r="9.5"/><text x="566" y="191.8" text-anchor="middle">3</text></g>
+<g class="bd"><circle cx="752" cy="188" r="9.5"/><text x="752" y="191.8" text-anchor="middle">4</text></g>
+<g class="bd"><circle cx="894" cy="233" r="9.5"/><text x="894" y="236.8" text-anchor="middle">5</text></g>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Một lệnh đi theo các số: ① app gửi qua TLS, nội dung nằm trong phong bì chỉ server mở được; ② cổng app mở phong bì, chuyển cho gác cổng; ③ gác cổng kiểm phiên và quyền trên đúng máy đó (đọc DB), rồi chuyển cho cổng máy; ④ cổng máy đóng lệnh vào phong bì phản hồi khi máy hỏi qua mTLS<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup>; ⑤ agent máy kiểm giới hạn cứng, ghi sổ, rồi mới chạy phần cứng. Kết quả đi ngược lại cùng đường. Root CA<sup class="fn" id="fnr-3"><a href="#fn-3" aria-label="Chú thích 3">3</a></sup> hãng và khóa phát hành không nằm trên server: chiếm server không giả được máy, cũng không đẩy được phần mềm độc xuống máy.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-inner">3.1 Lớp trong</a></li>
+        <li class="sub"><a href="#c-keys">3.2 Gốc tin cậy và khóa</a></li>
+        <li class="sub"><a href="#c-user">3.3 Định danh người dùng</a></li>
+        <li class="sub"><a href="#c-machine">3.4 Định danh máy</a></li>
+        <li class="sub"><a href="#c-gate">3.5 Gác cổng</a></li>
+        <li class="sub"><a href="#c-cmd">3.6 Lệnh và sổ lệnh</a></li>
+        <li class="sub"><a href="#c-ota">3.7 Cập nhật phần mềm</a></li>
+        <li><a href="#thuat-toan">4. Thuật toán</a></li>
+        <li><a href="#ghi-chu">5. Ghi chú và câu hỏi mở</a></li>
+        <li><a href="#chu-thich">6. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <!-- 2 · Luồng chính -->
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: nạp 200 g đường từ app</h2></div>
+      <p class="prose">Ví dụ đi hết hệ thống: quản lý bấm nạp nguyên liệu trên app khi máy đang online. Bước 1–6 là chặng app ↔ server, bước 7–13 là chặng server ↔ máy, bước 14–15 là app hỏi kết quả. Mũi tên liền là yêu cầu, mũi tên đứt là phản hồi. Mọi mũi tên giữa hai khối khác nhau đều đi trong TLS và trong phong bì lớp trong.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor U as Quản lý
+  participant A as App
+  participant SA as Cổng app
+  participant G as Gác cổng
+  participant SM as Cổng máy
+  participant M as Agent máy
+  participant H as Phần cứng
+  U->>A: bấm nạp 200 g đường
+  A->>A: sinh mã lệnh, đóng phong bì tới khóa server
+  A->>SA: TLS · phong bì gồm token và lệnh
+  SA->>G: mở phong bì, kiểm mã lần gửi chưa thấy
+  G->>G: tra phiên, quyền trên máy này, ghi lệnh chờ
+  SA-->>A: phản hồi đóng bằng khóa dẫn từ yêu cầu · đã xếp hàng
+  M->>SM: mTLS · hỏi lệnh, phong bì có chữ ký máy
+  SM->>G: kiểm chữ ký, lấy lệnh chờ của đúng máy này
+  SM-->>M: phản hồi đóng gói · lệnh, mã lệnh, hạn sống
+  M->>M: kiểm loại lệnh, giới hạn cứng, hạn · ghi sổ claimed
+  M->>H: chạy bơm 200 g
+  M->>SM: báo kết quả, phong bì có chữ ký máy
+  SM->>G: cập nhật trạng thái lệnh
+  A->>SA: hỏi trạng thái theo mã lệnh
+  SA-->>A: xong
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: thiết kế đề xuất, chưa có code. "Mã lệnh" do app sinh và đi suốt tới máy: app gửi lại thì server trả lệnh cũ, server giao lại thì máy nhận ra qua sổ lệnh. "Khóa dẫn từ yêu cầu" là khóa chỉ người gửi yêu cầu và server biết, nên phản hồi không ghép nhầm sang yêu cầu khác được.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Trong mã nguồn hiện có</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>App</td><td><code>project1_app/flutter_app/</code></td><td>Mới có UI, chưa có lớp mạng, chưa lưu token</td></tr>
+            <tr><td>Cổng app, Gác cổng</td><td><code>project1_server/server/security/seca/</code></td><td>Đang làm cho trình duyệt (cookie). Dùng lại được phiên, kiểm quyền, chống trùng, giới hạn lượt thử. Có lỗi owner bỏ qua kiểm quyền, xem mục 5</td></tr>
+            <tr><td>Cổng máy</td><td><code>project1_server/server/security/fm1/</code>, <code>internal/contracts/fm1_wire.md</code></td><td>Bản nháp cũ, tự định dạng gói tin. Giữ ý tưởng: khóa sinh trên máy, ràng buộc phản hồi với lần gửi, sổ lệnh. Làm lại theo tài liệu này</td></tr>
+            <tr><td>Lệnh, mã lệnh</td><td><code>project1_server/internal/contracts/commands.md</code></td><td>Đã có chống trùng theo khóa yêu cầu. Còn thiếu: nối mã do app sinh vào mã lệnh gửi xuống máy</td></tr>
+            <tr><td>Agent máy</td><td><code>version1.1/agent/</code> (<code>net.py</code>, <code>routing.py</code>)</td><td>Long-poll, ghim CA, cấm redirect</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <!-- 3.1 Lớp trong -->
+      <article class="comp" id="c-inner">
+        <header><h3>3.1 · Lớp trong (phong bì)</h3><div class="src">Áp dụng cho cả hai chặng · Sơ đồ: luồng · 7 bước · <span class="pill m">đã chốt có lớp trong</span> <span class="pill h">cách làm: đề xuất</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Mỗi yêu cầu được mã hóa thêm một lần bên trong TLS, tới khóa công khai của bên nhận. TLS chỉ che đường truyền: nó kết thúc ở chỗ nào thì dữ liệu ra dạng rõ ở chỗ đó. Phong bì thì chỉ mở được ở đúng tiến trình có khóa. Phong bì <b>không</b> thay cho kiểm quyền và không làm E2E: server vẫn mở để đọc và kiểm.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S1["① Chuẩn bị nội dung"] --> S2["② Đóng phong bì"]
+  S2 --> S3["③ Gửi trong TLS"]
+  S3 --> R1["④ Chặn cửa"]
+  R1 --> D1{"Chữ ký máy đúng?"}
+  D1 -- "đúng · hoặc chặng app" --> R2["⑤ Mở phong bì"]
+  D1 -- "sai" --> X1["bỏ · lỗi tối giản"]
+  R2 --> D2{"Mã lần gửi mới?"}
+  D2 -- "mới" --> R3["⑥ Gác cổng xử lý"]
+  D2 -- "đã thấy" --> X2["từ chối lặp"]
+  R3 --> R4["⑦ Đóng phản hồi"]
+  R4 --> OK["người gửi mở phản hồi"]
+  class S1,S2,S3,R1,R2,R4 proc
+  class R3 hot
+  class D1,D2 dec
+  class X1,X2 bad
+  class OK ok
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Chuẩn bị nội dung</td></tr>
+                <tr><td>Đầu phong bì</td><td>route, method, bên nhận, mã lần gửi, thời điểm, mã khóa (<code>kid</code><sup class="fn" id="fnr-4"><a href="#fn-4" aria-label="Chú thích 4">4</a></sup>)</td></tr>
+                <tr><td>Thân</td><td>dữ liệu lệnh; chặng app thêm session token</td></tr>
+                <tr class="grp"><td colspan="2">② Đóng phong bì</td></tr>
+                <tr><td>1</td><td>HPKE<sup class="fn" id="fnr-5"><a href="#fn-5" aria-label="Chú thích 5">5</a></sup>: thỏa thuận một khóa dùng một lần với khóa công khai server</td></tr>
+                <tr><td>2</td><td>AES-GCM<sup class="fn" id="fnr-6"><a href="#fn-6" aria-label="Chú thích 6">6</a></sup> mã hóa thân, đầu phong bì làm dữ liệu kèm (AAD<sup class="fn" id="fnr-7"><a href="#fn-7" aria-label="Chú thích 7">7</a></sup>)</td></tr>
+                <tr><td>3</td><td>Chặng máy: máy ký ECDSA<sup class="fn" id="fnr-8"><a href="#fn-8" aria-label="Chú thích 8">8</a></sup> P-256<sup class="fn" id="fnr-9"><a href="#fn-9" aria-label="Chú thích 9">9</a></sup> lên cả phong bì</td></tr>
+                <tr class="grp"><td colspan="2">④ Chặn cửa</td></tr>
+                <tr><td>Rẻ trước</td><td>kích thước, route hợp lệ, <code>kid</code> còn dùng, rate-limit<sup class="fn" id="fnr-10"><a href="#fn-10" aria-label="Chú thích 10">10</a></sup></td></tr>
+                <tr class="grp"><td colspan="2">⑤ Mở phong bì</td></tr>
+                <tr><td>Khớp</td><td>route trong đầu phong bì phải trùng route thật</td></tr>
+                <tr class="grp"><td colspan="2">⑦ Đóng phản hồi</td></tr>
+                <tr><td>Khóa</td><td>xuất (export) từ chính ngữ cảnh HPKE của yêu cầu</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: đề xuất, dựa trên HPKE (RFC<sup class="fn" id="fnr-11"><a href="#fn-11" aria-label="Chú thích 11">11</a></sup> 9180). Phong bì là gói đã mã hóa nằm trong TLS. "Mã lần gửi" là số ngẫu nhiên riêng cho mỗi lần gửi, khác mã lệnh: một lệnh gửi lại ba lần thì có ba mã lần gửi và một mã lệnh.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Đầu phong bì để rõ nhưng được khóa chặt vào bản mã.</b> Cổng cần biết route và <code>kid</code> trước khi mở. Đưa đầu phong bì làm AAD thì sửa một chữ ở đầu là phong bì mở không ra.</li>
+          <li><b>Dùng HPKE, một chuẩn đã công bố.</b> HPKE có đặc tả (RFC 9180), bộ vector thử chính thức và thư viện sẵn cho nhiều ngôn ngữ, nên phần mã hóa không phải tự thiết kế hay tự kiểm.</li>
+          <li><b>App không có khóa ký riêng ở MVP<sup class="fn" id="fnr-12"><a href="#fn-12" aria-label="Chú thích 12">12</a></sup>.</b> Danh tính người dùng là session token nằm trong thân phong bì, nên chỗ kết thúc TLS cũng không thấy token. Máy có khóa riêng sẵn (giấy khai sinh, mục 3.4) nên ký được, và danh tính máy vẫn còn khi TLS kết thúc ở proxy.</li>
+          <li><b>Kiểm chữ ký trước khi mở.</b> Phép kiểm chữ ký rẻ hơn mở rồi parse. Kẻ giả không có khóa máy bị loại trước khi chạm vào phần giải mã.</li>
+          <li><b>Chống lặp bằng mã lần gửi, ghi bền.</b> Server ghi mã đã thấy trong cùng transaction<sup class="fn" id="fnr-13"><a href="#fn-13" aria-label="Chú thích 13">13</a></sup> với việc xử lý. Thời điểm trong đầu phong bì chỉ để loại gói quá cũ, không dùng làm chốt chính, vì đồng hồ máy chưa tin được sau khởi động.</li>
+          <li><b>Phản hồi không cần chữ ký server.</b> Khóa phản hồi dẫn từ yêu cầu, chỉ người gửi và server biết. Mở được là chắc chắn phản hồi đến từ server và thuộc đúng yêu cầu. Máy nhờ đó cũng biết lệnh trong phản hồi là "tươi" mà không cần tin đồng hồ.</li>
+          <li><b>Ảnh và file lớn không vào phong bì.</b> Chỉ đi TLS. Băm SHA-256<sup class="fn" id="fnr-14"><a href="#fn-14" aria-label="Chú thích 14">14</a></sup> của file nằm trong menu (đi trong phong bì), máy tải xong thì so băm.</li>
+        </ol>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Ai đứng giữa</th><th>Chỉ có TLS</th><th>TLS + lớp trong</th></tr></thead>
+            <tbody>
+              <tr><td>Người nghe lén mạng, wifi quán</td><td>Không đọc được</td><td>Không đọc được</td></tr>
+              <tr><td>Proxy hoặc load balancer<sup class="fn" id="fnr-15"><a href="#fn-15" aria-label="Chú thích 15">15</a></sup> kết thúc TLS khi chuyển lên cloud</td><td>Đọc và sửa được</td><td>Chỉ thấy phong bì kín; sửa là bị phát hiện</td></tr>
+              <tr><td>Log truy cập, công cụ giám sát trước app server</td><td>Có thể ghi dạng rõ</td><td>Chỉ ghi được bản mã</td></tr>
+              <tr><td>Tiến trình server giữ khóa lớp trong</td><td>Đọc được</td><td>Đọc được (đúng thiết kế hai chặng)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <!-- 3.2 Khóa -->
+      <article class="comp" id="c-keys">
+        <header><h3>3.2 · Gốc tin cậy và khóa</h3><div class="src">Sơ đồ: chuỗi tin cậy · 6 khóa · <span class="pill h">đề xuất</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Mỗi khóa có đúng một mục đích. Khóa có thể giả mạo cả đội máy (root, khóa phát hành) không nằm trên server. Server hiện chạy local, sau chuyển lên cloud: lúc đó chỉ đổi <b>chỗ lưu</b> khóa server, chuỗi tin cậy giữ nguyên.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  R["Root CA hãng"] --> I["CA xưởng"]
+  I --> B["Giấy khai sinh máy"]
+  R --> T["Chứng chỉ cổng máy"]
+  R --> K["Danh sách khóa lớp trong"]
+  P["Khóa phát hành"] --> U["Gói cập nhật"]
+  class R,P store
+  class I proc
+  class B,T,K,U file
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. Mũi tên nghĩa là "ký". Máy và app có sẵn khóa công khai của root, nên kiểm được chứng chỉ cổng máy và danh sách khóa lớp trong mà không cần tin CA công cộng.</figcaption>
+        </figure>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Khóa</th><th>Loại</th><th>Ai giữ</th><th>Dùng để</th><th>Lưu ở MVP → khi lên cloud</th><th>Xoay</th></tr></thead>
+            <tbody>
+              <tr><td>Root CA hãng</td><td>ECDSA P-256</td><td>Hãng</td><td>Ký CA xưởng, chứng chỉ cổng máy, danh sách khóa lớp trong</td><td>Máy tính offline</td><td>Hiếm. Gói tin cậy chở 2 root (hiện tại, kế tiếp)</td></tr>
+              <tr><td>CA xưởng</td><td>ECDSA P-256</td><td>Xưởng</td><td>Ký giấy khai sinh cho từng máy lúc sản xuất</td><td>Máy ở xưởng</td><td>1–2 năm</td></tr>
+              <tr><td>Khóa máy</td><td>ECDSA P-256</td><td>Từng máy</td><td>mTLS, ký phong bì, ký phiếu kích hoạt</td><td>File 0600 → chip ATECC608<sup class="fn" id="fnr-16"><a href="#fn-16" aria-label="Chú thích 16">16</a></sup> (sau MVP)</td><td>Đổi khóa: sau MVP</td></tr>
+              <tr><td>Khóa lớp trong của server</td><td>X25519<sup class="fn" id="fnr-17"><a href="#fn-17" aria-label="Chú thích 17">17</a></sup> (KEM<sup class="fn" id="fnr-18"><a href="#fn-18" aria-label="Chú thích 18">18</a></sup>)</td><td>Server</td><td>Mở phong bì của cả hai chặng</td><td>File 0600 → KMS<sup class="fn" id="fnr-19"><a href="#fn-19" aria-label="Chú thích 19">19</a></sup> hoặc Vault<sup class="fn" id="fnr-20"><a href="#fn-20" aria-label="Chú thích 20">20</a></sup></td><td>~1 năm, chồng lấn theo <code>kid</code></td></tr>
+              <tr><td>Chứng chỉ TLS</td><td>ECDSA</td><td>Server</td><td>Cổng app: CA công cộng. Cổng máy: root hãng</td><td>File → dịch vụ chứng chỉ của cloud</td><td>Tự động theo CA</td></tr>
+              <tr><td>Khóa phát hành</td><td>Ed25519<sup class="fn" id="fnr-21"><a href="#fn-21" aria-label="Chú thích 21">21</a></sup> hoặc ECDSA P-256</td><td>Hãng</td><td>Ký gói cập nhật phần mềm</td><td>Máy tính offline</td><td>Hiếm</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><b>Một khóa một mục đích</b>Khóa lớp trong (thỏa thuận khóa) tách khỏi mọi khóa ký. Đây là nguyên tắc của NIST SP 800-57<sup class="fn" id="fnr-22"><a href="#fn-22" aria-label="Chú thích 22">22</a></sup>. AWS KMS cũng bắt một khóa EC chỉ được chọn ký <i>hoặc</i> thỏa thuận khóa, không được cả hai.</div>
+      </article>
+
+      <!-- 3.3 Người dùng -->
+      <article class="comp" id="c-user">
+        <header><h3>3.3 · Định danh người dùng</h3><div class="src">Sơ đồ: vòng đời phiên · <span class="pill m">đã chốt: session token 30 ngày</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Nhận ra ai đang dùng app. Mỗi lần đăng nhập server cấp một session token sống 30 ngày. Token không chứa quyền: quyền luôn đọc mới từ DB, nên đổi quyền hay đá phiên có hiệu lực ngay.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> active: login()<br/>cấp token 30 ngày
+  active --> revoked: logout() · đá phiên<br/>đổi mật khẩu
+  active --> expired: hết 30 ngày<br/>đăng nhập lại
+  revoked --> [*]
+  expired --> [*]
+  class active ui
+  class revoked bad
+  class expired muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Phiên hết hạn cố định 30 ngày sau đăng nhập, không trượt theo lần dùng.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Đăng ký:</b> email, mật khẩu, xác nhận bằng OTP<sup class="fn" id="fnr-23"><a href="#fn-23" aria-label="Chú thích 23">23</a></sup> gửi mail. OTP dùng một lần, sống 5–10 phút, giới hạn số lần thử.</li>
+          <li><b>Lưu mật khẩu:</b> server chỉ lưu băm chậm có muối (Argon2id<sup class="fn" id="fnr-24"><a href="#fn-24" aria-label="Chú thích 24">24</a></sup>, hoặc PBKDF2<sup class="fn" id="fnr-25"><a href="#fn-25" aria-label="Chú thích 25">25</a></sup> 600.000 vòng như code hiện có). Không lấy lại được mật khẩu gốc, kể cả server.</li>
+          <li><b>Cấp token:</b> 256 bit ngẫu nhiên. Server chỉ lưu băm SHA-256 của token, kèm thiết bị và lần dùng gần nhất. DB bị lộ cũng không lấy được token dùng ngay.</li>
+          <li><b>Lưu trên điện thoại:</b> Android Keystore<sup class="fn" id="fnr-26"><a href="#fn-26" aria-label="Chú thích 26">26</a></sup> hoặc iOS Keychain qua <code>flutter_secure_storage</code><sup class="fn" id="fnr-27"><a href="#fn-27" aria-label="Chú thích 27">27</a></sup>. Không SharedPreferences, không log.</li>
+          <li><b>Mỗi yêu cầu:</b> token nằm trong phong bì. Server tra băm token, kiểm phiên còn sống, rồi mới kiểm quyền.</li>
+          <li><b>Thu hồi:</b> đăng xuất, chủ máy đá phiên một nhân viên, đổi mật khẩu thì giết mọi phiên. Vì token sống 30 ngày, app nên có màn "thiết bị đang đăng nhập".</li>
+          <li><b>Xác nhận lại cho việc nguy hiểm:</b> sửa menu, giá, xóa nguyên liệu, khóa máy, chuyển chủ phải nhập lại mật khẩu (có sẵn <code>require_stepup</code>).</li>
+        </ol>
+      </article>
+
+      <!-- 3.4 Máy -->
+      <article class="comp" id="c-machine">
+        <header><h3>3.4 · Định danh máy</h3><div class="src">Sơ đồ: kích hoạt + vòng đời · <span class="pill m">đã chốt: kích hoạt kiểu Matter<sup class="fn" id="fnr-28"><a href="#fn-28" aria-label="Chú thích 28">28</a></sup>, mã niêm phong</span> <span class="pill h">phiếu kích hoạt: đề xuất</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Chứng minh "đây đúng là máy X của hãng" và gắn máy với Owner đầu tiên. Danh tính máy là <b>giấy khai sinh</b>: chứng chỉ do CA xưởng ký, chứa serial CPU và khóa công khai của máy. Khóa riêng sinh trên máy ở xưởng và không bao giờ rời máy. Serial CPU chỉ là tên, không phải bí mật, vì ai cũng đọc được.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor O as Owner
+  participant A as App
+  participant M as Máy
+  participant S as Server hãng
+  O->>A: quét mã niêm phong trong hộp
+  A->>M: Bluetooth · mở kênh mã hóa bằng mã niêm phong
+  M-->>A: giấy khai sinh và chứng minh giữ khóa
+  A->>A: kiểm giấy khai sinh tới root hãng
+  A->>M: gửi wifi quán
+  M->>S: mTLS bằng giấy khai sinh
+  A->>S: xin mã thách kích hoạt
+  S-->>A: mã thách
+  A->>M: Bluetooth · nhờ ký mã thách cho tài khoản này
+  M-->>A: phiếu kích hoạt có chữ ký máy
+  A->>S: gửi phiếu
+  S->>S: kiểm chữ ký, máy đang chưa có chủ
+  S-->>A: bạn là Owner
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Cách kích hoạt theo mô hình Matter. "Mở kênh bằng mã niêm phong" là PAKE<sup class="fn" id="fnr-29"><a href="#fn-29" aria-label="Chú thích 29">29</a></sup>: hai bên cùng biết một mã ngắn, dùng nó thỏa thuận khóa mạnh mà người nghe lén không đoán ngược ra mã (Matter dùng SPAKE2+<sup class="fn" id="fnr-30"><a href="#fn-30" aria-label="Chú thích 30">30</a></sup>). "Phiếu kích hoạt" chứng minh người đang đứng cạnh máy và người đang đăng nhập là một.</figcaption>
+        </figure>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "Chưa có chủ" as unowned
+  state "Có chủ" as owned
+  state "Bị thu hồi" as revoked
+  [*] --> unowned: xuất xưởng<br/>có giấy khai sinh
+  unowned --> owned: activate()<br/>phiếu kích hoạt hợp lệ
+  owned --> unowned: chủ gỡ máy<br/>bán lại
+  owned --> revoked: hãng thu hồi<br/>mất máy · nghi nhân bản
+  revoked --> [*]
+  class unowned ui
+  class owned ok
+  class revoked bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Mã niêm phong chỉ có tác dụng ở trạng thái "Chưa có chủ". Thu hồi bằng cách tra DB mỗi lần máy kết nối, có hiệu lực ngay, không cần CRL/OCSP<sup class="fn" id="fnr-31"><a href="#fn-31" aria-label="Chú thích 31">31</a></sup>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Khóa máy chọn ECDSA P-256</b> vì chip bảo mật rẻ (ATECC608) chỉ làm P-256. Sau MVP thay file khóa bằng chip mà không phải đổi giao thức.</li>
+          <li><b>Rủi ro lớn nhất khi chưa có chip:</b> chép thẻ SD là chép được danh tính máy. Bù ở server: cùng một máy kết nối song song từ hai nơi thì cảnh báo và có thể thu hồi.</li>
+          <li><b>Server không cần biết mã niêm phong.</b> Mã chỉ mở kênh Bluetooth giữa app và máy. Server tin phiếu kích hoạt nhờ chữ ký của khóa máy, và khóa đó gắn với giấy khai sinh.</li>
+        </ol>
+      </article>
+
+      <!-- 3.5 Gác cổng -->
+      <article class="comp" id="c-gate">
+        <header><h3>3.5 · Gác cổng (middleware)</h3><div class="src"><code>server/security/seca/</code> dùng lại một phần · 9 trạm · <span class="pill h">đề xuất</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Mã hóa giao cho TLS và phong bì. Gác cổng trả lời ba câu: ai đang gọi, có được phép không, lệnh này đã chạy chưa. Thứ tự đi từ việc rẻ tới việc đắt, để yêu cầu rác bị loại sớm.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>#</th><th>Trạm</th><th>Việc</th><th>Chặng</th></tr></thead>
+            <tbody>
+              <tr><td class="num">1</td><td>Chặn cửa</td><td>Kích thước, số kết nối, route hợp lệ, rate-limit theo người và theo máy</td><td>Cả hai</td></tr>
+              <tr><td class="num">2</td><td>Phong bì</td><td>Kiểm chữ ký máy, mở phong bì, chống lặp theo mã lần gửi (mục 3.1)</td><td>Cả hai</td></tr>
+              <tr><td class="num">3</td><td>Nhận diện</td><td>App: tra băm session token. Máy: danh tính lấy từ khóa máy, không lấy từ nội dung gói</td><td>Cả hai</td></tr>
+              <tr><td class="num">4</td><td>Kiểm quyền</td><td>Vai trên <b>đúng máy đó</b>, mặc định từ chối</td><td>App</td></tr>
+              <tr><td class="num">5</td><td>Kiểm dữ liệu</td><td>Loại lệnh nằm trong danh sách, tham số đúng kiểu và đúng giới hạn</td><td>Cả hai</td></tr>
+              <tr><td class="num">6</td><td>Chống trùng</td><td>Mã lệnh từ app gặp lại thì trả kết quả cũ; cùng mã mà khác nội dung thì 409<sup class="fn" id="fnr-32"><a href="#fn-32" aria-label="Chú thích 32">32</a></sup></td><td>App</td></tr>
+              <tr><td class="num">7</td><td>Xác nhận lại</td><td>Việc nguy hiểm phải nhập lại mật khẩu</td><td>App</td></tr>
+              <tr><td class="num">8</td><td>Nhật ký</td><td>Ai, làm gì, máy nào, lúc nào. Chỉ ghi thêm, mỗi dòng móc băm dòng trước</td><td>Cả hai</td></tr>
+              <tr><td class="num">9</td><td>Lỗi tối giản</td><td>Không lộ lý do chi tiết ra ngoài; chi tiết chỉ vào log nội bộ</td><td>Cả hai</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <!-- 3.6 Lệnh -->
+      <article class="comp" id="c-cmd">
+        <header><h3>3.6 · Lệnh và sổ lệnh</h3><div class="src"><code>internal/contracts/commands.md</code> · Sơ đồ: trạng thái · <span class="pill h">đề xuất</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Bảo đảm lệnh có tác động vật lý chạy <b>nhiều nhất một lần</b>, kể cả khi mạng chập chờn hay mất điện giữa chừng. Server chỉ giữ lệnh trong lúc chuyển, không lưu dữ liệu vận hành. Sổ lệnh đầy đủ nằm trên máy.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> queued: app gửi<br/>server ghi lại
+  queued --> offered: máy hỏi<br/>giao kèm hạn sống
+  offered --> queued: mất phản hồi<br/>giao lại cùng mã
+  offered --> claimed: máy ghi sổ<br/>trước khi chạy
+  claimed --> done: chạy xong
+  claimed --> failed: lỗi rõ ràng
+  claimed --> unknown: mất điện giữa chừng<br/>không tự chạy lại
+  queued --> expired: hết hạn<br/>máy offline
+  done --> [*]
+  failed --> [*]
+  unknown --> [*]
+  expired --> [*]
+  class queued ui
+  class offered proc
+  class claimed hot
+  class done ok
+  class failed bad
+  class unknown human
+  class expired muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: <code>commands.md</code>. <code>unknown</code> nghĩa là máy không biết bơm đã chạy hay chưa: app phải hiện đúng trạng thái này để người kiểm tra, không ép thành "lỗi" rồi tự gửi lại.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Máy ghi <code>claimed</code> bền trước khi gọi phần cứng.</b> Nếu ghi sau, mất điện lúc bơm đang chạy thì khởi động lại máy sẽ bơm lần nữa.</li>
+          <li><b>Giới hạn cứng tại máy</b> (trần gram mỗi lần nạp, chân điều khiển hợp lệ, vé đã dùng không quay về chưa dùng). Đây là lớp chặn cuối khi server bị chiếm, và rất rẻ.</li>
+          <li><b>Hạn sống đo bằng đồng hồ đơn điệu của máy</b> (<code>CLOCK_BOOTTIME</code><sup class="fn" id="fnr-33"><a href="#fn-33" aria-label="Chú thích 33">33</a></sup>), tính từ lúc nhận. Pi<sup class="fn" id="fnr-34"><a href="#fn-34" aria-label="Chú thích 34">34</a></sup> không có pin đồng hồ nên giờ thật sau khởi động chưa tin được.</li>
+          <li><b>Khóa liên động an toàn</b> (bơm, nhiệt) nằm cục bộ trên máy, không phụ thuộc server.</li>
+        </ol>
+      </article>
+
+      <!-- 3.7 OTA -->
+      <article class="comp" id="c-ota">
+        <header><h3>3.7 · Cập nhật phần mềm từ hãng</h3><div class="src">Sơ đồ: luồng · 4 bước · <span class="pill m">đã chốt: có cập nhật từ hãng → ký gói là MVP</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Gói cập nhật là mã sẽ chạy trên máy, nên nó cần một chữ ký riêng, đứng ngoài server. Kẻ chiếm được server phát được gói, nhưng không ký được gói.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  H["① Hãng build gói"] --> SG["② Ký offline"]
+  SG --> SV["③ Server phát"]
+  SV --> MV{"④ Chữ ký đúng<br/>và phiên bản tăng?"}
+  MV -- "đúng" --> IN["cài"]
+  MV -- "sai" --> RJ["bỏ · giữ bản cũ"]
+  class H,SG,SV proc
+  class MV dec
+  class IN ok
+  class RJ bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất, theo ETSI EN 303 645<sup class="fn" id="fnr-35"><a href="#fn-35" aria-label="Chú thích 35">35</a></sup> mục 5.3 (cập nhật an toàn). "Phiên bản tăng" chống hạ cấp về bản cũ còn lỗi. TUF/Uptane<sup class="fn" id="fnr-36"><a href="#fn-36" aria-label="Chú thích 36">36</a></sup> là chuẩn đầy đủ hơn, để sau MVP.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <!-- 4 · Thuật toán -->
+    <section id="thuat-toan">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Thuật toán và nguyên lý</h2></div>
+      <p class="prose">Có hai họ mật mã. <b>Đối xứng</b>: một chìa vừa khóa vừa mở, rất nhanh, nhưng hai bên phải chung chìa từ trước. <b>Bất đối xứng</b>: một cặp khóa, khóa công khai đưa ai cũng được, khóa riêng giữ kín; chậm hơn, dùng để thỏa thuận khóa và ký số. Giao thức thật luôn dùng bất đối xứng để thỏa thuận ra chìa đối xứng, rồi dùng chìa đó mã hóa dữ liệu. TLS và phong bì lớp trong đều theo đúng mẫu này.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thuật toán</th><th>Họ</th><th>Dùng ở</th><th>Nguyên lý</th></tr></thead>
+          <tbody>
+            <tr><td>ECDHE<sup class="fn" id="fnr-37"><a href="#fn-37" aria-label="Chú thích 37">37</a></sup> (X25519, P-256)</td><td>Thỏa thuận khóa</td><td>Bắt tay TLS</td><td>Mỗi bên sinh cặp khóa tạm, gửi nhau phần công khai, mỗi bên tự tính ra cùng một bí mật mà người nghe lén không tính được. Khóa tạm bị xóa sau phiên: lộ khóa dài hạn về sau cũng không giải được phiên cũ (forward secrecy<sup class="fn" id="fnr-38"><a href="#fn-38" aria-label="Chú thích 38">38</a></sup>)</td></tr>
+            <tr><td>HPKE (RFC 9180)</td><td>Mã hóa lai</td><td>Phong bì lớp trong</td><td>Gói sẵn "thỏa thuận khóa + dẫn xuất khóa + AEAD<sup class="fn" id="fnr-39"><a href="#fn-39" aria-label="Chú thích 39">39</a></sup>" để mã hóa một gói tới khóa công khai của bên nhận. Có hàm xuất khóa (export): hai bên cùng dẫn ra được khóa phụ để mã hóa phản hồi. Bộ đề xuất: DHKEM(X25519) + HKDF-SHA256<sup class="fn" id="fnr-40"><a href="#fn-40" aria-label="Chú thích 40">40</a></sup> + AES-128-GCM</td></tr>
+            <tr><td>HKDF-SHA256</td><td>Dẫn xuất khóa</td><td>Trong TLS và HPKE</td><td>Biến một bí mật thô thành nhiều khóa riêng cho từng mục đích, mỗi khóa gắn một nhãn</td></tr>
+            <tr><td>AES-GCM</td><td>Đối xứng, AEAD</td><td>Dữ liệu trong TLS và phong bì</td><td>Vừa giấu nội dung vừa gắn tem kiểm. Sửa một bit là tem sai và gói bị bỏ. Phần không giấu nhưng cần chống sửa (đầu phong bì) đưa vào làm AAD</td></tr>
+            <tr><td>ECDSA P-256</td><td>Ký số</td><td>Chứng chỉ, khóa máy, phiếu kích hoạt</td><td>Khóa riêng ký lên băm của dữ liệu; ai có khóa công khai cũng kiểm được nhưng không giả được. Chạy được trên chip ATECC608 và TPM<sup class="fn" id="fnr-41"><a href="#fn-41" aria-label="Chú thích 41">41</a></sup></td></tr>
+            <tr><td>X.509<sup class="fn" id="fnr-42"><a href="#fn-42" aria-label="Chú thích 42">42</a></sup> + CA hãng</td><td>Hạ tầng khóa</td><td>Giấy khai sinh máy, cổng máy</td><td>Chứng chỉ là tờ giấy "khóa công khai này thuộc máy X", có CA ký. Máy và app chỉ tin root hãng (ghim), nên CA công cộng bị lừa cũng không mạo danh được cổng máy</td></tr>
+            <tr><td>mTLS</td><td>Giao thức</td><td>Chặng server ↔ máy</td><td>TLS thường chỉ server trình chứng chỉ. mTLS bắt máy cũng trình giấy khai sinh và chứng minh giữ khóa riêng trong lúc bắt tay</td></tr>
+            <tr><td>PAKE (SPAKE2+)</td><td>Thỏa thuận khóa bằng mã ngắn</td><td>Bluetooth lúc kích hoạt</td><td>Hai bên cùng biết mã niêm phong, dùng nó dựng khóa mạnh. Người nghe lén không thử dò mã offline được; mỗi lần đoán sai phải thử trực tiếp với máy</td></tr>
+            <tr><td>SHA-256</td><td>Băm</td><td>Băm token, file ảnh, nhật ký móc xích</td><td>Ra vân tay 32 byte, không suy ngược được, gần như không có hai đầu vào trùng vân tay. Nhật ký móc xích: mỗi dòng chứa băm dòng trước, sửa một dòng là gãy cả đoạn sau</td></tr>
+            <tr><td>Token ngẫu nhiên 256 bit</td><td>Bộ sinh ngẫu nhiên an toàn</td><td>Session token</td><td>Không có cấu trúc để đoán. Server chỉ giữ băm</td></tr>
+            <tr><td>Argon2id / PBKDF2</td><td>Băm mật khẩu chậm</td><td>Lưu mật khẩu</td><td>Cố tình chậm (Argon2id còn tốn bộ nhớ) để đoán hàng loạt đắt. Muối riêng từng người: cùng mật khẩu vẫn ra băm khác</td></tr>
+            <tr><td>Ed25519 / ECDSA P-256</td><td>Ký số</td><td>Gói cập nhật</td><td>Khóa phát hành giữ offline ký gói; máy kiểm trước khi cài</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Mã hóa, băm, ký là ba việc khác nhau</b>Mã hóa giấu nội dung và mở lại được bằng chìa. Băm là một chiều, không lấy lại bản gốc. Ký hoặc MAC chứng minh ai tạo ra và không bị sửa, nội dung vẫn để rõ. Mật khẩu được <i>băm</i> khi lưu, không được <i>mã hóa</i>.</div>
+    </section>
+
+    <!-- 5 · Ghi chú -->
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Ghi chú và câu hỏi mở</h2></div>
+      <div class="note crit"><b>Lỗi trong code hiện có, chưa sửa</b><code>project1_server/server/security/seca/guard.py:171-172</code>: <code>check_access</code> trả về ngay khi <code>role == "owner"</code>, tức là owner qua mọi kiểm quyền, kể cả trên máy của người khác. Khi hệ thống chỉ có một chủ thì chưa lộ ra. Khi có nhiều chủ thì đây là lỗi BOLA<sup class="fn" id="fnr-43"><a href="#fn-43" aria-label="Chú thích 43">43</a></sup> (OWASP<sup class="fn" id="fnr-44"><a href="#fn-44" aria-label="Chú thích 44">44</a></sup> API1). Hướng sửa: quyền luôn xét theo từng máy, kể cả với owner.</div>
+      <div class="note"><b>Chế độ LAN và Bluetooth chưa nằm trong tài liệu này</b>Khi mất Internet, app nói chuyện trực tiếp với máy qua wifi quán hoặc Bluetooth. Yêu cầu: ba chế độ dùng chung cách xác minh danh tính và mức mã hóa. Ở LAN và Bluetooth không có server đứng giữa, nên phong bì phải đóng tới khóa của máy, và máy kiểm quyền bằng bản sao danh sách quyền. Cần một vòng thiết kế riêng.</div>
+      <div class="note"><b>Nhật ký nằm ở đâu</b>Server không lưu dữ liệu vận hành, nhưng việc truy vết thao tác của từng người cần một nhật ký không xóa được. Đề xuất: server giữ nhật ký bảo mật (đăng nhập, quyền, lệnh đi qua), máy giữ nhật ký vận hành. Chưa chốt.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Câu hỏi mở</th><th>Đề xuất</th></tr></thead>
+          <tbody>
+            <tr><td>Danh sách lệnh nguy hiểm và giới hạn cứng cho từng lệnh</td><td>Sửa hoặc xóa nguyên liệu, đổi trạng thái vé, xóa lỗi, đổi màn hình, sửa menu và giá, khóa máy</td></tr>
+            <tr><td>Lệnh gửi khi máy offline</td><td>Hết hạn thì hủy, app báo người dùng (như sơ đồ 3.6)</td></tr>
+            <tr><td>Owner có cần xác thực mạnh hơn nhân viên</td><td>MVP: nhập lại mật khẩu cho việc nguy hiểm. Sau MVP: passkey cho Owner</td></tr>
+            <tr><td>Thời điểm thêm chip bảo mật cho máy</td><td>Khi máy đặt nơi công cộng, hoặc khi giả một máy gây thiệt hại tiền (vé QR)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Để sau MVP</th><th>Lý do hoãn</th></tr></thead>
+          <tbody>
+            <tr><td>Ghim chứng chỉ trên app</td><td>Đổi CA là app mất kết nối cho tới khi cập nhật; Android khuyên không làm</td></tr>
+            <tr><td>Gắn token với phần cứng điện thoại (DPoP<sup class="fn" id="fnr-45"><a href="#fn-45" aria-label="Chú thích 45">45</a></sup>), App Attest<sup class="fn" id="fnr-46"><a href="#fn-46" aria-label="Chú thích 46">46</a></sup> / Play Integrity</td><td>Thêm khóa thiết bị và phụ thuộc Google/Apple; chưa có dấu hiệu gian lận</td></tr>
+            <tr><td>Server ký lệnh bằng dịch vụ ký tách riêng</td><td>Chỉ có ích khi khóa ký nằm ngoài tiến trình API</td></tr>
+            <tr><td>Đổi khóa máy, chip ATECC608, HSM<sup class="fn" id="fnr-47"><a href="#fn-47" aria-label="Chú thích 47">47</a></sup>, TUF/Uptane</td><td>Tốn công, chưa cần ở quy mô hiện tại</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Transport Layer Security.</b> Giao thức mã hóa và xác thực đường truyền mà HTTPS dùng. Bản 1.3 được đặc tả ở RFC 8446. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>Mutual TLS.</b> TLS trong đó cả hai bên đều trình chứng chỉ và chứng minh giữ khóa riêng lúc bắt tay, nên server biết chắc thiết bị nào đang kết nối. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-3"><b>Certificate Authority.</b> Bên ký chứng chỉ để xác nhận một khóa công khai thuộc về ai. Root CA là gốc của chuỗi, thường giữ offline. <a class="fn-back" href="#fnr-3" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-4"><b>Key ID.</b> Mã định danh khóa. Bên nhận biết dùng khóa nào, và khi xoay khóa thì khóa cũ và khóa mới chạy song song được. <a class="fn-back" href="#fnr-4" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-5"><b>Hybrid Public Key Encryption.</b> Chuẩn mã hóa một gói tin tới khóa công khai của bên nhận, ghép thỏa thuận khóa, dẫn xuất khóa và AEAD thành một khối (RFC 9180). <a class="fn-back" href="#fnr-5" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-6"><b>AES ở chế độ Galois/Counter.</b> Thuật toán mã hóa đối xứng kiểu AEAD được NIST chuẩn hóa (SP 800-38D). <a class="fn-back" href="#fnr-6" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-7"><b>Additional Authenticated Data.</b> Phần dữ liệu không mã hóa nhưng được kiểm toàn vẹn cùng bản mã: sửa phần này thì gói không mở được. <a class="fn-back" href="#fnr-7" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-8"><b>Elliptic Curve Digital Signature Algorithm.</b> Thuật toán chữ ký số trên đường cong elliptic (FIPS 186-5). <a class="fn-back" href="#fnr-8" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-9"><b>Đường cong NIST P-256.</b> Đường cong elliptic 256 bit do NIST chuẩn hóa, còn gọi là secp256r1; được hầu hết chip bảo mật hỗ trợ. <a class="fn-back" href="#fnr-9" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-10"><b>Rate limit.</b> Giới hạn số yêu cầu trong một khoảng thời gian, để chống dò mật khẩu và chống quá tải. <a class="fn-back" href="#fnr-10" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-11"><b>Request for Comments.</b> Loạt tài liệu đặc tả chuẩn Internet do IETF công bố; mỗi RFC có một số hiệu cố định. <a class="fn-back" href="#fnr-11" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-12"><b>Minimum Viable Product.</b> Bản phát hành đầu tiên với chức năng tối thiểu. <a class="fn-back" href="#fnr-12" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-13"><b>Transaction (giao dịch DB).</b> Nhóm thao tác trên cơ sở dữ liệu hoặc cùng thành công, hoặc cùng bị hủy. <a class="fn-back" href="#fnr-13" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-14"><b>Secure Hash Algorithm 256.</b> Hàm băm 256 bit thuộc họ SHA-2 (FIPS 180-4). <a class="fn-back" href="#fnr-14" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-15"><b>Load balancer.</b> Máy hoặc dịch vụ đứng trước server để chia tải; thường là nơi kết thúc TLS khi chạy trên cloud. <a class="fn-back" href="#fnr-15" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-16"><b>Microchip ATECC608.</b> Chip bảo mật giá vài USD, giữ khóa riêng P-256 bên trong và không cho xuất ra. <a class="fn-back" href="#fnr-16" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-17"><b>X25519.</b> Hàm thỏa thuận khóa trên đường cong Curve25519 (RFC 7748). <a class="fn-back" href="#fnr-17" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-18"><b>Key Encapsulation Mechanism.</b> Cơ chế dùng khóa công khai của bên nhận để tạo và gói một khóa đối xứng dùng một lần. <a class="fn-back" href="#fnr-18" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-19"><b>Key Management Service.</b> Dịch vụ quản lý khóa của nhà cung cấp cloud (ví dụ AWS KMS, Google Cloud KMS). Khóa không rời dịch vụ; ứng dụng chỉ gọi lệnh ký hoặc giải mã. <a class="fn-back" href="#fnr-19" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-20"><b>HashiCorp Vault.</b> Phần mềm tự host để lưu bí mật và quản lý khóa, có phiên bản khóa và nhật ký truy cập. <a class="fn-back" href="#fnr-20" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-21"><b>Ed25519.</b> Thuật toán chữ ký số trên Curve25519 (RFC 8032). <a class="fn-back" href="#fnr-21" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-22"><b>NIST SP 800-57.</b> Khuyến nghị quản lý khóa của Viện Tiêu chuẩn và Công nghệ Hoa Kỳ: vòng đời khóa, mỗi khóa một mục đích, chu kỳ dùng khóa. <a class="fn-back" href="#fnr-22" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-23"><b>One-Time Password.</b> Mã dùng một lần, ở đây gửi qua email để xác nhận địa chỉ. <a class="fn-back" href="#fnr-23" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-24"><b>Argon2id.</b> Hàm băm mật khẩu cố tình chậm và tốn bộ nhớ, thắng Password Hashing Competition (RFC 9106). <a class="fn-back" href="#fnr-24" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-25"><b>Password-Based Key Derivation Function 2.</b> Hàm băm mật khẩu lặp nhiều vòng để làm chậm việc dò (RFC 8018). <a class="fn-back" href="#fnr-25" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-26"><b>Android Keystore / iOS Keychain.</b> Kho khóa do hệ điều hành điện thoại bảo vệ; app khác không đọc được. <a class="fn-back" href="#fnr-26" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-27"><b>flutter_secure_storage.</b> Thư viện Flutter lưu dữ liệu nhỏ vào kho khóa của hệ điều hành (Keystore, Keychain). <a class="fn-back" href="#fnr-27" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-28"><b>Matter.</b> Chuẩn nhà thông minh của Connectivity Standards Alliance, quy định cách ghép thiết bị, chứng chỉ thiết bị và kênh bảo mật. <a class="fn-back" href="#fnr-28" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-29"><b>Password-Authenticated Key Exchange.</b> Thỏa thuận khóa mạnh từ một mã ngắn hai bên cùng biết; người nghe lén không dò mã offline được. <a class="fn-back" href="#fnr-29" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-30"><b>SPAKE2+.</b> Một giao thức PAKE (RFC 9383); Matter dùng nó khi ghép thiết bị. <a class="fn-back" href="#fnr-30" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-31"><b>Certificate Revocation List / Online Certificate Status Protocol.</b> Hai cách công bố chứng chỉ đã bị thu hồi (RFC 5280, RFC 6960). <a class="fn-back" href="#fnr-31" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-32"><b>HTTP 409 Conflict.</b> Mã lỗi HTTP báo yêu cầu xung đột với trạng thái hiện có. <a class="fn-back" href="#fnr-32" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-33"><b>CLOCK_BOOTTIME.</b> Đồng hồ của Linux đếm thời gian từ lúc khởi động, kể cả lúc ngủ, và không bị chỉnh lùi khi đổi giờ hệ thống. <a class="fn-back" href="#fnr-33" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-34"><b>Raspberry Pi.</b> Máy tính nhúng dùng làm bộ điều khiển của máy pha. <a class="fn-back" href="#fnr-34" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-35"><b>ETSI EN 303 645.</b> Tiêu chuẩn châu Âu về an ninh mạng cho thiết bị IoT tiêu dùng. <a class="fn-back" href="#fnr-35" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-36"><b>The Update Framework / Uptane.</b> Khung chuẩn để phát hành cập nhật phần mềm an toàn; Uptane là bản cho ô tô. <a class="fn-back" href="#fnr-36" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-37"><b>Elliptic Curve Diffie-Hellman Ephemeral.</b> Thỏa thuận khóa bằng cặp khóa tạm sinh mới cho mỗi phiên. <a class="fn-back" href="#fnr-37" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-38"><b>Forward secrecy.</b> Tính chất: lộ khóa dài hạn về sau cũng không giải được các phiên đã bị ghi lại. <a class="fn-back" href="#fnr-38" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-39"><b>Authenticated Encryption with Associated Data.</b> Kiểu mã hóa vừa giấu nội dung vừa phát hiện bị sửa. <a class="fn-back" href="#fnr-39" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-40"><b>HMAC-based Key Derivation Function.</b> Hàm dẫn xuất nhiều khóa riêng từ một bí mật (RFC 5869); HKDF-SHA256 là bản dùng hàm băm SHA-256. <a class="fn-back" href="#fnr-40" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-41"><b>Trusted Platform Module.</b> Chip bảo mật theo chuẩn của Trusted Computing Group, giữ khóa và ghi lại trạng thái khởi động. <a class="fn-back" href="#fnr-41" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-42"><b>X.509.</b> Định dạng chuẩn của chứng chỉ khóa công khai (RFC 5280). <a class="fn-back" href="#fnr-42" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-43"><b>Broken Object Level Authorization.</b> Lỗi không kiểm người dùng có quyền trên đúng đối tượng đang truy cập; hạng 1 trong OWASP API Security Top 10 (2023). <a class="fn-back" href="#fnr-43" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-44"><b>Open Worldwide Application Security Project.</b> Tổ chức phi lợi nhuận công bố các danh sách rủi ro và hướng dẫn bảo mật ứng dụng. <a class="fn-back" href="#fnr-44" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-45"><b>Demonstrating Proof of Possession.</b> Cách gắn token với một khóa trên thiết bị, để token bị đánh cắp không dùng được ở máy khác (RFC 9449). <a class="fn-back" href="#fnr-45" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-46"><b>App Attest / Play Integrity.</b> Dịch vụ của Apple và Google chứng minh yêu cầu đến từ app chính hãng trên máy chưa bị can thiệp. <a class="fn-back" href="#fnr-46" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-47"><b>Hardware Security Module.</b> Thiết bị phần cứng chuyên giữ khóa và thực hiện phép mật mã bên trong. <a class="fn-back" href="#fnr-47" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

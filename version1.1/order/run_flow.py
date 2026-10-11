@@ -100,7 +100,7 @@ if __package__ in {None, ""}:
         sys.path.insert(0, project_dir)
 
 from configuration import machine
-from database import error_log, order_ticket
+from database.services import error_log, order_ticket
 from panel_control import button_watch
 from order.qr_to_recipe import (
     CURRENT_RECIPE_FILE,

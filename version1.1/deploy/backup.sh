@@ -32,7 +32,7 @@
 #   /var/lib/flexmix/       Hiệu chuẩn bơm và loadcell. Lấy lại được, nhưng
 #                           phải hiệu chuẩn tay nhiều giờ với một cái cân.
 #
-#   recipe/                 Ảnh món và phim hướng dẫn admin tự upload. Chỉ
+#   recipe/                 Ảnh món và phim hướng dẫn do app quản lý upload. Chỉ
 #                           lấy lại được nếu ai đó còn giữ file gốc.
 #
 # KHÔNG sao lưu: mã nguồn (đã ở git), .venv (dựng lại được), log.
@@ -54,7 +54,7 @@
 #     rm -f "$CNF"
 #     sudo tar xzf files_<ngày>.tar.gz -C / etc/flexmix var/lib/flexmix
 #     tar xzf files_<ngày>.tar.gz -C <thư mục dự án> recipe
-#     ./.venv/bin/python3 -m database.main update     # migration mới hơn bản sao lưu
+#     ./.venv/bin/python3 -c 'from database import apply_database_sql, check_inventory; apply_database_sql(); check_inventory()'
 #     sudo systemctl start flexmix-backend
 #
 # HAI lệnh tar, không phải một. recipe/ nằm trong gói theo đường dẫn tương

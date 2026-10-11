@@ -3,7 +3,7 @@
 WHAT THIS FILE IS
     The executor. It is the only thing that touches the pumps, the button
     panel and the load cell during a drink. Everything else either writes
-    the recipe file it reads (database/export_data.py) or reads the
+    the recipe file it reads (database/services/recipe_export.py) or reads the
     progress it writes (bartender_gui/).
 
 THE FILE IT READS AND WRITES
@@ -1657,7 +1657,7 @@ def record_step_failure(
     TICKET in database/error_log.py.
     """
     try:
-        from database import error_log
+        from database.services import error_log
 
         error_log.log_step_failure(
             document, step, message, severity=severity,
@@ -1867,7 +1867,7 @@ def verify_pump_step(
         # calibration file -- a second copy of t = (gram - b) / a here
         # could drift from the one that produced the original durations.
         try:
-            from database.export_data import (
+            from database.services.recipe_export import (
                 duration_for_gram,
                 load_pump_calibration,
             )
@@ -2061,7 +2061,7 @@ def charge_for_failed_order(
         return
 
     try:
-        from database.inventory_service import consume_recipe_usage
+        from database.services.inventory import consume_recipe_usage
 
         consume_recipe_usage(usage)
         print(
@@ -2090,7 +2090,7 @@ def consume_inventory(
         print("[inventory] Nothing to deduct.")
         return
 
-    from database.inventory_service import consume_recipe_usage
+    from database.services.inventory import consume_recipe_usage
 
     consume_recipe_usage(usage)
     print(

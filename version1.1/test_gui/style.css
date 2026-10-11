@@ -2,24 +2,20 @@
    Workshop tool, not a customer screen: dense, legible at arm's length
    from a bench, and every state readable at a glance.
 
-   RE-GROUNDED onto the palette and type the store, bartender and admin
+   RE-GROUNDED onto the palette and type the store and bartender
    screens share, so a technician moving between them is looking at one
    machine. The density is untouched -- this is a bench tool, and the
    kiosk's sizing would push half the pump grid off the screen. What is
    shared is the colour, the two typefaces, the radii and the shadows.
 
-   FONTS ARE LOCAL. Same two files the other three screens load, from the
+   FONTS ARE LOCAL. Same two files the other screens load, from the
    same folder, so this page needs no network either.
 
    FOUR TOKENS THAT NEVER EXISTED
      The hold-to-run block asked for --warn, --warn-soft, --panel-2 and
      --muted, nine times between them. None of the four was ever declared
-     in this file, so every one fell through to its hardcoded fallback --
-     and those fallbacks were lifted from the ADMIN sheet, a different
-     palette entirely. The result was on screen the whole time: the
-     "đang giữ" strip glowed in the admin's bright #f0932b while the busy
-     banner three inches above it used this sheet's own muted #b06d14. Two
-     ambers, one screen. They are declared now, and they resolve here. */
+     in this file, so every one fell through to a hardcoded fallback from
+     a different palette. They are declared now, and they resolve here. */
 
 @font-face{font-family:"Bricolage Grotesque";src:url("../store_gui/fonts/BricolageGrotesque-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"Bricolage Grotesque";src:url("../store_gui/fonts/BricolageGrotesque-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
@@ -59,8 +55,8 @@
   --blue:#1d4ed8;
   --blue-soft:#eff4ff;
 
-  /* The log. Espresso rather than the old green-black, so it matches the
-     admin rail -- the two dark surfaces in the system are now one colour. */
+  /* The log. Espresso rather than the old green-black, matching the
+     other dark surfaces in the system. */
   --log-bg:#2a1d16;
   --log-ink:#e4d7cc;
   --log-dim:#9a8577;
@@ -229,7 +225,7 @@ button{font:inherit}
    and finish on their own, these run only while pressed. */
 .pumps.holds .pump.hold{border-style:dashed}
 /* The fallbacks are gone with the tokens now declared. They were not
-   harmless defaults: each one named a colour from the admin sheet, so the
+   harmless defaults: each one named a colour from another sheet, so the
    day this block was written it painted itself in another product's
    palette and nothing said so. A var() with no fallback fails loudly the
    next time somebody deletes a token, which is the behaviour worth

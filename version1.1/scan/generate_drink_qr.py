@@ -111,7 +111,7 @@ if __package__ in {None, ""}:
     if project_dir not in sys.path:
         sys.path.insert(0, project_dir)
 
-from database.db_core import connect_database
+from database.core.connection import connect_database
 from scan.qr_payload import (
     Grams,
     Instruction,

@@ -78,7 +78,7 @@ TOGGLE_PANEL_ID = machine.PANEL_BUTTON_TEST_MODE
 #
 # 14 is free. An order's manual buttons come from the DATABASE -- a MANUAL
 # ingredient's panel position is its ingredient.gpio, see
-# database/export_data.py -- and those occupy 1 to 6 (Milk, Cream,
+# database/services/recipe_export.py -- and those occupy 1 to 6 (Milk, Cream,
 # Chocolate, Strawberry, Ice, Pearls). 15 is the test-mode toggle above.
 # 0 and 7 to 13 are unassigned.
 #

@@ -35,7 +35,7 @@ WHAT "OUT OF STOCK" MEANS HERE
     is on the menu but cannot be poured. Either way the tile is visible
     and not clickable, so customers can see what exists.
 
-    drink.in_stock is maintained by triggers in database.sql, so it is
+    drink.in_stock is maintained by triggers in schema/schema.sql, so it is
     already correct when this script reads it.
 
 RUNNING IT
@@ -64,7 +64,7 @@ if __package__ in {None, ""}:
     if project_dir not in sys.path:
         sys.path.insert(0, project_dir)
 
-from database.db_core import connect_database
+from database.core.connection import connect_database
 
 
 STORE_DIR = Path(__file__).resolve().parent
@@ -89,7 +89,7 @@ IMAGE_PREFIX = "../"
 # What the strips do when store_setting has nothing to say -- which is
 # the case on a database that has not taken the migrations yet. Enabled,
 # because the operator's first sign that the feature exists should be the
-# strip appearing once they tick a drink, not an empty admin panel that
+# strip appearing once they tick a drink, not an empty settings panel that
 # seems to do nothing.
 # How a strip arranges its drinks.
 #
@@ -199,7 +199,7 @@ SETTING_QUERY = """
 #                     and counting them would rank the machine's failures.
 #
 #   completed_at      when the drink was finished, not when the label was
-#                     printed. It is also the column the admin report
+#                     printed. It is also the column the management report
 #                     totals takings by, so the strip and the report can
 #                     never disagree about which day a sale fell in.
 #
@@ -394,7 +394,7 @@ def setting_flag(stored: dict, key: str, fallback: bool) -> bool:
     """A '1'/'0' setting, read leniently.
 
     Anything but an explicit '0' is on: this table is edited by hand as
-    well as by the admin console, and 'true', 'yes' and '1' all plainly
+    well as by the management app, and 'true', 'yes' and '1' all plainly
     mean the same thing to whoever typed them.
     """
     if key not in stored:
@@ -409,7 +409,7 @@ def setting_int(stored: dict, key: str, fallback: int,
 
     Out of range is CLAMPED rather than refused, because this reader runs
     on the shop floor: a nonsense value typed straight into MySQL should
-    cost a sensible strip, not the whole menu rebuild. The admin console
+    cost a sensible strip, not the whole menu rebuild. the management app
     refuses it properly, up front, where somebody is there to read why.
     """
     low, high = bounds
@@ -663,7 +663,7 @@ def build_menu(raw: dict) -> dict:
         # Milliseconds, not seconds. The store screen decides the menu has
         # changed by comparing this string, so two rebuilds inside one
         # second used to be indistinguishable -- and that is no longer a
-        # theoretical gap: the admin console republishes on every edit, so
+        # theoretical gap: the management app republishes on every edit, so
         # switching a drink off and on again, or a price change followed
         # straight away by a toggle, lands twice in the same second. The
         # screen would keep serving the first of the two for ever.
@@ -813,7 +813,7 @@ def report_featured(menu: dict) -> None:
 
     if featured.get("enabled") and not shown:
         print("    Nothing to draw, so the strip stays hidden. "
-              "Tick a sellable drink in the admin Menu page.")
+              "Tick a sellable drink in the Menu page of the management app.")
 
     report_bestseller(menu)
 
@@ -838,7 +838,7 @@ def report_bestseller(menu: dict) -> None:
 
     if best.get("enabled") and not ids:
         print("    Nothing sold in that window, so the strip stays hidden. "
-              "Widen it in the admin Menu page.")
+              "Widen it in the Menu page of the management app.")
 
     # The same drink in both strips is drawn twice, one above the other.
     # Legal, and sometimes wanted -- but it is never what somebody meant

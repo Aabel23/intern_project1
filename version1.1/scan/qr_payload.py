@@ -32,7 +32,7 @@ THE SERIAL, AND WHY IT IS NOT ENOUGH ON ITS OWN
     when it is scanned. The serial is only a key. What makes a label
     single-use is the order_ticket row it points at, which moves
     unused -> in_progress -> used -- see the table's comment in
-    database/database.sql, and the claim in order/qr_to_recipe.py.
+    database/schema/schema.sql, and the claim in order/qr_to_recipe.py.
 
     SERIAL_NONE (000000) is the deliberate exception: a well-formed
     payload that no ticket will ever match. scan/generate_drink_qr.py uses

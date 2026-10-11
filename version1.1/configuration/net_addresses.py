@@ -1,13 +1,9 @@
 """Which addresses this machine can actually be reached on.
 
 WHY THIS EXISTS
-    Two copies of this lived in store_gui/serve.py and admin_gui/serve.py,
-    and they had already drifted apart. Only the admin copy grew the third
-    branch below -- asking the kernel directly -- so the store server could
-    not see a Tailscale address at all:
-
-        store_gui.local_addresses()   -> ['192.168.1.167']
-        admin_gui.local_addresses()   -> ['192.168.1.167', '100.71.158.28']
+    The store server once had its own copy without the third branch
+    below -- asking the kernel directly -- so it could not see a Tailscale
+    address at all.
 
     That difference is not cosmetic. store_gui/serve.py now decides which
     interfaces to BIND from these answers, so a copy that cannot see the
@@ -170,12 +166,11 @@ def bind_hosts(explicit: str | None = None,
         ngay: không Tailscale thì chỉ loopback, có tailnet thì tự thêm.
 
     VÌ SAO Ở ĐÂY CHỨ KHÔNG Ở store_gui/serve.py
-        Ba server dùng nó -- store_gui, admin_gui, test_gui. Bản đầu chỉ
-        sửa store_gui, nên hai cái kia vẫn bind 0.0.0.0 khi chạy độc lập:
-        admin_gui phơi toàn bộ API quản trị ra LAN, test_gui phơi
-        /api/prime và /api/pump/hold, những endpoint KHÔNG cần đăng nhập.
-        main.py không mở hai cổng đó nên máy bán hàng an toàn, nhưng tài
-        liệu bảo người phát triển chạy chúng bằng tay.
+        Hai server dùng nó -- store_gui, test_gui. Bản đầu chỉ sửa
+        store_gui, nên test_gui vẫn bind 0.0.0.0 khi chạy độc lập và phơi
+        /api/prime, /api/pump/hold ra LAN, những endpoint KHÔNG cần đăng
+        nhập. main.py không mở cổng đó nên máy bán hàng an toàn, nhưng tài
+        liệu bảo người phát triển chạy nó bằng tay.
 
     `explicit` đè lên tất cả -- kể cả "0.0.0.0", lối thoát cho máy phát
     triển thật sự muốn được gọi qua LAN. Máy bán hàng không nên truyền.

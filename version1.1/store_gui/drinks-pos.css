@@ -529,7 +529,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,
 /* ------------------------------------------------------------- FEATURED ---
    The drinks the shop is pushing, as one horizontal row above the menu or
    below it. Which drinks, whether it is drawn and where, all come from the
-   admin console through menu-data.js; this sheet only knows how it looks.
+   management app through menu-data.js; this sheet only knows how it looks.
 
    WHY A ROW AND NOT MORE OF THE GRID
        The grid is the menu: everything, in a shape built for comparing.
@@ -633,7 +633,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,
 .featured.best .fmark{background:var(--surface);color:var(--brand-deep)}
 
 /* ================= THE FIVE ARRANGEMENTS =================
-   Set per module in the admin console.
+   Set per module in the management app.
 
    The first three run sideways and share one scroller; the last two
    stack. What separates them is not how the same object is arranged --
@@ -795,7 +795,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,
    A line is as wide as the tray, so at one column a board row is a name
    at one end, a price at the other and a hand's width of nothing
    between. Two closes that gap and halves the height. Set per module in
-   the admin console; --cols is written by drinks-pos.js. */
+   the management app; --cols is written by drinks-pos.js. */
 .fstrip.lay-board{
   display:grid;grid-template-columns:repeat(var(--cols,1),1fr);
   column-gap:var(--s-12);padding:var(--s-2) 0 0;
@@ -1762,7 +1762,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,
 .modal .startbtn:active:not(:disabled){transform:translateY(1px)}
 .modal .startbtn:disabled{opacity:.6;cursor:progress}
 
-/* Which of the two this shop offers is set in the admin console and read
+/* Which of the two this shop offers is set in the management app and read
    by applyOrderMode() in drinks-pos.js, which sets el.hidden.
 
    That needs saying in CSS because both rules above declare display:flex,

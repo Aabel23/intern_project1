@@ -230,7 +230,7 @@ def _free_gpio_line(slot: int | str | None) -> None:
     quietly does nothing.
     """
     try:
-        from database.db_core import gpio_number
+        from database.core.helpers import gpio_number
         from pump_control.gpio_lines import free_gpio_line
 
         number = gpio_number(slot)

@@ -134,9 +134,10 @@ def pump_lines(assigned_only: bool = False) -> list[dict[str, Any]]:
     GPIO_TO_PUMP is the mapping the recipe builder uses, so a pump number
     here means the same thing it means in a recipe and in pump_calib.json.
     """
-    from database.db_core import (close_database_resources,
-                                  connect_database, gpio_number)
-    from database.export_data import GPIO_TO_PUMP
+    from database.core.connection import (close_database_resources,
+                                          connect_database)
+    from database.core.helpers import gpio_number
+    from database.services.recipe_export import GPIO_TO_PUMP
 
     names: dict[int, dict[str, Any]] = {}
 
@@ -416,7 +417,7 @@ def record_failures(results: list[dict[str, Any]]) -> None:
         return
 
     try:
-        from database import error_log
+        from database.services import error_log
 
         for item in bad:
             # GPIO and ingredient_id used to ride along in a `detail`

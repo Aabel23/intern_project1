@@ -15,7 +15,7 @@ unclutter -idle 0.5 -root &
 
 # ĐỘ PHÂN GIẢI MÀN HÌNH
 #
-# Áp lại lựa chọn đã lưu trong trang admin (Màn hình). Phải làm ở ĐÂY chứ
+# Áp lại lựa chọn đã lưu trong app quản lý (Màn hình). Phải làm ở ĐÂY chứ
 # không phải trong flexmix-backend.service: service đó khởi động TRƯỚC X,
 # nên xrandr gọi từ backend sẽ không có màn hình nào để nói chuyện.
 #

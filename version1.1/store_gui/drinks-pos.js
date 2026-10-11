@@ -111,7 +111,7 @@ function toItems(source){
 
 const ITEMS = toItems(MENU_SOURCE);
 
-/* The two strips and the page order, as the admin console set them up.
+/* The two strips and the page order, as the management app set them up.
 
    WHAT IS DECIDED WHERE
      WHICH drinks are in a strip is decided by store_gui/sync_menu.py, not
@@ -1524,7 +1524,7 @@ async function issueTicket(b){
    and closing it still costs nothing and leaves nothing behind. */
 /* ---------------- HOW THIS SHOP TAKES AN ORDER ----------------
    Two ways to turn a placed order into a drink, and the shop decides in
-   the admin console which of them the counter is offered:
+   the management app which of them the counter is offered:
 
      printQR    "Print QR"                        -> the label path
      runDirect  "Start on the machine (no scan)"  -> straight to the machine

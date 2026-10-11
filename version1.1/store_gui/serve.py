@@ -26,13 +26,6 @@ WHAT IT DOES BESIDES SERVE FILES
     POST /api/start     runs the order without a scan, for a dead scanner
                         or a printer out of paper.
 
-    ... and the admin console's endpoints (/api/menu, /api/drink/*,
-    /api/recipe*, /api/admin/login), so the whole machine answers on one
-    port. Those are NOT open by virtue of being here: each one requires a
-    session token issued by admin_gui/auth.py, checked inside the shared
-    dispatcher in admin_gui/serve.py. The customer's tablet can reach the
-    URL and gets 401.
-
 WHY THE PAYLOAD IS BUILT HERE AND NOT IN THE BROWSER
     The page used to encode the payload itself, which meant two
     implementations of one wire format -- and they had already drifted
@@ -91,12 +84,9 @@ PROJECT_DIR = STORE_DIR.parent
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
-# The admin console's endpoints, mounted on this port too. Imported rather
-# than reimplemented so the login check exists once -- see its do_GET below.
-from admin_gui import serve as admin_api                          # noqa: E402
 from printer import spool                                        # noqa: E402
 from store_gui import kiosk_watchdog                             # noqa: E402
-from database import order_ticket                                # noqa: E402
+from database.services import order_ticket                       # noqa: E402
 from configuration import net_addresses                          # noqa: E402
 from configuration import machine                               # noqa: E402
 from configuration import served_paths                           # noqa: E402
@@ -199,7 +189,7 @@ RUNNER_TIMEOUT_SECONDS = 30.0
 
 # The customer screen reads store_gui/menu-data.js, a snapshot of the menu.
 # Anything that changes stock changes the database, and the database keeps
-# itself right on its own -- the triggers in database.sql recompute
+# itself right on its own -- the triggers in schema/schema.sql recompute
 # drink.in_stock whenever an ingredient crosses its threshold, with no
 # Python involved. That is the problem: a snapshot rebuilt only by Python
 # goes stale the moment somebody edits a level directly in MySQL, and the
@@ -423,24 +413,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 self._send_json(*answer)
                 return
 
-        """Serve the QR endpoint, the admin API, or a file."""
+        """Serve the QR endpoint or a file."""
         if self.path.split("?")[0] == MENU_DATA_PATH:
             self.refresh_menu_if_stale()
-
-        # The admin console is served from this port too, so its endpoints
-        # are answered here. They are NOT open because they are here: every
-        # one of them goes through require_login() inside the dispatcher,
-        # which is why there is one dispatcher and not a copy of it. See
-        # admin_gui/serve.py.
-        answer = admin_api.dispatch_get(
-            self.path.split("?")[0],
-            urlparse(self.path).query,
-            admin_api.bearer_token(self.headers),
-        )
-
-        if answer is not None:
-            admin_api.send_json(self, *answer)
-            return
 
         if self.path.split("?")[0] != QR_PATH:
             super().do_GET()
@@ -558,35 +533,11 @@ class StoreHandler(SimpleHTTPRequestHandler):
             self.send_error(404, "Unknown endpoint")
             return
 
-        # An upload carries the file as its body, so it is answered before
-        # the JSON read below -- see admin_gui/serve.py. BOTH kinds have to
-        # be listed: a path that misses this branch reaches json.loads()
-        # with a GIF in its hands and the browser is told 400 Bad Request,
-        # which says nothing about what actually went wrong.
-        if path == admin_api.IMAGE_UPLOAD_PATH:
-            admin_api.send_json(self, *admin_api.handle_image_upload(self))
-            return
-
-        if path == admin_api.MEDIA_UPLOAD_PATH:
-            admin_api.send_json(self, *admin_api.handle_media_upload(self))
-            return
-
         try:
             length = int(self.headers.get("Content-Length", "0"))
             body = json.loads(self.rfile.read(length) or b"{}")
         except (ValueError, OSError):
             self._send_json(400, {"ok": False, "error": "Body khong hop le."})
-            return
-
-        # Admin endpoints first, and behind a session -- see do_GET.
-        answer = admin_api.dispatch_post(
-            path,
-            body if isinstance(body, dict) else {},
-            admin_api.bearer_token(self.headers),
-        )
-
-        if answer is not None:
-            admin_api.send_json(self, *answer)
             return
 
         if path not in (PRINT_PATH, TICKET_PATH, START_PATH):
@@ -1025,8 +976,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
     # Started here rather than at import: this module is also imported by
-    # admin_gui/serve.py and by the test suite, and neither of those is a
-    # kiosk that wants its browser restarted.
+    # the test suite, which is not a kiosk that wants its browser restarted.
     kiosk_watchdog.start()
 
     if explicit is None and not args.local and tailscale_address() is None:

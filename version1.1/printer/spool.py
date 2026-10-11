@@ -8,12 +8,11 @@ WHY A SUBPROCESS AND NOT A FUNCTION CALL
     a deadline and abandoned.
 
 WHY IT LIVES HERE
-    There are two callers now: store_gui/serve.py printing a new label,
-    and admin_gui/serve.py reprinting one that was lost. The second was
-    going to be a copy of the first, and a copy is how the two drift --
+    Printing is kept out of store_gui/serve.py so any later caller (a
+    reprint, say) uses this same code instead of a copy. Copies drift --
     a timeout raised in one and not the other, an exit code read in one
-    and not the other. One of them would then be wrong about whether a
-    label came out, which is the one thing this code exists to know.
+    and not the other -- and one of them would then be wrong about whether
+    a label came out, which is the one thing this code exists to know.
 
 WHAT IT REFUSES TO DO
     It never mints a ticket and never touches the database. It renders

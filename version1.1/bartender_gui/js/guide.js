@@ -487,7 +487,7 @@ function mapStepStatus(step) {
 
      A `sensor` block is what makes the machine the one watching. A
      cup-back step no longer carries one -- see build_detect_step() in
-     database/export_data.py -- so it lands on the last line here and is
+     database/services/recipe_export.py -- so it lands on the last line here and is
      released by a press, exactly like a manual step. It used to be keyed
      off `type === "detect"` instead, which made the load cell the only
      way past: when the cell read low the step could not be answered at
@@ -1317,7 +1317,7 @@ let gateSignature = "";
 let detectMessage = null;   // set when a reading finds no cup
 
 /* ---- the action step's clip ----
-   Files live in recipe/media/, written by admin_gui/serve.py. store_gui
+   Files live in recipe/media/, uploaded by the management app. store_gui
    serves PROJECT_DIR, so this page reaches them one directory up. */
 const MEDIA_URL_PREFIX = "../recipe/media/";
 
@@ -1355,7 +1355,7 @@ function showMedia(media) {
 
 /* ========================================================== THE GLASS ======
    Which glass a drink is served in is a property OF the drink, set once in
-   the admin GUI and stored on the drink row -- not something whoever is on
+   the management app and stored on the drink row -- not something whoever is on
    shift decides each time. Two people pouring the same cocktail into
    different glasses is the thing this exists to stop.
 

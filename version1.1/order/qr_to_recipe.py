@@ -22,7 +22,7 @@ THE FLOW OF ONE ORDER
         recipe behind it is the base drink: every pumped ingredient, its
         grams, and its step.
     4.  Apply the customer's choices from the payload (see below).
-    5.  Hand the adjusted rows to database/export_data.py, which is what
+    5.  Hand the adjusted rows to database/services/recipe_export.py, which is what
         already knows how to turn recipe rows into pump, manual and detect
         steps with pump numbers and pour durations.
     6.  Stamp a fresh order_id and created_at.
@@ -125,8 +125,8 @@ if __package__ in {None, ""}:
     if project_dir not in sys.path:
         sys.path.insert(0, project_dir)
 
-from database.db_core import connect_database
-from database.export_data import (
+from database.core.connection import connect_database
+from database.services.recipe_export import (
     attach_actions,
     build_drinks,
     build_process_document,
@@ -134,7 +134,7 @@ from database.export_data import (
     get_recipe_rows,
     load_pump_calibration,
 )
-from database import order_ticket
+from database.services import order_ticket
 import qrproto
 from qrproto.errors import (
     ClockSkewError,

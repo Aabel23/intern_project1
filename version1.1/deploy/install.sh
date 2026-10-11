@@ -39,12 +39,12 @@ RUNTIME_DIR="/var/lib/flexmix"
 # Người gác đồng hồ được phép đợi bao lâu. Xem phase_service.
 TIME_WAIT_SYNC_TIMEOUT=90
 
-# Mọi phase gọi python theo tên module (qrproto.keys, database.db_core,
-# admin_gui.auth) nên thư mục làm việc PHẢI là gốc dự án — kể cả khi người
+# Mọi phase gọi python theo tên module (qrproto.keys, database)
+# nên thư mục làm việc PHẢI là gốc dự án — kể cả khi người
 # dùng gọi script bằng đường dẫn tuyệt đối từ chỗ khác.
 cd "$PROJECT_DIR"
 
-PHASES="preflight packages hardware python secrets mysql database account printer runtime service kiosk verify"
+PHASES="preflight packages hardware python secrets mysql database printer runtime service kiosk verify"
 
 # ------------------------------------------------------------------ in ấn --
 c_ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
@@ -228,10 +228,10 @@ PY
     # thiếu hoặc một lỗi cú pháp phải lộ ra ở đây, không phải lúc service
     # khởi động rồi Restart=always quay vòng vô hạn.
     #
-    # qrproto và admin_gui.auth không cần biến môi trường nào; database và
+    # qrproto không cần biến môi trường nào; database và
     # store_gui thì có (BEVERAGE_DB_PASSWORD) nên để phase 'database' lo.
     "$PY" - <<'PY' || die "Mã nguồn không import được — xem lỗi ở trên."
-import qrproto, admin_gui.auth, qrproto.keys
+import qrproto, qrproto.keys
 print("    mã nguồn import được")
 PY
 }
@@ -366,45 +366,18 @@ phase_database() {
         || die "Không tạo được database. Chạy phase 'mysql' trước."
     c_ok "Database '$name' sẵn sàng"
 
-    # `database.main update` = apply_database_sql() + check_inventory().
-    # Gọi qua CLI thay vì gọi thẳng apply_database_sql: bỏ check_inventory()
-    # thì drink.in_stock không được tính lần đầu, và màn hình bán hàng mở ra
+    # apply_database_sql() rồi check_inventory(): bỏ check_inventory() thì
+    # drink.in_stock không được tính lần đầu, và màn hình bán hàng mở ra
     # với mọi món báo hết.
     env BEVERAGE_DB_USER="$user" \
         BEVERAGE_DB_PASSWORD="$pass" \
         BEVERAGE_DB_NAME="$name" \
-        "$PY" -m database.main update \
+        "$PY" -c 'from database import apply_database_sql, check_inventory; apply_database_sql(); check_inventory()' \
         || die "Áp schema thất bại."
     c_ok "Đã áp schema và tính lại tồn kho"
 }
 
-# ================================================================ 7. ACCOUNT
-# Tài khoản đăng nhập màn hình quản trị.
-#
-# configuration/admin_account.json nằm trong .gitignore, nên máy mới clone
-# về là KHÔNG có tài khoản nào: mọi endpoint /api/admin/* trả 503 và không
-# ai vào được menu để sửa giá.
-phase_account() {
-    title "7. Tài khoản quản trị"
-
-    if "$PY" -c 'import admin_gui.auth as a; raise SystemExit(0 if a.is_configured() else 1)'; then
-        c_ok "Đã có tài khoản admin — GIỮ NGUYÊN"
-        c_info "Đổi mật khẩu: $PY -m admin_gui.auth --set-password"
-        return 0
-    fi
-
-    c_warn "Chưa có tài khoản admin nào. Tạo ngay bây giờ."
-    c_info "Tên đăng nhập mặc định: manager. Mật khẩu tối thiểu 8 ký tự."
-    local admin_user
-    printf '\n  Tên đăng nhập [manager]: '
-    read -r admin_user || true; admin_user="${admin_user:-manager}"
-
-    "$PY" -m admin_gui.auth --set-password --user "$admin_user" \
-        || die "Chưa tạo được tài khoản admin."
-    c_ok "Đã tạo tài khoản '$admin_user' (configuration/admin_account.json, chmod 600)"
-}
-
-# ================================================================ 8. PRINTER
+# ================================================================ 7. PRINTER
 # Tạo hàng đợi CUPS đúng tên mà printer/printer_qr.py gọi tới.
 #
 # Cắm USB thôi chưa đủ: CUPS chỉ tự tạo hàng đợi tạm với tên do nó tự đặt,
@@ -427,7 +400,7 @@ printer_queue_name() {
 }
 
 phase_printer() {
-    title "8. Máy in nhãn (CUPS)"
+    title "7. Máy in nhãn (CUPS)"
 
     local want
     want="$(printer_queue_name)"
@@ -460,9 +433,9 @@ phase_printer() {
     c_info "In thử một nhãn: xem bước 8 trong docs/SETUP_NEW_MACHINE.md"
 }
 
-# ================================================================ 9. RUNTIME
+# ================================================================ 8. RUNTIME
 phase_runtime() {
-    title "9. Thư mục trạng thái của máy"
+    title "8. Thư mục trạng thái của máy"
     need_sudo
 
     # VÌ SAO HIỆU CHUẨN KHÔNG ĐƯỢC NẰM TRONG THƯ MỤC MÃ NGUỒN
@@ -522,9 +495,9 @@ phase_runtime() {
 }
 
 
-# ================================================================ 10. SERVICE
+# ================================================================ 9. SERVICE
 phase_service() {
-    title "10. systemd service"
+    title "9. systemd service"
     need_sudo
     local unit=flexmix-backend.service
 
@@ -586,11 +559,11 @@ phase_service() {
     fi
 }
 
-# ================================================================= 11. KIOSK
+# ================================================================= 10. KIOSK
 # Mở trình duyệt lúc boot + khoá Firefox + chặn snap tự cập nhật.
 # KHÔNG bao gồm bước khoá đường thoát (xem phase 'lockdown').
 phase_kiosk() {
-    title "11. Chế độ kiosk (Firefox)"
+    title "10. Chế độ kiosk (Firefox)"
     need_sudo
 
     # --- 10a. autologin vào Openbox ---
@@ -645,9 +618,9 @@ phase_kiosk() {
     fi
 }
 
-# ================================================================ 12. VERIFY
+# ================================================================ 11. VERIFY
 phase_verify() {
-    title "12. Kiểm tra tổng thể"
+    title "11. Kiểm tra tổng thể"
     local bad=0
 
     systemctl is-active --quiet flexmix-backend.service \
@@ -673,7 +646,7 @@ phase_verify() {
     elif sudo -n test -r "$ENV_FILE" 2>/dev/null; then
         envcat="sudo cat"
         c_err "$RUN_USER KHÔNG đọc được $ENV_FILE (chỉ root đọc được)"
-        c_info "Mọi lệnh chạy tay (calib_pump, database.main, admin_gui.auth)"
+        c_info "Mọi lệnh chạy tay (vd. calib_pump)"
         c_info "sẽ không tìm thấy mật khẩu DB. Sửa:"
         c_info "  sudo chown root:$RUN_USER $ENV_FILE && sudo chmod 640 $ENV_FILE"
         c_info "  sudo chmod 755 $ENV_DIR"
@@ -764,16 +737,6 @@ phase_verify() {
         c_err "configuration.machine KHÔNG nạp được — backend sẽ không khởi động:"
         c_info "$(printf '%s\n' "$profile_out" | tail -1)"
         c_info "   ./.venv/bin/python3 -m configuration.machine"
-        bad=1
-    fi
-
-    # Không có tài khoản admin thì máy vẫn bán được, nhưng không ai sửa
-    # được menu hay giá — và lỗi chỉ lộ ra khi đứng trước màn hình đăng nhập.
-    if "$PY" -c 'import admin_gui.auth as a; raise SystemExit(0 if a.is_configured() else 1)' 2>/dev/null; then
-        c_ok "có tài khoản admin"
-    else
-        c_err "CHƯA có tài khoản admin — màn hình quản trị trả 503"
-        c_info "   ./deploy/install.sh account"
         bad=1
     fi
 
@@ -922,7 +885,7 @@ phase_verify() {
     return "$bad"
 }
 
-# =============================================================== 13. SUDOERS
+# =============================================================== 12. SUDOERS
 # TUỲ CHỌN. Cho nút số 14 trên bảng nút khởi động lại backend.
 #
 # CHỈ có tác dụng khi chạy main.py bằng tay. Dưới systemd luật này KHÔNG
@@ -935,7 +898,7 @@ phase_verify() {
 # Giữ phase này vì nó vẫn đúng cho máy phát triển, và vì gỡ một file trong
 # /etc/sudoers.d đã cài rồi thì rắc rối hơn là để yên.
 phase_sudoers() {
-    title "13. Cho nút 14 khởi động lại backend (tuỳ chọn)"
+    title "12. Cho nút 14 khởi động lại backend (tuỳ chọn)"
     need_sudo
 
     local rule="$RUN_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart --no-block flexmix-backend.service"
@@ -959,10 +922,10 @@ phase_sudoers() {
     rm -f "$tmp"
 }
 
-# =============================================================== 14. LOCKDOWN
+# =============================================================== 13. LOCKDOWN
 # TÁCH RIÊNG, KHÔNG nằm trong 'all'. Sau bước này muốn thoát phải SSH.
 phase_lockdown() {
-    title "14. Khoá đường thoát  ⚠ CHỈ LÀM KHI CHUẨN BỊ GIAO MÁY"
+    title "13. Khoá đường thoát  ⚠ CHỈ LÀM KHI CHUẨN BỊ GIAO MÁY"
     c_warn "Sau bước này: không còn Alt+F4, Alt+Tab, Ctrl+Alt+F1..F7."
     c_warn "Muốn vào lại máy phải SSH từ máy khác."
     confirm "KHOA" || { c_info "Đã bỏ qua."; return 0; }
@@ -1042,7 +1005,6 @@ PHASE TỰ ĐỘNG (chạy theo đúng thứ tự này):
     secrets     sinh khoá QR + ghi $ENV_FILE  -> hỏi mật khẩu MySQL
     mysql       đặt mật khẩu root cho khớp file env
     database    tạo database + áp schema + tính tồn kho
-    account     tạo tài khoản đăng nhập màn hình quản trị
     printer     tạo hàng đợi CUPS raw đúng tên PRINTER_NAME
     runtime     tạo /var/lib/flexmix + chuyển hiệu chuẩn ra khỏi mã nguồn
     service     cài + bật flexmix-backend

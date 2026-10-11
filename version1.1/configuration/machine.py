@@ -154,12 +154,11 @@ PANEL_MAX_LEDS_ON = 4
 # it. Which network interfaces it is bound to is a separate question, and
 # a computed one -- see configuration/net_addresses.py.
 
-STORE_PORT = 8080          # all four screens + the admin API
+STORE_PORT = 8080          # every screen
 RUNNER_PORT = 8000         # process_runner, loopback only, only while pouring
 
-# Standalone development ports. main.py opens neither: admin_gui/serve.py
-# and test_gui/serve.py listen on these only when run on their own.
-ADMIN_STANDALONE_PORT = 8100
+# Standalone development port. main.py does not open it: test_gui/serve.py
+# listens on it only when run on its own.
 TEST_STANDALONE_PORT = 8090
 
 
@@ -361,7 +360,6 @@ _PROFILE_FIELDS = {
     "PANEL_MAX_LEDS_ON": _positive,
     "STORE_PORT": _port,
     "RUNNER_PORT": _port,
-    "ADMIN_STANDALONE_PORT": _port,
     "TEST_STANDALONE_PORT": _port,
     "PRINTER_NAME": _text,
     "LABEL_WIDTH_MM": _millimetres,
@@ -451,8 +449,8 @@ if _duplicate_lines:
 del _lines, _duplicate_lines
 
 # The inverse, derived rather than written out so it cannot disagree.
-# admin_gui/serve.py reads it to label a pin with the pump number a person
-# would recognise.
+# database/services/inventory.py reads it to label a pin with the pump
+# number a person would recognise.
 PIN_TO_PUMP: dict[int, int] = {pin: n for n, pin in PUMP_GPIO.items()}
 
 PUMP_NUMBERS: tuple[int, ...] = tuple(sorted(PUMP_GPIO))

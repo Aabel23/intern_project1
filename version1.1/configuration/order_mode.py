@@ -28,7 +28,7 @@ WHY A FILE AND NOT THE DATABASE
       * no migration, and the pattern is already proven on this hardware.
 
     It is NOT in localStorage, which is where it lived until 2026-09-07
-    and why it controlled nothing: the admin console and the customer
+    and why it controlled nothing: the management app and the customer
     screen are different browsers, and often different devices.
 
 BOTH OFF IS REFUSED
@@ -68,7 +68,7 @@ def read() -> dict[str, bool]:
     """The current mode. DEFAULTS if the file is missing or unreadable.
 
     Never raises. Every caller of this is on a path that has to answer --
-    a customer screen drawing its buttons, an admin page painting a
+    a customer screen drawing its buttons, a management screen painting a
     toggle -- and none of them is improved by an exception about a config
     file. A missing file means a machine that has never been configured,
     which is the same thing as a machine configured the old way.
@@ -94,7 +94,7 @@ def write(mode: dict[str, Any]) -> dict[str, bool]:
     WHY BOTH OFF IS REFUSED RATHER THAN CORRECTED
         With neither switch on, the customer screen has an order, a total
         and nothing to press. Silently turning one back on would leave the
-        admin page showing a setting the shop did not choose, and the
+        management app showing a setting the shop did not choose, and the
         counter working in a mode nobody selected. The person doing it is
         one click away from fixing it, so the honest move is to say no and
         let them.
