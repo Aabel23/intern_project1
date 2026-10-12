@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Contracts tối thiểu cho skeleton · Dự thảo C-04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"><link rel="stylesheet" href="../assets/doc.css"></head>
+<body><div class="page"><header class="masthead"><div style="display:grid;gap:4px"><div class="eyebrow">C-04 · <a href="../index.html">Mục lục</a> · Đã đối chiếu quyết định</div><h1>Contracts: tài khoản → nhận máy → hỏi máy</h1><p class="lead">Một nghĩa nghiệp vụ, chứng thực riêng cho từng đường. Skeleton chỉ chuyển câu hỏi qua cloud; Bluetooth dùng khi nhận máy. Sơ đồ này ghi quyết định nhận máy ngày 12/10 và ranh giới của C-02/C-03; chi tiết gói thuộc bước Planner.</p></div><div class="meta"><span><b>Phạm vi:</b> app · server · máy</span><span><b>Ngày:</b> 12/10/2026</span><span><b>Trạng thái:</b> chờ đặc tả kỹ thuật</span></div></header>
+<div class="shell"><nav class="toc" aria-label="Mục lục"><div class="lbl">Mục lục</div><ol><li><a href="#khoi">1. Khối và trách nhiệm</a></li><li><a href="#nhan">2. Tài khoản và nhận máy</a></li><li><a href="#relay">3. Relay và trạng thái</a></li><li><a href="#thongdiep">4. Danh mục thông điệp</a></li><li><a href="#kiem">5. Nhánh lỗi và ca kiểm</a></li><li><a href="#chon">6. Điểm cần chọn</a></li><li><a href="#ranhgioi">7. Ranh giới và bằng chứng</a></li></ol></nav><main>
+<section id="khoi"><div class="sec-head"><span class="sec-no">Mục 1</span><h2>Ba khối, hai loại niềm tin</h2></div><div class="note"><b>Cách đọc</b>“Đề xuất” là suy luận kiến trúc. Các tên endpoint trong tài liệu cũ chỉ giúp tìm đối chiếu; bản này chưa chốt tên trường, thuật toán, gói tin hay thời hạn. Nhãn “đã chốt” ở HTML khác không được dùng làm bằng chứng user đã chọn.</div>
+<figure class="dg"><script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+ A[App: người dùng và yêu cầu] -->|Phiên tài khoản; nhận chủ; câu hỏi| S[Server: kiểm danh tính và quyền; relay]
+ S --> D[(Tài khoản; phiên; chủ máy; quyền)]
+ M[Máy: danh tính; đọc trạng thái] -->|Chứng thực máy; poll; kết quả| S
+ S -->|Câu hỏi trong poll| M
+ S --> P[Pending RAM: máy + mã hỏi + hạn]
+ A <-->|Bluetooth khi nhận máy: bằng chứng tại chỗ; wifi| M
+</script><div class="dg-canvas"></div><figcaption>Máy chủ động kết nối ra ngoài; không mở cổng vào router. Database giữ quyền sở hữu, còn câu hỏi đang chờ chỉ cần RAM cho skeleton một server.</figcaption></figure>
+<div class="tbl"><table><thead><tr><th>Khối</th><th>Phát / chuyển</th><th>Kiểm</th><th>Trả / lưu</th></tr></thead><tbody>
+<tr><td>App</td><td>Đăng ký, xác minh, đăng nhập; nhận chủ; câu hỏi với mã mới</td><td>Hiển thị đúng nguồn và độ mới; không tự cấp quyền</td><td>Giữ phiên an toàn; hiển thị kết quả máy hoặc lỗi relay</td></tr>
+<tr><td>Server</td><td>Gửi mã email, cấp phiên; giao câu hỏi qua poll</td><td>Phiên còn hiệu lực, email đã xác minh, quyền máy hiện tại; danh tính máy; bằng chứng nhận chủ; ghép đúng máy và mã hỏi</td><td>Lưu chủ/quyền bền; kết thúc pending một lần; trả kết quả có nguồn</td></tr>
+<tr><td>Máy</td><td>Chứng minh danh tính; mở poll; trả bằng chứng tại chỗ và kết quả</td><td>Kênh nhận máy; loại câu hỏi hỗ trợ, tham số và hạn trước khi đọc</td><td>Đọc trạng thái tại thời điểm xử lý; trả cùng mã hỏi; không tự quyết chủ mới</td></tr>
+</tbody></table></div><p class="prose">Phiên trả lời “người nào”; quyền trả lời “được làm gì trên máy nào”; chứng thực máy trả lời “máy nào đang kết nối”. Nội dung tự khai trong body không thay được ba kiểm tra này.</p></section>
+<section id="nhan"><div class="sec-head"><span class="sec-no">Mục 2</span><h2>Nhận chủ cần ràng người, máy và một lần nhận</h2></div><p class="prose">Đã chốt: người quét mã niêm phong dài trong hộp đầu tiên nhận máy làm Owner; máy tự sinh cặp khóa khi bật lần đầu, không đòi xưởng nạp chứng chỉ hoặc khóa máy, không dùng PAKE cho mã dài. Trước khi bán, serial và bản kiểm mã niêm phong được đăng ký trên server; cùng mã nằm trong máy và QR niêm phong. Server kiểm bằng chứng máy biết mã đã đăng ký rồi mới gắn khóa công khai mới sinh với serial. Mã cố định suốt đời và chỉ có tác dụng khi máy chưa có chủ. Planner còn phải đặc tả cách kiểm mã an toàn và các gói tương ứng.</p>
+<figure class="dg"><script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+ autonumber
+ actor U as Người dùng
+ participant A as App
+ participant S as Server
+ participant E as Dịch vụ thư
+ participant M as Máy
+ U->>A: Email mới và mật khẩu
+ A->>S: Đăng ký
+ S->>E: Mã xác minh có mục đích và hạn
+ S-->>A: Tiếp tục xác minh
+ A->>S: Mã email
+ S-->>A: Email đã xác minh
+ A->>S: Đăng nhập
+ S-->>A: Phiên có hạn, có thể thu hồi
+ A->>M: Mở kênh nhận máy bằng mã niêm phong
+ M-->>A: Kênh được bảo vệ; định danh máy dự kiến
+ A->>M: Cấu hình wifi trong kênh bảo vệ
+ M->>S: Đề nghị gắn khóa tự sinh với serial
+ S-->>M: Kiểm mã niêm phong đã đăng ký; gắn khóa
+ A->>S: Bắt đầu nhận máy bằng phiên hiện tại
+ S-->>A: Thử thách gắn tài khoản, máy, mục đích và hạn
+ A->>M: Thử thách trong kênh nhận máy
+ M-->>A: Bằng chứng máy chấp thuận lần nhận này
+ A->>S: Hoàn tất nhận bằng chứng
+ S->>S: Kiểm bằng chứng; tiêu thụ thử thách và ghi chủ nguyên tử
+ S-->>A: Máy thuộc tài khoản hiện tại
+ M->>S: Poll với danh tính máy
+</script><div class="dg-canvas"></div><figcaption>Thứ tự đề xuất bổ sung bước server ràng tài khoản vào thử thách. Chữ ký máy trên phiếu không tự chứng minh phiếu thuộc tài khoản gửi lên nếu thiếu ràng buộc này.</figcaption></figure>
+<p class="prose">Bằng chứng nhận cần bao phủ danh tính máy đã được server xác thực, tài khoản từ phiên server, mục đích nhận chủ, thử thách một lần và hạn. Server kiểm người hoàn tất đúng tài khoản đã bắt đầu; máy kiểm đúng danh tính mình và đúng phiên nhận tại chỗ. Hai người tranh nhận chỉ một lần chuyển “chưa có chủ → có chủ” được ghi. Khi hoàn tất thành công nhưng app mất phản hồi, thử lại cùng lần nhận chỉ đọc lại kết quả cho đúng tài khoản; không cấp chủ lần thứ hai.</p><p class="prose">Reset cục bộ không xoá quyền sở hữu trên server. Chủ cũ gỡ máy thì máy về “chưa có chủ”; người mua sau dùng lại mã niêm phong cố định theo quyết định hiện tại. Thay bo và tranh chấp chủ cần quy trình hãng riêng về sau; không cho bo mới tự khai serial để kế thừa chủ trong skeleton.</p></section>
+<section id="relay"><div class="sec-head"><span class="sec-no">Mục 3</span><h2>Online là dấu vết kết nối; trạng thái trực tiếp là câu trả lời</h2></div>
+<div class="tbl"><table><thead><tr><th></th><th>Server báo online</th><th>App hỏi máy trực tiếp</th></tr></thead><tbody><tr><td>Nguồn</td><td>Server suy từ hoạt động poll đã chứng thực</td><td>Máy đọc sau khi nhận câu hỏi</td></tr><tr><td>Nghĩa</td><td>Gần đây có đường kết nối; không đảm bảo máy đáp ngay</td><td>Kết quả của đúng lần hỏi, có thể là lỗi máy</td></tr><tr><td>Nội dung</td><td>Online/offline và lần server thấy máy</td><td>Trạng thái được máy hỗ trợ; mã hỏi; thời điểm/độ mới</td></tr><tr><td>Độ mới</td><td>Có ngưỡng hết hiệu lực, công khai cho app</td><td>Gắn thời điểm đọc nếu đồng hồ tin được; luôn phân biệt nhận kết quả và đọc kết quả</td></tr><tr><td>Không có kết quả</td><td>Hiển thị offline theo ngưỡng</td><td>Offline/timeout/lỗi; không thay bằng cache server</td></tr></tbody></table></div>
+<figure class="dg"><script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+ autonumber
+ participant A as App
+ participant S as Server
+ participant M as Máy
+ M->>S: Poll có chứng thực máy
+ A->>S: Hỏi trạng thái với mã Q mới
+ S->>S: Kiểm phiên và quyền máy hiện tại
+ alt Không có quyền hoặc phiên sai
+  S-->>A: Từ chối, không tạo pending
+ else Máy offline theo bằng chứng server
+  S-->>A: Offline, không xếp chờ
+ else Có đường kết nối
+  S->>S: Tạo pending (máy, Q, người hỏi, hạn)
+  S-->>M: Giao câu hỏi Q trong poll
+  M->>M: Kiểm hạn và đọc trạng thái
+  M->>S: Kết quả Q bằng danh tính máy
+  alt Đúng máy, đúng Q, chưa hết hạn và còn quyền
+   S-->>A: Kết quả máy Q hoặc lỗi máy Q
+  else Hết hạn, sai máy hoặc quyền bị thu hồi
+   S->>S: Không dùng làm thành công của Q
+  end
+ end
+</script><div class="dg-canvas"></div><figcaption>Server có bộ hẹn giờ độc lập: hết hạn thì trả timeout và đóng Q dù máy đang mất kết nối. Sơ đồ chỉ mô tả câu hỏi đọc, không hứa lệnh ghi chạy đúng một lần.</figcaption></figure>
+<p class="prose">Mỗi lần bấm “Làm mới” là mã mới và lần đọc mới. Retry cùng mã nghĩa là hỏi lại kết quả của cùng phép đo: nếu pending còn sống thì nối vào cùng yêu cầu; nếu giữ kết quả ngắn hạn thì đánh dấu trả lại cùng kết quả và thời điểm đọc. Cùng mã nhưng đổi nội dung bị từ chối. Sau hạn hoặc sau server restart, trả “yêu cầu hết hạn/không còn theo dõi”; muốn đọc mới phải tạo mã mới. Không cần lưu hàng đợi hay kết quả bền cho skeleton.</p><p class="prose">Hạn trả lời app, thời gian giữ poll và timeout HTTP là ba khoảng khác nhau. Đề xuất timeout HTTP máy lớn hơn thời gian server giữ poll; mọi thời hạn hữu hạn và cấu hình đồng bộ. Kết quả muộn không đổi timeout đã trả, không được ghép vào lần làm mới kế tiếp. Server kiểm quyền lại trước khi giao kết quả để việc thu hồi quyền lúc đang chờ có hiệu lực.</p></section>
+<section id="thongdiep"><div class="sec-head"><span class="sec-no">Mục 4</span><h2>Thông điệp chung và chứng thực đường đi</h2></div><p class="prose">Danh mục ở mức ý nghĩa. Endpoint <code>status/get</code> hiện mô tả online, còn <code>command/send → poll → result</code> là đường cho câu hỏi trực tiếp; không dùng chung tên “trạng thái” để che hai nguồn dữ liệu.</p><div class="tbl"><table><thead><tr><th>Thông điệp</th><th>Ý nghĩa chung</th><th>Chứng thực / ràng buộc riêng</th></tr></thead><tbody>
+<tr><td>Đăng ký / xác minh</td><td>Email, bằng chứng xác minh, mục đích và kết quả</td><td>Kênh app–server; chống thử mã; không cần phiên đã đăng nhập</td></tr><tr><td>Đăng nhập / kết thúc phiên</td><td>Chứng minh tài khoản; cấp hạn; thu hồi</td><td>Thông tin đăng nhập hoặc phiên hiện hành; không mang quyền cố định trong phiên</td></tr><tr><td>Bắt đầu / hoàn tất nhận chủ</td><td>Máy mục tiêu, lần nhận một lần, tài khoản, bằng chứng và kết quả</td><td>Phiên app; danh tính máy được server tin; bằng chứng từ kênh nhận tại chỗ</td></tr><tr><td>Hỏi online</td><td>Máy mục tiêu; đánh giá đường cloud và lần thấy</td><td>Phiên và quyền xem máy trên server</td></tr><tr><td>Câu hỏi trực tiếp</td><td>Mã hỏi, máy mục tiêu, loại đọc, dữ liệu, hạn và nghĩa phiên bản</td><td>Server lấy người hỏi từ phiên, kiểm quyền rồi chuyển; không tin người hỏi tự khai</td></tr><tr><td>Poll / giao câu hỏi</td><td>Máy xin việc; server giao câu hỏi hoặc báo chưa có</td><td>Danh tính máy của kết nối, không lấy từ serial trong body</td></tr><tr><td>Kết quả trực tiếp</td><td>Mã hỏi; thành công/lỗi máy; dữ liệu; nguồn và độ mới</td><td>Danh tính máy gửi; ghép pending đúng máy và mã; kiểm hạn và quyền</td></tr></tbody></table></div><p class="prose">Khi có LAN/Bluetooth vận hành về sau, giữ nghĩa câu hỏi và kết quả; thay lớp kiểm người hỏi và quyền bằng cơ chế tại máy được thiết kế riêng. Token phiên cloud không tự trở thành quyền offline. Transport không quyết định quyền, nguồn kết quả hoặc ý nghĩa retry. User chốt giữ TLS và phong bì mã hóa bên trong trên hai chặng cloud ngay từ skeleton; Planner đặc tả cách khóa máy tự sinh ký/chứng thực sau bootstrap mà không dùng chứng chỉ xưởng.</p></section>
+<section id="kiem"><div class="sec-head"><span class="sec-no">Mục 5</span><h2>Đi bộ qua các nhánh</h2></div><div class="tbl"><table><thead><tr><th>Tình huống</th><th>Khối quyết định</th><th>Kết quả app / bất biến</th></tr></thead><tbody>
+<tr><td>Email mới → xác minh → nhận máy → hỏi</td><td>Server cấp phiên; nhận bằng chứng và ghi chủ; máy đọc Q</td><td>Chỉ sau nhận chủ thành công mới có quyền; hiện kết quả Q từ máy</td></tr><tr><td>Sai mã niêm phong</td><td>Máy từ chối mở kênh, hạn chế thử</td><td>Không gửi wifi/bằng chứng; không thay chủ</td></tr><tr><td>Danh tính máy không được tin</td><td>Server</td><td>Từ chối nhận; không mặc định serial/khóa tự sinh là máy hãng</td></tr><tr><td>Máy đã có chủ / hai người cùng nhận</td><td>Server ghi nguyên tử và kiểm trạng thái</td><td>Không ghi đè chủ; hướng tới quy trình chuyển chủ riêng</td></tr><tr><td>Phiếu bị lấy, dùng lại hoặc đổi tài khoản</td><td>Server kiểm ràng buộc và một lần dùng</td><td>Từ chối; không cấp chủ cho tài khoản khác</td></tr><tr><td>Wifi/server lỗi giữa nhận</td><td>Máy/app báo kết nối; server giữ trạng thái đã commit</td><td>Chưa commit thì chưa có chủ; đã commit thì tài khoản kiểm lại kết quả</td></tr><tr><td>Người không có quyền hỏi máy</td><td>Server trước pending</td><td>Không giao câu hỏi và không lộ kết quả máy</td></tr><tr><td>Máy offline</td><td>Server theo ngưỡng kết nối</td><td>Trả ngay offline; không trả cache như lần đọc mới</td></tr><tr><td>Máy ngắt sau khi nhận Q</td><td>Hẹn giờ server</td><td>Timeout hữu hạn; không hứa máy chưa đọc</td></tr><tr><td>Máy trả lỗi / loại hỏi chưa hỗ trợ</td><td>Máy</td><td>Hiện lỗi máy gắn Q; phân biệt lỗi relay</td></tr><tr><td>Kết quả muộn, trùng hoặc sai máy</td><td>Server</td><td>Không đổi kết quả cuối; không trả sang Q mới</td></tr><tr><td>Server restart lúc chờ</td><td>App gặp mất kết nối; server mới không có pending</td><td>Không khẳng định đã đọc; làm mới bằng mã mới</td></tr></tbody></table></div></section>
+<section id="chon"><div class="sec-head"><span class="sec-no">Mục 6</span><h2>Quyết định nhận máy và đánh đổi</h2></div><div class="tbl"><table><thead><tr><th>Điểm đã chốt</th><th>Cách vận hành</th><th>Đánh đổi còn phải xử lý</th></tr></thead><tbody>
+<tr><td>Server có dữ liệu kiểm máy trước khi bán; máy tự sinh khóa lần đầu</td><td>Ghi mã niêm phong ngẫu nhiên dài vào máy và QR; đăng ký serial cùng bản kiểm mã trên server. Máy chứng minh biết mã qua kênh bảo vệ, server mới gắn khóa công khai với serial. Không nạp chứng chỉ hoặc khóa riêng tại xưởng.</td><td>Khâu sản xuất phải bảo vệ mã trong máy và server. Người mở hộp trước vẫn có thể nhận chủ nếu cầm máy và mã; chủ cũ biết mã cố định khi bán lại. Reset không xóa Owner đã ghi trên server. Các rủi ro này phải có ca kiểm và quy trình vận hành, không được giải bằng cách tin serial/khóa tự khai.</td></tr></tbody></table></div><p class="prose">User chọn cách đăng ký serial và mã trước khi bán ngày 12/10/2026. Planner đặc tả gói, lỗi và thông số; nếu không triển khai được việc giữ/kiểm mã an toàn thì báo lại, không tự đổi sang chứng chỉ xưởng hoặc tin khóa xuất hiện đầu tiên.</p></section>
+<section id="ranhgioi"><div class="sec-head"><span class="sec-no">Mục 7</span><h2>Ranh giới tương thích và điểm cần kiểm</h2></div><p class="prose">Skeleton gồm đăng ký/xác minh/phiên, nhận chủ, danh sách máy trong quyền, online cloud và một câu hỏi đọc trạng thái trực tiếp. Menu, sharing, lệnh ghi, đồng bộ quyền offline và sự kiện chỉ giữ ranh giới: loại lệnh có quyền riêng; transport mới giữ nghĩa nghiệp vụ; lệnh ghi cần thiết kế idempotency và phục hồi riêng. Không kéo hàng đợi bền hoặc nhiều server vào bản này.</p><div class="note crit"><b>Bằng chứng code, chưa sửa</b><code>version1.1/machine/pairing/machine_bluetooth_pair.py</code> nhận identify rồi gửi product_key; <code>machine_server_request.py</code> đưa product_key vào body và timeout 10 giây. <code>main.py</code> chỉ ghép handler menu/kho, chưa có đọc trạng thái. Dashboard <code>machines_tab.dart</code> chỉ có bool online. Hằng routing không chứng minh handler server đã tồn tại.</div><p class="prose"><a href="account.html">account.html</a> còn ghi một token cố định thay vì access 1 giờ/refresh trượt 30 ngày. <a href="machine-activation.html">machine-activation.html</a> và <a href="../cryptography.html">cryptography.html</a> còn ghi chứng chỉ xưởng/PAKE, khác hướng đã chốt. <a href="command-relay.html">command-relay.html</a> có quy tắc retry cho lệnh ghi; câu hỏi đọc trong skeleton chỉ dùng cùng mã để khôi phục đúng lần hỏi, mã mới cho phép đo mới. Các HTML cũ cần sửa theo hợp đồng đã được user duyệt trước khi phát coder.</p><p class="prose">Nguồn nghiên cứu: <a href="https://www.rfc-editor.org/rfc/rfc9383.html">RFC 9383</a> là hướng PAKE đã so sánh nhưng không chọn; <a href="https://www.rfc-editor.org/rfc/rfc8995.html">RFC 8995</a> cho ví dụ gốc danh tính xưởng; <a href="https://docs.aws.amazon.com/iot/latest/developerguide/provision-wo-cert.html">AWS fleet provisioning</a> cho phương án triển khai có người tin cậy; <a href="https://learn.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-direct-methods">Azure direct methods</a> cho ví dụ request/response có timeout. Việc ghép các ý vào skeleton là đề xuất kiến trúc, chưa là hợp đồng triển khai.</p></section>
+<footer class="end">Dự thảo C-04 · Chỉ tài liệu repo và nguồn công khai · Sơ đồ Mermaid theo style thư mục.</footer></main></div></div><div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to"><div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div><div class="zoom-body" id="zoom-body"></div></div><script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script><script src="../assets/doc.js"></script></body></html>

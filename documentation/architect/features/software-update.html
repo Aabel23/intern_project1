@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cập nhật phần mềm máy</title>
+<meta name="description" content="Tính năng Cập nhật phần mềm máy: luồng, endpoint, gói tin, thông số.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tính năng 8 · <a href="../index.html">Mục lục</a></div>
+      <h1>Cập nhật phần mềm máy: luôn giữ đường quay về</h1>
+      <p class="lead">Việc rủi ro nhất của cả hệ: máy ở xa, có thể mất mạng giữa chừng, hỏng thì quán không bán được. Máy giữ hai bản trên đĩa, cài bản mới vào bản không dùng, và chỉ coi là thành công khi tự kiểm thấy mình khoẻ. Gói cập nhật được ký bằng khoá phát hành của hãng, giữ offline.</p>
+    </div>
+    <div class="meta">
+      <span><b>Sản phẩm:</b> máy, server</span>
+      <span><b>Endpoint:</b> <code>MACHINE_UPDATE_*</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#endpoint">2. Endpoint và gói tin</a></li>
+        <li><a href="#quy-tac">3. Quy tắc</a></li>
+        <li><a href="#thong-so">4. Thông số</a></li>
+        <li><a href="#ghi-chu">5. Ghi chú</a></li>
+        <li><a href="#chu-thich">6. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: các trạng thái của một lần cập nhật</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction TB
+  state "Chạy bản cũ" as cur
+  state "Đã tải bản mới" as dl
+  state "Chờ máy rảnh" as idle
+  state "Khởi động bản mới" as boot
+  state "Tự kiểm sức khoẻ" as chk
+  state "Bản mới ổn định" as ok
+  state "Bỏ bản tải" as drop
+  [*] --> cur
+  cur --> dl: UPDATE_GET có bản mới<br/>tải về, kiểm chữ ký
+  dl --> drop: chữ ký hoặc băm sai
+  dl --> idle: đúng
+  idle --> boot: không có đơn đang pha
+  boot --> chk
+  chk --> ok: đạt · UPDATE_REPORT ok
+  chk --> cur: không đạt · tự quay về<br/>UPDATE_REPORT rolled_back
+  drop --> cur
+  ok --> [*]
+  class cur ui
+  class dl,idle,boot,chk proc
+  class ok ok
+  class drop muted
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Ý tưởng theo cập nhật A/B<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> của Android và Mender. Server báo có bản mới qua <code>hello/send</code> và hàng chờ thông điệp quản trị; máy tự hỏi và tự tải.</figcaption>
+      </figure>
+    </section>
+
+    <section id="endpoint">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Endpoint và gói tin</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Gửi lên</th><th>Trả về</th></tr></thead>
+          <tbody>
+            <tr><td><code>MACHINE_UPDATE_GET</code><br><code>/machine/update/get</code></td><td><code>{"software_version"}</code></td><td><code>{"release": null}</code> hoặc <code>{"release":{"version", "url", "size", "sha256", "signature"}}</code></td></tr>
+            <tr><td><code>MACHINE_UPDATE_REPORT</code><br><code>/machine/update/report</code></td><td><code>{"version", "result":"ok"|"rolled_back"|"rejected", "detail"}</code></td><td><code>{"status":"ok"}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">File gói tải qua TLS, không đi trong phong bì Cryptography; máy so <code>sha256</code> và kiểm <code>signature</code> bằng khoá công khai phát hành được ghi sẵn trong phần mềm máy. Server lưu mỗi máy một dòng trạng thái cho mỗi bản, khoá (máy, bản), để một máy không chạy hai lần cùng một bản cập nhật.</div>
+    </section>
+
+    <section id="quy-tac">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Quy tắc</h2></div>
+      <ol class="steps">
+        <li><b>Khoá phát hành không nằm trên server.</b> Kẻ chiếm được server phát được gói nhưng không ký được gói.</li>
+        <li><b>Phiên bản chỉ tăng.</b> Máy từ chối gói cũ hơn bản đang chạy.</li>
+        <li><b>Chỉ đổi bản khi máy rảnh</b>, không có đơn đang pha.</li>
+        <li><b>Bản mới khởi động lỗi thì tự quay về bản cũ</b> và báo <code>rolled_back</code>.</li>
+        <li><b>Thứ tự cập nhật an toàn:</b> server trước, máy sau, app cuối. Server luôn nói được hợp đồng của máy cũ.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Sổ</th><th>Mặc định</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td>Nhịp máy hỏi bản mới</td><td>Máy</td><td class="num">6 giờ</td><td>Ngoài các lần server báo qua <code>hello/send</code></td></tr>
+            <tr><td>Thời gian tự kiểm sức khoẻ sau khởi động</td><td>Máy</td><td class="num">5 phút</td><td>Chưa đạt trong khoảng này thì quay về</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Ghi chú</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hướng bản đầu</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td>Nhịp hỏi và thời gian tự kiểm</td><td>6 giờ và 5 phút</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Cập nhật theo nhóm máy, tự dừng khi lỗi; cập nhật cả hệ điều hành; TUF/Uptane</td><td>Để sau, khi có vài trăm máy</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Cập nhật A/B.</b> Giữ hai bản hệ thống; cài bản mới vào bản không dùng rồi khởi động sang, lỗi thì tự quay lại bản cũ. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+    <footer class="end">Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu). "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../assets/doc.js"></script>
+</body>
+</html>

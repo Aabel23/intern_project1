@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sự kiện và nhật ký</title>
+<meta name="description" content="Tính năng Sự kiện và nhật ký: luồng, endpoint, gói tin, thông số.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tính năng 7 · <a href="../index.html">Mục lục</a></div>
+      <h1>Sự kiện và nhật ký: không mất sự kiện nào dù mạng chập chờn</h1>
+      <p class="lead">Máy ghi mọi thao tác có người làm và mọi sự kiện đáng báo (kho đổi mức, món tự tắt) vào nhật ký gốc và hộp thư đi<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> trong cùng một lần ghi. Khi có mạng, máy gửi lên theo lô. Server giữ bản sao chỉ ghi thêm để chủ quán xem được cả khi máy đang mất mạng.</p>
+    </div>
+    <div class="meta">
+      <span><b>Sản phẩm:</b> máy, server</span>
+      <span><b>Endpoint:</b> <code>MACHINE_EVENT_SEND</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#goi-tin">2. Gói tin</a></li>
+        <li><a href="#quy-tac">3. Quy tắc</a></li>
+        <li><a href="#thong-so">4. Thông số</a></li>
+        <li><a href="#ghi-chu">5. Ghi chú</a></li>
+        <li><a href="#chu-thich">6. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: máy xả hộp thư đi sau khi có mạng lại</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  OP["Thao tác hoặc sự kiện"] --> TX["Ghi dữ liệu, nhật ký, hộp thư đi trong một transaction"]
+  TX --> BOX[("Hộp thư đi")]
+  BOX --> NET{"Có mạng?"}
+  NET -->|"chưa"| BOX
+  NET -->|"có"| SEND["MACHINE_EVENT_SEND theo lô"]
+  SEND --> ACK{"Server xác nhận đã ghi bền?"}
+  ACK -->|"chưa"| BOX
+  ACK -->|"rồi"| DEL["Xoá phần đã xác nhận khỏi hộp thư"]
+  class OP ui
+  class TX proc
+  class BOX store
+  class NET,ACK dec
+  class SEND proc
+  class DEL ok
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Không có lúc "đã trừ kho nhưng chưa có sự kiện để báo", vì cả hai được ghi cùng lúc. Máy chỉ xoá sự kiện khỏi hộp thư sau khi server đã ghi bền và xác nhận.</figcaption>
+      </figure>
+    </section>
+
+    <section id="goi-tin">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Gói tin</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hướng</th><th>Thân</th></tr></thead>
+          <tbody>
+            <tr><td>Máy → server <code>/machine/event/send</code></td><td><code>{"epoch", "events":[…]}</code></td></tr>
+            <tr><td>Server → máy</td><td><code>{"acked_seq"}</code>: số thứ tự lớn nhất đã ghi bền liên tục</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trường của một sự kiện</th><th>Ý nghĩa</th></tr></thead>
+          <tbody>
+            <tr><td><code>seq</code></td><td>Số thứ tự tăng dần theo máy, không nhảy cóc</td></tr>
+            <tr><td><code>type</code></td><td>Loại sự kiện, ví dụ <code>menu_updated</code>, <code>stock_refilled</code>, <code>stock_counted</code>, <code>stock_level_changed</code>, <code>drink_auto_disabled</code></td></tr>
+            <tr><td><code>actor_id</code></td><td>Tài khoản làm thao tác; rỗng nếu máy tự làm</td></tr>
+            <tr><td><code>command_id</code></td><td>Mã lệnh gây ra sự kiện, để đối chiếu với lịch sử quyền và kết quả lệnh</td></tr>
+            <tr><td><code>channel</code></td><td>Lệnh đến từ <code>cloud</code>, <code>lan</code> hay <code>bluetooth</code></td></tr>
+            <tr><td><code>machine_time</code></td><td>Giờ máy lúc xảy ra; server ghi thêm giờ nhận, không ghi đè</td></tr>
+            <tr><td><code>contract_v</code>, <code>payload</code></td><td>Phiên bản hợp đồng và nội dung thô; server chưa hiểu phiên bản đó vẫn lưu thô</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="quy-tac">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Quy tắc</h2></div>
+      <ol class="steps">
+        <li><b>Khoá chính ở server là (máy, epoch<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup>, seq).</b> Gửi lại một lô bao nhiêu lần cũng như gửi một lần. Epoch tăng mỗi khi máy cài lại hoặc xoá dữ liệu, vì lúc đó seq quay về 0.</li>
+        <li><b>Thứ tự theo seq, không theo đồng hồ</b>, vì đồng hồ máy có thể lệch. Giờ máy và giờ server lệch bất thường thì đánh dấu.</li>
+        <li><b>Bản sao nhật ký ở server chỉ ghi thêm.</b> Tài khoản ứng dụng chỉ có quyền thêm và đọc trên bảng này. Xoá giữa chừng sẽ lộ ra ở lỗ hổng seq.</li>
+        <li><b>Không có khoá ngoại tới người hay món.</b> Nhật ký là bằng chứng, không được bị từ chối chỉ vì đối tượng nó nhắc tới đã bị xoá; lưu kèm tên đối tượng cạnh mã.</li>
+        <li><b>Chỉ ghi thao tác có người làm và sự kiện đáng báo</b>, không ghi từng ly bán ra.</li>
+        <li><b>Nhật ký tách khỏi log debug.</b> Nhật ký cho chủ quán đọc và lưu lâu; log debug cho kỹ sư và lưu ngắn.</li>
+        <li><b>Server tự giữ nhật ký bảo mật riêng</b> (đăng nhập, đổi quyền, lệnh đi qua), móc băm mỗi dòng với dòng trước, theo <a href="../cryptography.html">Cryptography</a>.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Sổ</th><th>Mặc định</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td>Số sự kiện tối đa mỗi lô</td><td>Máy</td><td class="num">200</td><td>Lô nhỏ thì gửi lại rẻ khi hỏng</td></tr>
+            <tr><td>Thời gian lưu nhật ký trên server</td><td>Server</td><td class="num">24 tháng</td><td>Cần đối chiếu luật bảo vệ dữ liệu cá nhân trước khi phát hành</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Ghi chú</h2></div>
+      <div class="note crit"><b>Phía máy còn thiếu</b><code>version1.1/database/schema/schema.sql</code> chưa có hộp thư đi, bảng nhật ký theo người, bảng mã lệnh đã chạy. Không dùng bảng <code>error_log</code> làm nhật ký: bảng đó dùng số tự tăng, không có người làm, không có seq theo máy.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hướng bản đầu</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td>Server giữ bản sao nhật ký</td><td>Có, bản gốc vẫn trên máy</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Số sự kiện mỗi lô</td><td>200</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Chuỗi băm cho nhật ký máy gửi lên, máy ký sự kiện</td><td>Để sau, khi nhật ký cần làm bằng chứng trước tòa</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Transactional outbox.</b> Mẫu thiết kế ghi sự kiện cần gửi vào một bảng cùng transaction với thay đổi dữ liệu, rồi gửi đi sau; mất mạng không làm mất sự kiện. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>Epoch.</b> Số đếm tăng mỗi khi máy cài lại hoặc xoá dữ liệu, ghép với số thứ tự để hai lần đánh số từ 0 không đè lên nhau. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+    <footer class="end">Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu). "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../assets/doc.js"></script>
+</body>
+</html>

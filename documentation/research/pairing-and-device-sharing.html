@@ -1,0 +1,950 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ghép và chia sẻ máy</title>
+<meta name="description" content="Nghiên cứu cách ghép máy pha lần đầu và chia sẻ máy cho nhân viên: danh tính máy, kênh Bluetooth, mã mời, danh sách quyền và vé.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 2.0)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+/* fn:start */
+  sup.fn{font-family:var(--sans); font-size:.62em; line-height:0; font-weight:600; margin-left:1px}
+  sup.fn a{text-decoration:none; color:var(--accent-ink); padding:0 1px}
+  ol.fnotes{margin:0; padding-left:1.8em; display:grid; gap:6px; font-family:var(--sans); font-size:13.5px; line-height:1.5; max-width:90ch; color:var(--ink-2)}
+  ol.fnotes li::marker{color:var(--accent-ink); font-weight:600}
+  ol.fnotes b{color:var(--ink); font-weight:600}
+  ol.fnotes li:target{background:var(--accent-soft); border-radius:6px}
+  .fn-back{text-decoration:none; font-size:12px}
+  sup.fn, ol.fnotes li{scroll-margin-top:80px}
+  /* fn:end */
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Nghiên cứu · Máy pha v1.1 · đang bàn</div>
+      <h1>Ghép máy lần đầu và chia sẻ máy: ai giữ khóa gì, ai ký cái gì</h1>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>project1_app</code> · <code>c34d55e</code> (có thay đổi chưa commit)</span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+      <span><b>Trạng thái:</b> research, chưa thành tài liệu kiến trúc</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Điện thoại</span>
+        <span><i class="sw proc"></i>Tiến trình</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw hw"></i>Phần cứng, vật lý</span>
+        <span><i class="ln"></i>Đường đi chính (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1000 500" role="img" aria-label="Chủ quét mã trong hộp, mở kênh Bluetooth tới máy, máy và app cùng chứng minh với server để nhận chủ; chủ mời nhân viên, server cấp danh sách quyền cho máy và vé cho nhân viên; khi mất Internet nhân viên trình vé trực tiếp cho máy">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="30" width="290" height="360" rx="12"/>
+<text x="18" y="22" class="zt">ĐIỆN THOẠI VÀ HỘP MÁY</text>
+<rect class="zn" x="380" y="120" width="250" height="200" rx="12"/>
+<text x="382" y="112" class="zt">SERVER CỦA HÃNG</text>
+<rect class="zn" x="720" y="30" width="264" height="300" rx="12"/>
+<text x="722" y="22" class="zt">MÁY PHA</text>
+<rect class="zn" x="16" y="418" width="968" height="70" rx="12"/>
+<text x="18" y="410" class="zt2">KHÓA VÀ GỐC TIN CẬY</text>
+
+<g class="nd hw"><rect x="50" y="50" width="200" height="54" rx="8"/>
+<text x="150" y="73" class="tt" text-anchor="middle">Hộp máy</text>
+<text x="150" y="90" class="ts" text-anchor="middle">QR: serial + mã niêm phong</text></g>
+<g class="nd ui"><rect x="50" y="150" width="200" height="58" rx="8"/>
+<text x="150" y="174" class="tt" text-anchor="middle">App của chủ</text>
+<text x="150" y="191" class="ts" text-anchor="middle">Owner hoặc Manager</text></g>
+<g class="nd ui"><rect x="50" y="318" width="200" height="58" rx="8"/>
+<text x="150" y="342" class="tt" text-anchor="middle">App nhân viên</text>
+<text x="150" y="359" class="ts" text-anchor="middle">người được chia sẻ</text></g>
+
+<g class="nd proc"><rect x="415" y="150" width="180" height="58" rx="8"/>
+<text x="505" y="174" class="tt" text-anchor="middle">Server</text>
+<text x="505" y="191" class="ts" text-anchor="middle">kiểm, ghi, ký</text></g>
+<g class="nd store"><rect x="415" y="248" width="180" height="50" rx="8"/>
+<text x="505" y="269" class="tt" text-anchor="middle">Bảng máy · bảng quyền</text>
+<text x="505" y="285" class="ts" text-anchor="middle">bản chuẩn</text></g>
+
+<g class="nd store"><rect x="760" y="50" width="190" height="50" rx="8"/>
+<text x="855" y="71" class="tt" text-anchor="middle">Bản sao danh sách quyền</text>
+<text x="855" y="87" class="ts" text-anchor="middle">có chữ ký, có hạn dùng</text></g>
+<g class="nd proc"><rect x="760" y="150" width="190" height="58" rx="8"/>
+<text x="855" y="174" class="tt" text-anchor="middle">Máy</text>
+<text x="855" y="191" class="ts" text-anchor="middle">BLE, wifi, kiểm vé</text></g>
+
+<g class="nd store"><rect x="40" y="430" width="290" height="46" rx="8"/>
+<text x="185" y="450" class="tt" text-anchor="middle">Khóa ký của server</text>
+<text x="185" y="466" class="ts" text-anchor="middle">ký danh sách quyền và vé; máy giữ khóa công khai</text></g>
+<g class="nd store"><rect x="355" y="430" width="290" height="46" rx="8"/>
+<text x="500" y="450" class="tt" text-anchor="middle">Khóa riêng của máy</text>
+<text x="500" y="466" class="ts" text-anchor="middle">sinh ở lần bật đầu, gắn với mã niêm phong</text></g>
+<g class="nd store"><rect x="670" y="430" width="290" height="46" rx="8"/>
+<text x="815" y="450" class="tt" text-anchor="middle">Khóa riêng của điện thoại</text>
+<text x="815" y="466" class="ts" text-anchor="middle">trong kho khóa của hệ điều hành, không xuất ra</text></g>
+
+<path class="e main" d="M150,104 L150,150" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="150" cy="127" r="9.5"/><text x="150" y="130.8" text-anchor="middle">1</text></g>
+<path class="e main" d="M250,160 C 420,10 640,10 760,165" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="505" cy="48" r="9.5"/><text x="505" y="51.8" text-anchor="middle">2</text></g>
+<text x="505" y="33" class="tl" text-anchor="middle">Bluetooth mã hóa · gửi wifi</text>
+<path class="e main" d="M760,172 L595,172" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="678" cy="172" r="9.5"/><text x="678" y="175.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M250,180 L415,180" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="332" cy="180" r="9.5"/><text x="332" y="183.8" text-anchor="middle">4</text></g>
+<path class="e main" d="M595,196 L760,196" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="678" cy="196" r="9.5"/><text x="678" y="199.8" text-anchor="middle">5</text></g>
+<path class="e main" d="M150,208 L150,318" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="150" cy="263" r="9.5"/><text x="150" y="266.8" text-anchor="middle">6</text></g>
+<text x="166" y="286" class="tl">QR hoặc Bluetooth</text>
+<path class="e main" d="M415,200 C 340,215 320,340 250,340" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="332" cy="282" r="9.5"/><text x="332" y="285.8" text-anchor="middle">7</text></g>
+<path class="e main" d="M250,362 L870,362 L870,208" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="560" cy="362" r="9.5"/><text x="560" y="365.8" text-anchor="middle">8</text></g>
+<text x="560" y="382" class="tl" text-anchor="middle">LAN hoặc Bluetooth khi mất Internet</text>
+<path class="e dash" d="M855,150 L855,100" marker-end="url(#ag)"/>
+<path class="e dash" d="M505,208 L505,248" marker-end="url(#ag)"/>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Ghép máy (1–5): chủ quét QR trong hộp (1), dùng mã niêm phong mở kênh Bluetooth mã hóa tới máy và gửi wifi (2). Máy lên server và chứng minh mình bằng khóa riêng (3). App gửi mã niêm phong cùng một mã một lần lấy từ máy (4). Server ghi người quét làm Owner, rồi gửi danh sách quyền có chữ ký xuống máy (5). Chia sẻ máy (6–8): chủ mời nhân viên bằng QR hoặc Bluetooth (6). Server ghi người mới, cấp cho app nhân viên một vé ngắn hạn gắn với khóa của điện thoại (7). Khi mất Internet, nhân viên trình vé trực tiếp cho máy qua wifi quán hoặc Bluetooth (8). Quyền luôn đến từ chữ ký của server, không đến từ việc đã ghép Bluetooth hay cùng mạng wifi.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-id">3.1 Danh tính máy</a></li>
+        <li class="sub"><a href="#c-pair">3.2 Kích hoạt lần đầu</a></li>
+        <li class="sub"><a href="#c-ble">3.3 Kênh Bluetooth app ↔ máy</a></li>
+        <li class="sub"><a href="#c-qr">3.4 Chia sẻ bằng QR</a></li>
+        <li class="sub"><a href="#c-bt">3.5 Chia sẻ bằng Bluetooth</a></li>
+        <li class="sub"><a href="#c-ticket">3.6 Danh sách quyền và vé</a></li>
+        <li class="sub"><a href="#c-life">3.7 Thu hồi, gỡ máy, bán lại</a></li>
+        <li><a href="#nguyen-ly">4. Kỹ thuật và cấu hình</a></li>
+        <li><a href="#ghi-chu">5. Ghi chú và câu hỏi mở</a></li>
+        <li><a href="#chu-thich">6. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: mở hộp, thêm một nhân viên, rồi mất Internet</h2></div>
+      <p class="prose">Ví dụ: chủ quán mua máy mới, kích hoạt, thêm một nhân viên bằng QR. Hôm sau quán mất Internet nhưng wifi vẫn chạy, nhân viên vẫn nạp kho được. Mũi tên liền là gửi đi, mũi tên đứt là trả lời. Các bước 1–9 là ghép máy, 10–15 là chia sẻ, 16–18 là làm việc khi mất Internet.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant O as App của chủ
+  participant M as Máy
+  participant S as Server
+  participant N as App nhân viên
+  O->>O: quét QR trong hộp: serial + mã niêm phong
+  O->>M: nối Bluetooth, bắt tay bằng mã niêm phong
+  M-->>O: kênh mã hóa đã mở, danh sách wifi
+  O->>M: tên và mật khẩu wifi
+  M->>S: lên mạng, ký thử thách bằng khóa máy, gửi mã một lần
+  M-->>O: mã một lần (qua kênh Bluetooth)
+  O->>S: kích hoạt: serial, mã niêm phong, mã một lần
+  S-->>O: bạn là Owner của máy
+  M->>S: kéo danh sách quyền phiên bản 1 (có chữ ký)
+  O->>S: tạo mã mời
+  O->>N: hiện QR mời
+  N->>S: gửi mã mời
+  S-->>O: "Nguyễn A (a@...) muốn vào máy"
+  O->>S: xác nhận bằng vân tay hoặc PIN
+  M->>S: kéo danh sách quyền phiên bản 2
+  S-->>N: vé ngắn hạn, gắn khóa điện thoại
+  N->>M: mất Internet: trình vé qua wifi quán
+  M-->>N: thử thách → N ký → được làm việc vận hành
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: đề xuất của tài liệu này, dựng trên các route có trong <code>server/configuration/routing.py</code>. "Thử thách" là một số ngẫu nhiên bên kiểm gửi cho bên bị kiểm ký lại; vì số mới cho mỗi lần, chữ ký cũ không dùng lại được. Chưa có route nào cấp vé ở bước 16.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Mã nguồn hiện có</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>Bắt tay Bluetooth, gửi wifi (2–4)</td><td><code>version1.1/machine/pairing/</code></td><td>Hiện dùng Bluetooth Classic<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> và không xác thực; phải làm lại (mục 5).</td></tr>
+            <tr><td>Máy chứng minh mình (5)</td><td><code>MACHINE_ACTIVATION_SEND</code>, <code>machine_server_request.py</code></td><td>Hiện máy chỉ gửi <code>product_key</code> cố định; thay bằng chữ ký.</td></tr>
+            <tr><td>Nhận chủ (7–8)</td><td><code>USER_MACHINE_ACTIVATE</code></td><td>Server kiểm ba bằng chứng rồi ghi Owner.</td></tr>
+            <tr><td>Danh sách quyền (9, 15)</td><td><code>MACHINE_PERMISSION_GET</code>, <code>MACHINE_COMMAND_POLL</code></td><td>Máy kéo bản mới khi poll báo có phiên bản mới.</td></tr>
+            <tr><td>Mời và xác nhận (10–14)</td><td><code>MACHINE_SHARE_CREATE</code>, <code>_ACCEPT</code>, <code>_SIGN</code></td><td><code>share/sign</code> đổi nghĩa thành "người share xác nhận"; server mới là bên ký.</td></tr>
+            <tr><td>Màn hình chia sẻ</td><td><code>flutter_app/lib/feature/machine_share/</code></td><td>Có màn QR, màn Bluetooth; nút tạo mã và thu hồi chưa chạy.</td></tr>
+            <tr><td>Màn hình kích hoạt</td><td><code>flutter_app/lib/feature/machine_register/</code></td><td>Điểm vào của luồng ghép máy trên app.</td></tr>
+            <tr><td>Vé (16–18)</td><td>chưa có</td><td>Cần một route app xin vé khi online.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <article class="comp" id="c-id">
+        <header><h3>3.1 · Danh tính máy</h3><div class="src"><code>version1.1/machine/config/env.py</code> · Sơ đồ: luồng · <span class="pill m">đã chốt</span> hướng, <span class="pill h">đề xuất</span> chi tiết</div></header>
+        <h4>Làm gì</h4>
+        <p>Cho server và app biết chắc đang nói chuyện với đúng máy thật. Serial CPU<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup> vẫn là định danh, nhưng serial đọc được và chép được nên chỉ là tên, không phải bằng chứng. Bằng chứng là việc máy ký được thử thách bằng khóa riêng mà chỉ nó giữ.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  F["① Xuất xưởng<br/>serial + mã niêm phong"] --> B["② Lần bật đầu<br/>máy tự sinh cặp khóa"]
+  B --> A["③ Kích hoạt<br/>server gắn khóa công khai với serial"]
+  A --> U["④ Mọi lần sau<br/>ký thử thách"]
+  U --> D{"khóa khớp<br/>bản đã gắn?"}
+  D -- "có" --> OK["tin máy"]
+  D -- "không" --> X["từ chối"]
+  class F hw
+  class B,A,U proc
+  class D dec
+  class OK ok
+  class X bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. Server chỉ chấp nhận khóa công khai của máy một lần, ở bước kích hoạt, khi người quét chứng minh được họ cầm mã niêm phong của đúng máy đó.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Xuất xưởng:</b> mỗi máy có một mã niêm phong ngẫu nhiên riêng. Server của hãng giữ serial và bản băm của mã. Máy giữ mã trong file chỉ root đọc được.</li>
+          <li><b>Lần bật đầu:</b> máy tự sinh cặp khóa (Ed25519<sup class="fn" id="fnr-3"><a href="#fn-3" aria-label="Chú thích 3">3</a></sup> hoặc ECDSA<sup class="fn" id="fnr-4"><a href="#fn-4" aria-label="Chú thích 4">4</a></sup> P-256<sup class="fn" id="fnr-5"><a href="#fn-5" aria-label="Chú thích 5">5</a></sup>), giữ khóa riêng trong file chỉ root đọc được. Cách này không đòi xưởng có quy trình nạp khóa. Đổi lại, mức bảo đảm thấp hơn chứng chỉ do hãng ký lúc sản xuất, vì server chưa biết khóa này trước khi máy được kích hoạt.</li>
+          <li><b>Kích hoạt:</b> máy gửi khóa công khai lên server cùng chữ ký trên thử thách. Server chỉ gắn khóa đó với serial khi người quét nộp đúng mã niêm phong và đúng mã một lần mà máy vừa đưa qua kênh Bluetooth (mục 3.2). Đây là kiểu "tin ở lần gặp đầu", có mã niêm phong đứng ra bảo lãnh.</li>
+          <li><b>Mọi lần sau:</b> máy ký thử thách của server, hoặc của app khi đi LAN hay Bluetooth. Khóa công khai đã gắn thì không đổi được nữa, trừ khi hãng gỡ khóa đó. Nhờ vậy, ai lấy được serial hay <code>product_key</code> cũng không giả được máy.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-pair">
+        <header><h3>3.2 · Kích hoạt lần đầu</h3><div class="src"><code>USER_MACHINE_ACTIVATE</code>, <code>MACHINE_ACTIVATION_SEND</code> · Sơ đồ: trạng thái · <span class="pill m">đã chốt</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Biến một máy mới mở hộp thành máy có chủ, trong một lần quét. Luồng này giống cách Matter<sup class="fn" id="fnr-6"><a href="#fn-6" aria-label="Chú thích 6">6</a></sup> ghép thiết bị: chỉ ai cầm được mã niêm phong trong hộp mới mở được kênh tới máy và nhận chủ. Lần kích hoạt đầu bắt buộc có Internet.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "chưa có chủ" as chua_co_chu
+  state "đang ghép" as dang_ghep
+  state "có chủ" as co_chu
+  [*] --> chua_co_chu: lần bật đầu<br/>sinh khóa máy
+  chua_co_chu --> dang_ghep: mã niêm phong đúng<br/>kênh Bluetooth mở
+  dang_ghep --> chua_co_chu: hết giờ phiên<br/>hoặc ngắt kết nối
+  dang_ghep --> co_chu: wifi được, server<br/>ghi Owner
+  co_chu --> chua_co_chu: Owner gỡ máy<br/>(online)
+  class chua_co_chu ui
+  class dang_ghep proc
+  class co_chu ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. Mã niêm phong chỉ có tác dụng ở hai trạng thái "chưa có chủ" và "đang ghép". Máy đã có chủ thì không nhận ghép bằng mã nữa.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Quét QR trong hộp.</b> QR chứa serial và mã niêm phong dài khoảng 100 bit (khoảng 20 ký tự). Mã dài như vậy thì dò thử vô ích, nên không cần giao thức PAKE<sup class="fn" id="fnr-7"><a href="#fn-7" aria-label="Chú thích 7">7</a></sup> như Matter. Matter phải dùng PAKE vì mã của nó chỉ là 8 chữ số để người dùng gõ tay. NIST SP 800-63B<sup class="fn" id="fnr-8"><a href="#fn-8" aria-label="Chú thích 8">8</a></sup> yêu cầu bí mật dưới 64 bit phải có giới hạn số lần thử; mã ở đây vượt xa ngưỡng đó.</li>
+          <li><b>Mở kênh Bluetooth.</b> Kênh được mã hóa bằng mã niêm phong (mục 3.3). Sai mã thì máy ngắt kết nối. Máy chỉ làm chậm khi bị thử sai liên tục (khoảng một lần mỗi giây), không khóa cứng sau N lần sai, để kẻ xấu không cố tình thử sai mà khóa máy của người khác.</li>
+          <li><b>Gửi wifi.</b> Máy gửi danh sách wifi quét được. App gửi tên và mật khẩu wifi. Máy thử kết nối và báo kết quả qua Bluetooth; nếu hỏng thì quay về trạng thái cũ để người dùng nhập lại. Đây là cách Matter, Espressif<sup class="fn" id="fnr-9"><a href="#fn-9" aria-label="Chú thích 9">9</a></sup> và Particle<sup class="fn" id="fnr-10"><a href="#fn-10" aria-label="Chú thích 10">10</a></sup> làm. Bỏ hướng SoftAP<sup class="fn" id="fnr-11"><a href="#fn-11" aria-label="Chú thích 11">11</a></sup> vì người dùng phải tự đổi wifi trên điện thoại, và bỏ Wi-Fi Easy Connect<sup class="fn" id="fnr-12"><a href="#fn-12" aria-label="Chú thích 12">12</a></sup> vì cần router hỗ trợ.</li>
+          <li><b>Máy chứng minh với server.</b> Máy lên server, ký thử thách bằng khóa riêng, rồi sinh một mã một lần. Máy gửi mã này lên server, đồng thời đưa cho app qua kênh Bluetooth.</li>
+          <li><b>Nhận chủ.</b> App đã đăng nhập gửi lên serial, mã niêm phong và mã một lần. Server kiểm đủ ba điều: chữ ký máy hợp lệ, mã niêm phong khớp bản băm, mã một lần khớp với mã máy vừa gửi (tức người quét đang đứng cạnh máy). Rồi server ghi chủ bằng một lệnh nguyên tử: chỉ cập nhật khi máy chưa có chủ. Hai người cùng quét thì người đến trước thắng, người sau nhận lỗi "máy đã có chủ". Lệnh nhận chủ cho kết quả như nhau dù gửi lại nhiều lần, để app tắt giữa chừng rồi gửi lại không sinh lỗi.</li>
+          <li><b>Khóa vào chủ.</b> Máy kéo danh sách quyền đầu tiên và chuyển sang "có chủ". Từ đây, reset máy tại chỗ cũng không gỡ được chủ, vì việc máy thuộc ai nằm ở server. Apple Activation Lock<sup class="fn" id="fnr-13"><a href="#fn-13" aria-label="Chú thích 13">13</a></sup> dùng đúng cách này.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-ble">
+        <header><h3>3.3 · Kênh Bluetooth app ↔ máy</h3><div class="src"><code>version1.1/machine/pairing/</code> · Sơ đồ: luồng · <span class="pill h">đề xuất</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Một kênh mã hóa giữa app và máy, dùng cho kích hoạt, đổi wifi và chế độ Bluetooth khi mất mạng. Kênh chỉ lo giấu và chống sửa nội dung. Ai được làm gì thì vẫn do vé và danh sách quyền quyết định (mục 3.6).</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  G["① BLE GATT<br/>chạy được cả iOS lẫn Android"] --> H["② Bắt tay tầng ứng dụng<br/>khóa tạm + bí mật chung"]
+  H --> C["③ Kênh AEAD<br/>mọi gói sau đó"]
+  H -. "bí mật chung sai" .-> X["ngắt kết nối"]
+  class G hw
+  class H,C proc
+  class X bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. Bí mật chung ở bước ② là mã niêm phong khi kích hoạt; ở chế độ Bluetooth hằng ngày, hai bên xác thực bằng khóa máy và vé gắn khóa điện thoại.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Chuyển sang BLE<sup class="fn" id="fnr-14"><a href="#fn-14" aria-label="Chú thích 14">14</a></sup>.</b> Code máy hiện dùng SPP<sup class="fn" id="fnr-15"><a href="#fn-15" aria-label="Chú thích 15">15</a></sup> của Bluetooth Classic. iOS không cho app thông thường dùng SPP với thiết bị bên thứ ba, nên phải làm lại bằng BLE GATT<sup class="fn" id="fnr-16"><a href="#fn-16" aria-label="Chú thích 16">16</a></sup>. Đây là phần việc lớn nhất phía máy.</li>
+          <li><b>Không dựa vào bảo mật của Bluetooth.</b> Kiểu ghép "Just Works<sup class="fn" id="fnr-17"><a href="#fn-17" aria-label="Chú thích 17">17</a></sup>" mà máy đang dùng không chống được kẻ đứng giữa. Các kiểu ghép an toàn hơn (so số, OOB<sup class="fn" id="fnr-18"><a href="#fn-18" aria-label="Chú thích 18">18</a></sup>) đòi màn hình hoặc API mà Flutter và iOS không mở. Vì vậy mã hóa đặt ở tầng ứng dụng.</li>
+          <li><b>Bắt tay.</b> Hai bên trao khóa X25519<sup class="fn" id="fnr-19"><a href="#fn-19" aria-label="Chú thích 19">19</a></sup> tạm, rồi dẫn xuất khóa phiên bằng HKDF<sup class="fn" id="fnr-20"><a href="#fn-20" aria-label="Chú thích 20">20</a></sup> từ kết quả trao khóa, bí mật chung và toàn bộ nội dung bắt tay. Mẫu chuẩn có sẵn là Noise<sup class="fn" id="fnr-21"><a href="#fn-21" aria-label="Chú thích 21">21</a></sup> (dạng có khóa chung trước, như NNpsk0). Dùng thư viện có sẵn, không tự ghép giao thức.</li>
+          <li><b>Cố định một bộ thuật toán.</b> Không thương lượng phiên bản hay thuật toán, để kẻ tấn công không ép được hai bên xuống bộ yếu hơn.</li>
+          <li><b>Giữ lại từ code cũ:</b> gói JSON một dòng, giới hạn 4096 byte, timeout 30 giây, bước xác nhận đã nhận (<code>machine_bluetooth_pair.py</code>).</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-qr">
+        <header><h3>3.4 · Chia sẻ bằng QR</h3><div class="src"><code>MACHINE_SHARE_*</code>, <code>machine_share_page.dart</code> · Sơ đồ: trình tự · <span class="pill m">đã chốt</span></div></header>
+        <h4>Làm gì</h4>
+        <p>Owner hoặc Manager thêm một tài khoản vào máy với vai Employee. Chỉ làm được khi online. Server là bên ký giấy phép. Người share không giữ khóa ký nào, chỉ xác nhận mình đang thêm đúng người.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant O as App người share
+  participant S as Server
+  participant N as App người mới
+  O->>S: share/create
+  S-->>O: mã mời dùng một lần, hạn ngắn
+  O->>N: hiện QR
+  N->>S: share/accept + mã mời
+  S-->>O: tên, email người mới
+  O->>S: share/sign: xác nhận (vân tay hoặc PIN)
+  S->>S: kiểm lại quyền người share, ghi Employee, tăng phiên bản
+  S-->>O: báo Owner có người mới
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: <code>server/configuration/routing.py</code> (ba route đã có tên), luồng là đề xuất. Mã mời chỉ là chìa vào bước chờ xác nhận; tự nó không cấp quyền gì.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Mã mời.</b> Mã ngẫu nhiên ít nhất 128 bit, sinh bằng CSPRNG<sup class="fn" id="fnr-22"><a href="#fn-22" aria-label="Chú thích 22">22</a></sup>. Server chỉ lưu bản băm, mã dùng một lần và có hạn. Đây là khuyến nghị của OWASP<sup class="fn" id="fnr-23"><a href="#fn-23" aria-label="Chú thích 23">23</a></sup> cho mọi token tạm. QR là một liên kết chứa mã, không chứa serial hay bí mật nào khác. Không đặt mã vào query string để log và proxy không ghi lại.</li>
+          <li><b>Người mới gửi mã.</b> Server đánh dấu mã đã dùng bằng một lệnh nguyên tử, để hai người quét cùng lúc thì chỉ một người được.</li>
+          <li><b>Người share xác nhận tên.</b> App người share hiện "Thêm Nguyễn A (a@...) làm Employee cho máy X?". Bước này chặn trường hợp mã bị chụp lén hoặc người lạ quét trước. Nó cũng chính là bước <code>share/sign</code> sẵn có, nên không thêm màn hình mới.</li>
+          <li><b>Server kiểm và ký.</b> Server kiểm lại người share vẫn còn quyền tại thời điểm xác nhận, không tin vai do app gửi lên (người mới luôn là Employee), ghi dòng quyền mới và tăng số phiên bản danh sách quyền của máy.</li>
+          <li><b>Báo Owner</b> mỗi khi có người mới vào máy, kể cả khi Manager là người thêm.</li>
+          <li><b>Máy đang offline:</b> server vẫn ghi ngay; máy nhận khi có mạng lại. Trong lúc chờ, người mới chưa vào được máy qua LAN hay Bluetooth.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-bt">
+        <header><h3>3.5 · Chia sẻ bằng Bluetooth</h3><div class="src"><code>machine_share_bluetooth_page.dart</code> · Sơ đồ: luồng · <span class="pill m">đã chốt</span> có ở bản đầu, <span class="pill h">đề xuất</span> cách làm</div></header>
+        <h4>Làm gì</h4>
+        <p>Cách thứ hai để thêm người, cho lúc không tiện quét QR. Bluetooth ở đây chỉ thay cho camera: nó chở đúng mã mời của mục 3.4 từ điện thoại người share sang điện thoại người mới. Mọi bước sau đó, kể cả xác nhận tên và server ký, giữ nguyên như QR. Vẫn chỉ làm được khi online.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  R["① Người mới mở<br/>'Nhận chia sẻ'"] --> F["② Người share<br/>tìm và nối BLE"]
+  F --> K["③ Bắt tay<br/>hai màn hiện 6 số"]
+  K --> D{"6 số<br/>khớp?"}
+  D -- "có" --> T["④ Gửi mã mời<br/>qua kênh"]
+  D -- "không" --> X["hủy"]
+  T --> Q["⑤ Tiếp như QR<br/>accept → xác nhận tên"]
+  class R,F ui
+  class K,T proc
+  class D human
+  class Q ok
+  class X bad
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. "6 số" lấy từ khóa phiên của lần bắt tay. Hai số giống nhau nghĩa là hai điện thoại đang nói trực tiếp với nhau, không có máy thứ ba chen giữa.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Hai điện thoại nói qua BLE.</b> Điện thoại người mới quảng bá, điện thoại người share tìm và nối. Giữa iOS và Android chỉ BLE đi được; Bluetooth Classic thì không.</li>
+          <li><b>So 6 số.</b> Đứng gần nhau không chứng minh đúng người, vì người lạ trong quán cũng ở gần. Hai màn hình hiện cùng một dãy 6 số lấy từ khóa phiên; người share thấy khớp mới bấm tiếp. Đây là bản tầng ứng dụng của kiểu ghép "so số" trong Bluetooth.</li>
+          <li><b>Chỉ gửi mã mời.</b> Kênh Bluetooth không chở giấy phép đã ký và không ghi quyền xuống máy. Nhờ vậy, Bluetooth không mở thêm đường cấp quyền nào ngoài server.</li>
+          <li><b>Giới hạn của nền tảng.</b> iOS hạn chế BLE khi app chạy nền, nên cả hai app phải đang mở trên màn hình trong lúc chia sẻ. Cần thử trên máy thật trước khi chốt giao diện.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-ticket">
+        <header><h3>3.6 · Danh sách quyền trên máy và vé của app</h3><div class="src"><code>MACHINE_PERMISSION_GET</code> · Sơ đồ: luồng · <span class="pill m">đã chốt</span> vé gắn khóa, <span class="pill h">đề xuất</span> định dạng</div></header>
+        <h4>Làm gì</h4>
+        <p>Cho máy tự kiểm quyền khi mất Internet, bằng đúng cách server kiểm khi online. Chế độ LAN và Bluetooth không bao giờ được mạnh hơn online: ba chế độ dùng chung một cách xác minh, chỉ khác đường đi của gói tin.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  V["① Kiểm chữ ký server trên vé"] -- "đạt" --> S2["② Kiểm hạn theo đồng hồ tin cậy"]
+  S2 -- "đạt" --> S3["③ Tìm người trong bản sao quyền"]
+  S3 -- "đạt" --> S4["④ Kiểm chữ ký trên thử thách"]
+  S4 -- "đạt" --> OK["cho làm việc theo vai"]
+  class V,S2,S3,S4 proc
+  class OK ok
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các bước kiểm</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Vé</td></tr>
+                <tr><td>Gồm</td><td>người, máy, vai, khóa công khai điện thoại, thời điểm cấp, hạn, phiên bản quyền</td></tr>
+                <tr><td>Ký</td><td>server, dạng COSE<sup class="fn" id="fnr-24"><a href="#fn-24" aria-label="Chú thích 24">24</a></sup> hoặc JWT<sup class="fn" id="fnr-25"><a href="#fn-25" aria-label="Chú thích 25">25</a></sup></td></tr>
+                <tr class="grp"><td colspan="2">② Đồng hồ tin cậy</td></tr>
+                <tr><td>Mốc</td><td>giờ server ở lần nối gần nhất</td></tr>
+                <tr><td>Cộng</td><td>đồng hồ đơn điệu<sup class="fn" id="fnr-26"><a href="#fn-26" aria-label="Chú thích 26">26</a></sup> từ mốc đó</td></tr>
+                <tr class="grp"><td colspan="2">③ Bản sao quyền</td></tr>
+                <tr><td>Gồm</td><td>máy, phiên bản, hạn, danh sách người và vai</td></tr>
+                <tr><td>Nhận</td><td>chỉ khi phiên bản lớn hơn bản đang giữ</td></tr>
+                <tr class="grp"><td colspan="2">④ Thử thách</td></tr>
+                <tr><td>Máy</td><td>gửi số ngẫu nhiên mới</td></tr>
+                <tr><td>App</td><td>ký bằng khóa trong kho khóa của điện thoại</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: đề xuất. Trượt ở bước nào thì máy từ chối ngay. Máy kiểm chữ ký bằng khóa công khai của server, được ghi sẵn trong phần mềm máy, không tin CA<sup class="fn" id="fnr-27"><a href="#fn-27" aria-label="Chú thích 27">27</a></sup> của hệ điều hành.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Máy giữ danh sách người, app giữ vé.</b> Danh sách quyền trên máy có chữ ký server, số phiên bản chỉ tăng và hạn dùng. Máy lưu số phiên bản cao nhất từng thấy, nên không ai đưa lại được bản cũ có người đã bị gỡ.</li>
+          <li><b>Vé gắn với khóa điện thoại.</b> Vé ghi khóa công khai của điện thoại. Khóa riêng nằm trong kho khóa của hệ điều hành (Android Keystore<sup class="fn" id="fnr-28"><a href="#fn-28" aria-label="Chú thích 28">28</a></sup>, iOS Secure Enclave<sup class="fn" id="fnr-29"><a href="#fn-29" aria-label="Chú thích 29">29</a></sup>) và không xuất ra được. Vé bị chép sang máy khác cũng vô dụng, vì nơi đó không ký được thử thách. Điều này quan trọng nhất ở LAN và Bluetooth, nơi kẻ xấu đứng gần máy.</li>
+          <li><b>Thử thách chống phát lại.</b> Mỗi lần kết nối máy gửi một số ngẫu nhiên mới. Vì vậy chặn phát lại không cần đồng hồ.</li>
+          <li><b>Đồng hồ tin cậy.</b> Hạn vé so với giờ server ở lần nối gần nhất, cộng đồng hồ đơn điệu của máy. Chỉnh lùi đồng hồ hệ thống không kéo dài được vé.</li>
+          <li><b>Làm mới.</b> Máy kéo danh sách mới mỗi lần nối server, định kỳ, và ngay khi long-poll<sup class="fn" id="fnr-30"><a href="#fn-30" aria-label="Chú thích 30">30</a></sup> báo có phiên bản mới. Máy ở sau NAT<sup class="fn" id="fnr-31"><a href="#fn-31" aria-label="Chú thích 31">31</a></sup> nên server không gọi vào máy được.</li>
+          <li><b>Bản sao hết hạn mà vẫn offline:</b> hướng xử lý còn mở, xem mục 5.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-life">
+        <header><h3>3.7 · Thu hồi, gỡ máy, bán lại</h3><div class="src"><code>MACHINE_MEMBER_REMOVE</code>, <code>USER_MACHINE_REMOVE</code>, <code>MACHINE_OWNER_TRANSFER</code> · Sơ đồ: luồng · <span class="pill m">đã chốt</span> mã cố định, <span class="pill h">đề xuất</span> phần còn lại</div></header>
+        <h4>Làm gì</h4>
+        <p>Rút quyền và đổi chủ. Tất cả chỉ làm khi online, vì server là nơi duy nhất ghi ai có quyền gì.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  A["Gỡ người<br/>đổi vai"] --> P["tăng phiên bản<br/>danh sách quyền"]
+  T["Chuyển chủ"] --> P
+  R["Gỡ máy"] --> E["xóa chủ trên server<br/>máy về 'chưa có chủ'"]
+  P --> M{"máy<br/>online?"}
+  M -- "có" --> NOW["hiệu lực ngay"]
+  M -- "không" --> LATE["hiệu lực khi máy có mạng<br/>vé cũ hết hạn"]
+  class A,T,R ui
+  class P,E proc
+  class M dec
+  class NOW ok
+  class LATE muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. Với máy đang offline, người vừa bị gỡ còn dùng được máy tới khi vé của họ hết hạn hoặc máy nhận bản danh sách mới, tùy điều nào đến trước.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Thu hồi dựa vào vé ngắn hạn,</b> không cần danh sách thu hồi riêng (CRL/OCSP). Hạn vé chính là khoảng rủi ro lớn nhất khi máy offline.</li>
+          <li><b>Chuyển chủ:</b> server ghi Owner mới, Owner cũ xuống Manager, tăng phiên bản danh sách quyền.</li>
+          <li><b>Gỡ máy và bán lại:</b> chủ cũ gỡ máy trên app. Server xóa chủ, máy xóa bản sao quyền và về "chưa có chủ". Khóa máy và mã niêm phong giữ nguyên, nên người mua dùng lại mã trong hộp để kích hoạt. Chủ cũ cũng biết mã này; vì chính họ là người gỡ máy để bán, rủi ro này được chấp nhận.</li>
+          <li><b>Owner mất tài khoản hoặc tranh chấp:</b> hãng gỡ khóa phía server sau khi kiểm hóa đơn và serial, làm thủ công, giống quy trình Apple áp dụng cho Activation Lock.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="nguyen-ly">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Kỹ thuật, case study và cấu hình</h2></div>
+      <h4>Chọn kỹ thuật</h4>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Việc</th><th>Chọn</th><th>Không chọn, vì sao</th><th>Mức</th></tr></thead>
+          <tbody>
+            <tr><td>Mã niêm phong</td><td>Ngẫu nhiên ~100 bit, in thành QR</td><td>PIN ngắn: phải thêm PAKE, mà người dùng vẫn quét QR được</td><td>bản đầu</td></tr>
+            <tr><td>Kênh Bluetooth</td><td>BLE GATT + bắt tay X25519 có bí mật chung, AEAD<sup class="fn" id="fnr-32"><a href="#fn-32" aria-label="Chú thích 32">32</a></sup></td><td>SPP: iOS không dùng được. Bảo mật ghép của Bluetooth: Just Works không chống kẻ đứng giữa</td><td>bản đầu</td></tr>
+            <tr><td>Khóa máy</td><td>Tự sinh ở lần bật đầu, file chỉ root đọc</td><td>Chuỗi chứng chỉ xuất xưởng kiểu Matter, TPM<sup class="fn" id="fnr-33"><a href="#fn-33" aria-label="Chú thích 33">33</a></sup>: cần quy trình xưởng và phần cứng</td><td>bản đầu; chứng chỉ xưởng để sau</td></tr>
+            <tr><td>Danh sách quyền, vé</td><td>Chữ ký Ed25519 hoặc ECDSA, dạng COSE hoặc JWT</td><td>mTLS<sup class="fn" id="fnr-34"><a href="#fn-34" aria-label="Chú thích 34">34</a></sup> cho từng điện thoại: phải quản lý chứng chỉ trên từng điện thoại</td><td>bản đầu</td></tr>
+            <tr><td>Vé</td><td>Gắn khóa điện thoại, ký thử thách</td><td>Vé ai cầm cũng dùng: lộ vé là mất quyền ở LAN/Bluetooth</td><td>bản đầu</td></tr>
+            <tr><td>Thu hồi</td><td>Vé ngắn hạn + phiên bản danh sách quyền</td><td>CRL/OCSP: thừa khi vé đã ngắn hạn</td><td>bản đầu</td></tr>
+            <tr><td>Gửi wifi</td><td>Qua kênh BLE đã mã hóa</td><td>SoftAP: trải nghiệm kém trên iOS. Wi-Fi Easy Connect: cần router hỗ trợ</td><td>bản đầu</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Case study</h4>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hệ</th><th>Cách làm</th><th>Áp dụng ở đây</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://docs.silabs.com/matter/2.3.1/matter-device-attestation">Matter</a></td><td>Mã ghép trong QR mở kênh PAKE. Máy ký thử thách bằng chứng chỉ xuất xưởng. Sau đó mới gửi wifi và nhận chủ.</td><td>Thứ tự các bước kích hoạt; bỏ PAKE vì mã đủ dài.</td></tr>
+            <tr><td><a href="https://nrfconnectdocs.nordicsemi.com/addons/ncs-matter/latest/matter/overview/multi_fabrics.html">Matter nhiều quản trị</a></td><td>Người đang có quyền mở một cửa sổ ghép có hạn, đóng lại sau khi thành công.</td><td>Mã mời dùng một lần, có hạn, do người có quyền tạo.</td></tr>
+            <tr><td><a href="https://docs.espressif.com/projects/esp-idf/en/v5.1/esp32c6/api-reference/provisioning/provisioning.html">Espressif</a></td><td>Gửi wifi qua BLE, mã hóa ở tầng ứng dụng.</td><td>Kênh Bluetooth và bước gửi wifi.</td></tr>
+            <tr><td><a href="https://docs.aws.amazon.com/iot/latest/developerguide/provision-wo-cert.html">AWS IoT</a></td><td>Mỗi thiết bị một khóa riêng. Người dùng tin cậy nhận một mã claim tạm.</td><td>Mã một lần ở bước nhận chủ.</td></tr>
+            <tr><td><a href="https://learn.microsoft.com/azure/iot-dps/concepts-service">Azure DPS</a></td><td>Thiết bị chứng minh bằng X.509<sup class="fn" id="fnr-35"><a href="#fn-35" aria-label="Chú thích 35">35</a></sup>, TPM hoặc khóa đối xứng.</td><td>Các mức chứng minh danh tính máy.</td></tr>
+            <tr><td><a href="https://support.apple.com/en-gb/ht201365">Apple Activation Lock</a></td><td>Việc máy thuộc ai nằm trên server; xóa máy không gỡ được.</td><td>Reset tại chỗ không gỡ được chủ.</td></tr>
+            <tr><td><a href="https://developer.nuki.io/t/nuki-web-api-authorization-update-synchronization-inconsistency-production-issue/40095">Nuki</a></td><td>Quyền lưu trên khóa cửa; đồng bộ với cloud từng bị lệch.</td><td>Danh sách quyền có phiên bản và hạn dùng.</td></tr>
+            <tr><td><a href="https://www.nfcw.com/2020/05/07/366483/car-connectivity-consortium-unveils-nfc-digital-key-specification/">CCC Digital Key</a></td><td>Chìa khóa xe trong chip bảo mật của điện thoại; chủ chia sẻ kèm quyền.</td><td>Vé gắn khóa điện thoại. Không theo kiểu điện thoại người share tự ký.</td></tr>
+            <tr><td><a href="https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html">OWASP</a></td><td>Token tạm: ngẫu nhiên an toàn, dùng một lần, có hạn, lưu bản băm.</td><td>Mã mời.</td></tr>
+            <tr><td><a href="https://pages.nist.gov/800-63-3/sp800-63b.html">NIST SP 800-63B</a></td><td>Ngưỡng độ ngẫu nhiên tối thiểu cho bí mật và khi nào phải giới hạn số lần thử.</td><td>Độ dài mã niêm phong.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Thông số cấu hình</h4>
+      <p class="prose">Các thông số dưới đây là biến cấu hình, có thể đổi lâu dài, không viết cứng trong code. Tất cả nằm trong một file cấu hình dùng chung, và lúc phát triển chỉnh được ngay mà không sửa code. Giá trị trong bảng là mặc định đề xuất. Tên file và định dạng sẽ chọn khi thiết kế kỹ thuật.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Mặc định</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td>Hạn vé LAN/Bluetooth</td><td class="num">24 giờ</td><td>Khoảng tối đa người bị gỡ còn dùng máy đang offline</td></tr>
+            <tr><td>Hạn bản sao danh sách quyền trên máy</td><td class="num">7 ngày</td><td>Máy offline lâu hơn thì bản sao hết hạn</td></tr>
+            <tr><td>Nhịp máy làm mới danh sách quyền</td><td class="num">6 giờ</td><td>Ngoài lần nối server và lần poll báo có bản mới</td></tr>
+            <tr><td>Hạn mã mời</td><td class="num">15 phút</td><td>Ngắn thì khó bị chụp lén dùng lại</td></tr>
+            <tr><td>Khung chờ nhận chủ sau khi máy lên server</td><td class="num">15 phút</td><td>Hết khung thì phải quét lại</td></tr>
+            <tr><td>Hạn phiên Bluetooth lúc kích hoạt</td><td class="num">10 phút</td><td>Hết giờ máy về "chưa có chủ"</td></tr>
+            <tr><td>Nhịp thử mã niêm phong sai</td><td class="num">1 lần/giây</td><td>Làm chậm dò thử mà không khóa cứng</td></tr>
+            <tr><td>Số mã mời đang chờ mỗi máy</td><td class="num">5</td><td>Chống tạo mời hàng loạt</td></tr>
+            <tr><td>Số người tối đa mỗi máy</td><td class="num">30</td><td>Kích thước danh sách quyền gửi xuống máy</td></tr>
+            <tr><td>Timeout gói Bluetooth</td><td class="num">30 giây</td><td>Giữ như code hiện có</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Ghi chú và câu hỏi mở</h2></div>
+      <div class="note crit"><b>Lỗi trong code hiện có · chưa sửa</b>
+        <code>machine_bluetooth_pair.py:19-26</code> chỉ kiểm tên loại gói <code>identify</code> mà không kiểm ai đang nối; dòng 52-57 gửi <code>product_key</code> dạng rõ cho bất kỳ điện thoại nào nối được.
+        <code>machine_bluetooth_serve.py:30-31</code> và <code>:112</code> tự chấp nhận mọi yêu cầu ghép kiểu "Just Works"; dòng 11 cho thấy máy dùng SPP, iOS không dùng được.
+        <code>machine_server_request.py:12</code>: mọi request của máy chỉ kèm <code>product_key</code> cố định, không ký; ai lấy được key là giả được máy.
+      </div>
+      <div class="note"><b>Lỗi nhỏ</b>Hai file import cấu hình lệch nhau: <code>machine_bluetooth_pair.py:4</code> dùng <code>machine.config.env</code>, <code>machine_server_request.py:6</code> dùng <code>config.env</code>.</div>
+      <div class="note"><b>Chưa kiểm</b>Máy chạy lệnh nhận từ server mà không kiểm chữ ký server (<code>version1.1/machine/main.py</code>); địa chỉ server mẫu dùng <code>http://</code>. Cần đối chiếu trước khi đưa vào thiết kế kỹ thuật.</div>
+
+      <h4>Câu hỏi mở</h4>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Câu hỏi</th><th>Đề xuất</th></tr></thead>
+          <tbody>
+            <tr><td>Manager có gỡ được Employee không?</td><td>Có, nhưng chỉ người do chính Manager đó thêm vào. Chia sẻ và gỡ nên đối xứng.</td></tr>
+            <tr><td>Bản sao danh sách quyền hết hạn mà máy vẫn offline thì LAN/Bluetooth làm gì?</td><td>Chỉ cho xem, không cho nạp kho hay tắt/bật món, tới khi máy gặp lại server.</td></tr>
+            <tr><td>Owner đứng cạnh máy có được tạm khóa máy qua Bluetooth khi offline không?</td><td>Có. Thao tác này chỉ thu hẹp quyền, không mở thêm, nên không làm Bluetooth mạnh hơn online.</td></tr>
+            <tr><td>Khóa máy trong file chỉ root đọc: ai có quyền root trên máy là chép được khóa.</td><td>Chấp nhận ở bản đầu. Khi phần cứng có TPM hoặc chip bảo mật thì chuyển khóa vào đó.</td></tr>
+            <tr><td>Hộp máy bị mở trước khi tới tay chủ (kho, đại lý): người chụp mã có thể kích hoạt trước.</td><td>Tem niêm phong chống mở và báo cho chủ khi máy vừa được kích hoạt. Hãng gỡ chủ nếu có tranh chấp.</td></tr>
+            <tr><td>Nhật ký theo người (ai làm gì trên máy) nằm ở đâu, khi server không giữ dữ liệu vận hành?</td><td>Máy giữ nhật ký có chữ ký bằng khóa máy, gửi lên qua <code>MACHINE_EVENT_SEND</code> khi online. Chưa nghiên cứu sâu.</td></tr>
+            <tr><td>Chia sẻ qua Bluetooth giữa iOS và Android có chạy ổn khi một bên ở nền không?</td><td>Yêu cầu cả hai app mở trên màn hình. Thử trên máy thật trước khi chốt giao diện.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Phạm vi chưa phủ</h4>
+      <ul class="prose">
+        <li>Owner xóa tài khoản mà chưa chuyển chủ thì máy đi đâu.</li>
+        <li>Quy trình hãng xử lý tranh chấp: giấy tờ cần có, thời gian chờ.</li>
+        <li>Đổi wifi về sau qua Bluetooth: dùng chung kênh ở mục 3.3 và vé ở mục 3.6, chưa vẽ riêng.</li>
+      </ul>
+
+      <h4>Để sau bản đầu</h4>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hạng mục</th><th>Khi nào cần</th></tr></thead>
+          <tbody>
+            <tr><td>Chứng chỉ xuất xưởng do hãng ký (kiểu Matter)</td><td>Khi xưởng có quy trình nạp khóa</td></tr>
+            <tr><td>TPM hoặc chip bảo mật giữ khóa máy</td><td>Khi đổi phần cứng</td></tr>
+            <tr><td>PAKE và mã ngắn gõ tay</td><td>Nếu người dùng cần gõ mã thay vì quét QR</td></tr>
+            <tr><td>Danh sách thu hồi riêng</td><td>Nếu hạn vé phải dài ra</td></tr>
+            <tr><td>Wi-Fi Easy Connect, SoftAP</td><td>Không dự kiến</td></tr>
+            <tr><td>Tự động hóa xử lý tranh chấp</td><td>Khi số vụ đủ nhiều</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Bluetooth Classic (BR/EDR).</b> Nhánh Bluetooth cũ, dùng cho tai nghe và cổng nối tiếp; khác và không tương thích trực tiếp với BLE. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>Serial CPU.</b> Số hiệu do nhà sản xuất ghi vào bộ xử lý của máy. Đọc được bằng phần mềm nên dùng làm tên, không dùng làm bằng chứng. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-3"><b>Ed25519.</b> Thuật toán chữ ký số trên Curve25519 (RFC 8032). <a class="fn-back" href="#fnr-3" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-4"><b>Elliptic Curve Digital Signature Algorithm.</b> Thuật toán chữ ký số trên đường cong elliptic (FIPS 186-5). <a class="fn-back" href="#fnr-4" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-5"><b>Đường cong NIST P-256.</b> Đường cong elliptic 256 bit do NIST chuẩn hóa, còn gọi là secp256r1; được hầu hết chip bảo mật hỗ trợ. <a class="fn-back" href="#fnr-5" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-6"><b>Matter.</b> Chuẩn nhà thông minh của Connectivity Standards Alliance, quy định cách ghép thiết bị, chứng chỉ thiết bị và kênh bảo mật. <a class="fn-back" href="#fnr-6" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-7"><b>Password-Authenticated Key Exchange.</b> Thỏa thuận khóa mạnh từ một mã ngắn hai bên cùng biết; người nghe lén không dò mã offline được. <a class="fn-back" href="#fnr-7" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-8"><b>NIST SP 800-63B.</b> Hướng dẫn xác thực số của Viện Tiêu chuẩn và Công nghệ Hoa Kỳ, gồm yêu cầu về độ ngẫu nhiên của bí mật và giới hạn thử. <a class="fn-back" href="#fnr-8" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-9"><b>Espressif Systems.</b> Hãng làm chip ESP32; bộ ESP-IDF có sẵn giao thức gửi wifi qua BLE có mã hóa. <a class="fn-back" href="#fnr-9" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-10"><b>Particle.</b> Nền tảng IoT thương mại; thiết bị của họ nhận wifi qua BLE có mã hóa. <a class="fn-back" href="#fnr-10" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-11"><b>Software Access Point.</b> Thiết bị tự phát một wifi tạm để điện thoại nối vào và gửi cấu hình. <a class="fn-back" href="#fnr-11" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-12"><b>Wi-Fi Easy Connect (DPP).</b> Chuẩn của Wi-Fi Alliance cho thiết bị vào mạng bằng cách quét QR chứa khóa công khai; cần router và hệ điều hành hỗ trợ. <a class="fn-back" href="#fnr-12" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-13"><b>Apple Activation Lock.</b> Tính năng của Apple gắn thiết bị với tài khoản trên server; xóa máy không gỡ được, chỉ chủ hoặc Apple gỡ. <a class="fn-back" href="#fnr-13" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-14"><b>Bluetooth Low Energy.</b> Nhánh Bluetooth tiết kiệm năng lượng, có trên mọi điện thoại hiện nay. <a class="fn-back" href="#fnr-14" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-15"><b>Serial Port Profile.</b> Hồ sơ Bluetooth Classic giả lập cổng nối tiếp qua RFCOMM. iOS chỉ cho phụ kiện có chứng nhận MFi dùng. <a class="fn-back" href="#fnr-15" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-16"><b>Bluetooth Low Energy · Generic Attribute Profile.</b> Bluetooth tiết kiệm năng lượng và cách hai thiết bị trao dữ liệu qua các &#x27;đặc tính&#x27; đọc/ghi. Là kiểu Bluetooth duy nhất app iOS dùng tự do với thiết bị bên thứ ba. <a class="fn-back" href="#fnr-16" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-17"><b>Just Works.</b> Kiểu ghép Bluetooth không cần người dùng xác nhận gì. Không chống được kẻ đứng giữa (Bluetooth Core Specification, phần Security Manager). <a class="fn-back" href="#fnr-17" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-18"><b>Out-of-Band.</b> Trao bí mật qua một kênh khác ngoài Bluetooth, ví dụ NFC hay QR, để chống kẻ đứng giữa. <a class="fn-back" href="#fnr-18" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-19"><b>X25519.</b> Hàm thỏa thuận khóa trên đường cong Curve25519 (RFC 7748). <a class="fn-back" href="#fnr-19" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-20"><b>HMAC-based Key Derivation Function.</b> Hàm dẫn xuất nhiều khóa riêng từ một bí mật (RFC 5869); HKDF-SHA256 là bản dùng hàm băm SHA-256. <a class="fn-back" href="#fnr-20" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-21"><b>Noise Protocol Framework.</b> Khung mô tả các kiểu bắt tay trao khóa đã được phân tích kỹ; WireGuard và WhatsApp dùng nó. NNpsk0 là kiểu bắt tay có thêm một bí mật chung biết trước. <a class="fn-back" href="#fnr-21" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-22"><b>Cryptographically Secure Pseudo-Random Number Generator.</b> Bộ sinh số ngẫu nhiên đủ an toàn cho mật mã, ví dụ os.urandom hay /dev/urandom; không đoán trước được. <a class="fn-back" href="#fnr-22" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-23"><b>Open Worldwide Application Security Project.</b> Tổ chức phi lợi nhuận công bố các danh sách rủi ro và hướng dẫn bảo mật ứng dụng. <a class="fn-back" href="#fnr-23" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-24"><b>CBOR Object Signing and Encryption.</b> Chuẩn ký và mã hóa cho dữ liệu nhị phân gọn, hợp với kênh băng thông thấp như BLE (RFC 9052). <a class="fn-back" href="#fnr-24" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-25"><b>JSON Web Token.</b> Chuẩn token dạng JSON có chữ ký (RFC 7519). <a class="fn-back" href="#fnr-25" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-26"><b>Đồng hồ đơn điệu (monotonic clock).</b> Đồng hồ chỉ đếm tăng từ lúc khởi động, không bị chỉnh lùi khi đổi giờ hệ thống (ví dụ CLOCK_BOOTTIME trên Linux). <a class="fn-back" href="#fnr-26" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-27"><b>Certificate Authority.</b> Bên ký chứng chỉ để xác nhận một khóa công khai thuộc về ai. Root CA là gốc của chuỗi, thường giữ offline. <a class="fn-back" href="#fnr-27" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-28"><b>Android Keystore / iOS Keychain.</b> Kho khóa do hệ điều hành điện thoại bảo vệ; app khác không đọc được. <a class="fn-back" href="#fnr-28" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-29"><b>Apple Secure Enclave.</b> Vùng phần cứng tách biệt trong chip của iPhone, giữ khóa riêng và ký bên trong, không cho xuất khóa ra. <a class="fn-back" href="#fnr-29" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-30"><b>Long polling.</b> Máy gửi yêu cầu và server giữ yêu cầu đó tới khi có tin mới, giúp đẩy tin xuống máy đứng sau NAT. <a class="fn-back" href="#fnr-30" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-31"><b>Network Address Translation.</b> Router của quán dùng chung một địa chỉ Internet cho mọi máy bên trong, nên từ ngoài không gọi thẳng vào máy được. <a class="fn-back" href="#fnr-31" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-32"><b>Authenticated Encryption with Associated Data.</b> Kiểu mã hóa vừa giấu nội dung vừa phát hiện bị sửa. <a class="fn-back" href="#fnr-32" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-33"><b>Trusted Platform Module.</b> Chip bảo mật theo chuẩn của Trusted Computing Group, giữ khóa và ghi lại trạng thái khởi động. <a class="fn-back" href="#fnr-33" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-34"><b>Mutual TLS.</b> TLS trong đó cả hai bên đều trình chứng chỉ và chứng minh giữ khóa riêng lúc bắt tay, nên server biết chắc thiết bị nào đang kết nối. <a class="fn-back" href="#fnr-34" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-35"><b>X.509.</b> Định dạng chuẩn của chứng chỉ khóa công khai (RFC 5280). <a class="fn-back" href="#fnr-35" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

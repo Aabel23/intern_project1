@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "ok": true,
+  "data": {
+    "command": {
+      "v": 1,
+      "request_id": "d4215a48-60d9-46bd-91c7-41186f1badb1",
+      "machine_id": "example-machine",
+      "instruction": "machine.status.read",
+      "data": {},
+      "deadline_at": "2026-10-12T02:00:15Z",
+      "remaining_ms": 14000
+    }
+  }
+}

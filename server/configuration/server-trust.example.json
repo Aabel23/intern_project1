@@ -1,0 +1,1 @@
+{"v":1,"hpke":{"kid":"server-hpke-1","public_key":"OPERATOR_PROVISION_RAW32_B64U"},"signing":{"kid":"server-sign-1","public_key":"OPERATOR_PROVISION_SEC1_65_B64U"}}

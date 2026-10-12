@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kích hoạt máy</title>
+<meta name="description" content="Tính năng Kích hoạt máy: luồng, endpoint, gói tin, thông số.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tính năng 2 · <a href="../index.html">Mục lục</a></div>
+      <h1>Kích hoạt máy: một lần quét, máy có chủ</h1>
+      <p class="lead">Chủ quét QR mã niêm phong trong hộp máy. Mã này mở một kênh Bluetooth an toàn tới máy để gửi wifi. Máy lên server, chứng minh mình là máy thật bằng giấy khai sinh do xưởng cấp, rồi trao cho app một phiếu kích hoạt có chữ ký. App nộp phiếu, server ghi người quét làm Owner. Lần kích hoạt đầu bắt buộc có Internet.</p>
+    </div>
+    <div class="meta">
+      <span><b>Sản phẩm:</b> app, server, máy</span>
+      <span><b>Mã:</b> <code>feature/machine_register/</code>, <code>machine/pairing/</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#vong-doi">2. Vòng đời máy</a></li>
+        <li><a href="#endpoint">3. Endpoint</a></li>
+        <li><a href="#goi-tin">4. Gói tin</a></li>
+        <li><a href="#quy-tac">5. Quy tắc</a></li>
+        <li><a href="#thong-so">6. Thông số</a></li>
+        <li><a href="#ghi-chu">7. Ghi chú</a></li>
+        <li><a href="#chu-thich">8. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: mở hộp tới lúc có chủ</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor O as Chủ quán
+  participant A as App
+  participant M as Máy
+  participant S as Server
+  O->>A: quét QR trong hộp
+  A->>M: BLE · mở kênh bằng mã niêm phong
+  M-->>A: danh sách wifi quét được
+  A->>M: tên và mật khẩu wifi
+  M->>M: thử kết nối wifi
+  M->>S: MACHINE_ACTIVATION_SEND · mTLS bằng giấy khai sinh
+  S-->>M: máy chưa có chủ · thử thách
+  M-->>A: phiếu kích hoạt có chữ ký máy
+  A->>S: USER_MACHINE_ACTIVATE · phiếu kích hoạt
+  S->>S: kiểm chữ ký, máy còn chưa có chủ · ghi Owner
+  S-->>A: đã kích hoạt
+  M->>S: MACHINE_PERMISSION_GET
+  S-->>M: bản sao quyền đầu tiên · máy chuyển sang có chủ
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Bước 2 dùng PAKE<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> với mã niêm phong: người không cầm hộp máy không mở được kênh, và người nghe lén không dò ngược được mã. Phiếu kích hoạt ở bước 8 chứng minh người đang đứng cạnh máy và người đang đăng nhập trên app là một.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Bước hỏng</th><th>Chuyện gì</th><th>Kết quả</th></tr></thead>
+          <tbody>
+            <tr><td>2</td><td>Sai mã niêm phong</td><td>Máy không mở kênh, làm chậm lần thử kế tiếp</td></tr>
+            <tr><td>5</td><td>Sai mật khẩu wifi</td><td>Máy báo lại qua Bluetooth, người dùng nhập lại</td></tr>
+            <tr><td>6</td><td>Giấy khai sinh sai hoặc không có</td><td>Server từ chối; app báo "máy không chính hãng"</td></tr>
+            <tr><td>10</td><td>Máy đã có chủ</td><td>Server trả <code>machine_owned</code>: "máy đang khoá vào tài khoản khác"</td></tr>
+            <tr><td>6–11</td><td>Không lên được server</td><td>Chưa kích hoạt được, máy chưa bán hàng</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="vong-doi">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Vòng đời máy</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  [*] --> unclaimed: xuất xưởng
+  unclaimed --> pairing: quét mã niêm phong
+  pairing --> unclaimed: hết giờ hoặc lỗi
+  pairing --> owned: server ghi Owner
+  owned --> owned: chuyển chủ
+  owned --> unclaimed: Owner gỡ máy
+  class unclaimed muted
+  class pairing proc
+  class owned ok
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Mã niêm phong chỉ có tác dụng ở "unclaimed" và "pairing". Máy "owned" thì reset tại chỗ cũng không gỡ được chủ, vì việc máy thuộc ai nằm ở server. Bán lại thì chủ cũ gỡ máy, người mua dùng lại đúng mã trong hộp.</figcaption>
+      </figure>
+    </section>
+
+    <section id="endpoint">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Endpoint</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hằng số</th><th>Đường dẫn</th><th>Bên gọi</th><th>Làm gì</th></tr></thead>
+          <tbody>
+            <tr><td><code>MACHINE_ACTIVATION_SEND</code></td><td><code>/machine/activation/send</code></td><td>Máy</td><td>Trình giấy khai sinh khi vừa có wifi; nhận thử thách để ký phiếu</td></tr>
+            <tr><td><code>USER_MACHINE_ACTIVATE</code></td><td><code>/app/user/machine/activate</code></td><td>App</td><td>Nộp phiếu kích hoạt; người gọi thành Owner</td></tr>
+            <tr><td><code>USER_MACHINE_LIST</code></td><td><code>/app/user/machine/list</code></td><td>App</td><td>Các máy của tài khoản, kèm vai trên từng máy</td></tr>
+            <tr><td><code>USER_MACHINE_REMOVE</code></td><td><code>/app/user/machine/remove</code></td><td>App</td><td>Owner gỡ máy; cần phiên vừa nhập lại mật khẩu</td></tr>
+            <tr><td><code>MACHINE_HELLO_SEND</code></td><td><code>/machine/hello/send</code></td><td>Máy</td><td>Mỗi lần khởi động: báo phiên bản phần mềm, hợp đồng, phiên bản quyền</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="goi-tin">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Gói tin</h2></div>
+      <h3>QR trong hộp và kênh Bluetooth</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Gói</th><th>Nội dung</th></tr></thead>
+          <tbody>
+            <tr><td>QR mã niêm phong</td><td><code>{"serial", "setup_code"}</code>; mã niêm phong cố định suốt đời máy, phải giữ bí mật</td></tr>
+            <tr><td>Máy → app: wifi quét được</td><td><code>{"type":"wifi_list", "networks":[{"ssid","rssi","secure"}]}</code></td></tr>
+            <tr><td>App → máy: cấu hình wifi</td><td><code>{"type":"wifi_set", "ssid", "password"}</code></td></tr>
+            <tr><td>Máy → app: kết quả wifi</td><td><code>{"type":"wifi_result", "ok", "error"}</code></td></tr>
+            <tr><td>Máy → app: phiếu kích hoạt</td><td><code>{"type":"activation_ticket", "ticket"}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Server</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Gửi lên</th><th>Trả về</th></tr></thead>
+          <tbody>
+            <tr><td><code>activation/send</code></td><td><code>{"software_version"}</code>; danh tính máy lấy từ chứng chỉ mTLS</td><td><code>{"state":"unclaimed"|"owned", "challenge"}</code></td></tr>
+            <tr><td><code>user/machine/activate</code></td><td><code>{"ticket"}</code></td><td><code>{"machine_id", "serial", "role":"owner"}</code> hoặc lỗi <code>machine_owned</code>, <code>ticket_invalid</code></td></tr>
+            <tr><td><code>user/machine/list</code></td><td><code>{}</code></td><td><code>{"machines":[{"machine_id","serial","name","role","online"}]}</code></td></tr>
+            <tr><td><code>user/machine/remove</code></td><td><code>{"machine_id"}</code></td><td><code>{"status":"ok"}</code></td></tr>
+            <tr><td><code>hello/send</code></td><td><code>{"software_version", "contract_versions", "acl_version", "last_event_seq"}</code></td><td><code>{"acl_version", "update_available"}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Phiếu kích hoạt</b>Gồm <code>serial</code>, <code>challenge</code> server vừa cấp, thời điểm ký theo đồng hồ đơn điệu của máy, và chữ ký của khoá máy trên tất cả các trường đó. Phiếu dùng một lần và chỉ sống trong khung chờ nhận chủ.</div>
+    </section>
+
+    <section id="quy-tac">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Quy tắc</h2></div>
+      <ol class="steps">
+        <li><b>Xưởng đóng định danh máy.</b> Khoá riêng sinh trên máy ở xưởng và không rời máy; CA xưởng ký giấy khai sinh chứa serial và khoá công khai. Serial chỉ là tên, không phải bằng chứng.</li>
+        <li><b>Không dựa vào bảo mật ghép đôi của Bluetooth.</b> Kênh được mã hoá ở tầng ứng dụng bằng PAKE với mã niêm phong.</li>
+        <li><b>Nhận chủ là một thao tác nguyên tử</b> có điều kiện "máy đang chưa có chủ". Hai người quét cùng lúc thì người đến trước thắng. Gửi lại cùng phiếu cho cùng kết quả, để app tắt giữa chừng rồi gửi lại không sinh lỗi.</li>
+        <li><b>Sai mã niêm phong chỉ làm chậm</b>, không khoá cứng sau N lần, để kẻ xấu không cố tình thử sai mà khoá máy của người khác.</li>
+        <li><b>Gỡ máy xoá quyền, giữ lịch sử.</b> Server xoá danh sách người của máy, giữ lịch sử quyền; máy xoá bản sao quyền và dữ liệu món, kho, đơn, về "unclaimed".</li>
+        <li><b>Máy bỏ <code>product_key</code>.</b> Danh tính máy chỉ đến từ giấy khai sinh qua mTLS.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Sổ</th><th>Mặc định</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td>Khung chờ nhận chủ sau khi máy lên server</td><td>Server</td><td class="num">15 phút</td><td>Hết khung thì phải quét lại</td></tr>
+            <tr><td>Hạn phiên Bluetooth lúc kích hoạt</td><td>Máy</td><td class="num">10 phút</td><td>Hết giờ máy về "unclaimed"</td></tr>
+            <tr><td>Nhịp thử mã niêm phong sai</td><td>Máy</td><td class="num">1 lần/giây</td><td>Làm chậm dò thử</td></tr>
+            <tr><td>Timeout gói Bluetooth</td><td>Máy, app</td><td class="num">30 giây</td><td>Hết giờ thì báo lỗi, người dùng thử lại</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Ghi chú</h2></div>
+      <div class="note crit"><b>Mã máy hiện có phải làm lại</b><code>machine/pairing/machine_bluetooth_serve.py</code> dùng Bluetooth Classic, tự chấp nhận mọi điện thoại; <code>machine_bluetooth_pair.py:52-57</code> gửi <code>product_key</code> dạng rõ cho bất kỳ ai nối được. Luồng ở tài liệu này thay hẳn luồng đó.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hướng bản đầu</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td>Loại Bluetooth</td><td>BLE<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup>: chạy được trên cả Android và iPhone</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Hộp bị mở trước khi tới tay chủ</td><td>Tem niêm phong chống mở; báo cho chủ khi máy vừa được kích hoạt; hãng gỡ chủ nếu có tranh chấp, làm thủ công bằng hoá đơn</td><td><span class="pill h">Tạm chốt</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Password-Authenticated Key Exchange.</b> Hai bên cùng biết một mã, dùng nó dựng khoá mạnh; người nghe lén không dò mã offline được. Matter dùng SPAKE2+ (RFC 9383). <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>Bluetooth Low Energy.</b> Nhánh Bluetooth tiết kiệm năng lượng, kiểu duy nhất app iOS dùng tự do với thiết bị bên thứ ba. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+    <footer class="end">Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu). "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../assets/doc.js"></script>
+</body>
+</html>

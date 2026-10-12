@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "ok": true,
+  "data": {
+    "access_token": "EXAMPLE_ONLY_NOT_A_TOKEN",
+    "access_expires_at": "2026-10-12T03:00:00Z",
+    "refresh_token": "EXAMPLE_ONLY_NOT_A_TOKEN",
+    "refresh_expires_at": "2026-11-11T02:00:00Z",
+    "user": {
+      "id": "example-user",
+      "email": "example@example.invalid"
+    }
+  }
+}

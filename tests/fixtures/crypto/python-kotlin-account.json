@@ -1,0 +1,42 @@
+{
+  "description": "TEST ONLY RFC9180 keys; Python sender/receiver exporter fixture for Kotlin BC interoperability, never runtime production keys",
+  "test_only_skRm": "4612c550263fc8ad58375df3f557aac531d26850903e55a9f23f21d8534e8ac8",
+  "test_only_pkRm": "3948cfe0ad1ddb695d780e59077195da6c56506b027329794ab02bca80815c4d",
+  "test_only_skEm": "52c4a758a802cd8b936eceea314432798d5baf2d7e9235dc084ab1b9cfa2f736",
+  "test_only_pkEm": "37fda3567bdbd628e88668c3c8d7e97d1d1253b6d4ea6d44c150f741f1bf4431",
+  "request_plaintext": {
+    "auth": null,
+    "body": {
+      "v": 1
+    }
+  },
+  "aad": "5b312c222f6170702f757365722f73657373696f6e2f626f6f747374726170222c22504f5354222c22736572766572222c227365727665722d68706b652d31222c2230303030303030302d303030302d343030302d383030302d303030303030303030303031222c302c6e756c6c5d",
+  "request": {
+    "pv": 1,
+    "route": "/app/user/session/bootstrap",
+    "method": "POST",
+    "receiver": "server",
+    "kid": "server-hpke-1",
+    "send_id": "00000000-0000-4000-8000-000000000001",
+    "sent_at_ms": 0,
+    "machine_key_id": null,
+    "enc": "N_2jVnvb1ijohmjDyNfpfR0SU7bU6m1EwVD3QfG_RDE",
+    "ct": "1MJERo5TPwIwJb5lBuLiKa16n-F0Jkovwz0TJXaQjjiYH-PEECHP6S9empE",
+    "sig": null
+  },
+  "response_key": "d28818d0526563dc44e369868eacffc3",
+  "response_plaintext": {
+    "v": 1,
+    "ok": true,
+    "data": {
+      "server_time_ms": 1791763200000
+    }
+  },
+  "response": {
+    "pv": 1,
+    "send_id": "00000000-0000-4000-8000-000000000001",
+    "status": 200,
+    "nonce": "AAECAwQFBgcICQoL",
+    "ct": "9aeRBIGDlmXG3hfkZ4NunPcjnZ7Lt2o1ueBz6rEf-x6Idnq73n6DfEcmGphinOgSk6Xc1vo5pxK6hyRlO2g6G6QTsEOYVSmu4A"
+  }
+}

@@ -1,0 +1,978 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Đồng bộ menu, kho, máy</title>
+<meta name="description" content="Giao thức đồng bộ menu, kho và trạng thái giữa máy pha và app: gói menu đầy đủ có số phiên bản CRC, đi qua cloud, wifi quán và Bluetooth.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 3.0256)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+/* fn:start */
+  sup.fn{font-family:var(--sans); font-size:.62em; line-height:0; font-weight:600; margin-left:1px}
+  sup.fn a{text-decoration:none; color:var(--accent-ink); padding:0 1px}
+  ol.fnotes{margin:0; padding-left:1.8em; display:grid; gap:6px; font-family:var(--sans); font-size:13.5px; line-height:1.5; max-width:90ch; color:var(--ink-2)}
+  ol.fnotes li::marker{color:var(--accent-ink); font-weight:600}
+  ol.fnotes b{color:var(--ink); font-weight:600}
+  ol.fnotes li:target{background:var(--accent-soft); border-radius:6px}
+  .fn-back{text-decoration:none; font-size:12px}
+  sup.fn, ol.fnotes li{scroll-margin-top:80px}
+  /* fn:end */
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu research · project1_app v1.1</div>
+      <h1>Đồng bộ menu, kho và trạng thái máy giữa máy pha và app</h1>
+      <p class="lead">Máy pha giữ dữ liệu thật. App chỉ giữ một bản chụp kèm số phiên bản CRC<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup>. Hai số khác nhau thì app xin lại cả gói menu. Tài liệu mô tả gói trông thế nào, gói đi qua server, wifi quán và Bluetooth ra sao, và các đề xuất cho kho và trạng thái máy.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>project1_app</code> · <code>c34d55e</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+      <span><b>Trạng thái:</b> research, đang bàn</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>App</span>
+        <span><i class="sw proc"></i>Tiến trình</span>
+        <span><i class="sw file"></i>Bộ nhớ tạm</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="ln"></i>Đồng bộ qua cloud (số = thứ tự)</span>
+        <span><i class="ln g"></i>Đường dự phòng</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1180 390" role="img" aria-label="App xin gói menu qua server hãng; server chuyển lệnh xuống máy, máy dựng gói từ MySQL và trả về; mất mạng thì app nói thẳng với máy qua wifi quán hoặc Bluetooth.">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="zn" x="16" y="50" width="290" height="250" rx="12"/>
+<text x="18" y="40" class="zt">ĐIỆN THOẠI · ANDROID</text>
+<rect class="zn" x="390" y="50" width="390" height="250" rx="12"/>
+<text x="392" y="40" class="zt">CLOUD CỦA HÃNG</text>
+<rect class="zn" x="864" y="50" width="300" height="250" rx="12"/>
+<text x="866" y="40" class="zt">QUÁN · MÁY PHA</text>
+
+<g class="nd ui"><rect x="40" y="100" width="236" height="130" rx="8"/>
+<text x="158" y="128" class="tt" text-anchor="middle">App</text>
+<text x="158" y="150" class="ts" text-anchor="middle">giữ bản chụp menu</text>
+<text x="158" y="166" class="ts" text-anchor="middle">+ số phiên bản CRC</text>
+<text x="158" y="190" class="tn" text-anchor="middle">ảnh lưu riêng theo hash</text></g>
+
+<g class="nd proc"><rect x="420" y="100" width="330" height="80" rx="8"/>
+<text x="585" y="128" class="tt" text-anchor="middle">Server hãng</text>
+<text x="585" y="148" class="ts" text-anchor="middle">kiểm quyền · chuyển lệnh · gộp yêu cầu</text>
+<text x="585" y="164" class="tn" text-anchor="middle">không đọc thân gói</text></g>
+<g class="nd file"><rect x="470" y="222" width="230" height="56" rx="8"/>
+<text x="585" y="245" class="tt" text-anchor="middle">Bộ đệm gói (RAM)</text>
+<text x="585" y="263" class="ts" text-anchor="middle">khoá: máy + CRC · hạn ngắn</text></g>
+
+<g class="nd proc"><rect x="890" y="100" width="250" height="80" rx="8"/>
+<text x="1015" y="128" class="tt" text-anchor="middle">Máy pha</text>
+<text x="1015" y="148" class="ts" text-anchor="middle">dựng gói · tính CRC</text>
+<text x="1015" y="164" class="tn" text-anchor="middle">nguồn sự thật của menu</text></g>
+<g class="nd store"><rect x="920" y="222" width="190" height="56" rx="8"/>
+<text x="1015" y="245" class="tt" text-anchor="middle">MySQL của máy</text>
+<text x="1015" y="263" class="ts" text-anchor="middle">món · công thức · bảng tra</text></g>
+
+<path class="e main" d="M276,125 L420,125" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="348" cy="125" r="9.5"/><text x="348" y="128.8" text-anchor="middle">1</text></g>
+<path class="e main" d="M750,125 L890,125" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="820" cy="125" r="9.5"/><text x="820" y="128.8" text-anchor="middle">2</text></g>
+<path class="e main" d="M890,160 L750,160" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="820" cy="160" r="9.5"/><text x="820" y="163.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M420,160 L276,160" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="348" cy="160" r="9.5"/><text x="348" y="163.8" text-anchor="middle">4</text></g>
+<text x="348" y="108" class="tl" text-anchor="middle">xin gói + CRC app</text>
+<text x="348" y="186" class="tl" text-anchor="middle">gói hoặc "không đổi"</text>
+<text x="820" y="108" class="tl" text-anchor="middle">lệnh qua long-poll</text>
+<text x="820" y="186" class="tl" text-anchor="middle">gói của máy</text>
+
+<path class="e dash" d="M585,180 L585,222" marker-end="url(#ag)"/>
+<path class="e" d="M1015,180 L1015,222" marker-end="url(#ag)"/>
+
+<path class="e dash" d="M158,230 L158,345 L1015,345 L1015,278" marker-end="url(#ag)"/>
+<text x="586" y="336" class="tl" text-anchor="middle">mất Internet: HTTP thẳng tới máy trong wifi quán · mất wifi: Bluetooth SPP</text>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Đường bình thường đi qua cloud: (1) app gửi lệnh xin menu kèm số CRC đang giữ; (2) server chuyển lệnh xuống máy qua kết nối long-poll<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup> do máy mở sẵn, vì máy nằm sau router của quán; (3) máy đọc MySQL<sup class="fn" id="fnr-3"><a href="#fn-3" aria-label="Chú thích 3">3</a></sup>, dựng gói và trả về; (4) server chuyển gói cho app. Server giữ gói trong RAM một thời gian ngắn để phát cho nhiều app đang chờ cùng máy. Mất Internet thì app gọi thẳng máy trong wifi quán; mất cả wifi thì qua Bluetooth. Ba đường chở cùng một gói.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#luong-chinh">2. Luồng chính</a></li>
+        <li><a href="#thanh-phan">3. Từng thành phần</a></li>
+        <li class="sub"><a href="#c-goi">3.1 Gói menu</a></li>
+        <li class="sub"><a href="#c-app">3.2 App nhận và kiểm</a></li>
+        <li class="sub"><a href="#c-server">3.3 Server và bộ đệm RAM</a></li>
+        <li class="sub"><a href="#c-lan">3.4 Đường wifi quán</a></li>
+        <li class="sub"><a href="#c-bt">3.5 Đường Bluetooth</a></li>
+        <li class="sub"><a href="#c-lenh">3.6 Khuôn lệnh chung</a></li>
+        <li class="sub"><a href="#c-kho">3.7 Kho nguyên liệu</a></li>
+        <li class="sub"><a href="#c-may">3.8 Trạng thái máy</a></li>
+        <li><a href="#nguyen-ly">4. Nguyên lý</a></li>
+        <li><a href="#ghi-chu">5. Ghi chú và câu hỏi mở</a></li>
+        <li><a href="#chu-thich">6. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Luồng chính: hai nhân viên cùng mở tab Menu</h2></div>
+      <p class="prose">Ví dụ đại diện: Manager và Employee cùng mở tab Menu của một máy, cả hai đang giữ bản cũ có CRC <code>1a2b</code>. Trong lúc đó Owner vừa đổi giá một món, nên CRC trên máy đã thành <code>9f3c</code>. Mũi tên liền là gửi đi, mũi tên đứt là trả lời. Khối <em>alt</em> tách hai nhánh: CRC khác thì máy gửi gói, CRC trùng thì máy chỉ trả "không đổi".</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant A1 as App Manager
+  participant A2 as App Employee
+  participant S as Server hãng
+  participant M as Máy pha
+  participant DB as MySQL máy
+  A1->>S: nhan_menu (CRC app = 1a2b)
+  S->>M: chuyển lệnh qua long-poll
+  A2->>S: nhan_menu (CRC app = 1a2b)
+  Note over S: máy này đã có yêu cầu đang chờ → gộp A2 vào
+  M->>DB: đọc món, công thức, bảng tra
+  M->>M: dựng thân JSON, tính CRC = 9f3c
+  alt CRC khác CRC app
+    M-->>S: phong bì + thân nén
+    S->>S: giữ gói trong RAM theo (máy, 9f3c)
+    S-->>A1: gói
+    S-->>A2: cùng gói trong RAM
+    A1->>A1: giải nén, CRC(byte) = 9f3c → lưu
+  else CRC trùng
+    M-->>S: up_to_date
+    S-->>A1: up_to_date
+  end
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: đề xuất dựa trên <code>nhan_menu</code> trong <code>version1.1/machine/menu_sync/machine_menu_sync.py</code> (đã có nhánh <code>up_to_date</code>). "Phong bì" là phần đầu nhỏ của gói, đọc được mà không cần giải nén; "thân" là JSON<sup class="fn" id="fnr-4"><a href="#fn-4" aria-label="Chú thích 4">4</a></sup> menu đã nén.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Mã nguồn hiện có</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>App</td><td><code>flutter_app/lib/feature/machine_menu/</code></td><td>Mới có giao diện tab. Chưa có lớp nhận gói, giải nén, kiểm CRC.</td></tr>
+            <tr><td>Server hãng</td><td><code>server/configuration/routing.py</code></td><td>Chỉ còn bảng route; phần xử lý sẽ viết mới.</td></tr>
+            <tr><td>Máy pha</td><td><code>version1.1/machine/menu_sync/</code>, <code>main.py</code></td><td>Có lệnh <code>nhan_menu</code>, <code>cap_nhat_menu</code>, dựng gói và tính CRC32<sup class="fn" id="fnr-5"><a href="#fn-5" aria-label="Chú thích 5">5</a></sup>.</td></tr>
+            <tr><td>MySQL máy</td><td><code>version1.1/database/</code></td><td>Nguồn dữ liệu thật. Mọi database của hệ thống dùng MySQL; code menu đọc qua kết nối chung <code>database/core/connection.py</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Từng thành phần</h2></div>
+
+      <article class="comp" id="c-goi">
+        <header><h3>3.1 · Gói menu <span class="pill m">đã chốt</span></h3><div class="src"><code>version1.1/machine/menu_sync/machine_menu_pack.py</code>, <code>machine_menu_store.py</code> · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Máy đọc MySQL, dựng một bản chụp đầy đủ của menu và tính số phiên bản bằng CRC32 trên chính chuỗi byte đó. Gói luôn là cả menu, không bao giờ là phần thay đổi. Gói mang cả công thức pha. Gói không mang ảnh, không mang số tồn kho, không mang tuỳ chọn size, đá, đường.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  R["① Đọc MySQL"] --> J["② Dựng thân JSON"]
+  J --> C["③ Tính CRC32"]
+  C --> D{"CRC app = CRC máy?"}
+  D -- "trùng" --> U["up_to_date"]
+  D -- "khác" --> Z["④ Nén + phong bì"]
+  Z --> T["gửi theo đường đang dùng"]
+  class R store
+  class J,Z proc
+  class C hot
+  class D dec
+  class U muted
+  class T ok
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Đọc MySQL</td></tr>
+                <tr><td>Món</td><td><code>drink</code>: id, tên, giá, đang bán, còn hàng, nổi bật, trang trí, hash ảnh, ly, kiểu pha</td></tr>
+                <tr><td>Bảng tra</td><td><code>glass</code>, <code>drink_type</code>, <code>category</code>, <code>drink_category_mapping</code></td></tr>
+                <tr><td>Công thức</td><td><code>recipe</code>: món, bước, nguyên liệu, gram</td></tr>
+                <tr><td>Nguyên liệu</td><td>chỉ id và tên, không có số tồn</td></tr>
+                <tr class="grp"><td colspan="2">② Dựng thân JSON</td></tr>
+                <tr><td>Thứ tự</td><td>cột cố định, dòng sắp theo id</td></tr>
+                <tr><td>Số</td><td>giá là số nguyên đồng; gram là số nguyên theo đơn vị nhỏ</td></tr>
+                <tr><td>Chuỗi</td><td>UTF-8, không thoát ký tự, không khoảng trắng thừa</td></tr>
+                <tr><td>Giờ</td><td>không có trường thời gian trong thân</td></tr>
+                <tr class="grp"><td colspan="2">③ Tính CRC32</td></tr>
+                <tr><td>Trên gì</td><td>byte thân JSON, trước khi nén</td></tr>
+                <tr class="grp"><td colspan="2">④ Nén + phong bì</td></tr>
+                <tr><td>Nén</td><td>zlib<sup class="fn" id="fnr-6"><a href="#fn-6" aria-label="Chú thích 6">6</a></sup></td></tr>
+                <tr><td>Phong bì</td><td>loại gói, <code>schema</code>, <code>min_app_schema</code>, <code>menu_version</code>, độ dài, giờ dựng (chỉ để hiển thị)</td></tr>
+                <tr><td>Bọc</td><td>base64<sup class="fn" id="fnr-7"><a href="#fn-7" aria-label="Chú thích 7">7</a></sup> chỉ khi đi qua server; wifi quán và Bluetooth gửi byte thô</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: <code>build_packet</code>, <code>menu_version_of</code> trong <code>machine_menu_pack.py</code>; <code>FIELDS</code> trong <code>machine_menu_store.py</code>. Khối viền đỏ là điểm nóng: mọi thứ làm CRC đổi khi dữ liệu không đổi (số <code>45000</code> so với <code>45000.0</code>, thứ tự dòng, giờ dựng gói) đều làm app tải lại thừa.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Đọc từ MySQL.</b> Mọi database của hệ thống dùng MySQL, và menu, kho, đơn, phần pha cùng đọc một nguồn. Nhờ vậy app thấy đúng menu máy đang bán. Giá kiểu <code>DECIMAL</code> được đổi sang số trước khi dựng JSON.</li>
+          <li><b>Thân JSON dựng theo quy tắc cố định.</b> Cùng dữ liệu phải luôn ra cùng chuỗi byte, vì số phiên bản là CRC của chuỗi đó. Giá và gram lưu dạng số nguyên để tránh một giá trị có hai cách viết. Giờ dựng gói nằm ở phong bì, ngoài phần tính CRC.</li>
+          <li><b>CRC32 trên byte thân chưa nén.</b> Một số làm hai việc: cho biết menu đã đổi, và cho app kiểm gói có bị hỏng trên đường không. App chỉ so số và tính lại CRC trên byte nhận được, không bao giờ tự dựng lại JSON, nên không cần chuẩn hoá JSON (JCS<sup class="fn" id="fnr-8"><a href="#fn-8" aria-label="Chú thích 8">8</a></sup>).</li>
+          <li><b>Nén rồi mới gửi.</b> Menu 200 món có công thức khoảng 56 KB thô, còn khoảng 14 KB sau zlib (mục 4). Base64 làm gói to thêm khoảng 33%, nên chỉ dùng khi gói phải nằm trong một chuỗi JSON đi qua server.</li>
+        </ol>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Phần của gói</th><th>Bảng nguồn</th><th>Có trong gói hiện tại?</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+              <tr><td>Món</td><td><code>drink</code></td><td>Có, 10 cột</td><td><span class="pill m">đã chốt</span></td></tr>
+              <tr><td>Công thức</td><td><code>recipe</code></td><td>Chưa</td><td><span class="pill m">đã chốt</span></td></tr>
+              <tr><td>Ly, kiểu pha, nhóm món</td><td><code>glass</code>, <code>drink_type</code>, <code>category</code>, <code>drink_category_mapping</code></td><td>Chỉ có id</td><td><span class="pill h">đề xuất</span></td></tr>
+              <tr><td>Tên nguyên liệu (không có tồn)</td><td><code>ingredient</code></td><td>Chưa</td><td><span class="pill h">đề xuất</span></td></tr>
+              <tr><td>Hash ảnh</td><td>cột mới hoặc tính từ file ảnh</td><td>Chưa; <code>image</code> hiện là đường dẫn</td><td><span class="pill h">đề xuất</span></td></tr>
+              <tr><td>Hướng dẫn pha có hình</td><td><code>recipe_action</code></td><td>Chưa</td><td>câu hỏi mở</td></tr>
+              <tr><td>Tuỳ chọn size, đá, đường</td><td>chưa có bảng</td><td>Không</td><td>ngoài phạm vi</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="comp" id="c-app">
+        <header><h3>3.2 · App nhận và kiểm gói <span class="pill h">đề xuất</span></h3><div class="src"><code>flutter_app/lib/feature/machine_menu/</code> (chưa có lớp này) · Sơ đồ: luồng · 5 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>App nhận gói từ bất kỳ đường nào, kiểm rồi mới thay bản chụp đang giữ. App không sửa gói và không tự tính phiên bản từ dữ liệu đã phân tích.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  N["① Nhận gói"] --> S{"② schema app hiểu?"}
+  S -- "không" --> OLD["giữ menu cũ · báo cần cập nhật app"]
+  S -- "có" --> X["③ Giải nén"]
+  X --> K{"④ CRC(byte) = menu_version?"}
+  K -- "không" --> RE["bỏ gói · xin lại"]
+  K -- "có" --> SV["⑤ Lưu byte + CRC · tải ảnh thiếu"]
+  class N ui
+  class X proc
+  class S,K dec
+  class OLD muted
+  class RE bad
+  class SV ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. <code>schema</code> là số phiên bản định dạng gói, khác với <code>menu_version</code> là số phiên bản nội dung.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Kiểm schema trước CRC.</b> App cũ gặp gói định dạng mới thì CRC đúng cũng vô ích, vì app không đọc được. Thêm cột mới thì không tăng <code>schema</code>, app cũ bỏ qua cột lạ. Đổi nghĩa một cột thì tăng <code>min_app_schema</code>; app cũ giữ menu cũ và báo cần cập nhật, không ghi đè.</li>
+          <li><b>CRC tính trên byte vừa giải nén.</b> Lệch nghĩa là gói hỏng hoặc bị cắt giữa đường. App bỏ gói và xin lại cả gói, không cố sửa.</li>
+          <li><b>Lưu nguyên byte và số CRC.</b> Lần sau app gửi đúng số này. Không tuần tự hoá lại để so, vì Dart và Python có thể in cùng dữ liệu ra hai chuỗi khác nhau.</li>
+          <li><b>Ảnh tải sau, theo hash.</b> Hash nào chưa có trong bộ nhớ của app thì tải qua cloud hoặc wifi quán. Đổi ảnh thì hash đổi, nên CRC menu cũng đổi và app biết. Mất cả wifi thì app hiện ảnh đã có hoặc ô chữ cái đầu.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-server">
+        <header><h3>3.3 · Server: chuyển tiếp và bộ đệm RAM <span class="pill m">đã chốt</span> <span class="pill h">chi tiết: đề xuất</span></h3><div class="src"><code>server/configuration/routing.py</code> (<code>MACHINE_COMMAND_POLL</code>, <code>MACHINE_RESULT_SEND</code>) · Sơ đồ: trạng thái · 4 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Server kiểm quyền, chuyển lệnh xin menu xuống máy, rồi chuyển gói về app. Server được giữ gói trong RAM để phát cho nhiều app cùng xin một máy. Server chỉ đọc phong bì (loại gói, <code>menu_version</code>, độ dài), không đọc thân, không ghi gói xuống đĩa.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "chờ máy" as cho
+  state "có gói" as co_goi
+  state "lỗi" as loi
+  state "hết hạn" as het
+  [*] --> cho: nhan_menu đầu tiên<br/>chuyển lệnh xuống máy
+  cho --> co_goi: máy trả gói<br/>phát cho mọi app đang chờ
+  cho --> loi: máy không trả lời<br/>báo app máy offline
+  co_goi --> het: quá hạn hoặc<br/>máy báo CRC mới
+  het --> [*]
+  loi --> [*]
+  class cho proc
+  class co_goi ok
+  class loi bad
+  class het muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. Mỗi máy có tối đa một mục đệm. Ở trạng thái <em>chờ máy</em>, app xin thêm được gộp vào danh sách chờ; ở trạng thái <em>có gói</em>, app xin trong hạn nhận ngay gói trong RAM. "Máy báo CRC mới" là khi server thấy một phong bì có <code>menu_version</code> khác đi qua, ví dụ sau lệnh <code>cap_nhat_menu</code>.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Gộp yêu cầu đang chờ.</b> Nhiều nhân viên mở app cùng lúc thì máy chỉ dựng và gửi gói một lần. Mỗi app vẫn được so riêng: CRC của app trùng gói thì nhận "không đổi", khác thì nhận gói.</li>
+          <li><b>Giữ ngắn.</b> Đề xuất giữ khoảng 30 giây. Trong khoảng đó, nếu ai sửa menu tại máy mà không qua server, app có thể nhận bản cũ hơn máy vài giây. Lần mở sau app tự xin lại.</li>
+          <li><b>Xoá khi thấy phiên bản mới.</b> Mọi kết quả của máy có phong bì đi qua server. Thấy <code>menu_version</code> khác với mục đang giữ thì bỏ mục cũ ngay.</li>
+          <li><b>Trần 256 KB cho mỗi gói,</b> dùng chung cho cả ba đường. Máy tự kiểm trước khi gửi; server từ chối gói vượt trần. Menu 200 món có công thức khoảng 14 KB nén, nên trần này còn dư nhiều.</li>
+          <li><b>Server khởi động lại thì mất bộ đệm.</b> Không sao: app xin lại và máy dựng lại gói. Đây là lý do bộ đệm chỉ nằm trong RAM.</li>
+        </ol>
+        <div class="note"><b>Giới hạn cần giữ</b>Bộ đệm là bản sao tạm của dữ liệu máy. Để nó không thành nơi lưu menu, đề xuất bốn giới hạn: chỉ RAM, hạn ngắn, tối đa một mục mỗi máy, server không đọc thân gói. Nếu server chạy nhiều tiến trình, bộ đệm và danh sách chờ phải nằm ở cùng tiến trình giữ kết nối long-poll của máy đó.</div>
+      </article>
+
+      <article class="comp" id="c-lan">
+        <header><h3>3.4 · Đường wifi quán <span class="pill h">đề xuất</span></h3><div class="src">chưa có mã · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Khi app không tới được server, app gọi thẳng máy trong cùng wifi. Lệnh và gói giống hệt đường cloud. Khác ở chỗ máy trả gói ngay trong response, không qua hộp thư hay long-poll.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  F["① Tìm máy bằng mDNS"] --> OK1{"thấy máy?"}
+  OK1 -- "không" --> IP["IP lần trước · nhập tay"]
+  OK1 -- "có" --> H["② Gọi HTTP tới máy"]
+  IP --> H
+  H --> R["③ Máy trả gói trong response"]
+  R --> CK["④ App kiểm như 3.2"]
+  class F,H proc
+  class OK1 dec
+  class IP human
+  class R proc
+  class CK ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. mDNS<sup class="fn" id="fnr-9"><a href="#fn-9" aria-label="Chú thích 9">9</a></sup> là cách máy tự quảng bá tên và địa chỉ trong mạng nội bộ, không cần máy chủ DNS.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>mDNS trước, IP dự phòng sau.</b> Nhiều router quán cà phê chặn multicast hoặc cách ly các máy khách với nhau. App nhớ IP lần trước của máy và cho nhập tay.</li>
+          <li><b>Byte thô, không base64.</b> Đường này không phải nhét gói vào chuỗi JSON của server.</li>
+          <li><b>Xác minh danh tính máy và người gọi</b> chưa bàn trong tài liệu này. Đường wifi quán chỉ được bằng, không được mạnh hơn đường cloud.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-bt">
+        <header><h3>3.5 · Đường Bluetooth <span class="pill m">Android, SPP: đã chốt</span> <span class="pill h">khung: đề xuất</span></h3><div class="src"><code>version1.1/machine/pairing/machine_bluetooth_serve.py</code>, <code>machine_bluetooth_pair.py</code> · Sơ đồ: tuần tự · 6 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Khi mất cả wifi, app Android nói với máy qua Bluetooth Classic, cấu hình SPP<sup class="fn" id="fnr-10"><a href="#fn-10" aria-label="Chú thích 10">10</a></sup> trên RFCOMM<sup class="fn" id="fnr-11"><a href="#fn-11" aria-label="Chú thích 11">11</a></sup>, là cách máy đang dùng để ghép nối. RFCOMM là một dòng byte tin cậy, có thứ tự, nên không cần chia mảnh theo MTU<sup class="fn" id="fnr-12"><a href="#fn-12" aria-label="Chú thích 12">12</a></sup> như BLE<sup class="fn" id="fnr-13"><a href="#fn-13" aria-label="Chú thích 13">13</a></sup>. Chỉ cần đóng khung có độ dài để bên nhận biết gói kết thúc ở đâu.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant A as App Android
+  participant M as Máy pha
+  A->>M: mở kết nối RFCOMM (đã ghép nối)
+  A->>M: khung lệnh nhan_menu (CRC app)
+  M->>M: dựng gói, tính CRC
+  M-->>A: khung đầu: độ dài + menu_version
+  M-->>A: thân gói nhị phân
+  A->>A: đủ độ dài → kiểm như 3.2
+  Note over A,M: rớt kết nối giữa chừng → bỏ phần đã nhận, nối lại, xin lại cả gói
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: đề xuất; kết nối và ghép nối dựa trên <code>machine_bluetooth_serve.py</code>. Một khung = 4 byte độ dài + nội dung. Cách đóng khung có độ dài tương tự Matter BTP<sup class="fn" id="fnr-14"><a href="#fn-14" aria-label="Chú thích 14">14</a></sup> và Espressif BluFi, nhưng bỏ phần chia mảnh vì RFCOMM đã là dòng byte.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Bỏ kiểu "một dòng JSON, tối đa 4096 byte".</b> Khuôn hiện tại ở <code>machine_bluetooth_pair.py</code> chỉ đủ cho ghép nối. Gói menu có thể tới vài chục KB, lại là byte nhị phân, nên phải dùng khung có độ dài.</li>
+          <li><b>Kết nối phải sống sau ghép nối.</b> Hiện máy chạy một vòng ghép nối rồi đóng kết nối. Cần một vòng nhận lệnh dùng cùng bảng lệnh của đường cloud.</li>
+          <li><b>Hết giờ tính theo tiến độ,</b> không tính cho cả kết nối. Còn đang nhận byte thì chưa hết giờ.</li>
+          <li><b>Không truyền tiếp từ chỗ đứt.</b> Gói nhỏ, nên gửi lại cả gói rẻ hơn lưu trạng thái truyền.</li>
+          <li><b>Không gửi ảnh qua Bluetooth.</b> Ảnh trung bình khoảng 15 KB mỗi món, cả menu có thể lên hàng trăm KB tới vài MB.</li>
+        </ol>
+        <div class="note"><b>Giới hạn của lựa chọn này</b>iOS không cho app nói chuyện với thiết bị Bluetooth Classic ngoài chương trình MFi<sup class="fn" id="fnr-15"><a href="#fn-15" aria-label="Chú thích 15">15</a></sup>. Nếu sau này cần iPhone, đường Bluetooth phải chuyển sang BLE và chia mảnh theo MTU. Kết luận về iOS lấy từ diễn đàn nhà phát triển Apple, chưa có văn bản chính thức.</div>
+      </article>
+
+      <article class="comp" id="c-lenh">
+        <header><h3>3.6 · Khuôn lệnh chung <span class="pill h">đề xuất</span></h3><div class="src"><code>version1.1/machine/main.py</code>, <code>server_connection/machine_server_request.py</code> · Sơ đồ: trạng thái · 6 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Menu, kho và trạng thái máy cùng đi trên một khuôn thông điệp, gồm bốn loại: <b>lệnh</b> (đổi dữ liệu, phải trả lời, chạy đúng một lần), <b>câu hỏi</b> (chỉ đọc, như <code>nhan_menu</code>), <b>sự kiện</b> (máy báo điều đã xảy ra) và <b>kết quả</b>. Mỗi thông điệp có mã riêng do bên gửi sinh (UUID<sup class="fn" id="fnr-16"><a href="#fn-16" aria-label="Chú thích 16">16</a></sup>), phiên bản hợp đồng, người gửi, thời điểm và hạn.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "chờ" as cho
+  state "đã lấy" as da_lay
+  state "xong" as xong
+  state "lỗi" as loi
+  state "từ chối" as tu_choi
+  state "hết hạn" as het_han
+  [*] --> cho: app gửi<br/>server xếp vào hộp thư máy
+  cho --> da_lay: máy poll<br/>đặt giờ chờ kết quả
+  da_lay --> cho: quá giờ chưa có kết quả<br/>trả lại hộp thư
+  da_lay --> xong: máy chạy xong
+  da_lay --> loi: máy báo lỗi
+  da_lay --> tu_choi: máy kiểm quyền<br/>không cho
+  cho --> het_han: quá hạn lệnh
+  xong --> [*]
+  loi --> [*]
+  tu_choi --> [*]
+  het_han --> [*]
+  class cho ui
+  class da_lay proc
+  class xong ok
+  class loi bad
+  class tu_choi bad
+  class het_han muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất, tham khảo vòng đời job của AWS IoT Jobs và hàng đợi lệnh của Azure IoT Hub. Lệnh có thể tới máy hai lần (sau khi bị trả lại hộp thư), nên máy phải tự chặn chạy lần hai.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Chạy đúng một lần nhờ bảng mã đã xử lý ở máy.</b> Máy ghi mã lệnh và kết quả cùng một transaction<sup class="fn" id="fnr-17"><a href="#fn-17" aria-label="Chú thích 17">17</a></sup> với thay đổi dữ liệu. Gặp lại mã cũ thì trả lại kết quả cũ, không chạy lại; cùng mã mà nội dung khác thì báo lỗi. Đây là cách Stripe dùng Idempotency-Key<sup class="fn" id="fnr-18"><a href="#fn-18" aria-label="Chú thích 18">18</a></sup>. Bảng phải ở máy, vì lệnh qua wifi quán và Bluetooth không đi qua server.</li>
+          <li><b>Lệnh có hạn ngắn.</b> Đề xuất 60 giây. Lệnh quá hạn thì app báo lỗi, máy không chạy muộn. Server đóng dấu hạn theo giờ server, máy đếm thời gian tương đối từ lúc nhận, vì máy có thể lệch giờ.</li>
+          <li><b>Gửi kết quả hỏng thì gửi lại.</b> Máy giữ kết quả theo mã lệnh và thử lại vài lần. Server lọc trùng theo mã.</li>
+          <li><b>Việc nguy hiểm chỉ qua cloud.</b> Máy biết lệnh đến từ đường nào. Sửa menu, sửa giá, xoá nguyên liệu, khoá máy đến từ wifi quán hay Bluetooth thì máy từ chối. Tắt/bật món và đọc menu thì cho.</li>
+          <li><b>Giữ long-poll.</b> Với vài chục máy và lệnh thưa, long-poll đủ dùng. MQTT<sup class="fn" id="fnr-19"><a href="#fn-19" aria-label="Chú thích 19">19</a></sup> hay WebSocket chỉ đáng đổi khi cần đẩy nhiều và nhanh. Khuôn thông điệp tách khỏi đường vận chuyển, nên đổi sau không chạm nội dung.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-kho">
+        <header><h3>3.7 · Kho nguyên liệu <span class="pill h">đề xuất</span></h3><div class="src"><code>version1.1/machine/ingredient_sync/</code>, <code>version1.1/database/services/inventory.py</code> · Sơ đồ: luồng · 5 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Chỉ máy được trừ kho, mỗi khi pha xong một ly. App xem tồn bằng cùng kiểu bản chụp + CRC như menu (lệnh <code>nhan_kho</code> đã làm vậy), và gửi lệnh nạp kho. Mọi thay đổi tồn kho ghi một dòng vào sổ kho. Sổ này đồng thời là nhật ký theo người.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  A["App: nạp kho"] --> T{"loại lệnh"}
+  T -- "đổ thêm X" --> ADD["cộng X"]
+  T -- "kiểm đếm, đặt về X" --> SET["đặt về X · cần lý do"]
+  ADD --> L["ghi sổ kho: ai · trước · sau · vì sao"]
+  SET --> L
+  P["Máy pha xong ly"] --> SUB["trừ theo công thức"] --> L
+  L --> W{"qua ngưỡng?"}
+  W -- "có" --> O["sự kiện vào hộp thư đi"]
+  class A ui
+  class P hw
+  class T,W dec
+  class ADD,SET,SUB proc
+  class L store
+  class O file
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất, dựa trên <code>refill</code> và <code>consume_recipe_usage</code> trong <code>inventory.py</code>. "Hộp thư đi" (outbox<sup class="fn" id="fnr-20"><a href="#fn-20" aria-label="Chú thích 20">20</a></sup>) là bảng ở máy giữ sự kiện chưa gửi được lên server.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Hai lệnh nạp.</b> "Đổ thêm X" dùng hằng ngày: cộng độc lập nên không lệch dù máy đang pha. "Kiểm đếm, đặt về X" để sửa sai số tích luỹ, dành cho Manager trở lên, kèm lý do. Square và Shopify đều tách hai loại này (adjustment và physical count).</li>
+          <li><b>Lệnh đổ thêm bắt buộc có mã lệnh.</b> Không có mã, gửi lại vì mạng chập chờn sẽ cộng hai lần.</li>
+          <li><b>Bỏ giá trị "nạp đầy".</b> Bình chưa khai báo dung tích thì máy dùng mặc định 10 kg, nên "nạp đầy" có thể ghi sai.</li>
+          <li><b>Cảnh báo chỉ khi chuyển mức</b> (đủ → sắp hết → hết). Sự kiện ghi cùng transaction với việc trừ kho, gửi bù khi có mạng, server lọc trùng theo mã sự kiện rồi đẩy thông báo.</li>
+          <li><b>Hết nguyên liệu thì máy tự tắt món</b> và ghi lý do. Phần này máy đã làm bằng cờ <code>in_stock</code>.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-may">
+        <header><h3>3.8 · Trạng thái máy <span class="pill h">đề xuất</span></h3><div class="src"><code>version1.1/machine/main.py</code> · Sơ đồ: luồng · 3 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Server không giữ bản sao trạng thái máy kiểu Device Shadow<sup class="fn" id="fnr-21"><a href="#fn-21" aria-label="Chú thích 21">21</a></sup>. Server chỉ nhớ máy có đang online không và lần cuối thấy máy lúc nào, suy ra từ chính các lần poll. Trạng thái chi tiết (đang pha, rảnh, lỗi) app hỏi thẳng máy khi mở màn hình. Thay đổi đáng báo thì máy gửi sự kiện qua hộp thư đi.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  P["Máy poll"] --> ON["server ghi: online · lần thấy cuối"]
+  Q["App mở màn hình máy"] --> ASK["câu hỏi: trạng thái hiện tại"] --> M["máy trả lời tươi"]
+  E["Máy đổi trạng thái"] --> OB["hộp thư đi · số thứ tự"] --> S["server lọc trùng · báo app"]
+  class P,E hw
+  class Q ui
+  class ON,ASK,S proc
+  class OB file
+  class M ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: đề xuất. AWS Device Shadow và Azure Device Twin giữ trạng thái ở cloud để app đọc khi máy offline; tài liệu này không làm vậy, vì máy offline thì phần lớn tính năng cũng không dùng được.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Online suy từ poll,</b> không cần luồng heartbeat riêng. Máy treo thì poll dừng và máy hiện offline.</li>
+          <li><b>Sự kiện có số thứ tự tăng dần theo máy.</b> Server trả số cuối đã nhận, máy xoá các dòng đã được nhận. Bên nhận bỏ qua số đã thấy.</li>
+          <li><b>Máy offline thì app hiện "offline" và lần thấy cuối.</b> App có nhớ trạng thái cuối cùng hay không là câu hỏi mở.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="nguyen-ly">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Nguyên lý và số đo</h2></div>
+      <article class="comp">
+        <header><h3>4.1 · Vì sao CRC32 là đủ</h3></header>
+        <p>CRC32 cho 2<sup>32</sup> (khoảng 4,3 tỷ) giá trị. Mỗi lần đồng bộ chỉ so đúng hai số: số app đang giữ và số máy vừa tính. Xác suất menu đổi mà CRC trùng do ngẫu nhiên là khoảng một phần 4,3 tỷ cho mỗi lần đổi. CRC không chống được người cố ý làm giả, nhưng việc đó là phần của TLS<sup class="fn" id="fnr-22"><a href="#fn-22" aria-label="Chú thích 22">22</a></sup> và xác thực, không phải của số phiên bản.</p>
+        <p>CRC không có thứ tự: nó cho biết hai bản khác nhau, không cho biết bản nào mới hơn. Vì app luôn nhận cả gói khi khác, điều này không làm hỏng dữ liệu. Nó chỉ cần tới khi muốn hiện "có bản mới hơn" mà chưa tải; khi đó mới thêm một bộ đếm tăng dần.</p>
+      </article>
+      <article class="comp">
+        <header><h3>4.2 · Vì sao app không tự dựng lại JSON</h3></header>
+        <p>Muốn hai bên cùng tính ra một CRC từ dữ liệu, cả hai phải in dữ liệu ra cùng một chuỗi byte. Chuẩn JCS (RFC 8785) làm việc đó, nhưng đầy bẫy: thứ tự khoá theo UTF-16, số thực theo cách in của ECMAScript, không chuẩn hoá Unicode, số nguyên lớn hơn 2<sup>53</sup> phải gửi dạng chuỗi. Thiết kế ở đây tránh hết bằng một quy tắc: chỉ máy dựng chuỗi, app chỉ lưu và kiểm trên byte nhận được.</p>
+      </article>
+      <article class="comp">
+        <header><h3>4.3 · Kích thước gói</h3></header>
+        <p>Đo trên dữ liệu giả lập: mỗi món có tên, giá, cờ, 3–5 bước công thức và hash ảnh 64 ký tự hex. Hash ngẫu nhiên nén kém, nên số dưới đây hơi bi quan.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Số món</th><th>JSON thô</th><th>zlib</th><th>zlib + base64</th><th>zstd</th><th>CBOR thô</th></tr></thead>
+            <tbody>
+              <tr><td>20</td><td class="num">5,6 KB</td><td class="num">1,6 KB</td><td class="num">2,1 KB</td><td class="num">1,5 KB</td><td class="num">4,6 KB</td></tr>
+              <tr><td>50</td><td class="num">14,0 KB</td><td class="num">3,7 KB</td><td class="num">4,9 KB</td><td class="num">3,3 KB</td><td class="num">11,5 KB</td></tr>
+              <tr><td>200</td><td class="num">56,3 KB</td><td class="num">13,9 KB</td><td class="num">18,5 KB</td><td class="num">11,9 KB</td><td class="num">46,2 KB</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>zstd<sup class="fn" id="fnr-23"><a href="#fn-23" aria-label="Chú thích 23">23</a></sup> nhỏ hơn zlib khoảng 14%, nhưng Dart phải thêm thư viện native. CBOR<sup class="fn" id="fnr-24"><a href="#fn-24" aria-label="Chú thích 24">24</a></sup> và MessagePack nhỏ hơn JSON khi chưa nén, còn sau nén thì gần như không hơn, lại khó đọc khi debug. Vì vậy chọn JSON + zlib, thư viện có sẵn ở cả Python và Dart. Ảnh thật trong <code>machine/database/menu/</code> trung bình khoảng 15 KB mỗi file webp, tức một ảnh đã nặng bằng cả gói chữ của 200 món.</p>
+      </article>
+      <article class="comp">
+        <header><h3>4.4 · Đối chiếu với hệ thống khác</h3></header>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Hệ thống</th><th>Họ làm gì</th><th>Áp dụng ở đây</th></tr></thead>
+            <tbody>
+              <tr><td>Toast Menus API</td><td>Hỏi mốc <code>lastUpdated</code> trước, chỉ tải cả menu khi mốc mới hơn.</td><td>Cùng ý "hỏi số nhỏ trước". Nguồn mới đọc qua kết quả tìm kiếm.</td></tr>
+              <tr><td>Square Catalog / Inventory</td><td>Mỗi đối tượng có <code>version</code>; khoá idempotency bắt buộc; kho tách điều chỉnh và kiểm đếm.</td><td>Mã lệnh chạy một lần; hai lệnh nạp kho.</td></tr>
+              <tr><td>AWS IoT Device Shadow</td><td>Cloud giữ trạng thái mong muốn và đã báo, có <code>version</code>.</td><td>Không dùng: buộc cloud giữ dữ liệu.</td></tr>
+              <tr><td>Azure IoT Hub</td><td>Direct method trả lời đồng bộ, tối đa 128 KB; hàng đợi lệnh có khoá 1 phút và hạn.</td><td>Vòng đời lệnh ở 3.6; trần gói cùng cỡ.</td></tr>
+              <tr><td>Stripe</td><td>Khoá do client sinh, lưu kết quả lần đầu, lặp lại trả kết quả cũ, nội dung khác thì báo lỗi.</td><td>Bảng mã đã xử lý ở máy.</td></tr>
+              <tr><td>Matter BTP, Espressif BluFi</td><td>Khung Bluetooth có độ dài, số thứ tự, cửa sổ nhận.</td><td>Khung có độ dài trên RFCOMM; bỏ chia mảnh.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Ghi chú và câu hỏi mở</h2></div>
+      <div class="note crit"><b>Nghiêm trọng</b><code>main.py</code>, hàm <code>reply</code>: chỉ bắt lỗi mạng, không bắt <code>ValueError</code>; server trả về không phải JSON thì vòng lặp chính của máy dừng. Gửi kết quả thất bại thì chỉ in log rồi bỏ, không gửi lại. Máy chưa lưu mã lệnh đã xử lý, nên nếu lệnh tới lần hai thì chạy lần hai. Chưa sửa.</div>
+      <div class="note"><b>Lỗi khác trong mã, chưa sửa</b>
+        <code>schema.sql:135</code> và <code>:511</code>: giá và gram là <code>DECIMAL</code>, có thể in thành hai chuỗi khác nhau và làm CRC đổi khi dữ liệu không đổi. ·
+        <code>machine_menu_store.py:11</code>: số phiên bản menu tính cả <code>in_stock</code>, nên mỗi lần kho đổi thì menu "đổi". ·
+        <code>machine_menu_validate.py:17</code>: tắt/bật món và sửa giá đi chung một lệnh, máy không tách được việc làm được offline. ·
+        <code>machine_bluetooth_pair.py:10</code>: Bluetooth chỉ nhận một dòng tối đa 4096 byte. ·
+        <code>machine_server_request.py:18</code>: timeout 10 giây dùng chung cho cả long-poll. ·
+        <code>machine_server_request.py:12</code>: <code>product_key</code> đi trong body, lộ nếu server chạy HTTP thường. ·
+        <code>inventory.py:602</code>: dung tích mặc định 10 kg cho "nạp đầy". ·
+        <code>nap_kho</code>: không ghi ai nạp, trước và sau bao nhiêu.
+      </div>
+      <div class="note"><b>Phạm vi chưa phủ</b>Xác minh danh tính máy và người gọi trên wifi quán và Bluetooth; app Android chưa có thư viện Bluetooth và chưa có lớp nhận gói; đường tải ảnh theo hash; cập nhật phần mềm máy; tuỳ chọn size, đá, đường.</div>
+
+      <h3 style="font-size:20px">Câu hỏi mở</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>#</th><th>Câu hỏi</th><th>Đề xuất</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Tách số phiên bản nội dung menu (tên, giá, công thức, ảnh) khỏi số phiên bản trạng thái (đang bán, còn hàng)?</td><td>Có. Máy tự tắt món vì hết sữa thì người đang sửa giá món khác không bị báo xung đột.</td></tr>
+            <tr><td>2</td><td>Gói có mang hướng dẫn pha có hình (<code>recipe_action</code>) không?</td><td>Không ở bản đầu.</td></tr>
+            <tr><td>3</td><td>Hạn giữ gói trong bộ đệm RAM của server?</td><td>30 giây.</td></tr>
+            <tr><td>4</td><td>Danh sách đóng các lệnh chỉ chạy qua cloud?</td><td>Sửa menu, sửa giá, xoá nguyên liệu, khoá máy, sửa ngưỡng kho.</td></tr>
+            <tr><td>5</td><td>Nạp kho dùng "đổ thêm", "kiểm đếm" hay cả hai; ai được dùng lệnh nào?</td><td>Cả hai. Mọi vai đổ thêm; Manager trở lên kiểm đếm.</td></tr>
+            <tr><td>6</td><td>Hạn lệnh, và thời gian máy giữ mã lệnh đã xử lý?</td><td>60 giây; 7 ngày.</td></tr>
+            <tr><td>7</td><td>Máy offline thì app chỉ hiện "offline + lần thấy cuối", hay nhớ trạng thái cuối?</td><td>Nhớ bản cuối, ghi rõ là dữ liệu cũ.</td></tr>
+            <tr><td>8</td><td>Món tự tắt vì hết nguyên liệu: cho Manager ép bán tiếp không?</td><td>Không ở bản đầu.</td></tr>
+            <tr><td>9</td><td>Máy cần khoá khẩn khi đang mất mạng thì sao, khi khoá máy chỉ chạy qua cloud?</td><td>Chấp nhận không làm được ở bản đầu.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:20px">Để sau bản đầu</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Việc</th><th>Khi nào đáng làm</th></tr></thead>
+          <tbody>
+            <tr><td>Máy chủ động báo app khi menu, kho đổi</td><td>Khi việc app hỏi lại theo chu kỳ không đủ tươi.</td></tr>
+            <tr><td>Chuyển Bluetooth sang BLE</td><td>Khi cần hỗ trợ iPhone.</td></tr>
+            <tr><td>Truyền tiếp từ chỗ đứt</td><td>Khi gói vượt vài trăm KB.</td></tr>
+            <tr><td>zstd</td><td>Khi đo thấy băng thông Bluetooth là điểm nghẽn.</td></tr>
+            <tr><td>Bộ đếm phiên bản tăng dần cạnh CRC</td><td>Khi cần biết bản nào mới hơn mà chưa tải.</td></tr>
+            <tr><td>MQTT hoặc WebSocket</td><td>Khi số máy lên hàng trăm hoặc cần đẩy nhiều.</td></tr>
+            <tr><td>Cân từng bình để đối chiếu tồn kho</td><td>Khi có phần cứng; loadcell hiện chỉ cân ly.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Cyclic Redundancy Check.</b> Mã kiểm tính từ một chuỗi byte; byte đổi thì mã gần như chắc chắn đổi. Dùng để phát hiện thay đổi hoặc lỗi truyền, không dùng để chống làm giả. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>HTTP long polling.</b> Bên gọi gửi một request và server giữ request đó mở tới khi có dữ liệu hoặc hết giờ. Giúp máy nằm sau router vẫn nhận lệnh gần như tức thì mà không cần mở cổng vào. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-3"><b>MySQL.</b> Hệ quản trị cơ sở dữ liệu quan hệ mà máy pha dùng để lưu món, công thức, kho và đơn. <a class="fn-back" href="#fnr-3" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-4"><b>JavaScript Object Notation.</b> Định dạng văn bản cho dữ liệu có cấu trúc, đặc tả ở RFC 8259. <a class="fn-back" href="#fnr-4" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-5"><b>Cyclic Redundancy Check 32 bit.</b> Một dạng CRC cho ra số 32 bit (khoảng 4,3 tỷ giá trị). Python có sẵn ở zlib.crc32, Dart có trong gói archive. <a class="fn-back" href="#fnr-5" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-6"><b>zlib.</b> Định dạng nén dùng thuật toán DEFLATE (RFC 1950/1951), có sẵn trong Python và Dart. <a class="fn-back" href="#fnr-6" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-7"><b>Base64.</b> Cách viết byte nhị phân bằng 64 ký tự chữ và số để nhét được vào chuỗi văn bản; làm dữ liệu to thêm khoảng một phần ba (RFC 4648). <a class="fn-back" href="#fnr-7" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-8"><b>JSON Canonicalization Scheme.</b> Quy tắc in JSON ra một chuỗi byte duy nhất để hai bên cùng tính được một mã băm hay chữ ký (RFC 8785). <a class="fn-back" href="#fnr-8" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-9"><b>Multicast DNS.</b> Cách các thiết bị trong một mạng nội bộ tự công bố và tìm tên, địa chỉ của nhau mà không cần máy chủ DNS (RFC 6762, kèm DNS-SD ở RFC 6763). <a class="fn-back" href="#fnr-9" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-10"><b>Serial Port Profile.</b> Cấu hình Bluetooth Classic giả lập một cổng nối tiếp giữa hai thiết bị, chạy trên RFCOMM. <a class="fn-back" href="#fnr-10" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-11"><b>Radio Frequency Communication.</b> Lớp giao thức Bluetooth Classic cung cấp một dòng byte tin cậy, có thứ tự giữa hai thiết bị. <a class="fn-back" href="#fnr-11" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-12"><b>Maximum Transmission Unit.</b> Kích thước tối đa của một gói ở một lớp truyền. Với BLE, mặc định chỉ 23 byte và phải thương lượng để tăng. <a class="fn-back" href="#fnr-12" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-13"><b>Bluetooth Low Energy.</b> Nhánh Bluetooth tiết kiệm năng lượng, trao đổi dữ liệu qua các đặc tính GATT với gói nhỏ; được cả Android và iOS hỗ trợ cho thiết bị thường. <a class="fn-back" href="#fnr-13" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-14"><b>Matter Bluetooth Transport Protocol.</b> Lớp chia mảnh và xác nhận mà chuẩn nhà thông minh Matter dùng để chở thông điệp qua BLE. <a class="fn-back" href="#fnr-14" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-15"><b>Made for iPhone/iPad.</b> Chương trình cấp phép phụ kiện của Apple. Phụ kiện Bluetooth Classic muốn nói chuyện với app iOS phải thuộc chương trình này. <a class="fn-back" href="#fnr-15" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-16"><b>Universally Unique Identifier.</b> Mã 128 bit sinh ngẫu nhiên, gần như không thể trùng, dùng làm mã lệnh do bên gửi tự tạo (RFC 9562). <a class="fn-back" href="#fnr-16" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-17"><b>Transaction cơ sở dữ liệu.</b> Nhóm thao tác ghi được áp dụng trọn vẹn hoặc không áp dụng gì; không có trạng thái nửa chừng. <a class="fn-back" href="#fnr-17" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-18"><b>Idempotency key.</b> Mã do bên gọi gửi kèm request để bên nhận nhận ra request lặp lại và trả kết quả cũ thay vì làm lần hai. <a class="fn-back" href="#fnr-18" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-19"><b>MQTT.</b> Giao thức nhắn tin nhẹ kiểu xuất bản/đăng ký qua một broker, phổ biến trong IoT (chuẩn OASIS). <a class="fn-back" href="#fnr-19" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-20"><b>Transactional outbox.</b> Mẫu thiết kế ghi sự kiện cần gửi vào một bảng cùng transaction với thay đổi dữ liệu, rồi gửi đi sau; mất mạng không làm mất sự kiện. <a class="fn-back" href="#fnr-20" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-21"><b>AWS IoT Device Shadow.</b> Tài liệu JSON trên cloud AWS giữ trạng thái mong muốn và trạng thái thiết bị báo lên, để app đọc cả khi thiết bị offline. <a class="fn-back" href="#fnr-21" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-22"><b>Transport Layer Security.</b> Giao thức mã hoá và xác thực đường truyền mà HTTPS dùng (RFC 8446). <a class="fn-back" href="#fnr-22" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-23"><b>Zstandard.</b> Thuật toán nén của Meta, thường nén nhỏ và nhanh hơn zlib (RFC 8878). <a class="fn-back" href="#fnr-23" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-24"><b>Concise Binary Object Representation.</b> Định dạng nhị phân có mô hình dữ liệu gần JSON (RFC 8949). <a class="fn-back" href="#fnr-24" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

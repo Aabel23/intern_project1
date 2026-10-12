@@ -33,7 +33,7 @@ def check_change(change, known_ids):
         raise ValueError(f"Món {change['drink_id']} không có cột nào để sửa")
     if not all(key in EDITABLE and EDITABLE[key](value) for key, value in fields.items()):
         raise ValueError(f"Món {change['drink_id']}: cột không sửa được hoặc giá trị sai")
-    # SQLite lưu available dạng 0/1.
+    # MySQL lưu available dạng TINYINT 0/1.
     if "available" in fields:
         fields["available"] = int(fields["available"])
     return change["drink_id"], fields

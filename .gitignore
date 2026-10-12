@@ -1,0 +1,4 @@
+server/configuration/.env
+tests/manual/__pycache__/
+__pycache__/
+*.pyc

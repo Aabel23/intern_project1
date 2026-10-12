@@ -1,0 +1,1186 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sửa từng phần hệ lớn</title>
+<meta name="description" content="Bốn lớp giúp các hệ lớn như Netflix, Google, Meta sửa, refactor và nâng cấp một tính năng mà không đụng phần còn lại.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.8456)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+/* fn:start */
+  sup.fn{font-family:var(--sans); font-size:.62em; line-height:0; font-weight:600; margin-left:1px}
+  sup.fn a{text-decoration:none; color:var(--accent-ink); padding:0 1px}
+  ol.fnotes{margin:0; padding-left:1.8em; display:grid; gap:6px; font-family:var(--sans); font-size:13.5px; line-height:1.5; max-width:90ch; color:var(--ink-2)}
+  ol.fnotes li::marker{color:var(--accent-ink); font-weight:600}
+  ol.fnotes b{color:var(--ink); font-weight:600}
+  ol.fnotes li:target{background:var(--accent-soft); border-radius:6px}
+  .fn-back{text-decoration:none; font-size:12px}
+  sup.fn, ol.fnotes li{scroll-margin-top:80px}
+  /* fn:end */
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tài liệu nghiên cứu · project1_app</div>
+      <h1>Sửa một phần hệ thống lớn mà không đụng phần còn lại</h1>
+      <p class="lead">Các sản phẩm như Netflix<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup>, YouTube, Google hay Facebook vẫn sửa lỗi, viết lại và nâng cấp từng tính năng trong khi hệ đang phục vụ hàng trăm triệu người. Tài liệu này giải thích họ làm thế nào: bốn lớp chồng lên nhau, mỗi lớp giải một nửa bài toán.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>project1_app</code> · <code>c34d55e</code></span>
+      <span><b>Ngày:</b> 11/10/2026</span>
+      <span><b>Trạng thái:</b> research, đang bàn</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Người dùng</span>
+        <span><i class="sw proc"></i>Khối xử lý</span>
+        <span><i class="sw hot"></i>Khối đang được sửa</span>
+        <span><i class="sw store"></i>Dữ liệu riêng của khối</span>
+        <span><i class="sw human"></i>Cửa công khai / công tắc</span>
+        <span><i class="ln"></i>Đường đi của một request (số = thứ tự)</span>
+        <span><i class="ln g"></i>Phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1100 596" role="img" aria-label="Bốn lớp giúp sửa một khối mà không đụng khối khác: ranh giới, hợp đồng, thay đổi an toàn, quan sát">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+<!-- Lớp 3 -->
+<rect class="zn" x="16" y="36" width="1068" height="96" rx="12"/>
+<text x="18" y="26" class="zt2">LỚP 3 · THAY ĐỔI AN TOÀN: ĐƯA BẢN SỬA RA TỪ TỪ, LÙI LẠI ĐƯỢC</text>
+<g class="nd proc"><rect x="40" y="58" width="160" height="52" rx="8"/>
+<text x="120" y="80" class="tt" text-anchor="middle">Commit nhỏ</text>
+<text x="120" y="97" class="ts" text-anchor="middle">nhánh sống dưới 2 ngày</text></g>
+<g class="nd proc"><rect x="250" y="58" width="180" height="52" rx="8"/>
+<text x="340" y="80" class="tt" text-anchor="middle">CI kiểm tự động</text>
+<text x="340" y="97" class="ts" text-anchor="middle">test · ranh giới · hợp đồng</text></g>
+<g class="nd proc"><rect x="480" y="58" width="180" height="52" rx="8"/>
+<text x="570" y="80" class="tt" text-anchor="middle">Deploy, flag tắt</text>
+<text x="570" y="97" class="ts" text-anchor="middle">code đã lên, chưa ai thấy</text></g>
+<g class="nd proc"><rect x="710" y="58" width="200" height="52" rx="8"/>
+<text x="810" y="80" class="tt" text-anchor="middle">Bật dần</text>
+<text x="810" y="97" class="ts" text-anchor="middle">nội bộ → 1% → 10% → 100%</text></g>
+<rect class="chip" x="950" y="58" width="116" height="52" rx="8"/>
+<text x="1008" y="80" class="tt" text-anchor="middle">Kill switch</text>
+<text x="1008" y="97" class="ts" text-anchor="middle">lùi trong vài giây</text>
+<path class="e" d="M200,84 L248,84" marker-end="url(#ag)"/>
+<path class="e" d="M430,84 L478,84" marker-end="url(#ag)"/>
+<path class="e" d="M660,84 L708,84" marker-end="url(#ag)"/>
+<path class="e dash" d="M910,84 L948,84" marker-end="url(#ag)"/>
+
+<!-- Lớp 1 + 2 -->
+<rect class="zn" x="16" y="172" width="1068" height="290" rx="12"/>
+<text x="18" y="162" class="zt2">LỚP 1 · RANH GIỚI THEO NGHIỆP VỤ  ·  LỚP 2 · HỢP ĐỒNG API GIỮA CÁC KHỐI</text>
+<g class="nd ui"><rect x="36" y="300" width="120" height="58" rx="8"/>
+<text x="96" y="325" class="tt" text-anchor="middle">Người dùng</text>
+<text x="96" y="342" class="ts" text-anchor="middle">app · web · TV</text></g>
+<g class="nd proc"><rect x="196" y="300" width="130" height="58" rx="8"/>
+<text x="261" y="325" class="tt" text-anchor="middle">Cổng vào</text>
+<text x="261" y="342" class="ts" text-anchor="middle">gắn request ID</text></g>
+
+<g class="nd proc"><rect x="380" y="290" width="140" height="70" rx="8"/>
+<text x="450" y="322" class="tt" text-anchor="middle">Tài khoản</text>
+<text x="450" y="339" class="ts" text-anchor="middle">nội bộ ẩn</text></g>
+<g class="nd proc"><rect x="560" y="290" width="140" height="70" rx="8"/>
+<text x="630" y="322" class="tt" text-anchor="middle">Phát video</text>
+<text x="630" y="339" class="ts" text-anchor="middle">nội bộ ẩn</text></g>
+<g class="nd hot"><rect x="740" y="290" width="140" height="70" rx="8"/>
+<text x="810" y="322" class="tt" text-anchor="middle">Gợi ý</text>
+<text x="810" y="339" class="thot" text-anchor="middle">đang viết lại</text></g>
+<g class="nd proc"><rect x="920" y="290" width="140" height="70" rx="8"/>
+<text x="990" y="322" class="tt" text-anchor="middle">Thanh toán</text>
+<text x="990" y="339" class="ts" text-anchor="middle">nội bộ ẩn</text></g>
+
+<rect class="chip" x="388" y="283" width="34" height="15" rx="4"/><text x="405" y="294" class="tchip" text-anchor="middle">API</text>
+<rect class="chip" x="568" y="283" width="34" height="15" rx="4"/><text x="585" y="294" class="tchip" text-anchor="middle">API</text>
+<rect class="chip" x="748" y="283" width="34" height="15" rx="4"/><text x="765" y="294" class="tchip" text-anchor="middle">API</text>
+<rect class="chip" x="928" y="283" width="34" height="15" rx="4"/><text x="945" y="294" class="tchip" text-anchor="middle">API</text>
+
+<g class="nd store"><path d="M390,406 a50,8 0 0 1 100,0 v36 a50,8 0 0 1 -100,0 z"/><path class="lid" d="M390,406 a50,8 0 0 0 100,0"/>
+<text x="440" y="434" class="ts" text-anchor="middle">dữ liệu riêng</text></g>
+<g class="nd store"><path d="M570,406 a50,8 0 0 1 100,0 v36 a50,8 0 0 1 -100,0 z"/><path class="lid" d="M570,406 a50,8 0 0 0 100,0"/>
+<text x="620" y="434" class="ts" text-anchor="middle">dữ liệu riêng</text></g>
+<g class="nd store"><path d="M750,406 a50,8 0 0 1 100,0 v36 a50,8 0 0 1 -100,0 z"/><path class="lid" d="M750,406 a50,8 0 0 0 100,0"/>
+<text x="800" y="434" class="ts" text-anchor="middle">dữ liệu riêng</text></g>
+<g class="nd store"><path d="M930,406 a50,8 0 0 1 100,0 v36 a50,8 0 0 1 -100,0 z"/><path class="lid" d="M930,406 a50,8 0 0 0 100,0"/>
+<text x="980" y="434" class="ts" text-anchor="middle">dữ liệu riêng</text></g>
+<path class="e" d="M440,360 L440,396" marker-end="url(#ag)"/>
+<path class="e" d="M620,360 L620,396" marker-end="url(#ag)"/>
+<path class="e" d="M980,360 L980,396" marker-end="url(#ag)"/>
+
+<!-- đường chính -->
+<path class="e main" d="M156,329 L194,329" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="175" cy="329" r="9.5"/><text x="175" y="332.8" text-anchor="middle">1</text></g>
+<path class="e main" d="M326,329 L350,329 L350,232 L630,232 L630,281" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="490" cy="232" r="9.5"/><text x="490" y="235.8" text-anchor="middle">2</text></g>
+<path class="e main" d="M700,325 L738,325" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="719" cy="325" r="9.5"/><text x="719" y="328.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M800,360 L800,396" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="800" cy="378" r="9.5"/><text x="800" y="381.8" text-anchor="middle">4</text></g>
+<text x="370" y="222" class="tl">khối khác chỉ đi qua cửa API, không đọc thẳng dữ liệu của nhau</text>
+
+<!-- deploy chỉ chạm Gợi ý -->
+<path class="e dash" d="M810,110 L810,281" marker-end="url(#ag)"/>
+<text x="818" y="200" class="tn">bản mới chỉ</text>
+<text x="818" y="214" class="tn">chạm khối này</text>
+
+<!-- Lớp 4 -->
+<rect class="zn" x="16" y="512" width="1068" height="72" rx="12"/>
+<text x="18" y="502" class="zt2">LỚP 4 · QUAN SÁT: MỖI LỖI TỰ CHỈ RA KHỐI CỦA NÓ</text>
+<g class="nd store"><rect x="380" y="528" width="684" height="42" rx="8"/>
+<text x="722" y="554" class="tt" text-anchor="middle">Log · metric · trace, cùng một request ID xuyên mọi khối</text></g>
+<g class="nd proc"><rect x="40" y="528" width="290" height="42" rx="8"/>
+<text x="185" y="554" class="tt" text-anchor="middle">Cảnh báo theo trải nghiệm người dùng</text></g>
+<path class="e" d="M378,549 L332,549" marker-end="url(#ag)"/>
+<path class="e dash" d="M510,360 L510,526" marker-end="url(#ag)"/>
+<path class="e dash" d="M690,360 L690,526" marker-end="url(#ag)"/>
+<path class="e main" d="M870,360 L870,526" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="870" cy="486" r="9.5"/><text x="870" y="489.8" text-anchor="middle">5</text></g>
+<path class="e dash" d="M1050,360 L1050,526" marker-end="url(#ag)"/>
+<path class="e dash" d="M261,358 L261,526" marker-end="url(#ag)"/>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Một request đi theo các số: (1) người dùng mở trang chủ, (2) cổng vào gắn một mã request ID<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup> rồi gọi khối Phát video, (3) Phát video hỏi khối Gợi ý qua API<sup class="fn" id="fnr-3"><a href="#fn-3" aria-label="Chú thích 3">3</a></sup> của nó, (4) Gợi ý đọc dữ liệu riêng của chính nó, (5) mọi khối gửi log, metric<sup class="fn" id="fnr-4"><a href="#fn-4" aria-label="Chú thích 4">4</a></sup> và trace<sup class="fn" id="fnr-5"><a href="#fn-5" aria-label="Chú thích 5">5</a></sup> mang cùng request ID về lớp quan sát. Khối Gợi ý đang được viết lại: bản mới đi qua đường ống ở lớp 3 và chỉ chạm đúng khối này, vì các khối khác chỉ thấy cửa API của nó, không thấy bên trong.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#vi-sao">2. Vì sao sửa một chỗ vỡ chỗ khác</a></li>
+        <li><a href="#luong-chinh">3. Luồng chính: viết lại một tính năng</a></li>
+        <li><a href="#thanh-phan">4. Bốn lớp, từng lớp một</a></li>
+        <li class="sub"><a href="#c-ranh-gioi">4.1 Ranh giới</a></li>
+        <li class="sub"><a href="#c-hop-dong">4.2 Hợp đồng</a></li>
+        <li class="sub"><a href="#c-an-toan">4.3 Thay đổi an toàn</a></li>
+        <li class="sub"><a href="#c-thay-the">4.4 Thay một tính năng đang chạy</a></li>
+        <li class="sub"><a href="#c-du-lieu">4.5 Đổi dữ liệu không dừng hệ</a></li>
+        <li class="sub"><a href="#c-co-lap">4.6 Cô lập lỗi</a></li>
+        <li class="sub"><a href="#c-quan-sat">4.7 Quan sát và debug</a></li>
+        <li class="sub"><a href="#c-realtime">4.8 Giao tiếp realtime</a></li>
+        <li><a href="#nguyen-ly">5. Chọn theo quy mô</a></li>
+        <li><a href="#case-study">6. Case study</a></li>
+        <li><a href="#ap-dung">7. Áp dụng vào project1_app</a></li>
+        <li><a href="#ghi-chu">8. Ghi chú và câu hỏi mở</a></li>
+        <li><a href="#chu-thich">9. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="vi-sao">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Vì sao sửa một chỗ lại vỡ chỗ khác</h2></div>
+      <p class="prose">Hãy hình dung một ngôi nhà không có tường: dây điện, ống nước của mọi phòng đan vào nhau. Sửa ổ cắm trong bếp có thể làm tắt đèn phòng ngủ. Code cũng vậy. Khi mọi phần gọi thẳng vào nhau và cùng đọc ghi một database, mỗi thay đổi lan ra khắp nơi theo những đường không ai vẽ ra. Hai sơ đồ dưới đây là cùng một sản phẩm, tổ chức theo hai cách.</p>
+      <div class="two">
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TB
+  P["Phát video"] --> G["Gợi ý"]
+  G --> T["Thanh toán"]
+  T --> P
+  G --> P
+  P --> DB[("Một database chung")]
+  G --> DB
+  T --> DB
+  class G hot
+  class P,T proc
+  class DB store
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Cách rối: các phần gọi thẳng vào nhau theo mọi chiều và cùng dùng chung bảng dữ liệu. Đổi một cột trong bảng chung, hoặc đổi một hàm trong Gợi ý, có thể làm hỏng cả Phát video lẫn Thanh toán.</figcaption>
+        </figure>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TB
+  P["Phát video"] -->|"chỉ qua API"| G["Gợi ý"]
+  T["Thanh toán"]
+  P --> DP[("dữ liệu Phát video")]
+  G --> DG[("dữ liệu Gợi ý")]
+  T --> DT[("dữ liệu Thanh toán")]
+  class G hot
+  class P,T proc
+  class DP,DG,DT store
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Cách có ranh giới: mỗi khối giữ dữ liệu riêng và chỉ mở một cửa API. Muốn viết lại toàn bộ bên trong Gợi ý cũng được, miễn là cửa API vẫn trả lời như cũ. Phát video không biết và không cần biết.</figcaption>
+        </figure>
+      </div>
+      <p class="prose">Nhưng ranh giới mới giải được một nửa. Dù sửa đúng một khối, bản sửa vẫn có thể sai, và người dùng vẫn bị ảnh hưởng nếu bản sai đó lộ ra cho tất cả cùng lúc. Vì vậy các hệ lớn chồng thêm ba lớp nữa: <b>hợp đồng</b> giữ cho cửa API không đổi bất ngờ, <b>thay đổi an toàn</b> đưa bản sửa ra từ từ và lùi được, <b>quan sát</b> chỉ ra ngay khối nào đang lỗi.</p>
+    </section>
+
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Luồng chính: viết lại tính năng Gợi ý khi hệ đang chạy</h2></div>
+      <p class="prose">Ví dụ đại diện: đội Gợi ý của một app xem video muốn thay thuật toán gợi ý bằng bản mới. Người dùng đang xem phim suốt 24 giờ, không được dừng hệ. Mũi tên liền là hành động, mũi tên đứt là phản hồi. Cả bốn lớp đều xuất hiện trong luồng này.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor D as Kỹ sư
+  participant CI as CI
+  participant PR as Production
+  participant F as Dịch vụ flag
+  participant Q as Lớp quan sát
+  actor U as Người dùng
+  D->>CI: commit nhỏ, bản mới sau flag
+  CI-->>D: test và kiểm đều xanh
+  CI->>PR: deploy, flag tắt
+  PR->>PR: chạy song song, so kết quả
+  D->>F: bật nội bộ, rồi 1%
+  U->>PR: mở trang chủ
+  PR->>Q: log, metric, trace kèm request ID
+  Q-->>D: nhóm 1% lỗi nhiều hơn nhóm đối chứng
+  D->>F: tắt flag, về bản cũ sau vài giây
+  D->>CI: sửa lỗi, đẩy bản vá
+  D->>F: bật lại 1%, 10%, 50%, 100%
+  D->>PR: xoá flag và code cũ
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: quy trình tổng hợp từ cách Meta release liên tục, Google SRE canary<sup class="fn" id="fnr-6"><a href="#fn-6" aria-label="Chú thích 6">6</a></sup> và GitHub Scientist<sup class="fn" id="fnr-7"><a href="#fn-7" aria-label="Chú thích 7">7</a></sup> (xem mục 6). Bước 4 là "chạy song song": bản mới chạy trên traffic thật nhưng kết quả của nó chỉ dùng để so sánh. Bước 9 là điểm mấu chốt: lùi lại chỉ là gạt công tắc, không phải build và deploy lại.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Bước</th><th>Kỹ thuật</th><th>Thuộc lớp</th><th>Vì sao cần</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td>Trunk-based development<sup class="fn" id="fnr-8"><a href="#fn-8" aria-label="Chú thích 8">8</a></sup>, feature flag<sup class="fn" id="fnr-9"><a href="#fn-9" aria-label="Chú thích 9">9</a></sup></td><td>Thay đổi an toàn</td><td>Commit nhỏ dễ review, dễ biết lỗi do đâu. Code dở dang nằm sau flag nên vẫn gộp vào nhánh chính được.</td></tr>
+            <tr><td class="num">2</td><td>CI<sup class="fn" id="fnr-10"><a href="#fn-10" aria-label="Chú thích 10">10</a></sup>, kiểm ranh giới, contract test<sup class="fn" id="fnr-11"><a href="#fn-11" aria-label="Chú thích 11">11</a></sup></td><td>Ranh giới, Hợp đồng</td><td>Máy chặn lỗi trước khi lên production: lỡ import vào bên trong khối khác, hay đổi API làm vỡ bên gọi.</td></tr>
+            <tr><td class="num">3</td><td>Tách deploy khỏi release</td><td>Thay đổi an toàn</td><td>Đưa code lên và bật cho người dùng là hai việc riêng. Deploy hỏng thì biết ngay mà chưa ai bị ảnh hưởng.</td></tr>
+            <tr><td class="num">4</td><td>Parallel run<sup class="fn" id="fnr-12"><a href="#fn-12" aria-label="Chú thích 12">12</a></sup> (kiểu Scientist)</td><td>Thay đổi an toàn</td><td>Thử bản mới trên dữ liệu thật mà người dùng không chịu rủi ro.</td></tr>
+            <tr><td class="num">5–6</td><td>Canary theo flag</td><td>Thay đổi an toàn</td><td>Lỗi nếu có chỉ chạm 1% người dùng.</td></tr>
+            <tr><td class="num">7–8</td><td>Request ID, golden signals<sup class="fn" id="fnr-13"><a href="#fn-13" aria-label="Chú thích 13">13</a></sup>, so với nhóm đối chứng</td><td>Quan sát</td><td>So nhóm bật với nhóm tắt cùng lúc, không so trước/sau, vì lưu lượng đổi theo giờ.</td></tr>
+            <tr><td class="num">9</td><td>Kill switch<sup class="fn" id="fnr-14"><a href="#fn-14" aria-label="Chú thích 14">14</a></sup></td><td>Thay đổi an toàn</td><td>Giảm thiệt hại trước, tìm nguyên nhân sau.</td></tr>
+            <tr><td class="num">12</td><td>Dọn flag và code cũ</td><td>Thay đổi an toàn</td><td>Flag bỏ quên thành bẫy. Knight Capital<sup class="fn" id="fnr-15"><a href="#fn-15" aria-label="Chú thích 15">15</a></sup> mất 461 triệu USD trong 45 phút vì một flag cũ bị dùng lại.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Bốn lớp, từng lớp một</h2></div>
+
+      <article class="comp" id="c-ranh-gioi">
+        <header><h3>4.1 · Ranh giới: chia theo nghiệp vụ <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 1 · Sơ đồ: luồng · 3 vùng</div></header>
+        <h4>Làm gì</h4>
+        <p>Chia hệ thống thành các khối theo <b>việc nghiệp vụ</b> (tài khoản, phát video, gợi ý, thanh toán), không theo tầng kỹ thuật (giao diện, logic, database). Lý do: một thay đổi nghiệp vụ như "đổi cách tính gợi ý" khi đó nằm gọn trong một khối. Nếu chia theo tầng, thay đổi ấy cắt ngang qua mọi tầng. DDD<sup class="fn" id="fnr-16"><a href="#fn-16" aria-label="Chú thích 16">16</a></sup> gọi mỗi khối như vậy là một bounded context<sup class="fn" id="fnr-17"><a href="#fn-17" aria-label="Chú thích 17">17</a></sup>. Ranh giới không quyết định khối chạy thành một hay nhiều process: một modular monolith<sup class="fn" id="fnr-18"><a href="#fn-18" aria-label="Chú thích 18">18</a></sup> có ranh giới tốt vẫn chạy một process.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  O["Khối khác"] -->|"chỉ gọi"| A
+  subgraph K["Một khối: Gợi ý"]
+    A["① Cửa công khai"] --> B["② Phần nội bộ"]
+    B --> C[("③ Dữ liệu riêng")]
+  end
+  O -. "cấm, CI báo đỏ" .-> B
+  O -. "cấm" .-> C
+  class O ui
+  class A dec
+  class B proc
+  class C store
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong một khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Cửa công khai</td></tr>
+                <tr><td>Là gì</td><td>Một file hoặc thư mục duy nhất mà khối khác được import, hoặc một API qua mạng</td></tr>
+                <tr><td>Quy tắc</td><td>Nhỏ, ổn định, chỉ thêm chứ không đổi nghĩa</td></tr>
+                <tr class="grp"><td colspan="2">② Phần nội bộ</td></tr>
+                <tr><td>Là gì</td><td>Mọi logic còn lại</td></tr>
+                <tr><td>Quy tắc</td><td>Viết lại thoải mái, không ai bên ngoài phụ thuộc</td></tr>
+                <tr class="grp"><td colspan="2">③ Dữ liệu riêng</td></tr>
+                <tr><td>Là gì</td><td>Bảng hoặc database chỉ khối này đọc ghi</td></tr>
+                <tr><td>Quy tắc</td><td>Khối khác muốn dữ liệu thì hỏi qua ①</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: mô hình chung của DDD và modular monolith<sup class="fn" id="fnr-19"><a href="#fn-19" aria-label="Chú thích 19">19</a></sup> ở Shopify<sup class="fn" id="fnr-20"><a href="#fn-20" aria-label="Chú thích 20">20</a></sup>. Mũi tên đứt là đường bị cấm; công cụ như Packwerk<sup class="fn" id="fnr-21"><a href="#fn-21" aria-label="Chú thích 21">21</a></sup>, ArchUnit<sup class="fn" id="fnr-22"><a href="#fn-22" aria-label="Chú thích 22">22</a></sup> hay Bazel visibility<sup class="fn" id="fnr-23"><a href="#fn-23" aria-label="Chú thích 23">23</a></sup> làm CI báo đỏ khi có ai đi đường đó.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Vẽ ranh giới theo ngôn ngữ nghiệp vụ.</b> Cùng một từ "khách hàng" ở Thanh toán và ở Gợi ý có thể mang nghĩa khác nhau; đó là dấu hiệu hai khối riêng. Cái hay đổi cùng nhau thì để cùng chỗ.</li>
+          <li><b>Mỗi khối sở hữu dữ liệu của mình.</b> Dùng chung database là nguyên nhân phổ biến nhất của chuyện "sửa một chỗ vỡ chỗ khác": đổi một cột là vỡ mọi nơi đọc cột đó. Lúc đầu chưa cần database riêng; schema riêng và quy tắc "không join chéo" là đủ.</li>
+          <li><b>Để máy kiểm ranh giới.</b> Quy ước trên giấy sẽ bị phá trong vài tháng. Bắt đầu bằng chế độ cảnh báo rồi chuyển sang chặn.</li>
+          <li><b>Mỗi khối có một chủ.</b> Theo luật Conway<sup class="fn" id="fnr-24"><a href="#fn-24" aria-label="Chú thích 24">24</a></sup>, ranh giới code đi theo ranh giới đội. Khối không ai sở hữu sẽ mục nát; CODEOWNERS<sup class="fn" id="fnr-25"><a href="#fn-25" aria-label="Chú thích 25">25</a></sup> gán người review theo thư mục.</li>
+          <li><b>Chỉ tách thành service riêng khi có lý do cụ thể</b>: cần scale khác hẳn, hai đội liên tục vướng lịch release của nhau, hoặc cần cô lập lỗi. Khối đã có ranh giới sạch thì tách gần như cơ học, chỉ việc cắt theo đường đã vẽ. Microservices<sup class="fn" id="fnr-26"><a href="#fn-26" aria-label="Chú thích 26">26</a></sup> chia sai ranh giới chỉ biến lỗi gọi hàm thành lỗi mạng.</li>
+        </ol>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Kiểu tổ chức</th><th>Sửa một chỗ có vỡ chỗ khác?</th><th>Chi phí</th><th>Hợp với</th></tr></thead>
+            <tbody>
+              <tr><td>Monolith rối</td><td>Thường xuyên</td><td>Thấp lúc đầu, tăng rất nhanh</td><td>Bản thử nghiệm vài tuần</td></tr>
+              <tr><td>Modular monolith</td><td>Hiếm, nếu ranh giới được máy kiểm</td><td>Thấp: một deploy, không có lỗi mạng</td><td>Một tới vài chục đội; ví dụ Shopify</td></tr>
+              <tr><td>Microservices</td><td>Hiếm, nếu ranh giới đúng; tệ nhất nếu sai (distributed monolith<sup class="fn" id="fnr-27"><a href="#fn-27" aria-label="Chú thích 27">27</a></sup>)</td><td>Cao: mạng, dữ liệu phân tán, tracing, đội nền tảng</td><td>Nhiều đội, scale lệch nhau; ví dụ Netflix</td></tr>
+              <tr><td>Serverless<sup class="fn" id="fnr-28"><a href="#fn-28" aria-label="Chú thích 28">28</a></sup></td><td>Hiếm</td><td>Rẻ khi tải thất thường, đắt khi tải lớn và đều</td><td>Tác vụ rìa, ngắn</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="comp" id="c-hop-dong">
+        <header><h3>4.2 · Hợp đồng: cửa API không được đổi bất ngờ <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 2 · Sơ đồ: luồng · 4 bước</div></header>
+        <h4>Làm gì</h4>
+        <p>Cửa API của khối giống ổ cắm điện chuẩn: thay tủ lạnh khác hãng mà ổ cắm giữ nguyên thì vẫn cắm được. Hợp đồng là cam kết về hình dạng của cửa đó. Bên trong muốn đổi thế nào cũng được; bên ngoài chỉ được <b>thêm</b>, không được đổi nghĩa hay xoá. Khi bắt buộc phải phá vỡ, mở cửa mới (<code>/v2</code>) chạy song song với cửa cũ cho tới khi không còn ai dùng cửa cũ.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  V1["API v1 đang chạy"] --> ADD["Thêm trường mới, trường cũ giữ nguyên"]
+  ADD --> Q{"Buộc phải đổi nghĩa?"}
+  Q -->|"không"| OK["Bên gọi cũ vẫn chạy"]
+  Q -->|"có"| V2["Mở v2 song song với v1"]
+  V2 --> MIG["Bên gọi chuyển dần sang v2"]
+  MIG --> DEL["Tắt v1 khi hết người dùng"]
+  class V1,ADD,V2,MIG proc
+  class Q dec
+  class OK ok
+  class DEL muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: quy tắc tiến hoá schema chung của REST<sup class="fn" id="fnr-29"><a href="#fn-29" aria-label="Chú thích 29">29</a></sup>, gRPC<sup class="fn" id="fnr-30"><a href="#fn-30" aria-label="Chú thích 30">30</a></sup>/protobuf và GraphQL<sup class="fn" id="fnr-31"><a href="#fn-31" aria-label="Chú thích 31">31</a></sup>. Bên nhận phải bỏ qua trường lạ, nhờ vậy bên gửi thêm trường mà không làm vỡ ai.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Chỉ thêm, không đổi nghĩa.</b> Với protobuf<sup class="fn" id="fnr-32"><a href="#fn-32" aria-label="Chú thích 32">32</a></sup>: thêm trường tùy chọn, không dùng lại số thứ tự trường cũ. Với GraphQL: đánh dấu deprecated trước khi xoá.</li>
+          <li><b>Contract test khi có nhiều bên gọi.</b> Với Pact<sup class="fn" id="fnr-33"><a href="#fn-33" aria-label="Chú thích 33">33</a></sup>, bên gọi viết ra kỳ vọng ("tôi cần trường X kiểu Y"), bên cung cấp chạy các kỳ vọng đó trong CI. Đổi API làm vỡ ai thì CI chỉ ra ngay trước khi merge. Một API chỉ có một bên gọi thuộc cùng đội thì chưa cần.</li>
+          <li><b>Tương thích cả hai chiều.</b> Trong lúc rollout, bản cũ và bản mới chạy cùng lúc. Bản mới phải đọc được dữ liệu cũ, bản cũ phải chịu được dữ liệu mới; nếu không thì không rollback được.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-an-toan">
+        <header><h3>4.3 · Thay đổi an toàn: tách deploy khỏi release <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 3 · Sơ đồ: trạng thái · vòng đời một feature flag</div></header>
+        <h4>Làm gì</h4>
+        <p>Deploy là đưa code lên máy chủ. Release là cho người dùng thấy. Các hệ lớn tách hai việc này bằng feature flag: một công tắc trong code, đổi được lúc hệ đang chạy mà không cần deploy lại. Code mới lên production ở trạng thái tắt, rồi được bật dần cho từng nhóm người dùng. Mỗi bước đều lùi lại được trong vài giây.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction TB
+  state "Đã deploy, tắt" as off
+  state "Nội bộ" as staff
+  state "1% người dùng" as one
+  state "10% đến 50%" as ten
+  state "100%" as full
+  state "Đã dọn" as clean
+  [*] --> off: deploy<br/>chưa ai thấy
+  off --> staff: bật<br/>nhân viên dùng thử
+  staff --> one: canary<br/>so với nhóm đối chứng
+  one --> ten: metric tốt<br/>mở rộng dần
+  ten --> full: metric tốt
+  full --> clean: xoá flag<br/>xoá code cũ
+  one --> off: lỗi<br/>tắt trong vài giây
+  ten --> off: lỗi<br/>tắt trong vài giây
+  clean --> [*]
+  class off ui
+  class staff,one,ten proc
+  class full ok
+  class clean muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: phân loại feature toggle của Martin Fowler<sup class="fn" id="fnr-34"><a href="#fn-34" aria-label="Chú thích 34">34</a></sup>; quy tắc canary trong Google SRE Workbook<sup class="fn" id="fnr-35"><a href="#fn-35" aria-label="Chú thích 35">35</a></sup>. Canary là cho một nhóm nhỏ dùng trước, như chim hoàng yến mà thợ mỏ mang xuống hầm để phát hiện khí độc sớm.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Chọn người dùng theo hash ổn định</b> (ví dụ theo mã người dùng), để một người luôn thấy cùng một bản thay vì nhảy qua lại giữa hai bản.</li>
+          <li><b>So nhóm bật với nhóm tắt chạy cùng lúc, không so trước và sau.</b> Lưu lượng đổi theo giờ trong ngày, nên so trước/sau dễ nhầm. Chọn vài metric gắn với trải nghiệm người dùng (tỉ lệ lỗi, độ trễ); CPU thường quá nhiễu.</li>
+          <li><b>Mỗi đợt chờ đủ lâu</b> ("bake time"), để lỗi chậm cũng kịp lộ ra, tốt nhất là qua cả giờ cao điểm.</li>
+          <li><b>Coi config và flag cũng là thay đổi.</b> Nhiều sự cố lớn đến từ đẩy một config ra toàn cầu cùng lúc; config cũng cần rollout dần như code.</li>
+          <li><b>Dọn flag ngay khi tới 100%.</b> Đặt hạn dùng lúc tạo flag. Flag cũ bị quên thành bẫy: năm 2012, Knight Capital dùng lại một flag cũ cho tính năng mới; một máy chủ chưa được cập nhật code đã kích hoạt đoạn code chết từ năm 2003 và gây lỗ khoảng 461 triệu USD trong 45 phút.</li>
+        </ol>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Loại flag</th><th>Sống bao lâu</th><th>Dùng để</th></tr></thead>
+            <tbody>
+              <tr><td>Release</td><td>Vài ngày tới vài tuần</td><td>Giấu tính năng chưa xong, bật dần khi xong</td></tr>
+              <tr><td>Thử nghiệm (A/B)</td><td>Vài giờ tới vài tuần</td><td>So hai phiên bản trên hai nhóm người dùng</td></tr>
+              <tr><td>Vận hành (kill switch)</td><td>Ngắn, một số giữ lâu</td><td>Tắt tính năng nặng hoặc phụ thuộc bên ngoài khi có sự cố</td></tr>
+              <tr><td>Phân quyền</td><td>Nhiều năm</td><td>Tính năng chỉ cho gói trả phí, cho nhân viên</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="comp" id="c-thay-the">
+        <header><h3>4.4 · Thay một tính năng đang chạy <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 3 · Sơ đồ: luồng · 6 khối</div></header>
+        <h4>Làm gì</h4>
+        <p>Không "tháo ra rồi lắp lại". Dựng bản mới <b>bên cạnh</b> bản cũ, chuyển dần, rồi mới xoá bản cũ. Có hai biến thể cùng ý tưởng: <b>strangler fig<sup class="fn" id="fnr-36"><a href="#fn-36" aria-label="Chú thích 36">36</a></sup></b> (cây sung bóp cổ: mọc quanh cây chủ cho tới khi thay hẳn) dùng ở quy mô cả hệ, chặn traffic ở cổng vào rồi chuyển từng đường sang hệ mới; <b>branch by abstraction<sup class="fn" id="fnr-37"><a href="#fn-37" aria-label="Chú thích 37">37</a></sup></b> dùng trong code, bọc phần cần thay sau một giao diện rồi thay bản cài bên dưới.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  C["① Nơi gọi"] --> I["② Giao diện chung"]
+  I -->|"flag tắt"| O["③ Bản cũ"]
+  I -->|"flag bật"| N["④ Bản mới"]
+  O --> K{"⑤ Kết quả khớp?"}
+  N --> K
+  K -->|"khớp ổn định"| X["⑥ Xoá bản cũ"]
+  K -->|"lệch"| B["Sửa bản mới"]
+  B --> N
+  class C ui
+  class I dec
+  class O store
+  class N hot
+  class K dec
+  class X ok
+  class B proc
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Nơi gọi</td></tr>
+                <tr><td>Đổi gì</td><td>Không đổi gì; vẫn gọi đúng giao diện cũ</td></tr>
+                <tr class="grp"><td colspan="2">② Giao diện chung</td></tr>
+                <tr><td>Làm gì</td><td>Đọc flag để quyết định gọi bản nào</td></tr>
+                <tr class="grp"><td colspan="2">③ Bản cũ · ④ Bản mới</td></tr>
+                <tr><td>Quan hệ</td><td>Cùng chạy trong một thời gian</td></tr>
+                <tr class="grp"><td colspan="2">⑤ Kết quả khớp?</td></tr>
+                <tr><td>Cách so</td><td>Chạy cả hai, ghi chỗ lệch, vẫn trả kết quả bản cũ</td></tr>
+                <tr><td>Giới hạn</td><td>Chỉ áp cho thao tác đọc; thao tác ghi phải chặn ở bản mới</td></tr>
+                <tr class="grp"><td colspan="2">⑥ Xoá bản cũ</td></tr>
+                <tr><td>Khi nào</td><td>Bản mới đã nhận 100% traffic và khớp ổn định</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: Martin Fowler (Strangler Fig, Branch by Abstraction) và thư viện Scientist của GitHub. Ô viền đỏ là phần đang thay.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Bọc trước, thay sau.</b> Commit đầu tiên chỉ thêm giao diện ② mà không đổi hành vi, nên rủi ro gần như bằng không.</li>
+          <li><b>Viết bản mới trên nhánh chính, sau flag.</b> Không giữ nhánh git dài hàng tháng, vì lúc gộp lại sẽ xung đột rất lớn.</li>
+          <li><b>Chạy song song để lấy bằng chứng</b> trước khi người dùng thấy bản mới. GitHub dùng cách này khi viết lại phần kiểm quyền merge.</li>
+          <li><b>Xoá bản cũ là bước bắt buộc.</b> Hai bản cùng tồn tại mãi thì độ phức tạp tăng gấp đôi.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-du-lieu">
+        <header><h3>4.5 · Đổi dữ liệu mà không dừng hệ <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 3 · Sơ đồ: luồng · 6 bước, mỗi bước một lần deploy</div></header>
+        <h4>Làm gì</h4>
+        <p>Dữ liệu khó đổi nhất vì không lùi lại được như code. Cách chuẩn là <b>expand/contract<sup class="fn" id="fnr-38"><a href="#fn-38" aria-label="Chú thích 38">38</a></sup></b> (còn gọi là parallel change): mở rộng trước (thêm cái mới, cái cũ vẫn chạy), chuyển dần sang cái mới, rồi mới thu hẹp (xoá cái cũ). Ví dụ: tách cột <code>ho_ten</code> thành hai cột <code>ho</code> và <code>ten</code>.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  subgraph X1["Mở rộng"]
+    direction TB
+    E1["1 · Thêm cột mới, cho phép rỗng"] --> E2["2 · Ghi vào cả cũ lẫn mới"]
+    E2 --> E3["3 · Backfill dữ liệu cũ theo lô nhỏ"]
+  end
+  subgraph X2["Chuyển"]
+    direction TB
+    E4["4 · Chuyển đọc sang cột mới"] --> E5["5 · Ngừng ghi cột cũ"]
+  end
+  subgraph X3["Thu hẹp"]
+    direction TB
+    E6["6 · Xoá cột cũ"]
+  end
+  X1 --> X2 --> X3
+  class E1,E2,E3 proc
+  class E4,E5 dec
+  class E6 muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: Martin Fowler, Parallel Change. Bước 1 tới 3 là "mở rộng", bước 4 và 5 là chuyển, bước 6 là "thu hẹp". Backfill<sup class="fn" id="fnr-39"><a href="#fn-39" aria-label="Chú thích 39">39</a></sup> là chép dữ liệu cũ sang cấu trúc mới. Tới hết bước 5, mọi bước đều lùi lại được.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Mỗi bước là một lần deploy riêng.</b> Nhờ vậy dừng hay lùi ở bất cứ đâu cũng được, và lúc nào bản cũ lẫn bản mới cũng chạy đúng.</li>
+          <li><b>Backfill theo lô nhỏ</b> để không khoá bảng hay làm chậm database đang phục vụ người dùng.</li>
+          <li><b>Có job đối chiếu</b> trong giai đoạn ghi kép, vì hai nơi có thể lệch nhau.</li>
+          <li><b>Bảng rất lớn thì dùng công cụ migration online</b> như gh-ost<sup class="fn" id="fnr-40"><a href="#fn-40" aria-label="Chú thích 40">40</a></sup> hay pt-online-schema-change<sup class="fn" id="fnr-41"><a href="#fn-41" aria-label="Chú thích 41">41</a></sup>: tạo bảng bóng, chép dần, rồi đổi tên trong một thao tác.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-co-lap">
+        <header><h3>4.6 · Cô lập lỗi: một khối hỏng không kéo sập cả hệ <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 1 và 3 · Bảng · 7 kỹ thuật</div></header>
+        <h4>Làm gì</h4>
+        <p>Ranh giới trong code chưa đủ. Lúc chạy, nếu khối Gợi ý treo, Phát video có thể bị treo theo vì đứng chờ nó. Mục tiêu ở đây là khi Gợi ý hỏng, trang chủ vẫn mở được và chỉ hiện "phim phổ biến" thay cho gợi ý cá nhân. Netflix gọi đây là fallback<sup class="fn" id="fnr-42"><a href="#fn-42" aria-label="Chú thích 42">42</a></sup>.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Kỹ thuật</th><th>Ví dụ đời thường</th><th>Tác dụng</th><th>Đánh đổi</th><th>Khi nào cần</th></tr></thead>
+            <tbody>
+              <tr><td>Timeout, retry có backoff</td><td>Gọi điện không ai nghe thì chờ lâu dần rồi mới gọi lại</td><td>Không treo vô hạn; retry không dồn thành bão</td><td>Retry làm tăng tải, cần giới hạn</td><td>Ngay từ đầu</td></tr>
+              <tr><td>Fallback</td><td>Đèn tắt thì bật nến</td><td>Trả bản rút gọn thay vì báo lỗi</td><td>Phải test cả đường fallback</td><td>Ngay từ đầu, cho phụ thuộc quan trọng nhất</td></tr>
+              <tr><td>Circuit breaker<sup class="fn" id="fnr-43"><a href="#fn-43" aria-label="Chú thích 43">43</a></sup></td><td>Cầu dao tự nhảy khi chập</td><td>Ngừng gọi khối đang hỏng để nó kịp hồi</td><td>Phải chỉnh ngưỡng</td><td>Khi có phụ thuộc hay hỏng</td></tr>
+              <tr><td>Bulkhead<sup class="fn" id="fnr-44"><a href="#fn-44" aria-label="Chú thích 44">44</a></sup></td><td>Vách ngăn khoang tàu</td><td>Mỗi phụ thuộc một nhóm tài nguyên riêng</td><td>Để dư tài nguyên</td><td>Quy mô vừa</td></tr>
+              <tr><td>Rate limit<sup class="fn" id="fnr-45"><a href="#fn-45" aria-label="Chú thích 45">45</a></sup></td><td>Cửa hàng giới hạn số khách vào</td><td>Giữ hệ sống khi quá tải</td><td>Từ chối một phần yêu cầu</td><td>Quy mô vừa</td></tr>
+              <tr><td>Cell-based<sup class="fn" id="fnr-46"><a href="#fn-46" aria-label="Chú thích 46">46</a></sup></td><td>Chung cư chia thành nhiều toà độc lập</td><td>Lỗi chỉ ảnh hưởng một toà</td><td>Vận hành phức tạp</td><td>Quy mô rất lớn</td></tr>
+              <tr><td>Shuffle sharding<sup class="fn" id="fnr-47"><a href="#fn-47" aria-label="Chú thích 47">47</a></sup></td><td>Mỗi khách được xếp vào một tổ hợp quầy ngẫu nhiên</td><td>Một khách xấu chỉ chạm rất ít khách khác</td><td>Cần quy mô lớn mới có ý nghĩa</td><td>Quy mô rất lớn</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="comp" id="c-quan-sat">
+        <header><h3>4.7 · Quan sát và debug: từ cảnh báo tới đúng dòng code <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 4 · Sơ đồ: luồng · 6 khối</div></header>
+        <h4>Làm gì</h4>
+        <p>Trong hệ có hàng trăm khối, không ai đọc cả codebase để tìm lỗi. Mỗi request mang một mã request ID đi qua mọi khối, và mỗi khối ghi lại mã đó vào log, metric và trace. Khi có lỗi, mã này dẫn thẳng tới khối và đoạn code gây ra. Ví dụ đời thường: mỗi phòng một đồng hồ điện riêng, chập ở đâu biết ngay ở đó.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  A["① Cảnh báo"] --> B["② Dashboard"]
+  B --> C["③ Trace"]
+  C --> D{"Vừa đổi gì?"}
+  D -->|"có"| R["Tắt flag hoặc rollback"]
+  D -->|"không"| E["④ Log và stack trace"]
+  R --> E
+  E --> F["⑤ Tái hiện"]
+  F --> G["⑥ Sửa và rút kinh nghiệm"]
+  class A human
+  class B,C,E proc
+  class D dec
+  class R bad
+  class F proc
+  class G ok
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Cảnh báo</td></tr>
+                <tr><td>Theo gì</td><td>Triệu chứng người dùng thấy: lỗi tăng, chậm; không theo CPU</td></tr>
+                <tr class="grp"><td colspan="2">② Dashboard</td></tr>
+                <tr><td>Xem gì</td><td>4 golden signals của từng khối: độ trễ, lưu lượng, lỗi, độ bão hoà</td></tr>
+                <tr class="grp"><td colspan="2">③ Trace</td></tr>
+                <tr><td>Thấy gì</td><td>Cây các bước của một request qua các khối; bước nào đỏ hoặc chậm</td></tr>
+                <tr class="grp"><td colspan="2">④ Log và stack trace</td></tr>
+                <tr><td>Lọc theo</td><td>Cùng request ID; thêm phiên bản app, vùng, trạng thái flag</td></tr>
+                <tr class="grp"><td colspan="2">⑤ Tái hiện</td></tr>
+                <tr><td>Cách</td><td>Phát lại request hoặc sự kiện đã ghi trên môi trường thử</td></tr>
+                <tr class="grp"><td colspan="2">⑥ Sửa và rút kinh nghiệm</td></tr>
+                <tr><td>Gồm</td><td>Test hồi quy, postmortem<sup class="fn" id="fnr-48"><a href="#fn-48" aria-label="Chú thích 48">48</a></sup> không đổ lỗi, thêm cảnh báo còn thiếu</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Nguồn: Google SRE (Monitoring Distributed Systems), Google Dapper<sup class="fn" id="fnr-49"><a href="#fn-49" aria-label="Chú thích 49">49</a></sup>, Netflix Edgar<sup class="fn" id="fnr-50"><a href="#fn-50" aria-label="Chú thích 50">50</a></sup>. Ô "Vừa đổi gì?" hỏi lỗi có bắt đầu cùng lúc với một lần deploy hay bật flag không. Nhánh đỏ là "giảm thiệt hại trước, tìm nguyên nhân sau".</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Log có cấu trúc kèm request ID</b> là nền tảng, bắt buộc từ ngày đầu. Mất ID ở một chỗ (hàng đợi, WebSocket<sup class="fn" id="fnr-51"><a href="#fn-51" aria-label="Chú thích 51">51</a></sup>, job nền) là trace đứt đúng ở chỗ khó debug nhất.</li>
+          <li><b>Chỉ báo động khi người dùng bị ảnh hưởng.</b> Đặt SLO<sup class="fn" id="fnr-52"><a href="#fn-52" aria-label="Chú thích 52">52</a></sup> cho luồng chính, ví dụ "99,9% lần mở trang chủ thành công dưới 1 giây". Báo động quá nhiều thì người trực sẽ bỏ qua cả báo động thật.</li>
+          <li><b>Dùng OpenTelemetry<sup class="fn" id="fnr-53"><a href="#fn-53" aria-label="Chú thích 53">53</a></sup> ngay từ đầu</b> để sau này thêm tracing hay đổi nhà cung cấp mà không phải viết lại code.</li>
+          <li><b>Hỏi "vừa đổi gì?" trước tiên.</b> Phần lớn sự cố đến từ một thay đổi vừa đưa ra. Đánh dấu thời điểm deploy và đổi flag ngay trên dashboard.</li>
+          <li><b>Postmortem không đổ lỗi.</b> Sửa hệ thống chứ không sửa con người; nếu không, người ta sẽ giấu sự cố.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-realtime">
+        <header><h3>4.8 · Giao tiếp realtime mà vẫn tách rời <span class="pill h">Đề xuất</span></h3><div class="src">Lớp 1 và 4 · Sơ đồ: luồng · ví dụ bình luận trực tiếp</div></header>
+        <h4>Làm gì</h4>
+        <p>Có hai cách để các khối nói chuyện. <b>Đồng bộ</b> (gọi API rồi chờ trả lời) giống gọi điện: cần kết quả ngay, nhưng bên kia chậm thì mình chậm theo. <b>Bất đồng bộ</b> (đẩy sự kiện vào hàng đợi, ai cần thì nhận) giống gửi thư vào hòm thư chung: người gửi không chờ, một người nhận hỏng không làm hỏng người gửi. Với tính năng realtime như bình luận trực tiếp, còn nên tách riêng lớp giữ kết nối với người dùng khỏi lớp xử lý nghiệp vụ.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  U["Người dùng"] <-->|"WebSocket"| GW["Cổng realtime"]
+  GW --> BUS[("Kênh sự kiện")]
+  BUS --> CMT["Bình luận"]
+  BUS --> MOD["Kiểm duyệt"]
+  BUS --> STAT["Thống kê"]
+  CMT -. "bình luận đã duyệt" .-> GW
+  class U ui
+  class GW proc
+  class BUS store
+  class CMT,MOD,STAT proc
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn: mô hình pub/sub<sup class="fn" id="fnr-54"><a href="#fn-54" aria-label="Chú thích 54">54</a></sup> chung; LinkedIn tạo ra Kafka<sup class="fn" id="fnr-55"><a href="#fn-55" aria-label="Chú thích 55">55</a></sup> để thay hàng loạt đường nối điểm-điểm bằng một log chung. Cổng realtime chỉ giữ kết nối và chuyển tin, không chứa logic nghiệp vụ.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Tách cổng realtime khỏi nghiệp vụ.</b> Sửa và deploy khối Bình luận không làm rớt kết nối của hàng triệu người đang xem. Lúc đầu chỉ cần tách thành module riêng; tách process riêng khi số kết nối đòi hỏi.</li>
+          <li><b>Thêm khối mới mà không sửa khối cũ.</b> Muốn thêm Thống kê thì chỉ cần cho nó nghe kênh sự kiện; Bình luận không đổi một dòng nào.</li>
+          <li><b>Xử lý một sự kiện hai lần phải cho cùng kết quả</b> (idempotency<sup class="fn" id="fnr-56"><a href="#fn-56" aria-label="Chú thích 56">56</a></sup>), vì hàng đợi có thể gửi trùng. Lưu sự kiện lại để phát lại khi cần tái hiện bug.</li>
+          <li><b>Mang request ID trong header của sự kiện</b>, nếu không trace sẽ đứt khi đi qua hàng đợi.</li>
+          <li><b>Đừng dùng Kafka, event sourcing<sup class="fn" id="fnr-57"><a href="#fn-57" aria-label="Chú thích 57">57</a></sup> hay CQRS<sup class="fn" id="fnr-58"><a href="#fn-58" aria-label="Chú thích 58">58</a></sup> khi chưa cần.</b> Một hàng đợi đơn giản là đủ cho tới khi lưu lượng lớn hoặc có nhiều bên nhận.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="nguyen-ly">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Chọn theo quy mô: làm gì trước, để gì sau</h2></div>
+      <p class="prose">Netflix và Google tách nhỏ vì có hàng nghìn kỹ sư, không chỉ vì lý do kỹ thuật. Áp nguyên bộ công cụ của họ vào một đội nhỏ thì tốn chi phí mà không nhận được lợi ích. Bảng dưới xếp theo số đội: nhỏ là 1 tới 3 đội, vừa là 4 tới 15, lớn là trên 15.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th></th><th>Đội nhỏ</th><th>Đội vừa</th><th>Đội lớn</th></tr></thead>
+          <tbody>
+            <tr><td><b>Ranh giới</b></td><td>Modular monolith, thư mục theo nghiệp vụ, một cửa công khai mỗi khối</td><td>Thêm công cụ kiểm ranh giới, CODEOWNERS</td><td>Microservices có chọn lọc, gom theo domain</td></tr>
+            <tr><td><b>Hợp đồng</b></td><td>Chỉ thêm trường, không đổi nghĩa</td><td>Versioning, contract test cho API quan trọng</td><td>Contract test khắp nơi</td></tr>
+            <tr><td><b>Release</b></td><td>CI chặn merge, deploy và rollback bằng một lệnh, flag đọc từ config</td><td>Dịch vụ flag, canary một máy, xem dashboard bằng mắt</td><td>Canary tự động, rollout theo vùng</td></tr>
+            <tr><td><b>Dữ liệu</b></td><td>Expand/contract cho mọi thay đổi schema</td><td>Thêm công cụ migration online cho bảng lớn</td><td>Migration tự động</td></tr>
+            <tr><td><b>Cô lập lỗi</b></td><td>Timeout, retry có backoff, một fallback</td><td>Circuit breaker, rate limit</td><td>Cell-based, shuffle sharding</td></tr>
+            <tr><td><b>Quan sát</b></td><td>Log JSON có request ID, công cụ bắt lỗi kiểu Sentry<sup class="fn" id="fnr-59"><a href="#fn-59" aria-label="Chú thích 59">59</a></sup>, dashboard golden signals</td><td>Tracing OpenTelemetry, SLO</td><td>Wide events<sup class="fn" id="fnr-60"><a href="#fn-60" aria-label="Chú thích 60">60</a></sup>, profiling liên tục, chaos engineering<sup class="fn" id="fnr-61"><a href="#fn-61" aria-label="Chú thích 61">61</a></sup></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  Q1{"① Mô tả được trong một câu?"}
+  Q1 -->|"chưa"| N1["Chưa tách. Vẽ lại ranh giới trong code trước"]
+  Q1 -->|"được"| Q2{"② Có lý do cụ thể?"}
+  Q2 -->|"không"| N2["Giữ làm module trong monolith"]
+  Q2 -->|"có"| Q3{"③ Nền tảng vận hành có chưa?"}
+  Q3 -->|"chưa"| N3["Làm nền tảng vận hành trước"]
+  Q3 -->|"rồi"| Y["Tách thành service, giữ nguyên API"]
+  class Q1,Q2,Q3 dec
+  class N1,N3 human
+  class N2 ok
+  class Y proc
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Câu hỏi kiểm nhanh trước khi tách một khối thành service riêng. ① Nói được trong một câu: khối này giữ dữ liệu gì, mở API gì. ② Lý do cụ thể là: cần scale lệch hẳn, hai đội liên tục vướng lịch release của nhau, hoặc cần cô lập lỗi. ③ Nền tảng vận hành gồm log có request ID, deploy tự động, rollback một lệnh. Ô xanh lá là kết quả thường gặp nhất ở đội nhỏ và vừa.</figcaption>
+      </figure>
+      <div class="note"><b>Những thứ không nên làm sớm</b>Microservices từ ngày đầu: chưa biết ranh giới đúng mà đã khắc vào hạ tầng, thì sửa ranh giới giữa các service đắt gấp nhiều lần sửa giữa các module. Tách service theo từng bảng (UserService, OrderService…): con đường nhanh nhất tới distributed monolith, tức là có nhiều service nhưng vẫn phải deploy cùng nhau. Kafka, event sourcing, CQRS khi chưa có bài toán đòi hỏi. Cell-based, chaos engineering, tự xây nền tảng flag hay nền tảng quan sát. Thư viện dùng chung phình to mà mọi khối cùng phụ thuộc.</div>
+    </section>
+
+    <section id="case-study">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Case study: các công ty lớn làm thế nào</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Ai</th><th>Làm gì</th><th>Bài học</th><th>Nguồn</th></tr></thead>
+          <tbody>
+            <tr><td>Shopify</td><td>Một monolith Rails rất lớn, chia thành các component theo nghiệp vụ; công cụ Packwerk báo lỗi khi code vượt ranh giới.</td><td>Có ranh giới mà không cần microservices.</td><td><a href="https://shopify.engineering/deconstructing-monolith-designing-software-maximizes-developer-productivity">Deconstructing the Monolith</a></td></tr>
+            <tr><td>Uber</td><td>Hàng nghìn microservice thành mớ rối; gom lại thành các domain, mỗi domain có một cổng vào (DOMA<sup class="fn" id="fnr-62"><a href="#fn-62" aria-label="Chú thích 62">62</a></sup>).</td><td>Quá nhiều service nhỏ thì phải gom lại thành khối lớn hơn.</td><td><a href="https://www.uber.com/blog/microservice-architecture/">Introducing DOMA</a></td></tr>
+            <tr><td>Segment</td><td>Gộp hơn 50 repo của từng "destination" về một repo, một service.</td><td>Tách quá sớm, thư viện chung lệch phiên bản, ba kỹ sư chỉ lo giữ hệ chạy.</td><td><a href="https://twilio.com/en-us/blog/developers/best-practices/goodbye-microservices">Goodbye Microservices</a></td></tr>
+            <tr><td>Amazon Prime Video</td><td>Dịch vụ giám sát chất lượng video chuyển từ serverless (Step Functions<sup class="fn" id="fnr-63"><a href="#fn-63" aria-label="Chú thích 63">63</a></sup>, Lambda, trao dữ liệu qua S3) sang tiến trình gộp chạy trên ECS<sup class="fn" id="fnr-64"><a href="#fn-64" aria-label="Chú thích 64">64</a></sup>, dữ liệu đi trong bộ nhớ.</td><td>Chi phí hạ tầng của dịch vụ đó giảm khoảng 90%. Chỉ một dịch vụ, không phải cả Prime Video.</td><td><a href="https://www.infoq.com/news/2023/05/prime-ec2-ecs-saves-costs/">InfoQ</a></td></tr>
+            <tr><td>Google</td><td>Một monorepo<sup class="fn" id="fnr-65"><a href="#fn-65" aria-label="Chú thích 65">65</a></sup> khoảng hai tỉ dòng; trunk-based, hệ build biết ai phụ thuộc ai nên chỉ test phần bị ảnh hưởng.</td><td>Một repo vẫn sửa cục bộ được nếu có công cụ build và quyền sở hữu.</td><td><a href="https://research.google/pubs/why-google-stores-billions-of-lines-of-code-in-a-single-repository/">Potvin &amp; Levenberg, CACM 2016</a></td></tr>
+            <tr><td>Meta</td><td>Chuyển sang đẩy code thẳng từ nhánh chính, rollout dần: nhân viên trước, rồi tỉ lệ traffic tăng dần. Gatekeeper<sup class="fn" id="fnr-66"><a href="#fn-66" aria-label="Chú thích 66">66</a></sup> quyết định ai thấy tính năng nào.</td><td>Release nhiều lần mỗi ngày an toàn hơn release lớn mỗi tuần.</td><td><a href="https://engineering.fb.com/2017/08/31/web/rapid-release-at-massive-scale/">Rapid release at massive scale</a></td></tr>
+            <tr><td>Netflix, Google</td><td>Kayenta<sup class="fn" id="fnr-67"><a href="#fn-67" aria-label="Chú thích 67">67</a></sup> so metric của canary với nhóm đối chứng bằng thống kê, tự quyết cho đi tiếp hay dừng, tích hợp vào Spinnaker<sup class="fn" id="fnr-68"><a href="#fn-68" aria-label="Chú thích 68">68</a></sup>.</td><td>Canary tự động chỉ đáng làm khi traffic đủ lớn.</td><td><a href="https://cloud.google.com/blog/products/gcp/introducing-kayenta-an-open-automated-canary-analysis-tool-from-google-and-netflix">Introducing Kayenta</a></td></tr>
+            <tr><td>Google SRE</td><td>Canary, error budget, 4 golden signals, postmortem không đổ lỗi.</td><td>Biến tranh luận "nhanh hay an toàn" thành con số.</td><td><a href="https://sre.google/workbook/canarying-releases/">Canarying Releases</a> · <a href="https://sre.google/sre-book/monitoring-distributed-systems/">Monitoring</a> · <a href="https://sre.google/sre-book/postmortem-culture/">Postmortem</a></td></tr>
+            <tr><td>Google Dapper</td><td>Tracing xuyên service, lấy mẫu để giảm chi phí, gắn sẵn trong vài thư viện chung.</td><td>Nguồn gốc của tracing hiện đại (Zipkin<sup class="fn" id="fnr-69"><a href="#fn-69" aria-label="Chú thích 69">69</a></sup>, Jaeger<sup class="fn" id="fnr-70"><a href="#fn-70" aria-label="Chú thích 70">70</a></sup>, OpenTelemetry).</td><td><a href="https://research.google/pubs/dapper-a-large-scale-distributed-systems-tracing-infrastructure/">Dapper</a></td></tr>
+            <tr><td>Netflix Edgar</td><td>Dựng lại cả một phiên xem phim từ trace, log và metadata theo mã phiên.</td><td>Một mã xuyên suốt biến hàng triệu dòng log thành một câu chuyện.</td><td><a href="https://www.infoq.com/articles/observability-edgar-netflix/">InfoQ</a></td></tr>
+            <tr><td>LinkedIn</td><td>Kafka ra đời để thay các đường ống dữ liệu điểm-điểm bằng một log chung.</td><td>Tách bên gửi khỏi bên nhận.</td><td><a href="https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying">Jay Kreps, The Log</a></td></tr>
+            <tr><td>GitHub</td><td>Scientist chạy song song code cũ và mới; gh-ost đổi schema bảng lớn khi hệ đang chạy.</td><td>Thay phần lõi bằng bằng chứng, không bằng niềm tin.</td><td><a href="https://github.blog/2016-02-03-scientist/">Scientist</a> · <a href="https://github.com/github/gh-ost">gh-ost</a></td></tr>
+            <tr><td>Spotify</td><td>Backstage<sup class="fn" id="fnr-71"><a href="#fn-71" aria-label="Chú thích 71">71</a></sup>: danh mục ghi rõ chủ sở hữu của mọi service, đặt cạnh code.</td><td>Khối không có chủ sẽ mục nát.</td><td><a href="https://backstage.io/docs/features/software-catalog/">Backstage</a></td></tr>
+            <tr><td>Martin Fowler</td><td>Hệ thống hoá feature toggles, strangler fig, branch by abstraction, parallel change.</td><td>Từ vựng chung của cả ngành.</td><td><a href="https://martinfowler.com/articles/feature-toggles.html">Feature Toggles</a> · <a href="https://martinfowler.com/bliki/StranglerFigApplication.html">Strangler Fig</a> · <a href="https://martinfowler.com/bliki/ParallelChange.html">Parallel Change</a></td></tr>
+            <tr><td>Knight Capital</td><td>Năm 2012 dùng lại một flag cũ; một trong tám máy chưa được cập nhật code đã kích hoạt logic chết từ năm 2003.</td><td>Lỗ khoảng 461 triệu USD trong 45 phút. Phải dọn flag và code chết.</td><td><a href="https://en.wikipedia.org/wiki/Knight_Capital_Group">Wikipedia</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ap-dung">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Áp dụng vào project1_app: hệ app, server, máy pha</h2></div>
+      <p class="prose">Hệ máy pha khác các ví dụ ở trên ở một điểm quan trọng: có ba bên chạy ở ba nơi, do ba nhóm người cập nhật vào ba thời điểm khác nhau. Server do hãng deploy. App nằm trên điện thoại người dùng, cập nhật qua kho ứng dụng. Phần mềm máy nằm trong quán, có thể mất mạng nhiều ngày. Thiết kế hệ thống đang bàn ở <code>documentation/research/iot-v11-system-design.html</code>: server là cổng nối, chỉ giữ tài khoản và danh sách máy; dữ liệu món và kho nằm trên máy; mất Internet thì app nói chuyện với máy qua LAN, mất cả wifi thì qua Bluetooth.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  APP["App điện thoại"] -->|"hợp đồng A"| SV["Server cổng nối"]
+  SV -->|"hợp đồng B"| M1["Máy quán 1"]
+  SV -->|"hợp đồng B"| M2["Máy quán 2"]
+  APP -. "LAN hoặc Bluetooth khi mất mạng" .-> M1
+  SV --> AC[("Tài khoản, danh sách máy")]
+  M1 --> D1[("Món, kho của máy 1")]
+  M2 --> D2[("Món, kho của máy 2")]
+  class APP ui
+  class SV proc
+  class M1,M2 hw
+  class AC,D1,D2 store
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Nguồn: thiết kế ở <code>documentation/research/iot-v11-system-design.html</code>. Mỗi máy giữ dữ liệu riêng nên tự nhiên là một "ô" độc lập như cell-based ở mục 4.6: một máy hỏng không kéo theo máy khác. Hai đường hợp đồng A và B là chỗ dễ vỡ nhất, vì ba bên không bao giờ được cập nhật cùng lúc.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Lớp</th><th>Hệ này cần gì</th><th>Hiện có trong repo</th><th>Nhận xét</th></tr></thead>
+          <tbody>
+            <tr><td><b>Ranh giới</b></td><td>Ba bên tách rời; trong mỗi bên chia theo nghiệp vụ: tài khoản, kích hoạt máy, chia sẻ máy, menu, kho, đơn</td><td><code>flutter_app/lib/feature/</code> chia theo tính năng (<code>user_auth</code>, <code>machine_register</code>, <code>machine_share</code>, <code>machine_menu</code>, <code>machine_ingredient</code>, <code>orders</code>). Máy: <code>version1.1/machine/</code> có <code>menu_sync</code>, <code>ingredient_sync</code>, <code>pairing</code>, <code>server_connection</code>; dữ liệu ở <code>version1.1/database/services/</code></td><td><span class="pill m">Đúng hướng</span> App và máy đã chia theo nghiệp vụ. App hiện mới có giao diện; server mới có <code>server/configuration/routing.py</code></td></tr>
+            <tr><td><b>Hợp đồng</b></td><td>Hợp đồng A (app ↔ server) và B (server ↔ máy, cũng dùng cho LAN và Bluetooth) có phiên bản, tương thích ngược, mỗi bên báo phiên bản của mình</td><td>Quy ước hiện tại của repo: đổi hợp đồng gói tin thì sửa app, server và máy cùng lúc</td><td><span class="pill r">Rủi ro</span> Sửa cùng lúc chạy được khi cả ba còn trong một repo chưa phát hành. Khi máy đã ở quán và app đã trên điện thoại người dùng thì không thể cập nhật cùng lúc. Đây là dạng distributed monolith ở mục 5</td></tr>
+            <tr><td><b>Thay đổi an toàn</b></td><td>Server: canary. App: flag phía server, vì bản app đã phát hành không thu hồi được. Máy: cập nhật từ xa theo từng nhóm máy, tự quay về bản cũ nếu khởi động lỗi</td><td>Chưa có trong thiết kế</td><td><span class="pill h">Còn mở</span> Cập nhật phần mềm máy là việc rủi ro nhất: máy ở xa, có thể mất mạng giữa chừng, hỏng thì quán không bán được</td></tr>
+            <tr><td><b>Quan sát</b></td><td>Request ID đi app → server → máy, kể cả qua LAN và Bluetooth. Máy giữ log khi mất mạng, gửi lên khi có mạng lại</td><td>Thiết kế đã có nhật ký theo người, không xoá được</td><td><span class="pill h">Còn mở</span> Nên tách nhật ký kiểm toán (ai làm gì, để chủ xem) khỏi log debug (để kỹ sư tìm lỗi): hai loại khác người đọc, khác thời gian lưu</td></tr>
+            <tr><td><b>Cô lập lỗi</b></td><td>Server hỏng thì quán vẫn bán được; một máy hỏng không ảnh hưởng máy khác</td><td>Thiết kế: dữ liệu nằm trên máy, app tự chuyển sang LAN rồi Bluetooth</td><td><span class="pill m">Đúng hướng</span> Đây chính là fallback và cell-based ở mục 4.6, có sẵn từ cách chia dữ liệu</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note crit"><b>Điểm cần quyết sớm</b>Hợp đồng giữa ba bên quyết định hình dạng mọi phần sau. Nếu giữ cách "sửa cả ba cùng lúc" tới lúc máy đã bán ra, mỗi lần sửa một tính năng nhỏ sẽ buộc cập nhật mọi máy và mọi điện thoại cùng lúc, đúng tình huống "sửa một chỗ phải sửa cả hệ". Ghi nhận ở đây, chưa sửa quy ước.</div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Ghi chú và câu hỏi mở</h2></div>
+      <div class="note"><b>Lưu ý</b>Ca Prime Video thường được kể là "quay về monolith". Theo InfoQ, bản mới vẫn chia thành nhiều nhóm instance chạy trên các task ECS khác nhau; chính xác hơn là gộp các bước lại và bỏ đường trao dữ liệu qua S3. Bài học đúng là: chọn cách tách theo chi phí và luồng dữ liệu thật, không theo trào lưu.</div>
+      <div class="note"><b>Phạm vi chưa phủ</b>Bảo mật giữa các khối, chi phí hạ tầng, phát hành app di động (không rollback được như server, phải dựa vào flag phía server), và cách tổ chức đội.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Câu hỏi khi áp dụng vào một dự án</th><th>Đề xuất</th></tr></thead>
+          <tbody>
+            <tr><td>Bắt đầu bằng monolith hay microservices?</td><td>Modular monolith. Tách service khi qua được cả ba câu hỏi ở mục 5.</td></tr>
+            <tr><td>Chia khối theo gì?</td><td>Theo nghiệp vụ. Thử viết một câu "khối này giữ dữ liệu gì, mở API gì" cho từng khối.</td></tr>
+            <tr><td>Cần những gì ngay từ đầu?</td><td>CI chặn merge, deploy và rollback một lệnh, flag đơn giản, log có request ID, expand/contract cho schema, timeout và retry cho mọi cuộc gọi ra ngoài.</td></tr>
+            <tr><td>Hợp đồng giữa app, server và máy có phiên bản không, và mỗi bên phải hiểu được bao nhiêu phiên bản cũ?</td><td>Có phiên bản, tương thích ngược. Server hiểu được ít nhất bản mới nhất và bản liền trước của app và của máy.</td></tr>
+            <tr><td>Phần mềm máy được cập nhật từ xa thế nào?</td><td>Theo từng nhóm máy, máy giữ bản cũ để tự quay về nếu bản mới khởi động lỗi. Bàn ở mức hệ thống trước khi chọn công nghệ.</td></tr>
+            <tr><td>Nhật ký kiểm toán và log debug có tách nhau không?</td><td>Tách: hai loại có người đọc và thời gian lưu khác nhau.</td></tr>
+            <tr><td>Đồng bộ hay bất đồng bộ?</td><td>Đồng bộ cho thao tác cần kết quả ngay. Bất đồng bộ cho thông báo, thống kê, việc nền. Hàng đợi đơn giản trước, Kafka sau.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Để sau, khi quy mô đòi hỏi</th><th>Dấu hiệu đã tới lúc</th></tr></thead>
+          <tbody>
+            <tr><td>Canary tự động</td><td>Traffic đủ lớn để thống kê có ý nghĩa; deploy nhiều lần mỗi ngày</td></tr>
+            <tr><td>Contract test (Pact)</td><td>Một API có nhiều bên gọi thuộc nhiều đội</td></tr>
+            <tr><td>Kafka, event sourcing</td><td>Nhiều bên nhận cùng một luồng sự kiện, cần lịch sử để kiểm toán</td></tr>
+            <tr><td>Cell-based, shuffle sharding</td><td>Một sự cố có thể chạm hàng triệu người cùng lúc</td></tr>
+            <tr><td>Chaos engineering</td><td>Đã có quan sát tốt; nếu không, phá thử chỉ gây sự cố thật</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 9</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Netflix.</b> Dịch vụ xem phim trực tuyến, nổi tiếng về kiến trúc microservices trên AWS và nhiều công cụ mã nguồn mở về độ tin cậy. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>Request ID / correlation ID.</b> Một mã duy nhất gắn cho mỗi yêu cầu ngay từ cổng vào và được chuyển tiếp qua mọi khối, để ghép log và trace của cùng một yêu cầu lại với nhau. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-3"><b>Application Programming Interface.</b> Giao diện mà một khối phần mềm mở ra cho khối khác gọi: gồm các thao tác, dữ liệu vào và dữ liệu ra. <a class="fn-back" href="#fnr-3" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-4"><b>Metric.</b> Số đo theo thời gian như số yêu cầu mỗi giây, tỉ lệ lỗi, độ trễ; rẻ để lưu và hợp để vẽ biểu đồ, đặt cảnh báo. <a class="fn-back" href="#fnr-4" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-5"><b>Distributed trace.</b> Bản ghi đường đi của một yêu cầu qua các khối, dạng cây các bước (span) có thời gian bắt đầu và kết thúc, cho thấy bước nào lỗi hoặc chậm. <a class="fn-back" href="#fnr-5" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-6"><b>Canary release.</b> Đưa bản mới cho một phần nhỏ máy chủ hoặc người dùng trước, so với nhóm đối chứng, rồi mới mở rộng. <a class="fn-back" href="#fnr-6" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-7"><b>Scientist.</b> Thư viện mã nguồn mở của GitHub để chạy thí nghiệm parallel run khi thay thế code quan trọng. <a class="fn-back" href="#fnr-7" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-8"><b>Trunk-based development.</b> Cách làm việc mà mọi người commit nhỏ, thường xuyên vào nhánh chính; nhánh phụ chỉ sống vài giờ tới một hai ngày. <a class="fn-back" href="#fnr-8" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-9"><b>Feature flag / feature toggle.</b> Công tắc trong code cho phép bật tắt một tính năng lúc hệ đang chạy, không cần deploy lại. <a class="fn-back" href="#fnr-9" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-10"><b>Continuous Integration.</b> Hệ thống tự động build và chạy test mỗi khi có code mới đẩy lên; không xanh thì không được gộp vào nhánh chính. <a class="fn-back" href="#fnr-10" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-11"><b>Contract test.</b> Test kiểm hai bên của một API vẫn hiểu nhau đúng như cam kết, mà không cần dựng cả hệ thống. <a class="fn-back" href="#fnr-11" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-12"><b>Parallel run / shadow.</b> Chạy bản cũ và bản mới trên cùng đầu vào thật, so kết quả, nhưng chỉ trả kết quả của bản cũ cho người dùng. <a class="fn-back" href="#fnr-12" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-13"><b>Four golden signals.</b> Bốn chỉ số Google SRE khuyên theo dõi cho mọi service: độ trễ, lưu lượng, lỗi và độ bão hoà. <a class="fn-back" href="#fnr-13" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-14"><b>Kill switch.</b> Flag vận hành dùng để tắt nhanh một tính năng khi có sự cố. <a class="fn-back" href="#fnr-14" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-15"><b>Knight Capital Group.</b> Công ty chứng khoán Mỹ; sự cố ngày 1/8/2012 do triển khai sai và dùng lại flag cũ khiến công ty lỗ khoảng 461 triệu USD và sau đó bị sáp nhập. <a class="fn-back" href="#fnr-15" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-16"><b>Domain-Driven Design.</b> Phương pháp thiết kế phần mềm bám theo nghiệp vụ, do Eric Evans đề xuất trong cuốn sách cùng tên năm 2003. <a class="fn-back" href="#fnr-16" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-17"><b>Bounded context.</b> Khái niệm của DDD: một vùng nghiệp vụ có ranh giới rõ, trong đó mỗi thuật ngữ có đúng một nghĩa và có mô hình dữ liệu riêng. <a class="fn-back" href="#fnr-17" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-18"><b>Modular monolith.</b> Một ứng dụng chạy và deploy như một khối, nhưng bên trong chia thành các module theo nghiệp vụ, mỗi module chỉ được gọi qua giao diện công khai của nó. <a class="fn-back" href="#fnr-18" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-19"><b>Monolith.</b> Ứng dụng nguyên khối: toàn bộ code chạy trong một tiến trình và deploy cùng nhau. <a class="fn-back" href="#fnr-19" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-20"><b>Shopify.</b> Nền tảng thương mại điện tử của Canada, vận hành một trong những monolith Ruby on Rails lớn nhất. <a class="fn-back" href="#fnr-20" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-21"><b>Packwerk.</b> Công cụ mã nguồn mở của Shopify cho Ruby, báo lỗi khi code của một package dùng phần không công khai của package khác. <a class="fn-back" href="#fnr-21" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-22"><b>ArchUnit.</b> Thư viện Java để viết test kiểm quy tắc kiến trúc, ví dụ tầng nào được phụ thuộc vào tầng nào. <a class="fn-back" href="#fnr-22" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-23"><b>Bazel visibility.</b> Thuộc tính trong hệ build Bazel (mã nguồn mở từ hệ build nội bộ của Google) quy định target nào được phép phụ thuộc vào target nào. <a class="fn-back" href="#fnr-23" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-24"><b>Luật Conway.</b> Nhận xét của Melvin Conway (1968): cấu trúc của hệ thống phản chiếu cấu trúc giao tiếp của tổ chức làm ra nó. <a class="fn-back" href="#fnr-24" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-25"><b>CODEOWNERS.</b> File cấu hình trên GitHub hoặc GitLab gán người hoặc đội chịu trách nhiệm review cho từng thư mục. <a class="fn-back" href="#fnr-25" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-26"><b>Microservices.</b> Kiến trúc chia hệ thành nhiều service nhỏ, mỗi service chạy, deploy và scale độc lập, nói chuyện với nhau qua mạng. <a class="fn-back" href="#fnr-26" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-27"><b>Distributed monolith.</b> Hệ có nhiều service tách rời về mặt chạy nhưng vẫn phụ thuộc chặt vào nhau, phải sửa và deploy cùng lúc; chịu chi phí của cả hai mô hình mà không có lợi ích nào. <a class="fn-back" href="#fnr-27" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-28"><b>Serverless.</b> Mô hình chạy code theo từng lần gọi trên hạ tầng của nhà cung cấp đám mây, không tự quản lý máy chủ; trả tiền theo lượt chạy. <a class="fn-back" href="#fnr-28" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-29"><b>REST.</b> Kiểu thiết kế API qua HTTP, mỗi tài nguyên có một địa chỉ và thao tác bằng các phương thức GET, POST, PUT, DELETE. <a class="fn-back" href="#fnr-29" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-30"><b>gRPC.</b> Khung gọi hàm từ xa mã nguồn mở của Google, chạy trên HTTP/2 và dùng Protocol Buffers. <a class="fn-back" href="#fnr-30" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-31"><b>GraphQL.</b> Ngôn ngữ truy vấn API do Meta công bố, cho phép bên gọi chọn đúng các trường cần lấy. <a class="fn-back" href="#fnr-31" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-32"><b>Protocol Buffers.</b> Định dạng tuần tự hoá dữ liệu của Google, dùng với gRPC; có quy tắc rõ để thêm trường mà không làm vỡ bên đọc cũ. <a class="fn-back" href="#fnr-32" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-33"><b>Pact.</b> Công cụ consumer-driven contract testing: bên gọi ghi kỳ vọng thành hợp đồng, bên cung cấp chạy hợp đồng đó trong CI. <a class="fn-back" href="#fnr-33" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-34"><b>Martin Fowler.</b> Kỹ sư phần mềm và tác giả người Anh, có nhiều bài viết đặt tên cho các mẫu kiến trúc và refactor dùng rộng rãi. <a class="fn-back" href="#fnr-34" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-35"><b>Site Reliability Engineering.</b> Bộ sách công khai của Google về vận hành hệ thống tin cậy (sre.google), gồm SRE Book và SRE Workbook. <a class="fn-back" href="#fnr-35" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-36"><b>Strangler fig.</b> Mẫu thay thế hệ cũ dần dần: dựng hệ mới bên cạnh, chuyển từng phần traffic sang, cuối cùng bỏ hệ cũ. Tên lấy từ cây sung bóp cổ. <a class="fn-back" href="#fnr-36" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-37"><b>Branch by abstraction.</b> Thay một phần code lớn trên nhánh chính bằng cách bọc nó sau một giao diện, cài bản mới dưới giao diện rồi chuyển dần. <a class="fn-back" href="#fnr-37" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-38"><b>Expand/contract (parallel change).</b> Đổi một giao diện hoặc schema qua ba pha: mở rộng thêm cái mới, chuyển người dùng sang, rồi thu hẹp bằng cách xoá cái cũ. <a class="fn-back" href="#fnr-38" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-39"><b>Backfill.</b> Chép hoặc tính lại dữ liệu cũ sang cấu trúc mới. <a class="fn-back" href="#fnr-39" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-40"><b>gh-ost.</b> Công cụ của GitHub đổi schema bảng MySQL khi hệ đang chạy, đọc binlog thay vì dùng trigger. <a class="fn-back" href="#fnr-40" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-41"><b>pt-online-schema-change.</b> Công cụ trong Percona Toolkit đổi schema MySQL trực tuyến bằng bảng bóng và trigger. <a class="fn-back" href="#fnr-41" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-42"><b>Fallback.</b> Đường dự phòng trả kết quả rút gọn khi một phụ thuộc hỏng, thay vì báo lỗi cho người dùng. <a class="fn-back" href="#fnr-42" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-43"><b>Circuit breaker.</b> Cơ chế ngừng gọi một phụ thuộc đang lỗi liên tục trong một khoảng thời gian, rồi thử lại từ từ. <a class="fn-back" href="#fnr-43" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-44"><b>Bulkhead.</b> Chia tài nguyên (luồng, kết nối) thành các ngăn riêng cho từng phụ thuộc, để một phụ thuộc hỏng không chiếm hết tài nguyên. <a class="fn-back" href="#fnr-44" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-45"><b>Rate limiting.</b> Giới hạn số yêu cầu được xử lý trong một khoảng thời gian. <a class="fn-back" href="#fnr-45" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-46"><b>Cell-based architecture.</b> Chia hệ thành nhiều bản sao độc lập (cell), mỗi cell phục vụ một phần khách hàng, để sự cố chỉ ảnh hưởng một cell. <a class="fn-back" href="#fnr-46" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-47"><b>Shuffle sharding.</b> Kỹ thuật của AWS: gán mỗi khách hàng một tổ hợp ngẫu nhiên các máy, nên hai khách hàng hiếm khi chung toàn bộ tài nguyên. <a class="fn-back" href="#fnr-47" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-48"><b>Postmortem.</b> Bản phân tích sau sự cố: chuyện gì xảy ra, vì sao, sửa hệ thống thế nào để không lặp lại; không đổ lỗi cá nhân. <a class="fn-back" href="#fnr-48" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-49"><b>Dapper.</b> Hệ thống distributed tracing của Google, mô tả trong bài báo năm 2010. <a class="fn-back" href="#fnr-49" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-50"><b>Edgar.</b> Công cụ nội bộ của Netflix dựng lại toàn bộ một phiên người dùng từ trace, log và metadata để debug. <a class="fn-back" href="#fnr-50" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-51"><b>WebSocket.</b> Giao thức giữ một kết nối hai chiều lâu dài giữa trình duyệt hoặc app và máy chủ (RFC 6455), dùng cho tính năng realtime. <a class="fn-back" href="#fnr-51" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-52"><b>Service Level Objective.</b> Mục tiêu về chất lượng dịch vụ đo bằng con số, ví dụ 99,9% yêu cầu thành công dưới 1 giây. <a class="fn-back" href="#fnr-52" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-53"><b>OpenTelemetry.</b> Chuẩn mở và bộ thư viện của CNCF để phát ra log, metric, trace theo một định dạng chung, không phụ thuộc nhà cung cấp. <a class="fn-back" href="#fnr-53" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-54"><b>Publish/subscribe.</b> Mô hình nhắn tin: bên gửi phát sự kiện lên một kênh, mọi bên đăng ký kênh đó đều nhận được, hai bên không cần biết nhau. <a class="fn-back" href="#fnr-54" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-55"><b>Apache Kafka.</b> Nền tảng event streaming mã nguồn mở do LinkedIn tạo ra, lưu sự kiện thành log bền và cho nhiều bên cùng đọc. <a class="fn-back" href="#fnr-55" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-56"><b>Idempotency.</b> Tính chất làm một thao tác nhiều lần cho cùng kết quả như làm một lần; cần để retry và nhận tin trùng một cách an toàn. <a class="fn-back" href="#fnr-56" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-57"><b>Event sourcing.</b> Lưu mọi thay đổi thành chuỗi sự kiện bất biến; trạng thái hiện tại được dựng lại bằng cách phát lại chuỗi đó. <a class="fn-back" href="#fnr-57" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-58"><b>Command Query Responsibility Segregation.</b> Tách mô hình ghi và mô hình đọc thành hai phần riêng, mỗi phần tối ưu cho việc của nó. <a class="fn-back" href="#fnr-58" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-59"><b>Sentry.</b> Công cụ thu thập lỗi và stack trace từ ứng dụng, gom các lỗi giống nhau lại. <a class="fn-back" href="#fnr-59" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-60"><b>Wide events.</b> Cách ghi một sự kiện có rất nhiều trường cho mỗi yêu cầu, để hỏi được những câu chưa tính trước; Honeycomb gọi là observability 2.0. <a class="fn-back" href="#fnr-60" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-61"><b>Chaos engineering.</b> Cố ý gây lỗi có kiểm soát trên hệ thật để kiểm chứng khả năng chịu lỗi; Netflix khởi xướng với Chaos Monkey. <a class="fn-back" href="#fnr-61" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-62"><b>Domain-Oriented Microservice Architecture.</b> Cách Uber gom microservice thành các domain, mỗi domain có một cổng vào và các điểm mở rộng định sẵn. <a class="fn-back" href="#fnr-62" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-63"><b>AWS Step Functions.</b> Dịch vụ AWS điều phối nhiều bước xử lý serverless thành một quy trình. <a class="fn-back" href="#fnr-63" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-64"><b>Amazon Elastic Container Service.</b> Dịch vụ AWS chạy và quản lý container. <a class="fn-back" href="#fnr-64" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-65"><b>Monorepo.</b> Một kho mã duy nhất chứa code của nhiều dự án hoặc service. <a class="fn-back" href="#fnr-65" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-66"><b>Gatekeeper.</b> Hệ thống feature flag nội bộ của Meta, quyết định người dùng nào thấy tính năng nào. <a class="fn-back" href="#fnr-66" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-67"><b>Kayenta.</b> Công cụ phân tích canary tự động mã nguồn mở của Netflix và Google. <a class="fn-back" href="#fnr-67" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-68"><b>Spinnaker.</b> Nền tảng continuous delivery đa đám mây, mã nguồn mở, do Netflix khởi xướng. <a class="fn-back" href="#fnr-68" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-69"><b>Zipkin.</b> Hệ thống tracing mã nguồn mở do Twitter phát triển, lấy cảm hứng từ Dapper. <a class="fn-back" href="#fnr-69" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-70"><b>Jaeger.</b> Hệ thống tracing mã nguồn mở do Uber phát triển, nay thuộc CNCF. <a class="fn-back" href="#fnr-70" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-71"><b>Backstage.</b> Nền tảng mã nguồn mở của Spotify làm danh mục service, ghi chủ sở hữu và tài liệu của từng thành phần. <a class="fn-back" href="#fnr-71" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

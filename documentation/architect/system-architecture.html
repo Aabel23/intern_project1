@@ -1,0 +1,1059 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kiến trúc hệ máy pha</title>
+<meta name="description" content="Kiến trúc ba sản phẩm app, server hãng, máy pha của project1_app v1.1: nguyên tắc, khối, luồng, repo đề xuất và quy trình.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Tông kem – cam theo phong cách Claude */
+  :root{
+    --bg:#F5F4ED; --surface:#FAF9F5; --surface-2:#EFEDE4; --card:#FFFFFF;
+    --ink:#1F1E1B; --ink-2:#4A4740; --ink-3:#7A776D; --line:#E3E0D4; --line-2:#CDC9BB;
+    --accent:#C96442; --accent-ink:#A9502F; --accent-soft:#F6E2D8;
+    --ui:#4A7BAF; --ui-soft:#E5EDF6;
+    --proc:#C96442; --proc-soft:#F8E6DC;
+    --hw:#7D78AD; --hw-soft:#ECEAF4;
+    --store:#8A867B; --store-soft:#FAF9F5;
+    --amber:#AE8231; --amber-soft:#F5EBD2;
+    --ok:#687F4D; --ok-soft:#E5EBDB;
+    --red:#B23A26; --red-soft:#F6DBD2;
+    --code-bg:#EDEADF;
+    --serif:"Source Serif 4", "Tiempos Text", Georgia, "Times New Roman", serif;
+    --sans:"Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+      --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+      --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+      --ui:#8DB2DA; --ui-soft:#263444;
+      --proc:#DE8361; --proc-soft:#46302A;
+      --hw:#B3AEDA; --hw-soft:#35334A;
+      --store:#A19D92; --store-soft:#2B2A28;
+      --amber:#DDB467; --amber-soft:#443922;
+      --ok:#A7BE8A; --ok-soft:#303A27;
+      --red:#EE8B73; --red-soft:#4C2A23;
+      --code-bg:#383733;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#262624; --surface:#2E2D2A; --surface-2:#1F1E1C; --card:#30302D;
+    --ink:#F3F1EA; --ink-2:#C6C2B7; --ink-3:#9B978C; --line:#3E3D39; --line-2:#56544E;
+    --accent:#DE8361; --accent-ink:#EE9A7A; --accent-soft:#4A2F25;
+    --ui:#8DB2DA; --ui-soft:#263444;
+    --proc:#DE8361; --proc-soft:#46302A;
+    --hw:#B3AEDA; --hw-soft:#35334A;
+    --store:#A19D92; --store-soft:#2B2A28;
+    --amber:#DDB467; --amber-soft:#443922;
+    --ok:#A7BE8A; --ok-soft:#303A27;
+    --red:#EE8B73; --red-soft:#4C2A23;
+    --code-bg:#383733;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent-ink)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  code, .mono{font-family:var(--mono); font-size:.8em}
+  code{background:var(--code-bg); padding:.1em .38em; border-radius:4px; white-space:nowrap}
+  h1,h2,h3,h4{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0; font-weight:600}
+
+  .page{max-width:1440px; margin:0 auto; padding-inline:clamp(16px,3vw,40px); padding-block:20px 80px; display:grid; gap:20px}
+
+  /* ---------- đầu trang ---------- */
+  .masthead{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); align-items:end}
+  @media (min-width:1000px){ .masthead{grid-template-columns:minmax(0,1fr) auto; column-gap:40px} .masthead .meta{flex-direction:column; align-items:flex-end; text-align:right} }
+  .eyebrow{font-family:var(--sans); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  .masthead h1{font-size:clamp(24px,2.6vw,30px); letter-spacing:-.01em}
+  .lead{color:var(--ink-2); margin:0; max-width:70ch; font-size:15.5px; line-height:1.5}
+  .meta{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:4px 22px; font-size:12.5px; color:var(--ink-3)}
+  .meta b{color:var(--ink-2); font-weight:600}
+
+  /* ---------- tổng quan ---------- */
+  .overview{display:grid; gap:12px; scroll-margin-top:16px}
+  .ov-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 24px}
+  .ov-head h2{font-size:24px}
+  .ov-frame{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:10px; overflow-x:auto}
+  svg.ov{display:block; margin-inline:auto; width:min(100%, calc((100vh - 190px) * 1.8966)); min-width:980px; height:auto; font-family:var(--sans)}
+  .ov .zn{fill:var(--card); stroke:var(--line); stroke-width:1}
+  .ov .zt{font-size:11px; letter-spacing:.12em; font-weight:600; fill:var(--ink-3)}
+  .ov .zt2{font-size:10.5px; letter-spacing:.12em; font-weight:700; fill:var(--accent-ink)}
+  .ov .nd rect, .ov .nd path{stroke-width:1.4}
+  .ov .nd.ui rect{fill:var(--ui-soft); stroke:var(--ui)}
+  .ov .nd.proc rect{fill:var(--proc-soft); stroke:var(--proc)}
+  .ov .nd.hot rect{fill:var(--proc-soft); stroke:var(--red); stroke-width:3}
+  .ov .nd.hw rect{fill:var(--hw-soft); stroke:var(--hw)}
+  .ov .nd.file rect{fill:var(--store-soft); stroke:var(--store); stroke-dasharray:5 3}
+  .ov .nd.store rect, .ov .nd.store path{fill:var(--store-soft); stroke:var(--store)}
+  .ov .nd.store path.lid{fill:none}
+  .ov .tt{font-size:13px; font-weight:600; fill:var(--ink)}
+  .ov .tm{font-family:var(--mono); font-size:11px; font-weight:500; fill:var(--ink)}
+  .ov .ts{font-size:10.5px; fill:var(--ink-2)}
+  .ov .tn{font-size:10.5px; fill:var(--ink-3); font-style:italic}
+  .ov .tl{font-size:10.5px; fill:var(--ink-2); font-weight:500}
+  .ov .tmono{font-family:var(--mono); font-size:9.5px; fill:var(--ink-2)}
+  .ov .tmono2{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+  .ov .thot{font-size:10.5px; fill:var(--red); font-weight:600}
+  .ov .tlist{font-size:11px; fill:var(--ink)}
+  .ov .chip{fill:var(--amber-soft); stroke:var(--amber); stroke-width:1}
+  .ov .tchip{font-family:var(--mono); font-size:10px; fill:var(--ink)}
+  .ov .e{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+  .ov .e.main{stroke:var(--accent); stroke-width:2}
+  .ov .e.dash{stroke-dasharray:4 3}
+  .ov .mk-g path{fill:var(--ink-3)}
+  .ov .mk-a path{fill:var(--accent)}
+  .ov .dot{fill:var(--accent)}
+  .ov .bd circle{fill:var(--accent); stroke:var(--surface); stroke-width:2.5}
+  .ov .bd text{font-size:10px; font-weight:700; fill:#FFFFFF}
+
+  .legend{font-family:var(--sans); display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-2)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .sw{width:15px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block}
+  .sw.ui{background:var(--ui-soft); border-color:var(--ui)}
+  .sw.proc{background:var(--proc-soft); border-color:var(--proc)}
+  .sw.hw{background:var(--hw-soft); border-color:var(--hw)}
+  .sw.store{background:var(--store-soft); border-color:var(--store)}
+  .sw.file{background:var(--store-soft); border-color:var(--store); border-style:dashed}
+  .sw.human{background:var(--amber-soft); border-color:var(--amber)}
+  .sw.hot{background:var(--proc-soft); border-color:var(--red); border-width:2.5px}
+  .ln{width:22px; height:0; border-top:2px solid var(--accent); display:inline-block}
+  .ln.g{border-top:1.5px solid var(--ink-3)}
+  .ov-note{font-size:14.5px; color:var(--ink-2); font-style:italic; margin:0; max-width:110ch}
+
+  /* ---------- lưới tài liệu ---------- */
+  .shell{display:grid; grid-template-columns:minmax(0,1fr); gap:48px; padding-top:24px; border-top:1px solid var(--line)}
+  @media (min-width:1180px){ .shell{grid-template-columns:220px minmax(0,1fr)} }
+  .toc{display:none; font-family:var(--sans)}
+  @media (min-width:1180px){
+    .toc{display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 20px); align-self:start; font-size:13px; max-height:calc(100vh - 40px); overflow:auto; padding-right:8px}
+  }
+  .toc .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:10px}
+  .toc ol{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+  .toc a{display:block; color:var(--ink-2); text-decoration:none; padding:4px 10px; border-radius:6px; border-left:2px solid transparent}
+  .toc a:hover{background:var(--surface-2); color:var(--ink)}
+  .toc a.on{color:var(--ink); border-left-color:var(--accent); background:var(--surface-2)}
+  .toc .sub a{padding-left:22px; font-size:12.5px}
+
+  main{min-width:0; display:grid; gap:60px}
+  section{display:grid; gap:18px; scroll-margin-top:20px}
+  .sec-head{display:grid; gap:4px}
+  .sec-no{font-family:var(--sans); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); font-weight:600}
+  section > .sec-head h2{font-size:clamp(23px,2.6vw,29px)}
+  .prose{max-width:70ch; margin:0}
+
+  figure.dg{margin:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .dg-canvas{overflow-x:auto; overflow-y:hidden; min-height:60px}
+  .dg-canvas svg{display:block; margin-inline:auto; height:auto}
+  .dg-canvas pre.fallback{font-family:var(--mono); font-size:12px; color:var(--ink-2); white-space:pre; margin:0}
+  figcaption{font-size:14.5px; color:var(--ink-2); font-style:italic; max-width:84ch; line-height:1.5}
+  figcaption code{font-style:normal}
+  .dg-split{grid-template-columns:minmax(0,1fr)}
+  .dg-main{display:grid; gap:10px; min-width:0}
+  .dg-side{border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden; align-self:start}
+  .dg-side table{min-width:0; font-size:12.5px}
+  .dg-side th,.dg-side td{padding:6px 10px}
+  .dg-side td:first-child{color:var(--ink-3); white-space:nowrap}
+  .dg-side tr.grp td{color:var(--ink); font-weight:600; background:var(--surface-2)}
+  .dg-split > figcaption{grid-column:1 / -1}
+  @media (min-width:1000px){
+    .dg-split{grid-template-columns:minmax(0,1fr) minmax(260px,330px); column-gap:14px}
+    .dg-side{position:sticky; top:20px}
+  }
+  .dg-tools{display:flex; justify-content:flex-end; gap:6px; font-family:var(--sans)}
+  .dg-tools button{font:inherit; font-size:12px; color:var(--ink-2); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer}
+  .dg-tools button:hover{background:var(--surface-2); color:var(--ink)}
+
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,2.4vw,26px); display:grid; gap:14px; scroll-margin-top:20px}
+  .comp > header{display:grid; gap:4px}
+  .comp h3{font-size:22px}
+  .comp .src{font-family:var(--sans); font-size:12.5px; color:var(--ink-3)}
+  .comp .src code{white-space:normal}
+  .comp h4{font-family:var(--sans); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:4px}
+  .comp figure.dg{background:var(--surface)}
+  .comp p{margin:0; max-width:74ch}
+  ol.steps{margin:0; padding-left:1.4em; display:grid; gap:6px; max-width:80ch}
+  ol.steps li::marker{color:var(--accent-ink); font-family:var(--sans); font-size:.85em; font-weight:600}
+  .note{border:1px solid var(--amber); background:var(--amber-soft); border-radius:10px; padding:12px 16px; font-size:15.5px; max-width:84ch}
+  .note b:first-child{font-family:var(--sans); color:var(--amber); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:2px}
+  .note.crit{border-color:var(--red); background:var(--red-soft)}
+  .note.crit b:first-child{color:var(--red)}
+
+  .tbl{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+  table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; min-width:620px}
+  th,td{text-align:left; padding:9px 14px; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td.num{font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; border:1px solid; white-space:nowrap}
+  .pill.m{color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft)}
+  .pill.h{color:var(--amber); border-color:var(--amber); background:var(--amber-soft)}
+  .pill.r{color:var(--red); border-color:var(--red); background:var(--red-soft)}
+
+  .phases{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-family:var(--mono); font-size:12px}
+  .phases span{border:1px solid var(--line-2); background:var(--surface); border-radius:6px; padding:3px 9px}
+  .phases i{font-style:normal; color:var(--ink-3)}
+  .phases span.x{border-style:dashed; color:var(--ink-2)}
+
+  .two{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+  @media (min-width:900px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  /* ---------- phóng to ---------- */
+  .zoom{position:fixed; inset:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); display:grid; grid-template-rows:auto 1fr; padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
+  .zoom-bar{display:flex; justify-content:space-between; align-items:center; font-family:var(--sans); font-size:13px; color:var(--ink-2); padding-bottom:8px}
+  .zoom-bar button{font:inherit; background:var(--card); border:1px solid var(--line-2); border-radius:6px; padding:4px 12px; cursor:pointer; color:var(--ink)}
+  .zoom-body{overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .zoom-body svg{display:block; margin:auto; max-width:none !important; min-width:0 !important; max-height:none !important}
+
+  footer.end{font-family:var(--sans); font-size:12.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:18px}
+  @media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+/* fn:start */
+  sup.fn{font-family:var(--sans); font-size:.62em; line-height:0; font-weight:600; margin-left:1px}
+  sup.fn a{text-decoration:none; color:var(--accent-ink); padding:0 1px}
+  ol.fnotes{margin:0; padding-left:1.8em; display:grid; gap:6px; font-family:var(--sans); font-size:13.5px; line-height:1.5; max-width:90ch; color:var(--ink-2)}
+  ol.fnotes li::marker{color:var(--accent-ink); font-weight:600}
+  ol.fnotes b{color:var(--ink); font-weight:600}
+  ol.fnotes li:target{background:var(--accent-soft); border-radius:6px}
+  .fn-back{text-decoration:none; font-size:12px}
+  sup.fn, ol.fnotes li{scroll-margin-top:80px}
+  /* fn:end */
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Kiến trúc MVP · project1_app v1.1</div>
+      <h1>Ba sản phẩm, một hợp đồng: app, server hãng và máy pha</h1>
+      <p class="lead">Hệ gồm ba sản phẩm chạy ở ba nơi và được cập nhật vào ba thời điểm khác nhau. Kiến trúc này nhắm một mục tiêu: sửa, nâng cấp hay viết lại một tính năng thì chỉ chạm đúng một chỗ, và không bao giờ phải cập nhật cả ba sản phẩm cùng lúc. Tài liệu chỉ gồm phạm vi bản đầu (MVP); phần để sau ghi ở mục 7.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>project1_app</code> · <code>c34d55e</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+      <span><b>Trạng thái:</b> kiến trúc MVP; điểm tạm chốt ghi ở mục 7</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>App</span>
+        <span><i class="sw proc"></i>Server</span>
+        <span><i class="sw hw"></i>Máy pha</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw file"></i>Hợp đồng chung</span>
+        <span><i class="ln"></i>Đường bình thường (số = thứ tự)</span>
+        <span><i class="ln g"></i>Dự phòng / phụ trợ</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame" data-zoom-src>
+<svg class="ov" viewBox="0 0 1100 580" role="img" aria-label="App và máy pha ở quán, server hãng trên cloud, cả ba cùng tuân theo một hợp đồng chung có số phiên bản">
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+<rect class="zn" x="340" y="38" width="720" height="168" rx="12"/>
+<text x="342" y="28" class="zt">CLOUD CỦA HÃNG</text>
+<g class="nd proc"><rect x="380" y="62" width="340" height="120" rx="8"/>
+<text x="550" y="92" class="tt" text-anchor="middle">Server hãng</text>
+<text x="550" y="112" class="ts" text-anchor="middle">tài khoản · danh sách máy · bản chuẩn quyền</text>
+<text x="550" y="130" class="ts" text-anchor="middle">bản trạng thái máy · chuyển tin</text>
+<text x="550" y="156" class="tn" text-anchor="middle">không giữ món, kho, đơn</text></g>
+<g class="nd store"><path d="M790,92 a70,9 0 0 1 140,0 v52 a70,9 0 0 1 -140,0 z"/><path class="lid" d="M790,92 a70,9 0 0 0 140,0"/>
+<text x="860" y="122" class="ts" text-anchor="middle">tài khoản</text>
+<text x="860" y="137" class="ts" text-anchor="middle">danh sách máy, quyền</text></g>
+<path class="e" d="M720,118 L788,118" marker-end="url(#ag)"/>
+
+<rect class="zn" x="16" y="262" width="1068" height="214" rx="12"/>
+<text x="18" y="252" class="zt">QUÁN · WIFI CỦA QUÁN</text>
+<g class="nd ui"><rect x="60" y="292" width="260" height="96" rx="8"/>
+<text x="190" y="320" class="tt" text-anchor="middle">App điện thoại</text>
+<text x="190" y="340" class="ts" text-anchor="middle">Owner · Manager · Employee</text>
+<text x="190" y="358" class="ts" text-anchor="middle">tính năng theo nghiệp vụ</text>
+<text x="190" y="376" class="ts" text-anchor="middle">một lớp kết nối, ba đường</text></g>
+<g class="nd hw"><rect x="780" y="292" width="280" height="96" rx="8"/>
+<text x="920" y="320" class="tt" text-anchor="middle">Máy pha</text>
+<text x="920" y="340" class="ts" text-anchor="middle">nguồn sự thật của món, kho, đơn</text>
+<text x="920" y="358" class="ts" text-anchor="middle">lõi nghiệp vụ · driver phần cứng</text>
+<text x="920" y="376" class="ts" text-anchor="middle">kết nối · cập nhật phần mềm</text></g>
+<g class="nd store"><path d="M850,416 a70,9 0 0 1 140,0 v34 a70,9 0 0 1 -140,0 z"/><path class="lid" d="M850,416 a70,9 0 0 0 140,0"/>
+<text x="920" y="442" class="ts" text-anchor="middle">món · kho · đơn · nhật ký</text></g>
+<path class="e" d="M920,388 L920,404" marker-end="url(#ag)"/>
+
+<path class="e main" d="M190,292 L190,122 L378,122" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="190" cy="210" r="9.5"/><text x="190" y="213.8" text-anchor="middle">1</text></g>
+<text x="200" y="114" class="tl">lệnh và câu hỏi, chờ trả lời</text>
+<path class="e main" d="M690,182 L690,236 L960,236 L960,290" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="830" cy="236" r="9.5"/><text x="830" y="239.8" text-anchor="middle">2</text></g>
+<text x="700" y="228" class="tl">máy giữ kết nối mở ra server</text>
+<path class="e dash" d="M320,340 L778,340" marker-start="url(#ag)" marker-end="url(#ag)"/>
+<text x="340" y="330" class="tl">LAN khi mất Internet · Bluetooth khi mất cả wifi</text>
+
+<rect class="zn" x="16" y="510" width="1068" height="56" rx="12"/>
+<text x="18" y="502" class="zt2">HỢP ĐỒNG CHUNG · MỘT KHUÔN THÔNG ĐIỆP CÓ SỐ PHIÊN BẢN CHO CẢ BA ĐƯỜNG</text>
+<g class="nd file"><rect x="360" y="522" width="380" height="34" rx="8"/>
+<text x="550" y="544" class="tm" text-anchor="middle">contracts/ · schema · thông điệp mẫu</text></g>
+<path class="e dash" d="M190,388 L190,520 L358,539" marker-end="url(#ag)"/>
+<path class="e dash" d="M650,182 L650,520" marker-end="url(#ag)"/>
+<path class="e dash" d="M1040,388 L1040,520 L742,539" marker-end="url(#ag)"/>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Đường bình thường: (1) app gửi lệnh lên server hãng, (2) server chuyển xuống máy qua kết nối do máy mở sẵn ra ngoài, vì máy nằm sau router của quán nên server không tự gọi vào được. Mất Internet thì app nói thẳng với máy trong wifi quán; mất cả wifi thì qua Bluetooth<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup>. Ba đường dùng chung một hợp đồng (dải dưới cùng): thông điệp có cùng hình dạng, cùng số phiên bản, chỉ khác đường đi. Server chỉ giữ tài khoản, danh sách máy và bản chuẩn của quyền; mọi dữ liệu món, kho, đơn nằm trên máy.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#nguyen-tac">2. Bảy nguyên tắc</a></li>
+        <li><a href="#luong-chinh">3. Luồng chính: tắt một món</a></li>
+        <li><a href="#thanh-phan">4. Từng khối</a></li>
+        <li class="sub"><a href="#c-hop-dong">4.1 Hợp đồng chung</a></li>
+        <li class="sub"><a href="#c-may">4.2 Máy pha</a></li>
+        <li class="sub"><a href="#c-server">4.3 Server hãng</a></li>
+        <li class="sub"><a href="#c-app">4.4 App</a></li>
+        <li class="sub"><a href="#c-dong-bo">4.5 Đồng bộ dữ liệu</a></li>
+        <li class="sub"><a href="#c-cap-nhat">4.6 Cập nhật phần mềm máy</a></li>
+        <li class="sub"><a href="#c-bao-mat">4.7 Bảo mật và danh tính</a></li>
+        <li class="sub"><a href="#c-quyen">4.8 Vai và quyền</a></li>
+        <li><a href="#repo">5. Repo</a></li>
+        <li><a href="#quy-trinh">6. Quy trình làm việc</a></li>
+        <li><a href="#ghi-chu">7. Tạm chốt và để sau</a></li>
+        <li><a href="#chu-thich">8. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="nguyen-tac">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Bảy nguyên tắc kiến trúc</h2></div>
+      <p class="prose">Mỗi nguyên tắc trả lời một câu hỏi "sửa chỗ này có vỡ chỗ khác không". Cả bảy nguyên tắc áp dụng từ bản đầu.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>#</th><th>Nguyên tắc</th><th>Vì sao</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><b>Máy là nguồn sự thật</b> của món, nguyên liệu, kho, đơn. Server hãng mỏng: chỉ giữ tài khoản, danh sách máy, bản chuẩn của quyền và bản sao nhật ký.</td><td>Mất mạng không được làm hỏng việc bán hàng. Một máy hỏng không kéo theo máy khác.</td><td><span class="pill m">Đã chốt</span></td></tr>
+            <tr><td class="num">2</td><td><b>Ba sản phẩm đều là modular monolith<sup class="fn" id="fnr-2"><a href="#fn-2" aria-label="Chú thích 2">2</a></sup></b>: mỗi sản phẩm chạy và phát hành như một khối, bên trong chia module theo nghiệp vụ.</td><td>Đội nhỏ, ranh giới còn đang hình thành. Một khối dễ debug tại quán; module rõ thì sau này tách được nếu cần.</td><td><span class="pill m">Đã chốt</span></td></tr>
+            <tr><td class="num">3</td><td><b>Một hợp đồng chung có số phiên bản</b> cho cả ba đường cloud, LAN<sup class="fn" id="fnr-3"><a href="#fn-3" aria-label="Chú thích 3">3</a></sup>, Bluetooth. Chỉ thêm, không đổi nghĩa; phá vỡ thì tăng phiên bản và giữ bản cũ song song.</td><td>App trên điện thoại khách và máy ở quán không bao giờ cập nhật cùng lúc với server.</td><td><span class="pill m">Đã chốt</span></td></tr>
+            <tr><td class="num">4</td><td><b>Lệnh đi theo kiểu hỏi–đáp, sự kiện chỉ để thông báo và gửi bù.</b> Không dùng một hệ sự kiện lớn làm xương sống.</td><td>Hỏi–đáp dễ lần theo khi debug. Sự kiện chỉ cần ở chỗ máy phải báo lên điều đã xảy ra, kể cả lúc mất mạng.</td><td><span class="pill m">Đã chốt</span></td></tr>
+            <tr><td class="num">5</td><td><b>Ranh giới do máy kiểm.</b> Module chỉ gọi nhau qua cửa công khai; sản phẩm này không import code của sản phẩm kia, chỉ dùng chung <code>contracts/</code>.</td><td>Quy ước trên giấy sẽ bị phá, nhất là khi có AI agent viết code.</td><td><span class="pill m">Đã chốt</span></td></tr>
+            <tr><td class="num">6</td><td><b>Mỗi sản phẩm phát hành riêng</b>, có phiên bản riêng. Hợp đồng có phiên bản riêng, tách khỏi phiên bản sản phẩm.</td><td>Sửa lỗi app không bắt máy ở quán phải cập nhật, và ngược lại.</td><td><span class="pill m">Đã chốt</span></td></tr>
+            <tr><td class="num">7</td><td><b>Không có con số viết cứng.</b> Mọi hạn, giới hạn và chu kỳ là thông số trong <b>sổ thông số</b> của từng sản phẩm; code chỉ đọc theo tên. Con số ba bên phải hiểu giống nhau nằm trong hợp đồng chung.</td><td>Chỉnh được lâu dài mà không sửa code; mọi con số đang dùng nằm ở một chỗ.</td><td><span class="pill m">Đã chốt</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Luồng chính: Owner tắt một món từ app</h2></div>
+      <p class="prose">Ví dụ đại diện vì nó đi qua đủ ba sản phẩm, đủ hai lần kiểm quyền, và có cả nhánh mất mạng. Mũi tên liền là gửi đi, mũi tên đứt là trả lời. Khung "Mất Internet" là đường dự phòng: cùng lệnh, cùng hợp đồng, chỉ khác đường đi.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  actor O as Owner
+  participant A as App
+  participant S as Server hãng
+  participant M as Máy pha
+  O->>A: tắt món Cà phê sữa
+  A->>S: lệnh tắt món, kèm mã lệnh và phiên bản hợp đồng
+  S->>S: kiểm quyền theo bản chuẩn
+  S->>M: chuyển lệnh qua kết nối máy đang giữ mở
+  M->>M: kiểm quyền bằng bản sao, kiểm mã lệnh chưa từng chạy
+  M->>M: tắt món, ghi nhật ký theo người
+  M-->>S: kết quả và trạng thái mới của máy
+  S-->>A: đã tắt
+  alt Mất Internet
+    A->>M: cùng lệnh, đi thẳng qua LAN hoặc Bluetooth
+    M-->>A: đã tắt, sự kiện nằm chờ trong hộp thư đi
+    M-->>S: có mạng lại thì gửi bù sự kiện
+  end
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Bước 5 là chỗ quan trọng nhất: máy tự kiểm quyền bằng bản sao của mình, không tin mù quáng vào việc lệnh đã qua server. Mã lệnh giúp máy nhận ra lệnh bị gửi lại (do mạng chập chờn) và không chạy lần hai. Hộp thư đi là nơi máy giữ các sự kiện chưa gửi được lên server.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Thư mục đề xuất</th><th>Hiện có</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td>App</td><td><code>flutter_app/lib/feature/machine_menu/</code> + lớp kết nối</td><td>Giao diện tab menu đã có; chưa có lớp kết nối</td><td>Nhận thao tác, gửi lệnh theo hợp đồng, chọn đường đi</td></tr>
+            <tr><td>Server hãng</td><td><code>server/</code>: module quyền, chuyển tiếp</td><td><code>server/configuration/routing.py</code></td><td>Kiểm quyền bản chuẩn, chuyển lệnh, giữ bản trạng thái máy</td></tr>
+            <tr><td>Máy pha</td><td><code>version1.1/machine/</code> + lõi nghiệp vụ</td><td><code>menu_sync/</code>, <code>server_connection/</code></td><td>Kiểm quyền bản sao, chạy lệnh đúng một lần, ghi nhật ký</td></tr>
+            <tr><td>Hợp đồng</td><td><code>contracts/</code></td><td>Chưa có</td><td>Hình dạng lệnh, kết quả, sự kiện và số phiên bản</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Từng khối</h2></div>
+
+      <article class="comp" id="c-hop-dong">
+        <header><h3>4.1 · Hợp đồng chung <span class="pill m">Đã chốt</span></h3><div class="src"><code>contracts/</code> (mới) · Sơ đồ: luồng · 6 khối</div></header>
+        <h4>Làm gì</h4>
+        <p>Là thứ duy nhất cả ba sản phẩm cùng phụ thuộc. Nó mô tả mọi lệnh, câu hỏi, kết quả và sự kiện đi giữa app, server và máy, kèm số phiên bản. Hợp đồng không chứa code nghiệp vụ. Khối này đứng đầu vì nó quyết định việc ba sản phẩm có cập nhật riêng được hay không.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  C1["① Đổi hợp đồng"] --> C2["② Server hiểu cả cũ lẫn mới"]
+  C2 --> C3["③ Máy cập nhật dần"]
+  C3 --> C4["④ App cập nhật"]
+  C4 --> C5{"⑤ Hết thời hạn hỗ trợ bản cũ?"}
+  C5 -->|"chưa"| C4
+  C5 -->|"rồi"| C6["⑥ Bỏ bản cũ"]
+  class C1 file
+  class C2,C3,C4 proc
+  class C5 dec
+  class C6 muted
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Đổi hợp đồng</td></tr>
+                <tr><td>Cách</td><td>PR<sup class="fn" id="fnr-4"><a href="#fn-4" aria-label="Chú thích 4">4</a></sup> riêng, nhỏ, trước mọi code dùng nó</td></tr>
+                <tr><td>Quy tắc</td><td>Chỉ thêm; bên nhận bỏ qua phần lạ</td></tr>
+                <tr class="grp"><td colspan="2">② Server hiểu cả cũ lẫn mới</td></tr>
+                <tr><td>Vì sao</td><td>Server là bên duy nhất hãng cập nhật được ngay; nó làm lớp dịch giữa các phiên bản</td></tr>
+                <tr class="grp"><td colspan="2">③ Máy · ④ App</td></tr>
+                <tr><td>Khi kết nối</td><td>Hai bên báo phiên bản, chọn phiên bản chung cao nhất; không có thì báo "cần cập nhật" rõ ràng</td></tr>
+                <tr class="grp"><td colspan="2">⑤ ⑥ Bỏ bản cũ</td></tr>
+                <tr><td>Thời hạn</td><td>Thông số, mặc định 12 tháng (tạm chốt)</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Thứ tự cập nhật an toàn: server trước, máy sau, app cuối. Máy có thể mất mạng nhiều ngày, nên server phải luôn nói được "tiếng" của máy cũ.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Một khuôn thông điệp cho cả ba đường.</b> Lớp vận chuyển (cloud, LAN, Bluetooth) chỉ khuân thông điệp, không hiểu nội dung. Nhờ vậy thêm hay sửa một lệnh không phải viết lại ba lần.</li>
+          <li><b>Ba loại thông điệp:</b> lệnh (có mã riêng, phải trả lời, chạy đúng một lần), câu hỏi (chỉ đọc), sự kiện (máy báo điều đã xảy ra, không từ chối được).</li>
+          <li><b>Bộ thông điệp mẫu dùng chung.</b> Cả ba sản phẩm cùng chạy test trên đúng các mẫu này; đổi hợp đồng mà quên một bên thì test đỏ.</li>
+          <li><b>Kiểm khả năng, không so số phiên bản.</b> Hỏi "máy có hiểu lệnh này không" thay vì "máy có mới hơn bản X không", để dễ sống với đội máy lệch phiên bản.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-may">
+        <header><h3>4.2 · Máy pha <span class="pill m">Đã chốt</span></h3><div class="src"><code>version1.1/</code> · Sơ đồ: luồng · 4 nhóm module</div></header>
+        <h4>Làm gì</h4>
+        <p>Một khối chạy trên máy, giữ toàn bộ dữ liệu nghiệp vụ và vẫn bán hàng khi mất mạng. Bên trong chia bốn nhóm, mỗi nhóm có một trách nhiệm. Lõi nghiệp vụ không biết phần cứng cụ thể là gì: thay loại bơm hay máy in chỉ đổi driver, không đụng tới công thức hay đơn.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TB
+  K["① Kết nối"] --> L["② Lõi nghiệp vụ"]
+  U["④ Giao diện tại máy"] --> L
+  L --> D["③ Driver phần cứng"]
+  L --> DB[("Dữ liệu máy")]
+  L --> OUT[("Hộp thư đi")]
+  OUT -.-> K
+  class K proc
+  class L hot
+  class D hw
+  class U ui
+  class DB,OUT store
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Nhóm → thư mục hiện có</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Kết nối</td></tr>
+                <tr><td>Gồm</td><td>Server, LAN, Bluetooth</td></tr>
+                <tr><td>Có</td><td><code>machine/server_connection</code>, <code>machine/pairing</code> (Bluetooth)</td></tr>
+                <tr><td>Thiếu</td><td>Đường LAN, bắt tay phiên bản, giao thức Cryptography</td></tr>
+                <tr class="grp"><td colspan="2">② Lõi nghiệp vụ</td></tr>
+                <tr><td>Gồm</td><td>Menu, đơn, công thức, kho, quyền bản sao, nhật ký</td></tr>
+                <tr><td>Có</td><td><code>recipe</code>, <code>order</code>, <code>machine/menu_sync</code>, <code>machine/ingredient_sync</code>, <code>database/services</code></td></tr>
+                <tr><td>Thiếu</td><td>Bản sao quyền, bảng mã lệnh đã chạy, hộp thư đi, nhật ký theo người</td></tr>
+                <tr class="grp"><td colspan="2">③ Driver phần cứng</td></tr>
+                <tr><td>Gồm</td><td>Bơm, cân, máy in, quét QR, panel</td></tr>
+                <tr><td>Có</td><td><code>pump_control</code>, <code>loadcell</code>, <code>printer</code>, <code>scan</code>, <code>qrproto</code>, <code>panel_control</code></td></tr>
+                <tr class="grp"><td colspan="2">④ Giao diện tại máy</td></tr>
+                <tr><td>Gồm</td><td>Bán hàng, pha chế, kiểm phần cứng</td></tr>
+                <tr><td>Có</td><td><code>store_gui</code>, <code>bartender_gui</code>, <code>test_gui</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Mũi tên liền chỉ hướng được phép gọi: kết nối và giao diện gọi vào lõi, lõi gọi xuống driver, không có chiều ngược lại. Mũi tên đứt: hộp thư đi giữ sự kiện chờ, kết nối lấy ra gửi lên server khi có mạng. Ô viền đỏ là phần phức tạp nhất.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Giữ cách chia thư mục theo miền đang có.</b> Phần lớn module đã nằm đúng nhóm; việc cần làm là ghi rõ quy tắc ai được gọi ai và để CI<sup class="fn" id="fnr-5"><a href="#fn-5" aria-label="Chú thích 5">5</a></sup> kiểm.</li>
+          <li><b>Lõi không import thư viện phần cứng.</b> Driver cắm vào lõi qua một giao diện chung. Nhờ vậy chạy test lõi bằng driver giả mà không cần máy thật, và không vô tình bật bơm khi test.</li>
+          <li><b>Kết nối chỉ là đường vào.</b> Lệnh từ server, từ LAN hay từ Bluetooth đều đi vào cùng một chỗ trong lõi, cùng kiểm quyền. Đường dự phòng không bao giờ mạnh hơn đường chính.</li>
+          <li><b>Thông báo nội bộ bằng sự kiện trong tiến trình</b> (ví dụ "đơn xong", "kho sắp hết") để giao diện và hộp thư đi cùng nghe, mà lõi không phải biết ai đang nghe. Chỉ dùng cho thông báo; lệnh vẫn là gọi hàm.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-server">
+        <header><h3>4.3 · Server hãng <span class="pill m">Đã chốt</span></h3><div class="src"><code>server/</code> · Sơ đồ: luồng · 5 module</div></header>
+        <h4>Làm gì</h4>
+        <p>Cổng nối giữa app và máy, và là nơi giữ bản chuẩn của "ai được làm gì trên máy nào". Server <b>không</b> giữ món, kho hay đơn. Năm module, mỗi module một trách nhiệm, chạy chung một khối.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  APP["App"] --> GATE["① Cửa vào có phiên bản"]
+  GATE --> ACC["② Tài khoản"]
+  GATE --> PER["③ Danh sách máy và quyền"]
+  GATE --> REL["④ Chuyển tiếp"]
+  REL --> SHA["⑤ Bản trạng thái máy"]
+  REL --> MC["Kết nối máy"]
+  ACC --> DB[("Tài khoản, máy, quyền")]
+  PER --> DB
+  SHA --> DB
+  class APP ui
+  class GATE dec
+  class ACC,PER,REL,SHA proc
+  class MC hw
+  class DB store
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Cửa vào có phiên bản</td></tr>
+                <tr><td>Làm gì</td><td>Nhận thông điệp, đọc phiên bản, dịch bản cũ sang bản mới</td></tr>
+                <tr class="grp"><td colspan="2">② Tài khoản</td></tr>
+                <tr><td>Làm gì</td><td>Đăng ký bằng email và mật khẩu, OTP<sup class="fn" id="fnr-6"><a href="#fn-6" aria-label="Chú thích 6">6</a></sup> qua email để xác minh và khôi phục, phiên đăng nhập</td></tr>
+                <tr class="grp"><td colspan="2">③ Danh sách máy và quyền</td></tr>
+                <tr><td>Làm gì</td><td>Kích hoạt, share, đổi vai, gỡ người, chuyển chủ; bản chuẩn của quyền; ký bản sao quyền gửi xuống máy</td></tr>
+                <tr class="grp"><td colspan="2">④ Chuyển tiếp</td></tr>
+                <tr><td>Làm gì</td><td>Đưa lệnh tới đúng máy, đưa kết quả về đúng app</td></tr>
+                <tr class="grp"><td colspan="2">⑤ Bản trạng thái máy</td></tr>
+                <tr><td>Giữ gì</td><td>Chỉ những thứ nhỏ: máy online không, phiên bản phần mềm, phiên bản quyền, lệnh đang chờ. Không giữ dữ liệu nghiệp vụ</td></tr>
+                <tr class="grp"><td colspan="2">Hiện có</td></tr>
+                <tr><td>Thư mục</td><td><code>server/configuration/routing.py</code>, <code>server/src/</code> trống</td></tr>
+                <tr><td>Database</td><td>MySQL</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>"Bản trạng thái máy" theo ý của device shadow<sup class="fn" id="fnr-7"><a href="#fn-7" aria-label="Chú thích 7">7</a></sup> trên AWS IoT<sup class="fn" id="fnr-8"><a href="#fn-8" aria-label="Chú thích 8">8</a></sup> và device twin<sup class="fn" id="fnr-9"><a href="#fn-9" aria-label="Chú thích 9">9</a></sup> trên Azure: server ghi điều chủ quán muốn, máy báo điều đang là; khi máy nối lại thì kéo phần chênh lệch về.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Một khối, năm module.</b> Server nhỏ, một đội; tách thành nhiều service chỉ thêm chi phí vận hành.</li>
+          <li><b>Cửa vào là nơi duy nhất biết về phiên bản.</b> Các module phía sau chỉ làm việc với bản mới nhất, nên hỗ trợ máy cũ không làm rối logic nghiệp vụ.</li>
+          <li><b>Database chỉ có năm nhóm dữ liệu:</b> danh tính (tài khoản, phiên, mã OTP), máy, quyền (hiện trạng, mã mời, lịch sử quyền chỉ ghi thêm), hàng chờ thông điệp quản trị, bản sao nhật ký và bản phát hành phần mềm. Mã OTP, token phiên, mã mời, mã niêm phong chỉ lưu bản băm.</li>
+          <li><b>Máy offline thì lệnh thường bị từ chối ngay;</b> app tự thử lại. Chỉ thông điệp quản trị (đồng bộ quyền, đề nghị cập nhật phần mềm) được giữ lại, mỗi máy một dòng chờ cho mỗi loại, ghi đè bằng bản mới nhất.</li>
+          <li><b>Bản trạng thái máy giữ nhỏ.</b> Nhét dữ liệu món hay đơn vào đây là phá nguyên tắc 1 và kéo theo bài toán đồng bộ hai chiều.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-app">
+        <header><h3>4.4 · App <span class="pill m">Đã chốt</span></h3><div class="src"><code>flutter_app/lib/</code> · Sơ đồ: luồng · 3 tầng</div></header>
+        <h4>Làm gì</h4>
+        <p>Chia theo tính năng nghiệp vụ, đúng như thư mục <code>feature/</code> đang có. Mỗi tính năng có giao diện và trạng thái riêng. Tất cả cùng đi qua <b>một lớp kết nối</b>, lớp này tự chọn đường cloud, LAN hay Bluetooth. Tính năng không biết và không cần biết đang đi đường nào.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  F["① Tính năng"] --> R["② Kho dữ liệu của app"]
+  R --> T["③ Lớp kết nối"]
+  T --> W1["Cloud"]
+  T --> W2["LAN"]
+  T --> W3["Bluetooth"]
+  class F ui
+  class R,T proc
+  class W1,W2,W3 hw
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các khối</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">① Tính năng</td></tr>
+                <tr><td>Gồm</td><td>Tài khoản, kích hoạt máy, share máy, menu, kho, đơn, tổng quan</td></tr>
+                <tr><td>Có</td><td><code>user_auth</code>, <code>machine_register</code>, <code>machine_share</code>, <code>machine_menu</code>, <code>machine_ingredient</code>, <code>orders</code>, <code>dashboard</code> (mới có giao diện)</td></tr>
+                <tr><td>Quy tắc</td><td>Tính năng không import nhau; dùng chung qua <code>shared/</code></td></tr>
+                <tr class="grp"><td colspan="2">② Kho dữ liệu của app</td></tr>
+                <tr><td>Làm gì</td><td>Một chỗ cho mỗi loại dữ liệu; tính năng hỏi ở đây, không gọi mạng trực tiếp</td></tr>
+                <tr class="grp"><td colspan="2">③ Lớp kết nối</td></tr>
+                <tr><td>Làm gì</td><td>Đóng gói theo hợp đồng chung, chọn đường âm thầm, gửi lại khi chập chờn với cùng mã lệnh</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Ba đường ở tầng dưới cùng là ba "adapter" của cùng một cổng: thêm đường mới hay sửa một đường không đụng tới tính năng nào.</figcaption>
+        </figure>
+      </article>
+
+      <article class="comp" id="c-dong-bo">
+        <header><h3>4.5 · Đồng bộ dữ liệu <span class="pill m">Đã chốt</span></h3><div class="src">Máy pha + server · Sơ đồ: luồng · 2 vòng</div></header>
+        <h4>Làm gì</h4>
+        <p>Hai việc phải đúng dù mạng chập chờn: một lệnh không bao giờ chạy hai lần, và một sự kiện không bao giờ bị mất. Ví dụ đời thường: phiếu gửi xe có số; đưa lại phiếu cũ thì bãi trả đúng chiếc xe cũ chứ không giao thêm một chiếc.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  IN["Lệnh có mã"] --> Q{"Mã này đã chạy?"}
+  Q -->|"rồi"| OLD["Trả lại kết quả cũ"]
+  Q -->|"chưa"| RUN["Chạy, ghi dữ liệu và sự kiện cùng lúc"]
+  RUN --> BOX[("Hộp thư đi")]
+  BOX --> NET{"Có mạng?"}
+  NET -->|"chưa"| BOX
+  NET -->|"có"| SEND["Gửi lên server, chờ xác nhận"]
+  SEND --> DEL["Xoá khỏi hộp thư"]
+  class IN ui
+  class Q,NET dec
+  class OLD muted
+  class RUN proc
+  class BOX store
+  class SEND proc
+  class DEL ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Dữ liệu và sự kiện được ghi trong cùng một lần, nên không có lúc "đã trừ kho nhưng chưa có sự kiện để báo". Sự kiện mang số thứ tự tăng dần của máy; server sắp theo số này chứ không theo đồng hồ, vì đồng hồ máy có thể lệch.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Mã lệnh do app sinh.</b> Gửi lại qua cloud, qua LAN hay qua Bluetooth thì vẫn cùng mã, máy chỉ chạy một lần.</li>
+          <li><b>Hai người cùng sửa một thứ</b> thì dùng số phiên bản của dữ liệu: lệnh mang theo phiên bản nó đã thấy, máy từ chối nếu dữ liệu đã đổi và trả bản mới nhất. Máy đã làm đúng cách này với menu.</li>
+          <li><b>Bản sao quyền quá hạn</b> thì máy từ chối lệnh ghi, chỉ cho bán hàng và xem.</li>
+          <li><b>Menu là một bản chụp đầy đủ</b>, không bao giờ là phần thay đổi. Máy dựng gói từ MySQL theo quy tắc cố định và lấy CRC32<sup class="fn" id="fnr-20"><a href="#fn-20" aria-label="Chú thích 20">20</a></sup> của gói làm số phiên bản. App gửi số đang giữ; trùng thì máy trả "không đổi", khác thì trả cả gói. Gói không mang ảnh và số tồn kho; ảnh tải riêng theo băm.</li>
+          <li><b>Server được giữ gói menu trong RAM</b> một thời gian ngắn để phát cho nhiều app cùng hỏi một máy. Không ghi xuống đĩa, mỗi máy tối đa một gói, thấy phiên bản mới thì bỏ.</li>
+          <li><b>Kho có hai lệnh nạp:</b> "đổ thêm X" cho việc hằng ngày, và "kiểm đếm, đặt về X" để sửa sai số. Chỉ máy trừ kho, mỗi khi pha xong một ly. Mọi thay đổi tồn ghi vào sổ kho, kèm người làm.</li>
+          <li><b>Việc nguy hiểm chỉ chạy qua cloud:</b> sửa menu, sửa giá, xoá nguyên liệu, khoá máy, sửa ngưỡng kho. Máy biết lệnh đến từ đường nào và từ chối các lệnh này nếu đến từ wifi quán hay Bluetooth.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-cap-nhat">
+        <header><h3>4.6 · Cập nhật phần mềm máy từ xa <span class="pill m">Đã chốt</span></h3><div class="src">Máy pha + server · Sơ đồ: trạng thái · 7 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Việc rủi ro nhất của cả hệ: máy ở xa, có thể mất mạng giữa chừng, và hỏng thì quán không bán được. Nguyên tắc: luôn giữ bản cũ để quay về, và chỉ coi bản mới là thành công khi máy tự kiểm thấy mình khoẻ.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction TB
+  state "Chạy bản cũ" as cur
+  state "Đã tải bản mới" as dl
+  state "Chờ máy rảnh" as idle
+  state "Khởi động bản mới" as boot
+  state "Tự kiểm sức khoẻ" as chk
+  state "Bản mới ổn định" as ok
+  state "Bỏ bản tải" as drop
+  [*] --> cur
+  cur --> dl: tải về<br/>kiểm chữ ký hãng
+  dl --> drop: chữ ký sai
+  dl --> idle: chữ ký đúng
+  idle --> boot: không có đơn đang pha
+  boot --> chk
+  chk --> ok: đạt
+  chk --> cur: không đạt<br/>tự quay về bản cũ
+  drop --> cur
+  ok --> [*]
+  class cur ui
+  class dl,idle,boot,chk proc
+  class ok ok
+  class drop muted
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nguồn ý tưởng: cập nhật A/B<sup class="fn" id="fnr-10"><a href="#fn-10" aria-label="Chú thích 10">10</a></sup> của Android, Mender<sup class="fn" id="fnr-11"><a href="#fn-11" aria-label="Chú thích 11">11</a></sup>, balena<sup class="fn" id="fnr-12"><a href="#fn-12" aria-label="Chú thích 12">12</a></sup>. Bản đầu dùng cách đơn giản nhất: giữ hai bản trên đĩa, chuyển qua lại; cập nhật theo nhóm máy và cập nhật cả hệ điều hành để sau.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Gói cập nhật được ký bằng khoá phát hành của hãng</b>, giữ trên máy tính offline, không nằm trên server. Kẻ chiếm được server phát được gói nhưng không ký được gói.</li>
+          <li><b>Phiên bản chỉ tăng.</b> Máy từ chối gói cũ hơn bản đang chạy, để không ai ép máy quay về bản còn lỗi.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-bao-mat">
+        <header><h3>4.7 · Bảo mật và danh tính <span class="pill m">Đã chốt</span></h3><div class="src">Cả ba sản phẩm · Chi tiết: <a href="cryptography.html">Cryptography</a></div></header>
+        <h4>Làm gì</h4>
+        <p>Mọi gói đi qua server hãng dùng giao thức <a href="cryptography.html">Cryptography</a>. Mỗi chặng (app ↔ server, server ↔ máy) có hai lớp: TLS<sup class="fn" id="fnr-21"><a href="#fn-21" aria-label="Chú thích 21">21</a></sup> bên ngoài, phong bì mã hoá bên trong. Server mở phong bì để kiểm phiên và quyền, rồi đóng phong bì mới cho chặng sau. Lộ khoá TLS hay log ở chỗ cắt TLS vẫn không lộ nội dung.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Ai</th><th>Chứng minh mình bằng</th><th>Ghi chú</th></tr></thead>
+            <tbody>
+              <tr><td>Người dùng</td><td>Email và mật khẩu; server cấp token phiên</td><td>Mật khẩu chỉ lưu băm chậm. Token ngẫu nhiên, server chỉ lưu băm. Hạn phiên tính cố định từ lúc đăng nhập (thông số, mặc định 30 ngày), hết thì app tự đăng xuất. Đổi mật khẩu thu hồi mọi phiên</td></tr>
+              <tr><td>Máy pha</td><td>"Giấy khai sinh": chứng chỉ do CA<sup class="fn" id="fnr-22"><a href="#fn-22" aria-label="Chú thích 22">22</a></sup> xưởng ký, chứa serial và khoá công khai của máy</td><td>Xưởng nạp lúc sản xuất. Khoá riêng không rời máy. Máy nói với server qua mTLS<sup class="fn" id="fnr-23"><a href="#fn-23" aria-label="Chú thích 23">23</a></sup>. Thay hẳn <code>product_key</code> dùng chung</td></tr>
+              <tr><td>Server</td><td>Chứng chỉ của cổng máy do root CA hãng ký</td><td>Root CA và khoá phát hành giữ offline: chiếm server không giả được máy, không đẩy được phần mềm độc</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Kích hoạt theo kiểu Matter.</b> Chủ quét QR mã niêm phong trong hộp; mã mở kênh Bluetooth an toàn tới máy; app gửi wifi; máy lên server và chứng minh bằng giấy khai sinh; người quét thành Owner. Lần kích hoạt đầu bắt buộc có Internet.</li>
+          <li><b>Máy khoá vào tài khoản Owner</b>, giống Activation Lock của Apple. Reset tại chỗ không gỡ được chủ. Bán lại thì chủ cũ gỡ máy trên app, người mua dùng lại mã trong hộp.</li>
+          <li><b>Việc không đảo ngược được phải nhập lại mật khẩu:</b> chuyển chủ, gỡ máy, khoá máy, đổi mật khẩu, sửa menu và giá, xoá nguyên liệu.</li>
+          <li><b>Máy là lớp chặn cuối.</b> Máy tự kiểm giới hạn cứng của từng lệnh và ghi sổ lệnh trước khi chạy phần cứng, nên server bị chiếm cũng không bơm quá giới hạn được.</li>
+          <li><b>Wifi quán và Bluetooth dùng giao thức tại chỗ riêng</b>, không nằm trong Cryptography. Quy tắc duy nhất đã chốt: giao thức đó không bao giờ cho nhiều quyền hơn đường qua server.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-quyen">
+        <header><h3>4.8 · Vai và quyền <span class="pill m">Đã chốt khung</span></h3><div class="src">Server: bản chuẩn · Máy: bản sao có chữ ký</div></header>
+        <h4>Làm gì</h4>
+        <p>Mỗi máy có danh sách người riêng, mỗi người một vai: Owner, Manager hoặc Employee. Quyền của từng vai do hãng định sẵn. Mỗi máy có đúng một Owner. Máy chưa share cho ai thì app không hiện phần phân quyền.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Việc</th><th>Ai</th><th>Qua wifi quán, Bluetooth</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+              <tr><td>Kích hoạt máy, trở thành Owner</td><td>Người quét mã đầu tiên</td><td>Không</td><td><span class="pill m">Đã chốt</span></td></tr>
+              <tr><td>Share máy (người mới vào làm Employee)</td><td>Owner, Manager</td><td>Không</td><td><span class="pill m">Đã chốt</span></td></tr>
+              <tr><td>Nâng Employee lên Manager</td><td>Owner</td><td>Không</td><td><span class="pill m">Đã chốt</span></td></tr>
+              <tr><td>Chuyển chủ (Owner cũ xuống Manager)</td><td>Owner</td><td>Không</td><td><span class="pill h">Tạm chốt</span></td></tr>
+              <tr><td>Gỡ người</td><td>Owner gỡ mọi người; Manager chỉ gỡ người do mình thêm</td><td>Không</td><td><span class="pill h">Tạm chốt</span></td></tr>
+              <tr><td>Xem hàng chờ, món đang chạy, kho; đổ thêm kho</td><td>Mọi vai</td><td>Có</td><td><span class="pill m">Đã chốt</span></td></tr>
+              <tr><td>Kiểm đếm kho, đặt về X</td><td>Owner, Manager</td><td>Có</td><td><span class="pill h">Tạm chốt</span></td></tr>
+              <tr><td>Tắt/bật món</td><td>Mọi vai</td><td>Có</td><td><span class="pill h">Tạm chốt</span></td></tr>
+              <tr><td>Sửa menu, giá, xoá nguyên liệu, sửa ngưỡng kho, khoá máy</td><td>Owner, Manager</td><td>Không</td><td><span class="pill h">Tạm chốt</span></td></tr>
+              <tr><td>Đổi wifi của máy</td><td>Owner, Manager</td><td>Chỉ Bluetooth</td><td><span class="pill m">Đã chốt</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Mọi thay đổi quyền chỉ làm khi online</b>, vì server giữ bản chuẩn. Cắt mạng không giúp ai dùng được quyền cũ để đổi quyền.</li>
+          <li><b>Share bằng QR hoặc Bluetooth.</b> Người share tạo mã mời dùng một lần, có hạn; Bluetooth chỉ chở mã mời giữa hai điện thoại. Người mới gửi mã lên server, người share xác nhận đúng tên rồi server ghi người mới. Người mới không cần bấm đồng ý.</li>
+          <li><b>Server ký bản sao quyền và gửi xuống máy.</b> Bản sao có số phiên bản chỉ tăng và hạn dùng (thông số, mặc định 7 ngày). Máy từ chối bản cũ hơn bản đang giữ, nên không ai đưa lại được bản còn tên người đã bị gỡ.</li>
+          <li><b>Máy đang offline</b> thì người mới chưa vào được qua wifi quán hay Bluetooth cho tới khi máy nhận bản sao mới. Người bị gỡ còn quyền trên máy offline tối đa tới hạn bản sao.</li>
+          <li><b>Mỗi lần share, gỡ người, đổi vai</b> đều ghi lịch sử quyền: ai làm, làm cho ai, vai trước và sau. Lịch sử chỉ ghi thêm.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="repo">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Repo</h2></div>
+      <p class="prose">Giữ một repo cho cả ba sản phẩm, vì đổi hợp đồng và hai đầu dùng nó nằm được trong một lần sửa. Không đổi tên thư mục hiện có; chỉ thêm hai chỗ: <code>contracts/</code> và <code>documentation/adr/</code>. Mỗi sản phẩm vẫn phát hành và gắn phiên bản riêng.</p>
+      <figure class="dg" style="min-width:0">
+<div class="dg-canvas" style="min-width:0"><pre style="margin:0;font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink)">project1_app/
+├── contracts/                <b>mới</b> · hợp đồng chung, phiên bản hợp đồng
+│   ├── messages/             mô tả lệnh, câu hỏi, kết quả, sự kiện
+│   ├── examples/             thông điệp mẫu, cả ba sản phẩm cùng test
+│   └── COMPATIBILITY.md      bảng: bản server/app/máy nào nói hợp đồng nào
+├── flutter_app/              <b>app</b>
+│   └── lib/
+│       ├── feature/&lt;tính năng&gt;/   giao diện + trạng thái, không import nhau
+│       ├── data/             <b>mới</b> · kho dữ liệu của app
+│       ├── connection/       <b>mới</b> · lớp kết nối: cloud, LAN, Bluetooth
+│       └── shared/           giao diện dùng chung
+├── server/                   <b>server hãng</b>
+│   └── src/
+│       ├── gateway/          cửa vào có phiên bản
+│       ├── account/          tài khoản
+│       ├── machine_access/   danh sách máy và quyền
+│       ├── relay/            chuyển tiếp
+│       └── machine_state/    bản trạng thái máy
+├── version1.1/               <b>máy pha</b> · giữ tên và cách chia hiện có
+│   ├── machine/              kết nối: server, Bluetooth, (mới) LAN
+│   ├── recipe/ order/ database/   lõi nghiệp vụ
+│   ├── pump_control/ loadcell/ printer/ scan/ panel_control/   driver
+│   └── store_gui/ bartender_gui/ test_gui/   giao diện tại máy
+└── documentation/
+    ├── research/             bản đang bàn
+    ├── architect/            bản kiến trúc (tài liệu này)
+    └── adr/                  <b>mới</b> · mỗi quyết định kiến trúc một file</pre></div>
+        <figcaption>Tên module server viết tiếng Anh theo quy ước đặt tên của repo; đây là gợi ý, chốt khi sang bước kỹ thuật. "Mới" là thư mục chưa có.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Quy tắc ranh giới</th><th>Vì sao</th></tr></thead>
+          <tbody>
+            <tr><td>Ba sản phẩm không import code của nhau; chỉ dùng chung <code>contracts/</code></td><td>Sửa một sản phẩm không làm vỡ build của sản phẩm khác</td></tr>
+            <tr><td>Trong app, tính năng không import tính năng khác</td><td>Tháo một tính năng ra viết lại không kéo theo tính năng khác</td></tr>
+            <tr><td>Trên máy, lõi nghiệp vụ không import driver cụ thể</td><td>Đổi phần cứng chỉ đổi driver; test lõi không cần máy thật</td></tr>
+            <tr><td>Trong server, chỉ cửa vào biết về phiên bản hợp đồng</td><td>Hỗ trợ máy và app cũ không làm rối logic</td></tr>
+            <tr><td>CI kiểm các quy tắc trên và chỉ chạy test của phần bị đổi</td><td>Quy ước có máy giữ; CI nhanh</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="quy-trinh">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Quy trình làm việc và bảo trì</h2></div>
+      <p class="prose">Vòng đời của một thay đổi, từ lúc có ý tưởng hay báo lỗi tới lúc tới tay người dùng. Phần lớn thay đổi đi đường ngắn bên trái; chỉ thay đổi chạm hợp đồng hay chạm nhiều sản phẩm mới cần thiết kế và ADR<sup class="fn" id="fnr-13"><a href="#fn-13" aria-label="Chú thích 13">13</a></sup>.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  I["Ý tưởng hoặc báo lỗi"] --> Q{"Chạm hợp đồng hoặc nhiều sản phẩm?"}
+  Q -->|"không"| P["Plan ngắn"]
+  Q -->|"có"| D["Thiết kế ngắn và ADR"]
+  D --> C["Sửa hợp đồng trước, PR riêng"]
+  C --> P
+  P --> B["Code trên nhánh ngắn, phần dở sau flag"]
+  B --> T["CI: test, ranh giới, thông điệp mẫu"]
+  T --> R["Người review"]
+  R --> M["Gộp vào nhánh chính"]
+  M --> S1["Phát hành server"]
+  M --> S2["Phát hành máy, theo nhóm"]
+  M --> S3["Phát hành app"]
+  class I ui
+  class Q dec
+  class D,C file
+  class P,B,T,R proc
+  class M ok
+  class S1,S2,S3 proc
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>ADR (Architecture Decision Record) là một file ngắn ghi một quyết định kiến trúc: bối cảnh, quyết định, hệ quả. Không xoá; đổi ý thì viết ADR mới và đánh dấu ADR cũ bị thay thế.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Gói tối thiểu cho bản đầu</th><th>Để sau</th></tr></thead>
+          <tbody>
+            <tr><td><code>contracts/</code> với thông điệp mẫu và bảng tương thích</td><td>Contract test kiểu Pact<sup class="fn" id="fnr-14"><a href="#fn-14" aria-label="Chú thích 14">14</a></sup> giữa nhiều đội</td></tr>
+            <tr><td><code>documentation/adr/</code>; viết ADR cho các quyết định đã chốt</td><td>Quy trình RFC<sup class="fn" id="fnr-15"><a href="#fn-15" aria-label="Chú thích 15">15</a></sup> nhiều tầng duyệt</td></tr>
+            <tr><td>Hai sơ đồ: bối cảnh hệ thống và ba sản phẩm (tài liệu này)</td><td>Sơ đồ chi tiết từng module</td></tr>
+            <tr><td>Nhánh ngắn, PR nhỏ, một người review, CODEOWNERS<sup class="fn" id="fnr-16"><a href="#fn-16" aria-label="Chú thích 16">16</a></sup></td><td>Nhiều nhánh dài hạn</td></tr>
+            <tr><td>CI có test từng sản phẩm, kiểm ranh giới, chạy theo phần bị đổi</td><td>Test trên máy thật nối CI</td></tr>
+            <tr><td>Phiên bản riêng từng sản phẩm, changelog<sup class="fn" id="fnr-17"><a href="#fn-17" aria-label="Chú thích 17">17</a></sup>, thời hạn hỗ trợ hợp đồng cũ</td><td>Lịch phát hành cố định</td></tr>
+            <tr><td>File hướng dẫn cho AI agent: ranh giới, lệnh test, điều cấm; agent không sửa <code>contracts/</code> khi không có ADR</td><td>—</td></tr>
+            <tr><td>Một trang runbook<sup class="fn" id="fnr-18"><a href="#fn-18" aria-label="Chú thích 18">18</a></sup>, mẫu postmortem<sup class="fn" id="fnr-19"><a href="#fn-19" aria-label="Chú thích 19">19</a></sup>, nhãn <code>debt</code> cho nợ kỹ thuật</td><td>Trực sự cố luân phiên, dashboard chỉ số</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Tạm chốt và để sau</h2></div>
+      <div class="note crit"><b>Phát hiện trong mã máy, chưa sửa</b>(1) Máy không lưu mã lệnh đã chạy (<code style="white-space:normal;word-break:break-all">version1.1/machine/server_connection/machine_server_request.py</code>): server gửi lại một lệnh thì lệnh có thể chạy hai lần, nguy hiểm với lệnh trừ kho. (2) <code>product_key</code> nằm trong thân mọi yêu cầu (dòng 12); nếu địa chỉ server không mã hoá thì khoá bị lộ. (3) Mỗi lần gọi server là một yêu cầu riêng, không thử lại khi lỗi. Các điểm này được giải ở mục 4.1 và 4.5 khi triển khai; ghi nhận ở đây, chưa sửa mã.</div>
+      <p class="prose">Các điểm dưới đây cần có câu trả lời để làm bản đầu, nên tài liệu tạm theo hướng hợp lý nhất. Đổi điểm nào thì sửa đúng mục được dẫn.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Tạm chốt</th><th>Mục</th></tr></thead>
+          <tbody>
+            <tr><td>Nhật ký theo người nằm ở đâu</td><td>Bản gốc trên máy, gửi lên qua hộp thư đi. Server giữ bản sao chỉ ghi thêm để chủ xem khi máy mất mạng, và giữ nhật ký bảo mật riêng (đăng nhập, quyền, lệnh đi qua). Chỉ ghi thao tác có người làm, không ghi từng ly bán ra. Tách khỏi log debug</td><td>4.3, 4.5</td></tr>
+            <tr><td>Thời gian lưu nhật ký trên server</td><td>Thông số, mặc định 24 tháng; cần đối chiếu luật bảo vệ dữ liệu cá nhân trước khi phát hành</td><td>4.3</td></tr>
+            <tr><td>Thời hạn hỗ trợ hợp đồng cũ</td><td>Thông số, mặc định 12 tháng</td><td>4.1</td></tr>
+            <tr><td>Bluetooth</td><td>BLE: chạy được trên cả Android và iPhone, và là kiểu duy nhất share được giữa hai điện thoại</td><td>4.7, 4.8</td></tr>
+            <tr><td>Chuyển chủ, gỡ người, kiểm đếm kho, tắt/bật món, sửa menu và giá</td><td>Theo bảng vai</td><td>4.8</td></tr>
+            <tr><td>Owner xoá tài khoản</td><td>Chặn cho tới khi chuyển chủ hoặc gỡ máy</td><td>4.8</td></tr>
+            <tr><td>Gỡ máy để bán lại</td><td>Xoá món, kho, đơn trên máy để chủ cũ không lộ dữ liệu cho người mua</td><td>4.7</td></tr>
+            <tr><td>Số phiên bản menu</td><td>Tách phiên bản nội dung (tên, giá, công thức, ảnh) khỏi trạng thái (đang bán, còn hàng)</td><td>4.5</td></tr>
+            <tr><td>Hạn lệnh và thời gian máy nhớ mã lệnh đã chạy</td><td>Thông số, mặc định 60 giây và 7 ngày</td><td>4.5</td></tr>
+            <tr><td>Sự kiện nội bộ trên máy</td><td>Chỉ dùng cho thông báo; lệnh vẫn là gọi hàm</td><td>4.2</td></tr>
+            <tr><td>Tên thư mục <code>version1.1/</code></td><td>Giữ nguyên</td><td>5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Chưa thiết kế, nằm ngoài tài liệu này</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td>Giao thức tại chỗ cho wifi quán và Bluetooth</td><td>Phụ thuộc việc điện thoại có giữ khoá riêng hay không; sẽ có tài liệu riêng</td></tr>
+            <tr><td>Luồng đơn hàng, doanh thu, tổng quan trên app</td><td>Chưa thiết kế</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Để sau bản đầu</th><th>Khi nào cần</th></tr></thead>
+          <tbody>
+            <tr><td>Chip bảo mật giữ khoá máy</td><td>Khi đổi phần cứng, hoặc khi giả một máy gây thiệt hại tiền</td></tr>
+            <tr><td>Xác thực hai yếu tố hoặc passkey cho Owner</td><td>Khi có Owner quản lý nhiều máy giá trị cao</td></tr>
+            <tr><td>Chuỗi băm cho bản sao nhật ký máy gửi lên</td><td>Khi nhật ký cần làm bằng chứng trước tòa</td></tr>
+            <tr><td>Kết nối đẩy hai chiều thay cho máy hỏi định kỳ</td><td>Độ trễ lệnh trở thành vấn đề, hoặc số máy lớn</td></tr>
+            <tr><td>Cập nhật theo nhóm máy tự dừng khi lỗi, cập nhật cả hệ điều hành</td><td>Vài trăm máy trở lên</td></tr>
+            <tr><td>Tách server thành nhiều service</td><td>Nhiều đội, tải lệch nhau rõ</td></tr>
+            <tr><td>Hệ sự kiện lớn, lưu toàn bộ lịch sử bằng sự kiện</td><td>Cần kiểm toán sâu hoặc phân tích dữ liệu đội máy</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Bluetooth.</b> Chuẩn kết nối không dây tầm ngắn giữa điện thoại và máy, dùng khi không có wifi. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>Modular monolith.</b> Một ứng dụng chạy và deploy như một khối, nhưng bên trong chia thành các module theo nghiệp vụ, mỗi module chỉ được gọi qua giao diện công khai của nó. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-3"><b>Local area network.</b> Mạng nội bộ trong quán: điện thoại và máy cùng nối một router wifi. <a class="fn-back" href="#fnr-3" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-4"><b>Pull request.</b> Yêu cầu gộp một nhóm thay đổi vào nhánh chính, nơi người khác review và CI chạy kiểm. <a class="fn-back" href="#fnr-4" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-5"><b>Continuous Integration.</b> Hệ thống tự động build và chạy test mỗi khi có code mới đẩy lên; không xanh thì không được gộp vào nhánh chính. <a class="fn-back" href="#fnr-5" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-6"><b>One-time password.</b> Mã dùng một lần gửi qua email hoặc tin nhắn để xác nhận danh tính. <a class="fn-back" href="#fnr-6" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-7"><b>Device shadow (AWS IoT).</b> Bản trạng thái của thiết bị lưu trên cloud gồm phần &#x27;mong muốn&#x27; do ứng dụng ghi và phần &#x27;báo cáo&#x27; do thiết bị ghi, có số phiên bản để loại tin cũ. <a class="fn-back" href="#fnr-7" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-8"><b>AWS IoT Core.</b> Dịch vụ kết nối và quản lý thiết bị IoT của Amazon Web Services. <a class="fn-back" href="#fnr-8" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-9"><b>Device twin (Azure IoT Hub).</b> Tài liệu trạng thái của thiết bị trên Azure, tương tự device shadow: desired, reported và tags, kèm số phiên bản. <a class="fn-back" href="#fnr-9" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-10"><b>Cập nhật A/B.</b> Giữ hai bản hệ thống; cài bản mới vào bản không dùng rồi khởi động sang, lỗi thì tự quay lại bản cũ. Android dùng từ bản 7.0. <a class="fn-back" href="#fnr-10" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-11"><b>Mender.</b> Hệ thống mã nguồn mở cập nhật phần mềm thiết bị từ xa, có hai phân vùng và tự quay về bản cũ. <a class="fn-back" href="#fnr-11" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-12"><b>balena.</b> Nền tảng quản lý và cập nhật đội thiết bị bằng container. <a class="fn-back" href="#fnr-12" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-13"><b>Architecture Decision Record.</b> Một file ngắn ghi một quyết định kiến trúc: bối cảnh, quyết định, trạng thái, hệ quả; do Michael Nygard đề xuất năm 2011. <a class="fn-back" href="#fnr-13" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-14"><b>Pact.</b> Công cụ contract test: bên gọi ghi kỳ vọng thành hợp đồng, bên cung cấp chạy hợp đồng đó trong CI. <a class="fn-back" href="#fnr-14" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-15"><b>Request for Comments (quy trình nội bộ).</b> Văn bản đề xuất thay đổi gửi cho nhiều người góp ý và duyệt trước khi làm; Uber và nhiều công ty lớn dùng. <a class="fn-back" href="#fnr-15" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-16"><b>CODEOWNERS.</b> File cấu hình trên GitHub hoặc GitLab gán người hoặc đội chịu trách nhiệm review cho từng thư mục. <a class="fn-back" href="#fnr-16" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-17"><b>Changelog.</b> Danh sách thay đổi của từng phiên bản phát hành, viết cho người dùng và người bảo trì. <a class="fn-back" href="#fnr-17" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-18"><b>Runbook.</b> Trang hướng dẫn xử lý từng loại sự cố đã biết: dấu hiệu, cách kiểm, cách khắc phục. <a class="fn-back" href="#fnr-18" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-19"><b>Postmortem.</b> Bản phân tích sau sự cố: chuyện gì xảy ra, vì sao, sửa hệ thống thế nào để không lặp lại; không đổ lỗi cá nhân. <a class="fn-back" href="#fnr-19" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-20"><b>Cyclic Redundancy Check 32 bit.</b> Mã kiểm 32 bit tính từ một chuỗi byte; byte đổi thì mã gần như chắc chắn đổi. Dùng để phát hiện thay đổi, không dùng để chống làm giả. <a class="fn-back" href="#fnr-20" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-21"><b>Transport Layer Security.</b> Giao thức mã hoá và xác thực đường truyền mà HTTPS dùng (RFC 8446). <a class="fn-back" href="#fnr-21" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-22"><b>Certificate Authority.</b> Bên ký chứng chỉ để xác nhận một khoá công khai thuộc về ai. Root CA là gốc của chuỗi, thường giữ offline. <a class="fn-back" href="#fnr-22" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-23"><b>Mutual TLS.</b> TLS trong đó cả hai bên đều trình chứng chỉ và chứng minh giữ khoá riêng lúc bắt tay. <a class="fn-back" href="#fnr-23" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+          <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const blocks = Array.from(document.querySelectorAll('script[type="text/x-mermaid"]'));
+  let seq = 0;
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function classDefs(){
+    const ink = tok('--ink');
+    const d = (n, fill, stroke, extra) => `  classDef ${n} fill:${fill},stroke:${stroke},color:${ink},stroke-width:1.4px${extra||''}`;
+    return [
+      d('ui',    tok('--ui-soft'),    tok('--ui')),
+      d('proc',  tok('--proc-soft'),  tok('--proc')),
+      d('hw',    tok('--hw-soft'),    tok('--hw')),
+      d('store', tok('--store-soft'), tok('--store')),
+      d('file',  tok('--store-soft'), tok('--store'), ',stroke-dasharray:5 3'),
+      d('dec',   tok('--amber-soft'), tok('--amber')),
+      d('human', tok('--amber-soft'), tok('--amber')),
+      d('ok',    tok('--ok-soft'),    tok('--ok')),
+      d('bad',   tok('--red-soft'),   tok('--red')),
+      d('muted', tok('--surface-2'), tok('--ink-3'), ',stroke-dasharray:4 3'),
+      `  classDef hot fill:${tok('--proc-soft')},stroke:${tok('--red')},color:${ink},stroke-width:3px`
+    ].join('\n');
+  }
+
+  function config(){
+    const sans = getComputedStyle(document.documentElement).getPropertyValue('--sans');
+    const v = {
+      fontFamily: sans, fontSize:'13px',
+      background: tok('--surface'),
+      primaryColor: tok('--proc-soft'), primaryTextColor: tok('--ink'), primaryBorderColor: tok('--proc'),
+      secondaryColor: tok('--surface-2'), tertiaryColor: tok('--surface-2'),
+      lineColor: tok('--ink-3'), textColor: tok('--ink'),
+      mainBkg: tok('--proc-soft'), nodeBorder: tok('--proc'),
+      clusterBkg: tok('--card'), clusterBorder: tok('--line-2'), titleColor: tok('--ink-2'),
+      edgeLabelBackground: tok('--surface'),
+      actorBkg: tok('--card'), actorBorder: tok('--line-2'), actorTextColor: tok('--ink'), actorLineColor: tok('--line-2'),
+      signalColor: tok('--accent'), signalTextColor: tok('--ink'),
+      labelBoxBkgColor: tok('--surface-2'), labelBoxBorderColor: tok('--line-2'), labelTextColor: tok('--ink'),
+      noteBkgColor: tok('--amber-soft'), noteBorderColor: tok('--amber'), noteTextColor: tok('--ink'),
+      sequenceNumberColor: '#FFFFFF',
+      stateLabelColor: tok('--ink'), transitionColor: tok('--ink-3'), transitionLabelColor: tok('--ink-2'),
+      stateBkg: tok('--proc-soft'), altBackground: tok('--surface-2'), compositeBackground: tok('--surface-2'),
+      specialStateColor: tok('--ink-2')
+    };
+    return {
+      startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
+      flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      state:{ useMaxWidth:false }
+    };
+  }
+
+  function sourceOf(block){
+    let src = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+    if (block.dataset.kind === 'flow' || /\n\s*class /.test(src)) src += '\n' + classDefs();
+    return src;
+  }
+
+  function showSource(canvas, text){
+    canvas.innerHTML = '';
+    const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
+    canvas.appendChild(pre);
+  }
+
+  // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
+  function fit(canvas){
+    const svg = canvas.querySelector('svg'); if (!svg) return;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const natural = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+    const room = canvas.clientWidth;
+    svg.style.maxWidth = 'none';
+    if (natural > room && room / natural >= 0.6){ svg.style.width = room + 'px'; }
+    else { svg.style.width = natural + 'px'; }
+  }
+
+  function addTools(block, canvas){
+    if (canvas.nextElementSibling && canvas.nextElementSibling.classList.contains('dg-tools')) return;
+    const bar = document.createElement('div'); bar.className = 'dg-tools';
+    const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'Phóng to';
+    zoom.addEventListener('click', () => openZoom(canvas.querySelector('svg')));
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Mã nguồn';
+    btn.addEventListener('click', function(){
+      const text = block.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(()=>{btn.textContent='Mã nguồn'}, 1600); };
+      try{ navigator.clipboard.writeText(text).then(done, () => showSource(canvas, text)); }
+      catch(e){ showSource(canvas, text); }
+    });
+    bar.append(zoom, btn);
+    canvas.after(bar);
+  }
+
+  async function renderAll(){
+    if (!window.mermaid){ blocks.forEach(b => showSource(b.nextElementSibling, b.textContent.trim())); return; }
+    mermaid.initialize(config());
+    for (const block of blocks){
+      const canvas = block.nextElementSibling;
+      try{
+        const { svg } = await mermaid.render('mmd' + (++seq), sourceOf(block));
+        canvas.innerHTML = svg;
+        fit(canvas);
+      }catch(err){ console.error(err); showSource(canvas, block.textContent.trim()); }
+      addTools(block, canvas);
+    }
+  }
+
+  // ---------- phóng to ----------
+  const zoomEl = document.getElementById('zoom'), zoomBody = document.getElementById('zoom-body');
+  let lastFocus = null;
+  function openZoom(svg){
+    if (!svg) return;
+    lastFocus = document.activeElement;
+    const copy = svg.cloneNode(true);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    copy.removeAttribute('style');
+    if (vb && vb.width){ copy.setAttribute('width', Math.round(vb.width * (svg.classList.contains('ov') ? 1.25 : 1))); copy.removeAttribute('height'); }
+    zoomBody.innerHTML = ''; zoomBody.appendChild(copy);
+    zoomEl.hidden = false; document.getElementById('zoom-close').focus();
+  }
+  function closeZoom(){ zoomEl.hidden = true; zoomBody.innerHTML = ''; if (lastFocus) lastFocus.focus(); }
+  document.getElementById('zoom-close').addEventListener('click', closeZoom);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !zoomEl.hidden) closeZoom(); });
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => openZoom(document.querySelector('svg.ov'))));
+
+  const start = () => (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+  start();
+
+  let last = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => {
+    const now = document.documentElement.getAttribute('data-theme');
+    if (now !== last){ last = now; renderAll(); }
+  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  if (window.matchMedia){
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', renderAll);
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll('.dg-canvas').forEach(fit), 150); });
+
+  // ---------- mục lục ----------
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting){
+          links.forEach(l => l.classList.remove('on'));
+          const a = map.get(e.target.id); if (a) a.classList.add('on');
+        }
+      });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    map.forEach((a, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
+})();
+</script>

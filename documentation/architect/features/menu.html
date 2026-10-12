@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Menu</title>
+<meta name="description" content="Tính năng Menu: luồng, endpoint, gói tin, thông số.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tính năng 5 · <a href="../index.html">Mục lục</a></div>
+      <h1>Menu: máy giữ bản thật, app giữ bản chụp kèm số phiên bản</h1>
+      <p class="lead">Máy đọc MySQL, dựng một bản chụp đầy đủ của menu và lấy CRC32<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> của bản chụp làm số phiên bản. App gửi số đang giữ; trùng thì máy trả "không đổi", khác thì trả cả gói. Gói luôn là cả menu, không bao giờ là phần thay đổi.</p>
+    </div>
+    <div class="meta">
+      <span><b>Sản phẩm:</b> app, máy</span>
+      <span><b>Mã:</b> <code>feature/machine_menu/</code>, <code>machine/menu_sync/</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#lenh">2. Lệnh</a></li>
+        <li><a href="#goi">3. Gói menu</a></li>
+        <li><a href="#quy-tac">4. Quy tắc</a></li>
+        <li><a href="#thong-so">5. Thông số</a></li>
+        <li><a href="#ghi-chu">6. Ghi chú</a></li>
+        <li><a href="#chu-thich">7. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: hai nhân viên cùng mở tab Menu</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant A1 as App Manager
+  participant A2 as App Employee
+  participant S as Server
+  participant M as Máy
+  A1->>S: nhan_menu · menu_version 1a2b
+  S->>M: chuyển lệnh
+  A2->>S: nhan_menu · menu_version 1a2b
+  S->>S: gộp vào yêu cầu đang chờ cùng máy
+  M->>M: đọc MySQL · dựng gói · CRC 9f3c
+  M-->>S: status ok · gói menu
+  S->>S: giữ gói trong RAM
+  S-->>A1: gói 9f3c
+  S-->>A2: gói 9f3c
+  A1->>A1: giải nén · kiểm CRC · thay bản chụp
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Máy chỉ dựng và gửi gói một lần dù nhiều app cùng hỏi. Mỗi app vẫn được so riêng: app nào giữ đúng số của gói thì nhận <code>up_to_date</code>. Mất Internet thì app hỏi thẳng máy qua wifi quán hoặc Bluetooth, cùng lệnh, cùng gói.</figcaption>
+      </figure>
+    </section>
+
+    <section id="lenh">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Lệnh</h2></div>
+      <p class="prose">Tất cả đi qua <code>MACHINE_COMMAND_SEND</code> theo khuôn ở <a href="command-relay.html">Chuyển lệnh</a>. Bảng dưới là <code>data</code> và <code>ket_qua</code>.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>instruction</th><th>data</th><th>ket_qua</th></tr></thead>
+          <tbody>
+            <tr><td><code>nhan_menu</code></td><td><code>{"menu_version"}</code>; app chưa có gì thì gửi <code>0</code></td><td><code>{"status":"up_to_date", "menu_version"}</code> hoặc <code>{"status":"ok", "menu_version", "packet"}</code></td></tr>
+            <tr><td><code>bat_tat_mon</code> <span class="pill h">Mới</span></td><td><code>{"drink_id", "available": true|false}</code></td><td><code>{"status":"ok", "menu_version", "packet"}</code></td></tr>
+            <tr><td><code>cap_nhat_menu</code></td><td><code>{"menu_version", "thay_doi":[{"drink_id", "price"}]}</code></td><td><code>{"status":"ok"|"conflict", "menu_version", "packet"}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ol class="steps">
+        <li><b><code>cap_nhat_menu</code> mang số phiên bản app đã thấy.</b> Khác bản trên máy thì máy không ghi, trả <code>conflict</code> kèm gói mới nhất để app cho người dùng xem lại. Khớp thì máy kiểm hết mọi dòng rồi ghi trong một transaction; một dòng sai thì cả lệnh không được ghi.</li>
+        <li><b>Tắt/bật món tách khỏi sửa giá.</b> Tắt/bật là việc vận hành, mọi vai làm được và chạy được qua wifi quán và Bluetooth. Sửa giá chỉ Owner, Manager, chỉ qua cloud.</li>
+      </ol>
+    </section>
+
+    <section id="goi">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Gói menu</h2></div>
+      <p class="prose"><code>packet</code> = base64(zlib(JSON gọn, UTF-8)). Base64 chỉ dùng khi đi qua server; wifi quán và Bluetooth gửi byte thô.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trường</th><th>Ý nghĩa</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><code>type</code></td><td><code>"menu_sync"</code></td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>v</code></td><td>Phiên bản cấu trúc gói. Thêm cột không tăng; đổi nghĩa một cột thì tăng</td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>min_app_v</code></td><td>Bản cấu trúc thấp nhất app phải hiểu; app cũ hơn giữ menu cũ và báo cần cập nhật</td><td><span class="pill h">Mới</span></td></tr>
+            <tr><td><code>menu_version</code></td><td>CRC32 của dữ liệu món, tính trên byte JSON trước khi nén</td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>generated_at</code></td><td>Giờ dựng gói, chỉ để hiển thị; nằm ngoài phần tính CRC</td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>fields</code></td><td><code>drink_id, drink_name, image, price, available, in_stock, glass_id, drink_type_id, garnish, featured</code></td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>drinks</code></td><td>Mỗi món một mảng theo thứ tự <code>fields</code>, sắp theo <code>drink_id</code></td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>recipes</code></td><td>Công thức: món, bước, nguyên liệu, gram</td><td><span class="pill h">Mới</span></td></tr>
+            <tr><td><code>lookups</code></td><td>Tên ly, kiểu pha, nhóm món, tên nguyên liệu (không có số tồn)</td><td><span class="pill h">Mới</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Không có trong gói</b>Ảnh (app tải riêng theo băm ảnh, mất wifi thì hiện ảnh đã có hoặc chữ cái đầu), số tồn kho (thuộc <a href="inventory.html">Kho</a>), tuỳ chọn size, đá, đường.</div>
+    </section>
+
+    <section id="quy-tac">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Quy tắc</h2></div>
+      <ol class="steps">
+        <li><b>Cùng dữ liệu phải ra cùng chuỗi byte</b>, vì số phiên bản là CRC của chuỗi đó: thứ tự cột cố định, dòng sắp theo id, giá và gram là số nguyên theo đơn vị nhỏ nhất, không có trường thời gian trong phần tính CRC.</li>
+        <li><b>App không bao giờ tự dựng lại JSON để so.</b> App lưu nguyên byte nhận được cùng số CRC, và chỉ tính lại CRC trên byte vừa giải nén để kiểm gói không hỏng.</li>
+        <li><b>App kiểm <code>v</code> trước CRC.</b> Gói hỏng hoặc bị cắt thì app bỏ và xin lại cả gói, không cố sửa.</li>
+        <li><b>Bộ đệm RAM ở server</b>: mỗi máy tối đa một gói, giữ ngắn, không ghi xuống đĩa, không đọc thân gói. Thấy <code>menu_version</code> khác đi qua thì bỏ gói cũ ngay. Server khởi động lại thì mất bộ đệm, máy dựng lại.</li>
+        <li><b>Một trần kích thước gói</b> cho cả ba đường; máy tự kiểm trước khi gửi, server từ chối gói vượt trần.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Sổ</th><th>Mặc định</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td>Thời gian server giữ gói trong RAM</td><td>Server</td><td class="num">30 giây</td><td>Dài thì app có thể nhận bản cũ hơn máy vài giây</td></tr>
+            <tr><td>Trần kích thước gói</td><td>Hợp đồng chung</td><td class="num">256 KB</td><td>Menu 200 món có công thức khoảng 14 KB sau nén</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Ghi chú</h2></div>
+      <div class="note crit"><b>Mã máy hiện có, chưa sửa</b><code>machine_menu_store.py:11</code>: số phiên bản tính cả <code>in_stock</code>, nên mỗi lần kho đổi thì menu "đổi". <code>machine_menu_validate.py:17</code>: tắt/bật món và sửa giá đi chung một lệnh. <code>schema.sql:135</code>: giá là <code>DECIMAL</code>, có thể in thành hai chuỗi khác nhau.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hướng bản đầu</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td>Số phiên bản menu</td><td>Tách phiên bản nội dung (tên, giá, công thức, ảnh) khỏi trạng thái (đang bán, còn hàng), để máy tự tắt món vì hết sữa không làm người đang sửa giá bị báo xung đột</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Hướng dẫn pha có hình (<code>recipe_action</code>)</td><td>Không có trong gói ở bản đầu</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Máy chủ động báo app khi menu đổi</td><td>Để sau; app hỏi lại khi mở tab</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>Cyclic Redundancy Check 32 bit.</b> Mã kiểm 32 bit tính từ một chuỗi byte; byte đổi thì mã gần như chắc chắn đổi. Dùng để phát hiện thay đổi và lỗi truyền, không dùng để chống làm giả. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+    <footer class="end">Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu). "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../assets/doc.js"></script>
+</body>
+</html>

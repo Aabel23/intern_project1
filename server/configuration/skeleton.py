@@ -1,0 +1,90 @@
+"""Planner defaults and fail-closed environment configuration."""
+import base64
+import os
+from pathlib import Path
+import stat
+from server.src.types import Settings
+
+OTP_SECONDS = 600
+OTP_COOLDOWN_SECONDS = 60
+OTP_MAX_ATTEMPTS = 5
+OTP_LOCK_SECONDS = 900
+EMAIL_SEND_LIMIT = 5
+IP_SEND_LIMIT = 20
+SEND_WINDOW_SECONDS = 3600
+LOGIN_FAILURE_LIMIT = 10
+LOGIN_WINDOW_SECONDS = 600
+ACCESS_SECONDS = 3600
+REFRESH_SECONDS = 2592000
+CLAIM_SECONDS = 120
+RELAY_SECONDS = 15
+POLL_SECONDS = 20
+MACHINE_HTTP_SECONDS = 25
+APP_RELAY_HTTP_SECONDS = 20
+ONLINE_GRACE_SECONDS = 30
+TERMINAL_RELAY_SECONDS = 60
+HTTP_MAX_BYTES = 65536
+PLAINTEXT_MAX_BYTES = 16384
+MAX_HTTP_REQUESTS = 64
+HTTP_READ_SECONDS = 30
+REPLAY_CACHE_LIMIT = 10000
+REPLAY_CACHE_SECONDS = 600
+BOOTSTRAP_LIMIT = 20
+BOOTSTRAP_WINDOW_SECONDS = 60
+CLOCK_SKEW_SECONDS = 300
+TEST_RECIPIENTS = ('nguyenhoanganh15112005@gmail.com', '23200002@student.hcmus.edu.vn')
+
+
+def load_settings() -> Settings:
+    try:
+        def required(name):
+            value = os.environ[name]
+            if not value:
+                raise ValueError()
+            return value
+
+        def port(name, default):
+            value = int(os.environ.get(name, default))
+            if not 1 <= value <= 65535:
+                raise ValueError()
+            return value
+
+        def file(name, private=False):
+            value = required(name)
+            path = Path(value)
+            if not path.is_absolute() or not path.is_file():
+                raise ValueError()
+            if private and stat.S_IMODE(path.stat().st_mode) != 0o600:
+                raise ValueError()
+            with path.open('rb') as stream:
+                stream.read(1)
+            return value
+
+        smtp_user, smtp_from = required('SMTP_USER'), required('SMTP_FROM')
+        if smtp_user != smtp_from or any(c in smtp_user for c in '\r\n'):
+            raise ValueError()
+        encoded = required('OTP_HASH_SECRET')
+        secret = base64.urlsafe_b64decode(encoded + '=' * (-len(encoded) % 4))
+        if len(secret) != 32 or base64.urlsafe_b64encode(secret).decode().rstrip('=') != encoded:
+            raise ValueError()
+        app_env = required('APP_ENV')
+        if app_env not in ('test', 'production'):
+            raise ValueError()
+        allowlist = ()
+        if app_env == 'test':
+            allowlist = tuple(x.strip().lower() for x in required('TEST_RECIPIENT_ALLOWLIST').split(','))
+            if len(allowlist) != 2 or set(allowlist) != set(TEST_RECIPIENTS):
+                raise ValueError()
+        elif 'TEST_RECIPIENT_ALLOWLIST' in os.environ:
+            raise ValueError()
+        return Settings(
+            required('DB_HOST'), port('DB_PORT', '3306'), required('DB_NAME'),
+            required('DB_USER'), required('DB_PASSWORD'), smtp_user, smtp_from,
+            required('SMTP_APP_PASSWORD'), secret,
+            os.environ.get('SERVER_BIND_HOST', '127.0.0.1'), port('SERVER_BIND_PORT', '8443'),
+            file('TLS_CERT_FILE'), file('TLS_KEY_FILE', True),
+            file('SERVER_HPKE_KEY_FILE', True), file('SERVER_SIGNING_KEY_FILE', True),
+            file('SERVER_TRUST_FILE'), app_env, allowlist,
+        )
+    except (KeyError, ValueError, OSError):
+        raise ValueError('CONFIG_INVALID') from None

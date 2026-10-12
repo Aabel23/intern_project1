@@ -4,8 +4,16 @@ import 'package:simple_app/shared/ui/app_theme.dart';
 
 import 'package:simple_app/feature/user_auth/ui/otp_page.dart';
 
+import '../data/auth_service.dart';
+import '../../../shared/cloud/cloud_error.dart';
+
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key, required this.onAuthenticated});
+  const AuthPage({
+    super.key,
+    required this.authService,
+    required this.onAuthenticated,
+  });
+  final AuthService authService;
   final void Function(BuildContext context) onAuthenticated;
 
   @override
@@ -15,8 +23,8 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _password = TextEditingController();
-  final _name = TextEditingController();
-  final _username = TextEditingController();
+  bool _busy = false;
+  String? _notice;
   final _email = TextEditingController();
   bool _register = false;
   bool _hidePassword = true;
@@ -27,13 +35,13 @@ class _AuthPageState extends State<AuthPage> {
   @override
   void dispose() {
     _password.dispose();
-    _name.dispose();
-    _username.dispose();
+
     _email.dispose();
     super.dispose();
   }
 
   void _switchMode() {
+    if (_busy) return;
     _formKey.currentState?.reset();
     _password.clear();
     setState(() {
@@ -43,18 +51,56 @@ class _AuthPageState extends State<AuthPage> {
     });
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submit() async {
+    if (_busy || !_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    if (!_register) {
-      widget.onAuthenticated(context);
-      return;
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
+    try {
+      final email = _email.text.trim().toLowerCase();
+      if (!_register) {
+        await widget.authService.login(email: email, password: _password.text);
+        if (mounted) widget.onAuthenticated(context);
+      } else {
+        final retry = await widget.authService.register(
+          email: email,
+          password: _password.text,
+        );
+        if (!mounted) return;
+        _password.clear();
+        final verified = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => OtpPage(
+              email: email,
+              retryAfterSeconds: retry,
+              authService: widget.authService,
+            ),
+          ),
+        );
+        if (!mounted) return;
+        _password.clear();
+        if (verified == true) {
+          setState(() {
+            _register = false;
+            _notice = 'Email đã xác minh. Vui lòng đăng nhập.';
+          });
+        }
+      }
+    } on CloudError catch (e) {
+      if (mounted) {
+        setState(
+          () => _notice = e.code == 'MAIL_UNAVAILABLE'
+              ? 'Dịch vụ gửi thư đang lỗi. Vui lòng thử lại.'
+              : e.code == 'AUTH_FAILED'
+              ? 'Email hoặc mật khẩu không đúng.'
+              : 'Không thể hoàn tất (${e.code}). Vui lòng thử lại.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => OtpPage(email: _email.text.trim()),
-      ),
-    );
   }
 
   InputDecoration _decoration(String label, IconData icon, {Widget? suffix}) {
@@ -184,57 +230,24 @@ class _AuthPageState extends State<AuthPage> {
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              if (_register) ...[
-                                TextFormField(
-                                  key: const ValueKey('name'),
-                                  controller: _name,
-                                  textCapitalization: TextCapitalization.words,
-                                  textInputAction: TextInputAction.next,
-                                  decoration: _decoration(
-                                    'Họ và tên',
-                                    Icons.person_outline_rounded,
-                                  ),
-                                  validator: (value) =>
-                                      value == null || value.trim().isEmpty
-                                      ? 'Vui lòng nhập họ và tên.'
-                                      : null,
-                                ),
-                                const SizedBox(height: 16),
-                              ],
                               TextFormField(
-                                key: const ValueKey('username'),
-                                controller: _username,
+                                key: const ValueKey('email'),
+                                controller: _email,
+                                enabled: !_busy,
+                                keyboardType: TextInputType.emailAddress,
                                 autocorrect: false,
                                 textInputAction: TextInputAction.next,
                                 decoration: _decoration(
-                                  'Tên đăng nhập',
-                                  Icons.alternate_email,
+                                  'Email',
+                                  Icons.mail_outline_rounded,
                                 ),
                                 validator: (value) =>
-                                    value == null || value.trim().isEmpty
-                                    ? 'Vui lòng nhập tên đăng nhập.'
+                                    !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                        .hasMatch(value?.trim() ?? '')
+                                    ? 'Vui lòng nhập email hợp lệ.'
                                     : null,
                               ),
                               const SizedBox(height: 16),
-                              if (_register) ...[
-                                TextFormField(
-                                  key: const ValueKey('email'),
-                                  controller: _email,
-                                  keyboardType: TextInputType.emailAddress,
-                                  textInputAction: TextInputAction.next,
-                                  autocorrect: false,
-                                  decoration: _decoration(
-                                    'Email',
-                                    Icons.mail_outline_rounded,
-                                  ),
-                                  validator: (value) =>
-                                      !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                                          .hasMatch(value?.trim() ?? '')
-                                      ? 'Vui lòng nhập email hợp lệ.'
-                                      : null,
-                                ),
-                                const SizedBox(height: 16),
-                              ],
                               TextFormField(
                                 key: const ValueKey('password'),
                                 controller: _password,
@@ -261,7 +274,7 @@ class _AuthPageState extends State<AuthPage> {
                                   if (value == null || value.isEmpty) {
                                     return 'Vui lòng nhập mật khẩu.';
                                   }
-                                  if (_register && value.length < 8) {
+                                  if (value.runes.length < 8) {
                                     return 'Mật khẩu cần ít nhất 8 ký tự.';
                                   }
                                   return null;
@@ -295,9 +308,14 @@ class _AuthPageState extends State<AuthPage> {
                                       : null,
                                 ),
                               ],
+                              if (_notice != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: Text(_notice!),
+                                ),
                               const SizedBox(height: 24),
                               FilledButton(
-                                onPressed: _submit,
+                                onPressed: _busy ? null : _submit,
                                 style: FilledButton.styleFrom(
                                   backgroundColor: _green,
                                   foregroundColor: Colors.white,

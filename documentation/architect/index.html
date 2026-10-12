@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tài liệu hệ máy pha</title>
+<meta name="description" content="Mục lục tài liệu kiến trúc và tài liệu tính năng của project1_app v1.1.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Mục lục · project1_app v1.1</div>
+      <h1>Tài liệu hệ máy pha: app, server hãng và máy pha</h1>
+      <p class="lead">Đọc theo thứ tự: kiến trúc tổng quát để nắm các khối và luồng, giao thức bảo mật để biết gói tin được bảo vệ ra sao, rồi tài liệu của từng tính năng để biết luồng, endpoint và gói tin cụ thể.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>project1_app</code> · <code>c34d55e</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+      <span><b>Phạm vi:</b> bản đầu (MVP)</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quat">1. Tổng quát</a></li>
+        <li><a href="#tinh-nang">2. Tính năng</a></li>
+        <li><a href="#quy-uoc">3. Quy ước chung</a></li>
+        <li><a href="#chua-co">4. Chưa có tài liệu</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="tong-quat">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Tổng quát</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tài liệu</th><th>Nói về</th></tr></thead>
+          <tbody>
+            <tr><td><a href="system-architecture.html">Kiến trúc hệ thống</a></td><td>Ba sản phẩm, các khối bên trong, nguyên tắc, luồng chính, repo</td></tr>
+            <tr><td><a href="cryptography.html">Cryptography</a></td><td>Giao thức bảo mật trên HTTP cho mọi gói đi qua server: phong bì từng chặng, khoá, định danh người và máy, gác cổng</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tinh-nang">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Tính năng</h2></div>
+      <p class="prose">Mỗi tài liệu gồm luồng chính, endpoint, gói tin, thông số và điểm còn tạm chốt của đúng một tính năng.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>#</th><th>Tính năng</th><th>Gồm</th><th>Sản phẩm</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><a href="features/account.html">Tài khoản và phiên</a></td><td>Đăng ký, xác minh email, đăng nhập, đăng xuất, quên mật khẩu, nhập lại mật khẩu</td><td>App, server</td></tr>
+            <tr><td class="num">2</td><td><a href="features/machine-activation.html">Kích hoạt máy</a></td><td>Quét mã niêm phong, gửi wifi, nhận chủ, danh sách máy, gỡ máy</td><td>Cả ba</td></tr>
+            <tr><td class="num">3</td><td><a href="features/machine-sharing.html">Share máy và quyền</a></td><td>Mã mời QR hoặc Bluetooth, xác nhận, đổi vai, gỡ người, chuyển chủ, bản sao quyền trên máy</td><td>Cả ba</td></tr>
+            <tr><td class="num">4</td><td><a href="features/command-relay.html">Chuyển lệnh và trạng thái máy</a></td><td>Khuôn lệnh chung, relay qua server, long-poll, chạy đúng một lần, máy online</td><td>Cả ba</td></tr>
+            <tr><td class="num">5</td><td><a href="features/menu.html">Menu</a></td><td>Xem menu, tắt/bật món, sửa giá, gói menu và số phiên bản</td><td>App, máy</td></tr>
+            <tr><td class="num">6</td><td><a href="features/inventory.html">Kho nguyên liệu</a></td><td>Xem kho, đổ thêm, kiểm đếm, cảnh báo sắp hết</td><td>App, máy</td></tr>
+            <tr><td class="num">7</td><td><a href="features/machine-events.html">Sự kiện và nhật ký</a></td><td>Hộp thư đi trên máy, gửi bù, nhật ký theo người</td><td>Máy, server</td></tr>
+            <tr><td class="num">8</td><td><a href="features/software-update.html">Cập nhật phần mềm máy</a></td><td>Hỏi bản mới, kiểm chữ ký, đổi bản, tự quay về</td><td>Máy, server</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="quy-uoc">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Quy ước chung cho mọi tài liệu tính năng</h2></div>
+      <ol class="steps">
+        <li><b>Endpoint</b> lấy đúng hằng số trong <code>server/configuration/routing.py</code>. App gọi <code>/app/…</code>, máy gọi <code>/machine/…</code>. Endpoint ghi "cần thêm" là chưa có trong file đó.</li>
+        <li><b>Mọi endpoint đi trong phong bì Cryptography.</b> Gói tin trong tài liệu là phần <i>thân</i> sau khi mở phong bì, viết dạng JSON. Token phiên của app và danh tính máy nằm ở phong bì, không lặp lại trong thân.</li>
+        <li><b>Lệnh gửi xuống máy</b> (menu, kho) không có endpoint riêng: tất cả đi qua <code>MACHINE_COMMAND_SEND</code> với một <code>instruction</code>, theo khuôn ở tài liệu <a href="features/command-relay.html">Chuyển lệnh</a>.</li>
+        <li><b>Mọi con số là thông số</b> trong sổ thông số của sản phẩm tương ứng. Giá trị ghi trong tài liệu là mặc định.</li>
+        <li><b>Nhãn trạng thái:</b> <span class="pill m">Đã chốt</span> là quyết định thiết kế; <span class="pill h">Tạm chốt</span> là hướng đang dùng cho bản đầu, đổi được mà không ảnh hưởng phần đã chốt; <span class="pill h">Mới</span> ở trường gói tin là trường chưa có trong mã hiện tại.</li>
+      </ol>
+    </section>
+
+    <section id="chua-co">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Chưa có tài liệu</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Phần</th><th>Vì sao chưa có</th></tr></thead>
+          <tbody>
+            <tr><td>Giao thức tại chỗ cho wifi quán và Bluetooth khi mất Internet</td><td>Phụ thuộc việc điện thoại có giữ khoá riêng hay không, đang được nghiên cứu</td></tr>
+            <tr><td>Đơn hàng, doanh thu, tổng quan trên app</td><td>Chưa thiết kế</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    </main>
+  </div>
+</div>
+</body>
+</html>

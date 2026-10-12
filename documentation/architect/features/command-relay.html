@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chuyển lệnh</title>
+<meta name="description" content="Tính năng Chuyển lệnh: luồng, endpoint, gói tin, thông số.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Tính năng 4 · <a href="../index.html">Mục lục</a></div>
+      <h1>Chuyển lệnh và trạng thái máy: một khuôn lệnh, chạy đúng một lần</h1>
+      <p class="lead">Mọi lệnh và câu hỏi từ app tới máy (menu, kho) đi qua một endpoint chung. Server kiểm phiên và quyền theo loại lệnh, giữ lệnh chờ, rồi giao cho máy qua long-poll<sup class="fn" id="fnr-1"><a href="#fn-1" aria-label="Chú thích 1">1</a></sup> do máy mở sẵn. Mã lệnh do app sinh đi suốt tới máy, nên gửi lại bao nhiêu lần máy cũng chỉ chạy một lần.</p>
+    </div>
+    <div class="meta">
+      <span><b>Sản phẩm:</b> app, server, máy</span>
+      <span><b>Mã:</b> <code>machine/main.py</code>, <code>machine/server_connection/</code></span>
+      <span><b>Ngày:</b> 12/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#endpoint">2. Endpoint</a></li>
+        <li><a href="#khuon">3. Khuôn lệnh</a></li>
+        <li><a href="#lenh">4. Danh sách lệnh</a></li>
+        <li><a href="#trang-thai">5. Trạng thái máy</a></li>
+        <li><a href="#quy-tac">6. Quy tắc</a></li>
+        <li><a href="#thong-so">7. Thông số</a></li>
+        <li><a href="#ghi-chu">8. Ghi chú</a></li>
+        <li><a href="#chu-thich">9. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: app gửi một lệnh tới máy đang online</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant A as App
+  participant S as Server
+  participant M as Máy
+  M->>S: MACHINE_COMMAND_POLL · giữ kết nối chờ
+  A->>A: sinh mã lệnh
+  A->>S: MACHINE_COMMAND_SEND · machine_id, lệnh
+  S->>S: kiểm phiên, quyền theo instruction, mã lệnh đã thấy chưa
+  S-->>M: trả poll · lệnh kèm hạn
+  M->>M: mã lệnh đã chạy? · kiểm dữ liệu · chạy · ghi mã và kết quả
+  M->>S: MACHINE_RESULT_SEND · mã lệnh, kết quả
+  S-->>A: trả kết quả cho request đang chờ
+  M->>S: MACHINE_COMMAND_POLL · vòng mới
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Request <code>COMMAND_SEND</code> của app được server giữ mở tới khi máy trả kết quả hoặc hết hạn lệnh. Máy offline thì server trả lỗi <code>machine_offline</code> ngay ở bước 4, không xếp hàng lệnh thường. Hết hạn mà chưa có kết quả thì app nhận <code>timeout</code> và có thể gửi lại với <b>cùng mã lệnh</b>.</figcaption>
+      </figure>
+    </section>
+
+    <section id="endpoint">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Endpoint</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hằng số</th><th>Đường dẫn</th><th>Bên gọi</th><th>Làm gì</th></tr></thead>
+          <tbody>
+            <tr><td><code>MACHINE_COMMAND_SEND</code></td><td><code>/app/machine/command/send</code></td><td>App</td><td>Gửi lệnh hoặc câu hỏi, chờ kết quả</td></tr>
+            <tr><td><code>MACHINE_COMMAND_POLL</code></td><td><code>/machine/command/poll</code></td><td>Máy</td><td>Long-poll lấy lệnh kế tiếp</td></tr>
+            <tr><td><code>MACHINE_RESULT_SEND</code></td><td><code>/machine/result/send</code></td><td>Máy</td><td>Trả kết quả theo mã lệnh</td></tr>
+            <tr><td><code>MACHINE_STATUS_GET</code></td><td><code>/app/machine/status/get</code></td><td>App</td><td>Máy online không, lần thấy cuối, phiên bản</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="khuon">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Khuôn lệnh</h2></div>
+      <p class="prose">Khuôn này dùng chung cho cả ba đường cloud, wifi quán và Bluetooth; chỉ đường đi khác nhau. Tên trường giữ như mã máy hiện có.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Gói</th><th>Thân</th></tr></thead>
+          <tbody>
+            <tr><td>App → server <code>command/send</code></td><td><code>{"machine_id", "lenh":{"id", "instruction", "data", "contract_v"}}</code></td></tr>
+            <tr><td>Server → máy, trả poll</td><td><code>{"lenh":{"id", "instruction", "data", "contract_v", "actor_id", "expires_in_s"}}</code> hoặc <code>{"lenh": null}</code> khi hết giờ poll</td></tr>
+            <tr><td>Máy → server <code>result/send</code></td><td><code>{"id", "ket_qua"}</code></td></tr>
+            <tr><td>Server → app</td><td><code>{"id", "ket_qua"}</code>, hoặc <code>{"error":"machine_offline"|"timeout"|"forbidden"|"reauth_required"}</code></td></tr>
+            <tr><td>Lỗi do máy</td><td><code>ket_qua = {"loi": "&lt;lý do&gt;"}</code>; máy vẫn chạy tiếp</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trường</th><th>Ý nghĩa</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>Mã lệnh, UUID do app sinh; gửi lại thì giữ nguyên</td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>instruction</code></td><td>Tên lệnh, tra trong bảng lệnh của máy</td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>data</code></td><td>Tham số riêng của lệnh</td><td><span class="pill m">Có</span></td></tr>
+            <tr><td><code>contract_v</code></td><td>Phiên bản hợp đồng bên gửi dùng</td><td><span class="pill h">Mới</span></td></tr>
+            <tr><td><code>actor_id</code></td><td>Tài khoản ra lệnh, server điền sau khi kiểm phiên; máy ghi vào nhật ký</td><td><span class="pill h">Mới</span></td></tr>
+            <tr><td><code>expires_in_s</code></td><td>Số giây còn lại của lệnh; máy đếm bằng đồng hồ đơn điệu từ lúc nhận, không tin giờ hệ thống</td><td><span class="pill h">Mới</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="lenh">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Danh sách lệnh</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>instruction</th><th>Loại</th><th>Ai</th><th>Qua wifi quán, Bluetooth</th><th>Tài liệu</th></tr></thead>
+          <tbody>
+            <tr><td><code>nhan_menu</code></td><td>Câu hỏi</td><td>Mọi vai</td><td>Có</td><td><a href="menu.html">Menu</a></td></tr>
+            <tr><td><code>bat_tat_mon</code> <span class="pill h">Mới</span></td><td>Lệnh</td><td>Mọi vai</td><td>Có</td><td><a href="menu.html">Menu</a></td></tr>
+            <tr><td><code>cap_nhat_menu</code></td><td>Lệnh</td><td>Owner, Manager</td><td>Không</td><td><a href="menu.html">Menu</a></td></tr>
+            <tr><td><code>nhan_kho</code></td><td>Câu hỏi</td><td>Mọi vai</td><td>Có</td><td><a href="inventory.html">Kho</a></td></tr>
+            <tr><td><code>nap_kho</code></td><td>Lệnh</td><td>Mọi vai</td><td>Có</td><td><a href="inventory.html">Kho</a></td></tr>
+            <tr><td><code>kiem_dem_kho</code> <span class="pill h">Mới</span></td><td>Lệnh</td><td>Owner, Manager</td><td>Có</td><td><a href="inventory.html">Kho</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Bảng này là bảng quyền theo lệnh mà gác cổng server dùng. Máy tự kiểm lại bằng bản sao quyền, và tự từ chối lệnh "Không" nếu nó đến từ wifi quán hay Bluetooth.</p>
+    </section>
+
+    <section id="trang-thai">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Trạng thái máy</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Gửi lên</th><th>Trả về</th></tr></thead>
+          <tbody>
+            <tr><td><code>status/get</code></td><td><code>{"machine_id"}</code></td><td><code>{"online", "last_seen_at", "software_version", "contract_v", "acl_version"}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ol class="steps">
+        <li><b>Online suy từ poll</b>, không có luồng heartbeat riêng. Máy treo thì poll dừng và máy hiện offline. Cờ online giữ trong bộ nhớ server; <code>last_seen_at</code> chỉ ghi xuống database khi đổi trạng thái hoặc định kỳ.</li>
+        <li><b>Server không giữ trạng thái vận hành</b> (đang pha, rảnh, lỗi). App hỏi thẳng máy khi mở màn hình; máy offline thì app hiện "offline" và lần thấy cuối, kèm bản dữ liệu cuối đã nhận, ghi rõ là dữ liệu cũ.</li>
+      </ol>
+    </section>
+
+    <section id="quy-tac">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Quy tắc</h2></div>
+      <ol class="steps">
+        <li><b>Máy giữ bảng "mã lệnh → kết quả"</b>, ghi trong cùng một transaction với thay đổi dữ liệu. Gặp lại mã cũ thì trả kết quả cũ, không chạy lại; cùng mã mà nội dung khác thì trả lỗi. Bảng nằm ở máy vì lệnh qua wifi quán và Bluetooth không đi qua server.</li>
+        <li><b>Server cũng chống trùng</b> theo mã lệnh trong lúc lệnh còn chờ: app gửi lại thì server gắn vào cùng lệnh, không giao cho máy lần hai.</li>
+        <li><b>Lệnh quá hạn thì máy không chạy muộn.</b> App báo lỗi, người dùng quyết có gửi lại không.</li>
+        <li><b>Gửi kết quả hỏng thì máy gửi lại</b> từ bảng mã lệnh. Server lọc trùng theo mã.</li>
+        <li><b>Lệnh thường không lưu bền ở server.</b> Server khởi động lại giữa chừng thì lệnh mất; app hết giờ và gửi lại với cùng mã.</li>
+        <li><b>Server chỉ đọc loại lệnh để kiểm quyền</b>, không xử lý nội dung nghiệp vụ trong <code>data</code>. Máy kiểm dạng và giới hạn của <code>data</code>.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Sổ</th><th>Mặc định</th><th>Ảnh hưởng</th></tr></thead>
+          <tbody>
+            <tr><td>Hạn lệnh</td><td>Hợp đồng chung</td><td class="num">60 giây</td><td>Quá hạn thì máy không chạy, app báo lỗi</td></tr>
+            <tr><td>Thời gian máy nhớ mã lệnh đã chạy</td><td>Máy</td><td class="num">7 ngày</td><td>Gửi lại sau khoảng này sẽ bị coi là lệnh mới</td></tr>
+            <tr><td>Thời gian server giữ một poll</td><td>Server</td><td class="num">25 giây</td><td>Hết thì trả <code>{"lenh": null}</code>, máy poll lại</td></tr>
+            <tr><td>Timeout HTTP của máy khi poll</td><td>Máy</td><td class="num">35 giây</td><td>Phải lớn hơn thời gian server giữ poll</td></tr>
+            <tr><td>Ngưỡng coi máy là offline</td><td>Server</td><td class="num">3 chu kỳ poll</td><td>Không thấy máy trong khoảng này thì báo offline</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Ghi chú</h2></div>
+      <div class="note crit"><b>Mã máy hiện có, chưa sửa</b><code>main.py</code>, hàm <code>reply</code>: chỉ bắt lỗi mạng, không bắt <code>ValueError</code>; server trả về không phải JSON thì vòng lặp chính dừng. Gửi kết quả thất bại thì chỉ in log rồi bỏ. Máy chưa lưu mã lệnh đã chạy. <code>machine_server_request.py:18</code> dùng timeout 10 giây chung cho cả long-poll, viết cứng trong code.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hướng bản đầu</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td>Thời gian server giữ poll và timeout của máy</td><td>25 và 35 giây</td><td><span class="pill h">Tạm chốt</span></td></tr>
+            <tr><td>Kết nối đẩy hai chiều (MQTT, WebSocket)</td><td>Giữ long-poll; đổi khi số máy lên hàng trăm</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 9</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>HTTP long polling.</b> Bên gọi gửi một request và server giữ request đó mở tới khi có dữ liệu hoặc hết giờ. Máy nằm sau router vẫn nhận lệnh gần như tức thì mà không cần mở cổng vào. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+    <footer class="end">Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu). "Phóng to" mở kích thước thật.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../assets/doc.js"></script>
+</body>
+</html>
