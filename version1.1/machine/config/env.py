@@ -6,7 +6,7 @@ thư mục trạng thái do `python -m machine.config.provision` tạo ở xư�
 
     MACHINE_NAME=FlexMix-02
     SERVER_URL=https://flexmix.example.com
-    SERVER_TRUST_FILE=/etc/flexmix/server-trust.json   # khóa công khai server, ghim trước khi bán
+    SERVER_TRUST_FILE=/etc/flexmix/server-trust.json   # tùy chọn; mặc định config/server-trust.json
     STATE_DIR=/var/lib/flexmix                         # tùy chọn
 
 Đặt biến môi trường FLEXMIX_MACHINE_ENV để dùng file ở chỗ khác
@@ -47,7 +47,8 @@ def get_server_url():
 
 
 def get_server_trust_path():
-    return Path(read_env("SERVER_TRUST_FILE"))
+    # Mặc định là file provision_keys.py ghi cạnh env.py.
+    return Path(read_env("SERVER_TRUST_FILE", str(Path(__file__).with_name("server-trust.json"))))
 
 
 def get_state_dir():

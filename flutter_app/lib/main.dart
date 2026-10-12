@@ -9,6 +9,7 @@ import 'shared/cloud/cloud_config.dart';
 import 'shared/cloud/cloud_crypto.dart';
 import 'shared/cloud/cloud_client.dart';
 import 'shared/cloud/cloud_error.dart';
+import 'shared/cloud/server_endpoint.dart';
 import 'feature/user_auth/data/auth_service.dart';
 import 'feature/user_auth/data/session_store.dart';
 
@@ -37,8 +38,12 @@ class _BootstrapAppState extends State<_BootstrapApp> {
           as Map,
     );
     final config = CloudConfig(
+      // URL do provision_keys.py ghi sẵn; --dart-define vẫn ghi đè được khi cần trỏ server khác.
       baseUrl: Uri.parse(
-        const String.fromEnvironment('FLEXMIX_SERVER_BASE_URL'),
+        const String.fromEnvironment(
+          'FLEXMIX_SERVER_BASE_URL',
+          defaultValue: defaultServerBaseUrl,
+        ),
       ),
       trust: trust,
     );
