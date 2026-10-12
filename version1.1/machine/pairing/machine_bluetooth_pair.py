@@ -1,66 +1,42 @@
-"""Ghép đôi và gửi dữ liệu Bluetooth trên máy Linux dùng BlueZ."""
+"""Dịch vụ nhận máy qua BLE (hợp đồng v2): python -m machine.pairing.machine_bluetooth_pair
 
-import json
-from machine.config.env import get_machine_name, get_product_key
+Chỉ quảng bá khi máy chưa có chủ theo lần hello gần nhất, hoặc trong 10 phút đầu sau khi
+dịch vụ khởi động (cửa sổ claim, D2). Trạng thái online của phiên lấy từ cache mà vòng
+`machine.main` ghi sau mỗi hello.
+"""
 
+import time
 
-def receive_message(reader):
-    # Một dòng là một gói JSON, tối đa 4096 byte.
-    body = reader.readline(4097)
-    if len(body) > 4096 or not body.endswith(b"\n"):
-        raise ValueError("Gói Bluetooth quá lớn hoặc chưa đầy đủ")
-    text = body.decode("utf-8")
-    data = json.loads(text)
-    if not isinstance(data, dict):
-        raise ValueError("Gói Bluetooth phải là JSON object")
-    return data
+from machine.config.env import get_machine_name, get_server_trust_path, get_state_dir
+from machine.config.identity import decode_b64u, load_identity, load_seal_code, load_server_trust, read_cache
+from machine.pairing.claim_session import ClaimSession
+from machine.pairing.wifi_setup import configure_wifi
 
-
-def pair_bluetooth(connection, reader):
-    """Xác nhận app sẵn sàng; BlueZ đã xử lý bond trước khi gọi hàm này."""
-    data = receive_message(reader)
-    if data.get("type") != "identify":
-        connection.sendall(pack_message({"ok": False}))
-        return False
-    connection.sendall(pack_message({"type": "ready", "ok": True}))
-    return True
-
-
-def pack_message(message):
-    """Chuyển dictionary thành một gói JSON dạng bytes."""
-    json_text = json.dumps(message, ensure_ascii=False, separators=(",", ":"))
-    return (json_text + "\n").encode("utf-8")
-
-
-def send_bluetooth(connection, reader, message):
-    """Gửi trên kết nối hiện tại và chờ app xác nhận đã nhận đủ gói."""
-    packet = pack_message(message)
-    connection.sendall(packet)
-    answer = receive_message(reader)
-    return answer.get("type") == "ack" and answer.get("ok") is True
-
-
-def handle_connection(connection):
-    # Đóng kết nối cả khi lỗi; không chờ app gửi dữ liệu vô hạn.
-    with connection:
-        connection.settimeout(30)
-        with connection.makefile("rb") as reader:
-            paired = pair_bluetooth(connection, reader)
-            if not paired:
-                return False
-
-            message = {
-                "type": "pairing",
-                "machine_name": get_machine_name(),
-                "product_key": get_product_key(),
-            }
-            return send_bluetooth(connection, reader, message)
+CLAIM_WINDOW_SECONDS = 600
 
 
 def main():
-    # Chỉ cần BlueZ khi chạy trên Pi, test JSON không cần thư viện này.
-    from machine.pairing.machine_bluetooth_serve import run_server
-    run_server(get_machine_name(), handle_connection)
+    state_dir = get_state_dir()
+    identity = load_identity(state_dir)
+    trust = load_server_trust(get_server_trust_path())
+    signing_key = decode_b64u(trust["signing"]["public_key"])
+    started = time.monotonic()
+
+    def machine_info():
+        cache = read_cache(state_dir)
+        seen = cache.get("seen_at")
+        return cache.get("machine_id"), isinstance(seen, (int, float)) and time.time() - seen < 60
+
+    def new_session():
+        # Mỗi kết nối đọc lại S từ đĩa; phiên xóa bản sao trong RAM khi đóng.
+        return ClaimSession(identity, load_seal_code(state_dir), signing_key, configure_wifi, machine_info)
+
+    def advertise():
+        cache = read_cache(state_dir)
+        return cache.get("owned") is not True or time.monotonic() - started < CLAIM_WINDOW_SECONDS
+
+    from machine.pairing.gatt_server import run
+    run(get_machine_name(), new_session, advertise)
 
 
 if __name__ == "__main__":

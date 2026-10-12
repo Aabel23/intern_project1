@@ -85,8 +85,9 @@ def run(client, dispatcher, state_dir, stop=lambda: False):
         try:
             if client.machine_id is None:
                 client.hello()
-                write_cache(state_dir, {"machine_id": client.machine_id, "owned": client.owned})
             command = client.poll_command()
+            # Dịch vụ BLE đọc cache này để báo app máy đã online/đã có chủ chưa.
+            write_cache(state_dir, {"machine_id": client.machine_id, "owned": client.owned, "seen_at": time.time()})
         except CloudError as error:
             if error.code == "UNKNOWN_KEY":
                 # Khóa không còn được server nhận: dừng, báo Operator; không tự đăng ký khóa khác.
