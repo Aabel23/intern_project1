@@ -3,6 +3,8 @@
 Python stdlib HTTPS + MySQL. Mọi body nằm trong phong bì HPKE (`contracts/messages/cloud-protection.md`,
 `v2-decisions.md`). Một process, không cần Redis hay framework.
 
+Hướng dẫn từng bước cho laptop Windows: [MySQL, HTTPS Tailscale, Gmail OTP và chạy app](SETUP_WINDOWS.md).
+
 ## Dựng lần đầu
 
 1. **Khóa và cấu hình công khai** (một lần, rồi commit các file công khai nó ghi ra):
@@ -36,6 +38,38 @@ Python stdlib HTTPS + MySQL. Mọi body nằm trong phong bì HPKE (`contracts/m
    ```
 
 5. Chạy từ thư mục gốc repo: `python3 -m server.main`.
+
+## MySQL trên laptop Windows
+
+Đã cài MySQL 8.4.11 tại `E:\Development\mysql-8.4.11-winx64`; dữ liệu và cấu hình
+nằm trong `E:\Development\mysql-flexmix`. Database `flexmix` đã chạy migration 001/002.
+Tài khoản app `flexmix` chỉ có quyền SELECT/INSERT/UPDATE/DELETE trong database này.
+
+Chạy từ thư mục gốc repo:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File server/tools/mysql.ps1 start
+powershell -NoProfile -ExecutionPolicy Bypass -File server/tools/mysql.ps1 stop
+powershell -NoProfile -ExecutionPolicy Bypass -File server/tools/mysql.ps1 client
+```
+
+MySQL nghe ở `127.0.0.1:3306`, chạy nền theo tài khoản Windows hiện tại và cần bật lại
+sau khi khởi động laptop. Mật khẩu app nằm trong `server/configuration/.env` (gitignore);
+cấu hình đăng nhập root nằm trong `server/secrets/mysql-admin.ini` (gitignore).
+Các file chứa mật khẩu được giới hạn quyền truy cập cho tài khoản Windows hiện tại và SYSTEM.
+Không gửi hoặc commit các file này.
+
+Server đọc biến môi trường của process; nạp cấu hình database trước khi chạy server:
+
+```powershell
+Get-Content server/configuration/.env | ForEach-Object {
+    $dbName, $dbValue = $_ -split '=', 2
+    [Environment]::SetEnvironmentVariable($dbName, $dbValue, 'Process')
+}
+```
+
+Hoàn thiện cấu hình HTTPS, khóa và SMTP theo [SETUP_WINDOWS.md](SETUP_WINDOWS.md)
+trước khi chạy `python -m server.main`.
 
 ## Đăng ký máy ở xưởng
 

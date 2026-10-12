@@ -63,7 +63,7 @@ def load_settings() -> Settings:
             path = Path(value)
             if not path.is_absolute() or not path.is_file():
                 raise ValueError()
-            if private and stat.S_IMODE(path.stat().st_mode) != 0o600:
+            if private and os.name != 'nt' and stat.S_IMODE(path.stat().st_mode) != 0o600:
                 raise ValueError()
             with path.open('rb') as stream:
                 stream.read(1)

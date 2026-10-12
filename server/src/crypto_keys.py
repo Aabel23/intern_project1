@@ -7,7 +7,7 @@ import stat
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, x25519
 from server.src.types import Settings
-
+import os
 
 def b64u(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode('ascii').rstrip('=')
@@ -33,7 +33,9 @@ def load_server_keys(settings: Settings) -> ServerKeys:
     try:
         def private(path):
             path = Path(path)
-            if not path.is_absolute() or stat.S_IMODE(path.stat().st_mode) != 0o600:
+            if not path.is_absolute() or (
+                os.name != 'nt' and stat.S_IMODE(path.stat().st_mode) != 0o600
+            ):
                 raise ValueError()
             data = path.read_bytes()
             if not data.startswith(b'-----BEGIN PRIVATE KEY-----'):

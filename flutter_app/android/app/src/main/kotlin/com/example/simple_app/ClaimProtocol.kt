@@ -41,7 +41,7 @@ class ClaimProtocol(private val serial: String, seal: ByteArray, private val ran
 
     fun acceptHello(packet: ByteArray) {
         val hello = parseObject(packet)
-        require(hello.keySet() == setOf("pv", "type", "serial", "session_id", "machine_nonce", "public_key", "machine_public_key"))
+        require(hello.keys().asSequence().toSet() == setOf("pv", "type", "serial", "session_id", "machine_nonce", "public_key", "machine_public_key"))
         require(hello.getInt("pv") == 2 && hello.getString("type") == "hello")
         // A different machine nearby: never send anything sealed with this QR's secret to it.
         if (hello.getString("serial") != serial) throw PairingFailure("SERIAL_MISMATCH")
@@ -81,7 +81,7 @@ class ClaimProtocol(private val serial: String, seal: ByteArray, private val ran
         pending = null
         try {
             val outer = parseObject(packet)
-            require(outer.keySet() == setOf("pv", "type", "session_id", "send_id", "stage", "nonce", "ct"))
+            require(outer.keys().asSequence().toSet() == setOf("pv", "type", "session_id", "send_id", "stage", "nonce", "ct"))
             require(outer.getInt("pv") == 2 && outer.getString("type") == "response" && outer.getString("session_id") == sessionId)
             require(outer.getString("send_id") == p.sendId && outer.getString("stage") == p.stage)
             val aad = FlexJson.array(2, "flexmix-bt-response-v2", "machine", "app", serial, sessionId, h0, p.sendId, p.stage,

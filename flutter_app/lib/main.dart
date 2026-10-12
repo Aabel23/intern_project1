@@ -72,7 +72,9 @@ class _BootstrapAppState extends State<_BootstrapApp> {
                     children: [
                       const Text('Không thể tải cấu hình kết nối an toàn.'),
                       TextButton(
-                        onPressed: () => setState(() => _service = _load()),
+                        onPressed: () => setState(() {
+                          _service = _load();
+                        }),
                         child: const Text('Thử lại'),
                       ),
                     ],
@@ -154,8 +156,9 @@ class _MainAppState extends State<MainApp> {
                         'Không thể khôi phục phiên. Vui lòng thử lại.',
                       ),
                       TextButton(
-                        onPressed: () =>
-                            setState(() => _restoreFuture = _restore()),
+                        onPressed: () => setState(() {
+                          _restoreFuture = _restore();
+                        }),
                         child: const Text('Thử lại'),
                       ),
                     ],

@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "hpke": {
+    "kid": "server-hpke-1",
+    "public_key": "vYc6wRyn240ro2R1Ug3bviKSqT-1LHhCWC6AdgbX_XA"
+  },
+  "signing": {
+    "kid": "server-sign-1",
+    "public_key": "BLB5tpTiC4-Z2cBMhCzfpX9kz1i4JY7z3J_rNqFkG8Gv_Qw-Ok9ADqWsQV68Ca7UQEGmZsFPC1zG2_U4Xy8qfpk"
+  }
+}
