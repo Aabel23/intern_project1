@@ -18,7 +18,7 @@ ACCESS_SECONDS = 3600
 REFRESH_SECONDS = 2592000
 SESSION_ABSOLUTE_SECONDS = 7776000
 REFRESH_REUSE_GRACE_SECONDS = 30
-PASSWORD_MIN_LENGTH = 15
+PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 256
 ARGON2_CONCURRENCY = 4
 CLAIM_SECONDS = 120
@@ -42,6 +42,21 @@ BOOTSTRAP_LIMIT = 20
 BOOTSTRAP_WINDOW_SECONDS = 60
 CLOCK_SKEW_SECONDS = 300
 TEST_RECIPIENTS = ('nguyenhoanganh15112005@gmail.com', '23200002@student.hcmus.edu.vn')
+
+
+def load_local_environment() -> None:
+    path = Path(__file__).with_name('.env')
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding='utf-8-sig').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        name, separator, value = line.partition('=')
+        name = name.strip()
+        if not separator or not name.isidentifier():
+            raise ValueError('CONFIG_INVALID')
+        os.environ.setdefault(name, value.strip())
 
 
 def load_settings() -> Settings:

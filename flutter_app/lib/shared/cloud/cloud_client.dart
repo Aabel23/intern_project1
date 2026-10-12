@@ -106,7 +106,9 @@ class CloudClient {
         }
         request!.followRedirects = false;
         request!.headers.contentType = ContentType.json;
-        request!.add(utf8.encode(jsonEncode(sealed['envelope'])));
+        final payload = utf8.encode(jsonEncode(sealed['envelope']));
+        request!.contentLength = payload.length;
+        request!.add(payload);
         final response = await request!.close();
         if (response.statusCode >= 300 && response.statusCode < 400) {
           throw const CloudError('TRANSPORT_ERROR');

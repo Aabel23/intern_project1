@@ -193,7 +193,10 @@ class CloudTests(unittest.TestCase):
                 self.assertIn(('bootstrap_ip','127.0.0.1'),deps.state.rate_events)
                 self.assertNotIn(('bootstrap_ip','198.51.100.77'),deps.state.rate_events)
                 self.assertEqual(send('GET',env['route'],None),(405,{'pv':1,'error':{'code':'INVALID_ENVELOPE'}}))
-                self.assertEqual(send('POST','/unknown',b'{}'),(404,{'pv':1,'error':{'code':'INVALID_ENVELOPE'}}))
+                with self.assertLogs('server.src.http', level='INFO') as logs:
+                    self.assertEqual(send('POST','/unknown?token=PRIVATE_TEST_VALUE',b'{}'),(404,{'pv':1,'error':{'code':'INVALID_ENVELOPE'}}))
+                self.assertTrue(any('HTTP POST <unknown-route> -> 404' in line for line in logs.output))
+                self.assertFalse(any('PRIVATE_TEST_VALUE' in line for line in logs.output))
                 self.assertEqual(send('POST',env['route'],b'x'*65537),(400,{'pv':1,'error':{'code':'INVALID_ENVELOPE'}}))
                 # Regression P2: valid JSON syntax with excessive nesting remains a 400.
                 nested=b'['*5000+b'0'+b']'*5000

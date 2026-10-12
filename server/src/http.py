@@ -103,6 +103,8 @@ def create_app(deps: Dependencies) -> ThreadingHTTPServer:
             self.end_headers()
             self.wfile.write(raw)
             self.close_connection = True
+            route = self.path if self.path in all_routes() else '<unknown-route>'
+            logging.getLogger(__name__).info('HTTP %s %s -> %s', self.command, route, status)
 
         def _public_error(self,status,code):
             self._reply(status,{'pv':1,'error':{'code':code}})

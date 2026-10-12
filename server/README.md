@@ -59,14 +59,14 @@ cấu hình đăng nhập root nằm trong `server/secrets/mysql-admin.ini` (git
 Các file chứa mật khẩu được giới hạn quyền truy cập cho tài khoản Windows hiện tại và SYSTEM.
 Không gửi hoặc commit các file này.
 
-Server đọc biến môi trường của process; nạp cấu hình database trước khi chạy server:
+Chạy server trực tiếp trong terminal:
 
 ```powershell
-Get-Content server/configuration/.env | ForEach-Object {
-    $dbName, $dbValue = $_ -split '=', 2
-    [Environment]::SetEnvironmentVariable($dbName, $dbValue, 'Process')
-}
+.\server\secrets\venv\Scripts\python.exe -m server.main
 ```
+
+`main.py` tự nạp `server/configuration/.env`; biến môi trường có sẵn được ưu tiên.
+Terminal hiện log khởi động, request và lỗi. Nhấn `Ctrl+C` để tắt server.
 
 Hoàn thiện cấu hình HTTPS, khóa và SMTP theo [SETUP_WINDOWS.md](SETUP_WINDOWS.md)
 trước khi chạy `python -m server.main`.

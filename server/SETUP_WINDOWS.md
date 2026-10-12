@@ -172,22 +172,26 @@ $serverUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 icacls server/configuration/.env /inheritance:r /grant:r "${serverUser}:F" "SYSTEM:F"
 ```
 
-## 8. Nạp cấu hình và chạy server
+## 8. Chạy trực tiếp main.py
 
-Server đọc biến môi trường của process, không tự đọc `.env`.
-Trong PowerShell tại thư mục gốc project:
+Tại thư mục gốc project, chạy:
 
 ```powershell
-Get-Content server/configuration/.env | ForEach-Object {
-    if ($_ -match '^\s*([A-Z_]+)=(.*)$') {
-        [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
-    }
-}
 .\server\secrets\venv\Scripts\python.exe -m server.main
 ```
 
-Giữ cửa sổ này mở. Server hiện không in thông báo sẵn sàng; kiểm tra bằng bước tiếp theo.
-Nhấn `Ctrl+C` để tắt server.
+`main.py` tự đọc `server/configuration/.env`. Biến môi trường đã có trong process
+được ưu tiên hơn `.env`. Không cần script PowerShell để nạp cấu hình.
+
+Server chạy ngay trong terminal và hiện log:
+
+```text
+22:30:00 INFO SERVER_READY https://127.0.0.1:8443 — Ctrl+C to stop
+22:30:05 INFO HTTP POST /app/user/session/bootstrap -> 200
+```
+
+Giữ cửa sổ mở. Nhấn `Ctrl+C` để tắt; terminal sẽ hiện `SERVER_STOPPED`.
+Log request ghi phương thức, route API và mã HTTP; không ghi mật khẩu, OTP, token hoặc body.
 
 ## 9. Cho điện thoại truy cập qua HTTPS
 
@@ -223,9 +227,9 @@ Kiểm tra này mới xác nhận luồng app, server, MySQL và Gmail hoạt đ
 
 ## Bật lại, gia hạn và sao lưu
 
-- Sau khi khởi động laptop: bật MySQL ở bước 1, nạp `.env` và chạy Python ở bước 8.
+- Sau khi khởi động laptop: bật MySQL ở bước 1 và chạy Python ở bước 8.
   Tailscale Serve chạy nền với `--bg`; kiểm tra lại bằng `tailscale serve status`.
-- Khi thay `.env`: nạp lại biến môi trường và khởi động lại Python.
+- Khi thay `.env`: nhấn `Ctrl+C` và chạy lại Python để đọc cấu hình mới.
 - Khi cần tắt MySQL: chạy `powershell -ExecutionPolicy Bypass -File server/tools/mysql.ps1 stop`.
   Tắt Python trước khi tắt MySQL.
 - Chứng chỉ do `tailscale cert` ghi ra cần gia hạn trước khi hết hạn: chạy lại lệnh ở bước 4,
@@ -240,7 +244,7 @@ Kiểm tra này mới xác nhận luồng app, server, MySQL và Gmail hoạt đ
 | Lỗi | Kiểm tra |
 | --- | --- |
 | App báo không tải được cấu hình an toàn | File trust không còn `{}`, URL đúng HTTPS và đã build lại app |
-| Server báo `CONFIG_INVALID` | Đã nạp `.env`, không còn placeholder, các đường dẫn tuyệt đối và file khóa/chứng chỉ tồn tại |
+| Server báo `CONFIG_INVALID` | `.env` đúng dạng `TEN_BIEN=gia_tri`, không còn placeholder, các đường dẫn tuyệt đối và file khóa/chứng chỉ tồn tại |
 | HTTPS trả `502` | Python có chạy ở `127.0.0.1:8443` không; xem cấu hình `tailscale serve status` |
 | Điện thoại không kết nối | Tailscale đã bật, cùng mạng, có quyền truy cập laptop và URL đúng tên miền |
 | Server trả `SERVICE_UNAVAILABLE` | MySQL đang chạy, cấu hình `DB_...` đúng và đã chạy migration |
