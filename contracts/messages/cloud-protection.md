@@ -54,3 +54,9 @@ RAM replay/rate/HTTP capacity state thuộc một process server, tạo một l�
 
 
 Exporter server one-response là invariant của HTTP lifecycle: dispatcher gọi close_response đúng một lần cho OpenedRequest, HTTP handler bỏ reference trong finally. `close_response` là helper nội bộ thuần encrypt, không public API/state machine; không yêu cầu mutable consumed flag hoặc phát hiện lời gọi trực tiếp lần2. Test xác minh HTTP không gọi lần2 và không tái dùng OpenedRequest cho request khác. Native client handle one-use vẫn enforced như đã khóa, kể cả decrypt fail.
+
+## Activation retry sau Wi-Fi success (user chốt12/10/2026)
+
+Association+DHCP thành công nhưng server lỗi/offline: máy giữ Wi-Fi mới và tự thử activation lại theo bt-claim.md, không rollback mạng cũ. Retry dùng identity/S đã provision, không cần app giữ QR/BT context; mỗi HTTP attempt fresh HPKE context/send_id, pending bind retry giữ cùng challenge_id/key để bảo toàn idempotent commit. Không auto retry MACHINE_UNTRUSTED/KEY_CONFLICT/proof/config error, không tự đổi identity. Owner/claim vẫn cần phiên BT mới hợp lệ và server transaction.
+
+Cổng M-01/B-03 còn BLOCKED: retry timer/budget, pending-challenge durability/restart và expiry/result recovery cho commit chưa biết chưa được Planner khóa. Không sinh challenge mới khi chưa xác định bind cũ đã commit, không lưu seal_code trong file retry. OS/network manager discovery làm khi có Pi thật, không yêu cầu user chốt OS lúc này.

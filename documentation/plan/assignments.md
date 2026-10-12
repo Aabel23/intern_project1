@@ -1,8 +1,10 @@
 # Phân công MVP: skeleton kết nối trước
 
-**Trạng thái:** lộ trình đã duyệt; C-01/C-02/C-03/C-04 hoàn tất. User chốt cách server kiểm máy thật, TLS + phong bì cloud và HPKE PSK Bluetooth ngày 12/10/2026. C-05 đã lập hợp đồng; S-01/A-01 đã code và qua review nhỏ vòng 2. Review lớn module tài khoản đang chạy một lần. Nghiệm thu runtime thật còn thiếu Android, HTTPS pin/cert, Gmail; B-03 Bluetooth còn BLOCKED theo gate kỹ thuật.
+**Trạng thái:** lộ trình đã duyệt; C-01/C-02/C-03/C-04 hoàn tất. User chốt cách server kiểm máy thật, TLS + phong bì cloud và HPKE PSK Bluetooth ngày 12/10/2026. C-05 đã lập hợp đồng; S-01/A-01 đã code và qua review nhỏ vòng 2. [Review lớn module tài khoản](account-module-review-2026-10-12.md) đã chạy một lần: hai finding được user ghi nhận và quyết định chưa sửa. Nghiệm thu runtime thật còn thiếu Android, HTTPS pin/cert, Gmail; B-03 Bluetooth còn BLOCKED theo gate kỹ thuật.
 
 **Mốc đầu tiên:** người dùng mới đăng ký qua email/OTP, đăng nhập, quét mã niêm phong và nhận máy thật; app chọn máy, hỏi **trạng thái trực tiếp từ máy** qua server và hiển thị câu trả lời của chính máy. Không dùng tài khoản hoặc máy nạp sẵn, không dùng kết quả giả, không lấy cờ online lưu ở server thay câu trả lời máy. Menu sync làm sau mốc này.
+
+Thứ tự thực thi ngắn gọn và trạng thái mới nhất: [mvp-fast-path.md](mvp-fast-path.md).
 
 ## Thứ tự và người giữ việc
 
