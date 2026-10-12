@@ -1,6 +1,7 @@
 """Gmail STARTTLS transport with one validated recipient and sanitized errors."""
 from email.message import EmailMessage
 from email.utils import parseaddr
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 import logging
 import re
 import smtplib
@@ -19,11 +20,24 @@ def validate_email(email):
     return email
 
 
+# smtplib timeouts apply per socket step; this bounds the whole send.
+SEND_TOTAL_SECONDS = 15
+
+
 class SMTPMail:
     def __init__(self, settings: Settings):
         self.settings = settings
+        self._pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix='smtp')
 
     def _send_registration_mail(self, email, subject, content):
+        future = self._pool.submit(self._deliver, email, subject, content)
+        try:
+            return future.result(timeout=SEND_TOTAL_SECONDS)
+        except FutureTimeout:
+            logging.getLogger(__name__).error('MAIL_TIMEOUT')
+            raise ApiError('MAIL_UNAVAILABLE', 502) from None
+
+    def _deliver(self, email, subject, content):
         email = validate_email(email)
         settings = self.settings
         if settings.smtp_from != settings.smtp_user:

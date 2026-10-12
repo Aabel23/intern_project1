@@ -1,5 +1,7 @@
 # Tài khoản / phiên · payload nghiệp vụ v1
 
+> **Cập nhật 12/10/2026:** `v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 Đã khóa payload cloud; xem cloud-protection.md. App gửi, server nhận/trả. Không trường user_id từ client nào có quyền quyết danh tính. Email chuẩn hóa bằng trim + lowercase; password giữ nguyên, tối thiểu 8 Unicode code point, không quy tắc khác, không trim. Email phải đúng một địa chỉ, không CR/LF. Các trường dưới đây đều bắt buộc trừ khi ghi optional.
 
 | Route hằng | Request ngoài v | Success data | Lỗi riêng |

@@ -51,6 +51,25 @@ def account_routes():
             routing.USER_SESSION_LOGOUT, routing.USER_SESSION_BOOTSTRAP}
 
 
+def user_routes():
+    """App routes that require auth={access_token} inside the envelope."""
+    return {routing.USER_MACHINE_LIST, routing.USER_MACHINE_ACTIVATE, routing.USER_MACHINE_REMOVE,
+            routing.MACHINE_COMMAND_SEND}
+
+
+def machine_routes():
+    """Routes signed by a factory-registered machine key (contracts v2 D1)."""
+    return {routing.MACHINE_HELLO_SEND, routing.MACHINE_COMMAND_POLL, routing.MACHINE_RESULT_SEND}
+
+
+def all_routes():
+    return account_routes() | user_routes() | machine_routes()
+
+
+def machine_envelope_bytes(aad: bytes, enc: str, ct: str) -> bytes:
+    return json_bytes(['flexmix-machine-envelope-v1', b64u(aad), enc, ct])
+
+
 def verify_machine_signature(public_key: bytes, signed_bytes: bytes, signature: bytes) -> None:
     order = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
     try:
@@ -66,8 +85,10 @@ def verify_machine_signature(public_key: bytes, signed_bytes: bytes, signature: 
 
 
 def open_request(path: str, envelope: dict, context: RequestContext, *, deps: Dependencies) -> OpenedRequest:
-    if path not in account_routes():
+    if path not in all_routes():
         raise ApiError('INVALID_ENVELOPE', 404)
+    machine_route = path in machine_routes()
+    device = None
     try:
         fields = {'pv','route','method','receiver','kid','send_id','sent_at_ms','machine_key_id','enc','ct','sig'}
         if not isinstance(envelope, dict) or set(envelope) != fields:
@@ -78,7 +99,10 @@ def open_request(path: str, envelope: dict, context: RequestContext, *, deps: De
             raise ApiError('UNKNOWN_KEY', 400)
         if envelope['route'] != path or envelope['method'] != 'POST' or envelope['receiver'] != 'server':
             raise ValueError()
-        if envelope['machine_key_id'] is not None or envelope['sig'] is not None:
+        if machine_route:
+            if not isinstance(envelope['machine_key_id'],str) or not isinstance(envelope['sig'],str) or len(envelope['machine_key_id']) > 32:
+                raise ValueError()
+        elif envelope['machine_key_id'] is not None or envelope['sig'] is not None:
             raise ValueError()
         sid = envelope['send_id']
         uid = UUID(sid)
@@ -90,7 +114,15 @@ def open_request(path: str, envelope: dict, context: RequestContext, *, deps: De
         enc, ciphertext = decode_b64u(envelope['enc']), decode_b64u(envelope['ct'])
         if len(enc) != 32 or len(ciphertext) < 16:
             raise ValueError()
-        aad = json_bytes([1,path,'POST','server',envelope['kid'],sid,stamp,None])
+        aad = json_bytes([1,path,'POST','server',envelope['kid'],sid,stamp,envelope['machine_key_id']])
+        if machine_route:
+            from server.src.devices import device_by_key_id
+            device = device_by_key_id(deps, envelope['machine_key_id'])
+            if device is None:
+                raise ApiError('UNKNOWN_KEY', 400)
+            # The outer signature is checked before spending work on HPKE.
+            verify_machine_signature(bytes(device['public_key']), machine_envelope_bytes(aad, envelope['enc'], envelope['ct']),
+                                     decode_b64u(envelope['sig']))
         hpke = suite().create_recipient_context(enc, KEMKey.from_pyca_cryptography_key(deps.keys.hpke_private), info=b'flexmix-cloud-v1')
         plaintext = hpke.open(ciphertext, aad)
         if len(plaintext) > cfg.PLAINTEXT_MAX_BYTES:
@@ -100,9 +132,14 @@ def open_request(path: str, envelope: dict, context: RequestContext, *, deps: De
         if not isinstance(value, dict) or set(value) != {'auth','body'} or not isinstance(value['body'],dict):
             raise ValueError()
         if stamp == 0:
-            if path != routing.USER_SESSION_BOOTSTRAP or value != {'auth':None,'body':{'v':1}} or type(value['body']['v']) is not int:
+            if path not in (routing.USER_SESSION_BOOTSTRAP, routing.MACHINE_HELLO_SEND) or value != {'auth':None,'body':{'v':1}} or type(value['body']['v']) is not int:
                 raise ValueError()
         elif abs(int(deps.utc_now().timestamp()*1000)-stamp) > cfg.CLOCK_SKEW_SECONDS*1000:
+            raise ValueError()
+        elif stamp < deps.state.boot_wall_ms:
+            # Boot floor (v2 D6): the RAM replay cache cannot vouch for anything sent before this process started.
+            raise ValueError()
+        if machine_route and value['auth'] is not None:
             raise ValueError()
         now = deps.monotonic()
         with deps.state.guard:
@@ -114,9 +151,10 @@ def open_request(path: str, envelope: dict, context: RequestContext, *, deps: De
             if len(replay) >= cfg.REPLAY_CACHE_LIMIT:
                 raise ApiError('RATE_LIMITED',429)
             replay[key] = now + cfg.REPLAY_CACHE_SECONDS
-        return OpenedRequest(value['body'],value['auth'],path,sid,hpke.export(b'flexmix-response-v1',16))
-    except ApiError:
-        raise
+        return OpenedRequest(value['body'],value['auth'],path,sid,hpke.export(b'flexmix-response-v1',16),device)
+    except ApiError as error:
+        # A DB outage while looking up a machine key is not an envelope fault.
+        raise error
     except Exception:
         raise ApiError('INVALID_ENVELOPE',400) from None
 

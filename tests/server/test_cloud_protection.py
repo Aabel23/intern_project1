@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, x25519
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from pyhpke import KEMKey, KEMKeyPair
-from server.configuration import routing
+from server.configuration import routing, skeleton as cfg
 from server.src.cloud_protection import bootstrap_time, close_response, json_bytes, open_request, suite, verify_machine_signature
 from server.src.crypto_keys import ServerKeys, b64u, decode_b64u, load_server_keys
 from server.src.http import create_app
@@ -181,7 +181,7 @@ class CloudTests(unittest.TestCase):
                 while True:
                     acquired=deps.state.http_slots.acquire(blocking=False)
                     if acquired: deps.state.http_slots.release()
-                    if deps.state.http_slots._value == 63: break
+                    if deps.state.http_slots._value == cfg.MAX_HTTP_REQUESTS-1: break
                     if time.monotonic()>=deadline: self.fail('stalled TLS peer did not enter bounded worker')
                     time.sleep(.01)
                 env,sender=self.envelope(stamp=0)

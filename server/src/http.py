@@ -3,8 +3,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import logging
 import ssl
 from server.configuration import routing, skeleton as cfg
-from server.src import account
-from server.src.cloud_protection import account_routes, bootstrap_time, close_response, json_bytes, open_request, parse_json
+from dataclasses import replace
+from server.src import account, devices, relay
+from server.src.cloud_protection import (account_routes, all_routes, bootstrap_time, close_response, json_bytes,
+                                         machine_routes, open_request, parse_json, user_routes)
+from server.src.database import RetryableTransaction
 from server.src.types import ApiError, Dependencies, HandlerResult, RequestContext
 
 
@@ -15,7 +18,8 @@ def _error(error):
     return HandlerResult(error.status,{'v':1,'ok':False,'error':payload})
 
 
-def dispatch_request(path: str, payload: dict, context: RequestContext, *, deps: Dependencies) -> HandlerResult:
+def dispatch_request(path: str, payload: dict, context: RequestContext, *, deps: Dependencies, auth=None) -> HandlerResult:
+    """auth is the decrypted envelope auth object; context.machine is set only for verified machine envelopes."""
     handlers = {
         routing.USER_ACCOUNT_REGISTER: account.register_account,
         routing.USER_OTP_SEND: account.send_registration_otp,
@@ -24,15 +28,32 @@ def dispatch_request(path: str, payload: dict, context: RequestContext, *, deps:
         routing.USER_SESSION_REFRESH: account.refresh_session,
         routing.USER_SESSION_LOGOUT: account.logout,
         routing.USER_SESSION_BOOTSTRAP: bootstrap_time,
+        routing.USER_MACHINE_LIST: devices.list_user_machines,
+        routing.USER_MACHINE_ACTIVATE: devices.activate_machine,
+        routing.USER_MACHINE_REMOVE: devices.remove_machine,
+        routing.MACHINE_COMMAND_SEND: relay.command_send,
+        routing.MACHINE_HELLO_SEND: devices.machine_hello,
+        routing.MACHINE_COMMAND_POLL: relay.command_poll,
+        routing.MACHINE_RESULT_SEND: relay.result_send,
     }
     try:
         if context.auth is not None:
             raise ApiError('INVALID_REQUEST',400)
         handler = handlers.get(path)
         if handler is None: raise ApiError('INVALID_REQUEST',400)
+        if path in user_routes():
+            if not isinstance(auth,dict) or set(auth) != {'access_token'} or not isinstance(auth['access_token'],str):
+                raise ApiError('SESSION_EXPIRED',401)
+            context = replace(context,auth=account.authenticate_access(auth['access_token'],deps=deps))
+        elif auth is not None:
+            raise ApiError('INVALID_REQUEST',400)
+        if path in machine_routes() and context.machine is None:
+            raise ApiError('INVALID_REQUEST',400)
         return handler(payload,context,deps=deps)
     except ApiError as error:
         return _error(error)
+    except RetryableTransaction:
+        return _error(ApiError('SERVICE_UNAVAILABLE',503))
     except Exception:
         logging.getLogger(__name__).error('INTERNAL_ERROR')
         return _error(ApiError('INTERNAL_ERROR',500))
@@ -90,7 +111,7 @@ def create_app(deps: Dependencies) -> ThreadingHTTPServer:
             self._public_error(405 if code == 501 else 400,'INVALID_ENVELOPE')
 
         def do_POST(self):
-            if self.path not in account_routes():
+            if self.path not in all_routes():
                 self._public_error(404,'INVALID_ENVELOPE')
                 return
             try:
@@ -111,11 +132,9 @@ def create_app(deps: Dependencies) -> ThreadingHTTPServer:
             except ApiError as error:
                 self._public_error(error.status,error.code)
                 return
-            # Anonymous account routes must reject an injected auth object after opening.
-            if opened.auth is not None:
-                result = _error(ApiError('INVALID_REQUEST',400))
-            else:
-                result = dispatch_request(self.path,opened.body,context,deps=deps)
+            # Anonymous account routes reject an injected auth object inside dispatch.
+            context = replace(context,machine=opened.machine)
+            result = dispatch_request(self.path,opened.body,context,deps=deps,auth=opened.auth)
             try: self._reply(result.status,close_response(opened,result))
             finally: del opened
 

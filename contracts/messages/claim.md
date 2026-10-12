@@ -1,5 +1,7 @@
 # Nhận máy · nghiệp vụ v1 (BLOCKED B-03)
 
+> **Cập nhật 12/10/2026:** `v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 Byte encoding activation/challenge/proof theo `cloud-protection.md`; phiên tại chỗ theo `bt-claim.md`. B-03 chưa qua review/vector/Android nên chưa phát coder các phiếu claim. Ví dụ không chứng minh mật mã.
 
 - Factory register (tool nội bộ, không app endpoint): serial CPU và seal_verifier đã chốt thuật toán, chưa gắn owner/public key. Unique serial. Cùng serial khác verifier lỗi; không ghi đè.

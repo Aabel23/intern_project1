@@ -1,5 +1,7 @@
 # Bluetooth nhận máy v1 · profile B-03
 
+> **Cập nhật 12/10/2026:** `v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 **User chốt HPKE PSK + review phiên ngày 12/10/2026; không Noise adapter. Trạng thái BLOCKED, chưa phát coder.** Profile dưới là đặc tả Planner để review, không chứng nhận giao thức an toàn hoặc Android đã chạy. Gate cuối tài liệu phải đóng trước READY. Không sửa sản phẩm theo bản này khi còn BLOCKED.
 
 ## Mục tiêu và ranh giới

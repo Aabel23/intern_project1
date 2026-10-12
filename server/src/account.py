@@ -7,14 +7,14 @@ import hmac
 import math
 import re
 import secrets
-from threading import RLock
+from threading import BoundedSemaphore, RLock
 from uuid import uuid4
 from argon2 import PasswordHasher, Type
 from argon2.exceptions import VerificationError, InvalidHashError
 from server.configuration import skeleton as cfg
 from server.src.cloud_protection import json_bytes
 from server.src.crypto_keys import b64u, decode_b64u
-from server.src.database import transaction
+from server.src.database import run_transaction, transaction
 from server.src.smtp_mail import validate_email
 from server.src.types import ApiError, AuthContext, HandlerResult
 
@@ -31,12 +31,36 @@ def _schema(body, fields):
 
 
 def _password(value):
-    if not isinstance(value,str) or len(value) < 8: raise ApiError('INVALID_REQUEST',400)
+    # NIST SP 800-63B-4: password is the only login factor, so at least 15 characters.
+    if not isinstance(value,str) or not cfg.PASSWORD_MIN_LENGTH <= len(value) <= cfg.PASSWORD_MAX_LENGTH:
+        raise ApiError('INVALID_REQUEST',400)
     return value
 
 
 def _hasher():
     return PasswordHasher(time_cost=3,memory_cost=65536,parallelism=1,salt_len=16,type=Type.ID)
+
+
+# Each Argon2 call holds 64 MiB; cap concurrent work across all request threads.
+_ARGON2_SLOTS = BoundedSemaphore(cfg.ARGON2_CONCURRENCY)
+_DUMMY_HASH = None
+
+
+def _hash_password(password):
+    with _ARGON2_SLOTS:
+        return _hasher().hash(password)
+
+
+def _verify_password(stored_hash,password):
+    with _ARGON2_SLOTS:
+        try: return _hasher().verify(stored_hash,password)
+        except (VerificationError,InvalidHashError): return False
+
+
+def _dummy_hash():
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None: _DUMMY_HASH = _hash_password(secrets.token_urlsafe(24))
+    return _DUMMY_HASH
 
 
 def _now(deps):
@@ -108,11 +132,11 @@ def _send(email,context,deps,password=None):
             user = cursor.fetchone()
             if user is None and password is not None:
                 user = {'id':str(uuid4()),'email':email,'verified_at':None,'registration_attempts':0,'registration_locked_until':None}
-                cursor.execute('INSERT INTO users(id,email,password_hash) VALUES(%s,%s,%s)',(user['id'],email,_hasher().hash(password)))
+                cursor.execute('INSERT INTO users(id,email,password_hash) VALUES(%s,%s,%s)',(user['id'],email,_hash_password(password)))
             elif user is not None and user['verified_at'] is None:
                 _clear_expired_lock(cursor,user,now)
                 if password is not None:
-                    cursor.execute('UPDATE users SET password_hash=%s WHERE id=%s',(_hasher().hash(password),user['id']))
+                    cursor.execute('UPDATE users SET password_hash=%s WHERE id=%s',(_hash_password(password),user['id']))
             if user is not None and user['verified_at'] is None:
                 cursor.execute('SELECT COALESCE(MAX(generation),0) AS latest FROM otp_generations WHERE email=%s AND purpose=%s',(email,'register'))
                 generation = cursor.fetchone()['latest'] + 1
@@ -194,72 +218,112 @@ def _token_hash(token,code):
     return hashlib.sha256(token.encode('ascii')).digest()
 
 
-def _issue(cursor,user,now,session_id=None):
+def _issue(cursor,user,now,session=None):
     access,refresh = b64u(secrets.token_bytes(32)),b64u(secrets.token_bytes(32))
     access_expires = now+timedelta(seconds=cfg.ACCESS_SECONDS)
-    refresh_expires = now+timedelta(seconds=cfg.REFRESH_SECONDS)
+    if session is None:
+        session = {'id':str(uuid4()),'absolute_expires_at':now+timedelta(seconds=cfg.SESSION_ABSOLUTE_SECONDS)}
+        cursor.execute('INSERT INTO sessions(id,user_id,refresh_hash,refresh_expires_at,created_at,absolute_expires_at) VALUES(%s,%s,%s,%s,%s,%s)',
+                       (session['id'],user['id'],secrets.token_bytes(32),now,now,session['absolute_expires_at']))
+    # Idle expiry never extends past the absolute session limit.
+    refresh_expires = min(now+timedelta(seconds=cfg.REFRESH_SECONDS),session['absolute_expires_at'])
     refresh_hash = _token_hash(refresh,'SESSION_EXPIRED')
-    if session_id is None:
-        session_id = str(uuid4())
-        cursor.execute('INSERT INTO sessions(id,user_id,refresh_hash,refresh_expires_at) VALUES(%s,%s,%s,%s)',(session_id,user['id'],refresh_hash,refresh_expires))
-    else:
-        cursor.execute('UPDATE sessions SET refresh_hash=%s,refresh_expires_at=%s WHERE id=%s',(refresh_hash,refresh_expires,session_id))
-    cursor.execute('INSERT INTO access_tokens(hash,session_id,expires_at) VALUES(%s,%s,%s)',(_token_hash(access,'SESSION_EXPIRED'),session_id,access_expires))
+    cursor.execute('UPDATE sessions SET refresh_hash=%s,refresh_expires_at=%s WHERE id=%s',(refresh_hash,refresh_expires,session['id']))
+    cursor.execute('INSERT INTO refresh_tokens(hash,session_id,created_at) VALUES(%s,%s,%s)',(refresh_hash,session['id'],now))
+    cursor.execute('INSERT INTO access_tokens(hash,session_id,expires_at) VALUES(%s,%s,%s)',(_token_hash(access,'SESSION_EXPIRED'),session['id'],access_expires))
     return _success({'access_token':access,'access_expires_at':_rfc3339(access_expires),
                      'refresh_token':refresh,'refresh_expires_at':_rfc3339(refresh_expires),
                      'user':{'id':user['id'],'email':user['email']}})
 
 
+def _reserve_login(deps,ip):
+    """Check and reserve in one critical section so concurrent wrong logins cannot overshoot the limit."""
+    now = deps.monotonic()
+    with deps.state.guard:
+        events = _events(deps,'login_ip',ip,now,cfg.LOGIN_WINDOW_SECONDS)
+        in_flight = deps.state.login_in_flight.get(ip,0)
+        if len(events)+in_flight >= cfg.LOGIN_FAILURE_LIMIT:
+            wait = events[0]+cfg.LOGIN_WINDOW_SECONDS-now if events else 1
+            raise ApiError('RATE_LIMITED',429,max(1,math.ceil(wait)))
+        deps.state.login_in_flight[ip] = in_flight+1
+
+
+def _release_login(deps,ip,failed):
+    with deps.state.guard:
+        remaining = deps.state.login_in_flight.get(ip,1)-1
+        if remaining > 0: deps.state.login_in_flight[ip] = remaining
+        else: deps.state.login_in_flight.pop(ip,None)
+        if failed:
+            _events(deps,'login_ip',ip,deps.monotonic(),cfg.LOGIN_WINDOW_SECONDS).append(deps.monotonic())
+
+
 def login(body,context,*,deps):
     _schema(body,{'email','password'})
     email,password = validate_email(body['email']),_password(body['password'])
-    with deps.state.guard:
-        events = _events(deps,'login_ip',context.ip,deps.monotonic(),cfg.LOGIN_WINDOW_SECONDS)
-        if len(events) >= cfg.LOGIN_FAILURE_LIMIT:
-            raise ApiError('RATE_LIMITED',429,max(1,math.ceil(events[0]+cfg.LOGIN_WINDOW_SECONDS-deps.monotonic())))
-    with transaction(deps.connect) as connection, closing(connection.cursor(dictionary=True)) as cursor:
-        cursor.execute('SELECT * FROM users WHERE email=%s',(email,))
-        user = cursor.fetchone()
-        valid = False
-        if user is not None and user['verified_at'] is not None:
-            try: valid = _hasher().verify(user['password_hash'],password)
-            except (VerificationError,InvalidHashError): pass
-        if valid: return _issue(cursor,user,_now(deps))
-    with deps.state.guard:
-        _events(deps,'login_ip',context.ip,deps.monotonic(),cfg.LOGIN_WINDOW_SECONDS).append(deps.monotonic())
-    raise ApiError('AUTH_FAILED',401)
+    _reserve_login(deps,context.ip)
+    failed = False
+    try:
+        with transaction(deps.connect) as connection, closing(connection.cursor(dictionary=True)) as cursor:
+            cursor.execute('SELECT * FROM users WHERE email=%s',(email,))
+            user = cursor.fetchone()
+            if user is not None and user['verified_at'] is not None:
+                valid = _verify_password(user['password_hash'],password)
+            else:
+                # Same Argon2 cost for unknown or unverified emails, so timing does not reveal accounts.
+                _verify_password(_dummy_hash(),password)
+                valid = False
+            if valid: return _issue(cursor,user,_now(deps))
+        failed = True
+        raise ApiError('AUTH_FAILED',401)
+    finally:
+        _release_login(deps,context.ip,failed)
 
 
 def refresh_session(body,context,*,deps):
     _schema(body,{'refresh_token'})
     token_hash = _token_hash(body['refresh_token'],'SESSION_EXPIRED')
-    with transaction(deps.connect) as connection, closing(connection.cursor(dictionary=True)) as cursor:
-        cursor.execute('SELECT * FROM sessions WHERE refresh_hash=%s FOR UPDATE',(token_hash,))
-        session = cursor.fetchone()
-        now = _now(deps)
-        if session is None or session['revoked_at'] is not None or now >= session['refresh_expires_at']:
-            raise ApiError('SESSION_EXPIRED',401)
-        cursor.execute('SELECT id,email FROM users WHERE id=%s',(session['user_id'],))
-        user = cursor.fetchone()
-        return _issue(cursor,user,now,session['id'])
+    def work(connection):
+        with closing(connection.cursor(dictionary=True)) as cursor:
+            cursor.execute('SELECT * FROM refresh_tokens WHERE hash=%s FOR UPDATE',(token_hash,))
+            token = cursor.fetchone()
+            if token is None: return ApiError('SESSION_EXPIRED',401)
+            cursor.execute('SELECT * FROM sessions WHERE id=%s FOR UPDATE',(token['session_id'],))
+            session = cursor.fetchone()
+            now = _now(deps)
+            if token['used_at'] is not None:
+                # A rotated token came back. Within the grace window it is a client race (two
+                # refreshes in flight); after it, assume theft and end the whole session.
+                grace = (now-token['used_at']).total_seconds() < cfg.REFRESH_REUSE_GRACE_SECONDS
+                if not grace and session['revoked_at'] is None:
+                    cursor.execute('UPDATE sessions SET revoked_at=%s WHERE id=%s',(now,session['id']))
+                return ApiError('SESSION_EXPIRED',401)
+            if session['revoked_at'] is not None or now >= session['refresh_expires_at'] or now >= session['absolute_expires_at']:
+                return ApiError('SESSION_EXPIRED',401)
+            cursor.execute('UPDATE refresh_tokens SET used_at=%s WHERE hash=%s',(now,token_hash))
+            cursor.execute('SELECT id,email FROM users WHERE id=%s',(session['user_id'],))
+            return _issue(cursor,cursor.fetchone(),now,session)
+    result = run_transaction(deps.connect,work)
+    # Revocation must commit before the error is reported.
+    if isinstance(result,ApiError): raise result
+    return result
 
 
 def logout(body,context,*,deps):
     _schema(body,{'refresh_token'})
     token_hash = _token_hash(body['refresh_token'],'INVALID_REQUEST')
     with transaction(deps.connect) as connection, closing(connection.cursor(dictionary=True)) as cursor:
-        cursor.execute('SELECT id FROM sessions WHERE refresh_hash=%s FOR UPDATE',(token_hash,))
-        session = cursor.fetchone()
-        if session is not None:
-            cursor.execute('UPDATE sessions SET revoked_at=%s WHERE id=%s',(_now(deps),session['id']))
+        cursor.execute('SELECT session_id FROM refresh_tokens WHERE hash=%s',(token_hash,))
+        token = cursor.fetchone()
+        if token is not None:
+            cursor.execute('UPDATE sessions SET revoked_at=%s WHERE id=%s AND revoked_at IS NULL',(_now(deps),token['session_id']))
     return _success({'logged_out':True})
 
 
 def authenticate_access(token,*,deps):
     token_hash = _token_hash(token,'SESSION_EXPIRED')
     with transaction(deps.connect) as connection, closing(connection.cursor(dictionary=True)) as cursor:
-        cursor.execute('SELECT a.expires_at,s.id AS session_id,s.user_id,s.revoked_at FROM access_tokens a JOIN sessions s ON s.id=a.session_id WHERE a.hash=%s',(token_hash,))
+        cursor.execute('SELECT a.expires_at,s.id AS session_id,s.user_id,s.revoked_at,s.absolute_expires_at FROM access_tokens a JOIN sessions s ON s.id=a.session_id WHERE a.hash=%s',(token_hash,))
         row = cursor.fetchone()
-        if row is None or row['revoked_at'] is not None or _now(deps) >= row['expires_at']:
+        if row is None or row['revoked_at'] is not None or _now(deps) >= row['expires_at'] or _now(deps) >= row['absolute_expires_at']:
             raise ApiError('SESSION_EXPIRED',401)
         return AuthContext(row['user_id'],row['session_id'])

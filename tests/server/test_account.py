@@ -92,9 +92,9 @@ class AccountMySQLTests(unittest.TestCase):
         self.deps=Dependencies(self.config,lambda:open_connection(self.config),lambda:self.clock[0],lambda:self.clock[1],self.mail,None,create_runtime_state(self.config))
         self.context=RequestContext('127.0.0.1')
         with transaction(self.deps.connect) as connection,closing(connection.cursor()) as cursor:
-            for table in ('access_tokens','sessions','otp_generations','users'): cursor.execute('DELETE FROM '+table)
+            for table in ('device_audit','claim_challenges','devices','refresh_tokens','access_tokens','sessions','otp_generations','users'): cursor.execute('DELETE FROM '+table)
         self.email='recipient@example.invalid'
-        self.password='TEST_ONLY_PASSWORD'
+        self.password='TEST_ONLY_PASSWORD_LONG'
 
     def advance(self,seconds):
         self.clock[0]+=timedelta(seconds=seconds);self.clock[1]+=seconds
@@ -126,7 +126,7 @@ class AccountMySQLTests(unittest.TestCase):
     def test_new_duplicate_verified_neutral_and_notice(self):
         first=self.register();self.verify();before=self.query('SELECT password_hash FROM users')[0]
         self.advance(60)
-        second=self.call(routing.USER_ACCOUNT_REGISTER,email=self.email,password='TEST_ONLY_CHANGED')
+        second=self.call(routing.USER_ACCOUNT_REGISTER,email=self.email,password='TEST_ONLY_CHANGED_LONG')
         self.assertEqual(first,second)
         self.assertEqual(self.mail.sent[-1],('notice',self.email,None))
         self.assertEqual(before,self.query('SELECT password_hash FROM users')[0])
@@ -134,11 +134,11 @@ class AccountMySQLTests(unittest.TestCase):
     def test_unverified_overwrite_persists_on_smtp_failure_and_old_active_survives(self):
         self.register();old_otp=self.otp();before=self.query('SELECT password_hash FROM users')[0]
         self.advance(60);self.mail.fail=True
-        failed=self.call(routing.USER_ACCOUNT_REGISTER,email=self.email,password='TEST_ONLY_NEW_PASSWORD')
+        failed=self.call(routing.USER_ACCOUNT_REGISTER,email=self.email,password='TEST_ONLY_NEW_PASSWORD_LONG')
         self.assertEqual(failed.status,502)
         after=self.query('SELECT password_hash,verified_at FROM users')[0]
         self.assertNotEqual(before['password_hash'],after['password_hash']);self.assertIsNone(after['verified_at'])
-        self.assertTrue(account._hasher().verify(after['password_hash'],'TEST_ONLY_NEW_PASSWORD'))
+        self.assertTrue(account._hasher().verify(after['password_hash'],'TEST_ONLY_NEW_PASSWORD_LONG'))
         generations=self.query('SELECT status FROM otp_generations ORDER BY generation')
         self.assertEqual([x['status'] for x in generations],['active','failed'])
         self.assertEqual(self.verify(old_otp).status,200)
@@ -211,7 +211,7 @@ class AccountMySQLTests(unittest.TestCase):
         for email,password in ((self.email,self.password),('unknown@example.invalid',self.password)):
             self.assertEqual(self.call(routing.USER_SESSION_LOGIN,email=email,password=password).payload['error']['code'],'AUTH_FAILED')
         self.verify()
-        self.assertEqual(self.call(routing.USER_SESSION_LOGIN,email=self.email,password='TEST_ONLY_WRONG').payload['error']['code'],'AUTH_FAILED')
+        self.assertEqual(self.call(routing.USER_SESSION_LOGIN,email=self.email,password='TEST_ONLY_WRONG_PASSWORD').payload['error']['code'],'AUTH_FAILED')
 
     def test_access_exact_expiry_refresh_rotation_logout(self):
         data=self.verified_login();token=data['access_token'];refresh=data['refresh_token']
@@ -240,6 +240,32 @@ class AccountMySQLTests(unittest.TestCase):
         winner=next(x.payload['data'] for x in results if x.status==200)
         account.authenticate_access(winner['access_token'],deps=self.deps)
         self.assertEqual(self.call(routing.USER_SESSION_REFRESH,refresh_token=winner['refresh_token']).status,200)
+
+    def test_refresh_reuse_after_grace_revokes_session(self):
+        data=self.verified_login()
+        rotated=self.call(routing.USER_SESSION_REFRESH,refresh_token=data['refresh_token']).payload['data']
+        self.advance(31)
+        self.assertEqual(self.call(routing.USER_SESSION_REFRESH,refresh_token=data['refresh_token']).status,401)
+        with self.assertRaises(ApiError): account.authenticate_access(rotated['access_token'],deps=self.deps)
+        self.assertEqual(self.call(routing.USER_SESSION_REFRESH,refresh_token=rotated['refresh_token']).status,401)
+
+    def test_absolute_session_limit(self):
+        data=self.verified_login()
+        for _ in range(3):
+            self.advance(2592000-1)
+            data=self.call(routing.USER_SESSION_REFRESH,refresh_token=data['refresh_token']).payload['data']
+        self.assertEqual(data['refresh_expires_at'],'2027-01-10T00:00:00.000000Z')
+        self.advance(3)
+        self.assertEqual(self.call(routing.USER_SESSION_REFRESH,refresh_token=data['refresh_token']).status,401)
+
+    def test_concurrent_wrong_logins_never_exceed_limit(self):
+        self.register();self.verify()
+        for _ in range(9):
+            self.assertEqual(self.call(routing.USER_SESSION_LOGIN,email=self.email,password='TEST_ONLY_WRONG_PASSWORD').status,401)
+        with ThreadPoolExecutor(2) as pool:
+            results=list(pool.map(lambda _:self.call(routing.USER_SESSION_LOGIN,email=self.email,password='TEST_ONLY_WRONG_PASSWORD'),range(2)))
+        self.assertEqual(sorted(x.status for x in results),[401,429])
+        self.assertEqual(len(self.deps.state.rate_events[('login_ip','127.0.0.1')]),10)
 
     def test_unknown_and_otp_expiry_exact(self):
         result=self.call(routing.USER_OTP_SEND,email='unknown@example.invalid')

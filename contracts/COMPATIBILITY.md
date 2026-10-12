@@ -1,5 +1,7 @@
 # Skeleton v1 · C-05
 
+> **Cập nhật 12/10/2026:** `messages/v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 **Trạng thái: cloud đã đặc tả; BT/claim BLOCKED, chưa phát các phiếu phụ thuộc.** Lộ trình đã duyệt; các gói nghiệp vụ dưới đây là đặc tả Planner. Bảng cổng và phiếu được phép bắt đầu nằm trong `messages/security-boundary.md`. File JSON trong examples là dữ liệu đã giải mã để kiểm hợp đồng, không phải body được phép gửi rõ trên Internet/Bluetooth.
 
 ## Quy tắc chung

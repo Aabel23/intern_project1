@@ -16,3 +16,6 @@ mysql-connector-python
 cryptography             # AES-256-GCM: mã hoá và xác thực payload
 qrcode                   # vẽ ảnh mã QR
 pillow                   # qrcode cần để xuất PNG cho máy in nhãn
+
+# --- kết nối server và nhận máy (hợp đồng v2) ---
+pyhpke==0.6.5            # HPKE RFC 9180: phong bì cloud và phiên BLE PSK

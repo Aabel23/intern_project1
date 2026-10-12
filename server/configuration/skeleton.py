@@ -16,6 +16,11 @@ LOGIN_FAILURE_LIMIT = 10
 LOGIN_WINDOW_SECONDS = 600
 ACCESS_SECONDS = 3600
 REFRESH_SECONDS = 2592000
+SESSION_ABSOLUTE_SECONDS = 7776000
+REFRESH_REUSE_GRACE_SECONDS = 30
+PASSWORD_MIN_LENGTH = 15
+PASSWORD_MAX_LENGTH = 256
+ARGON2_CONCURRENCY = 4
 CLAIM_SECONDS = 120
 RELAY_SECONDS = 15
 POLL_SECONDS = 20
@@ -25,7 +30,11 @@ ONLINE_GRACE_SECONDS = 30
 TERMINAL_RELAY_SECONDS = 60
 HTTP_MAX_BYTES = 65536
 PLAINTEXT_MAX_BYTES = 16384
-MAX_HTTP_REQUESTS = 64
+MAX_HTTP_REQUESTS = 256
+MAX_POLL_REQUESTS = 160
+MAX_RELAY_REQUESTS = 48
+RELAY_DATA_MAX_BYTES = 12288
+MACHINE_RESULT_CACHE = 32
 HTTP_READ_SECONDS = 30
 REPLAY_CACHE_LIMIT = 10000
 REPLAY_CACHE_SECONDS = 600
@@ -87,4 +96,17 @@ def load_settings() -> Settings:
             file('SERVER_TRUST_FILE'), app_env, allowlist,
         )
     except (KeyError, ValueError, OSError):
+        raise ValueError('CONFIG_INVALID') from None
+
+
+def load_db_settings() -> Settings:
+    """Operator CLI only needs the database; other server secrets stay unread."""
+    try:
+        value = int(os.environ.get('DB_PORT', '3306'))
+        names = ('DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD')
+        if not 1 <= value <= 65535 or not all(os.environ.get(n) for n in names):
+            raise ValueError()
+        return Settings(os.environ['DB_HOST'], value, os.environ['DB_NAME'], os.environ['DB_USER'],
+                        os.environ['DB_PASSWORD'], '', '', '', b'', '', 0, '', '', '', '', '', 'production', ())
+    except ValueError:
         raise ValueError('CONFIG_INVALID') from None

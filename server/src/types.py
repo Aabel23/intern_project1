@@ -55,6 +55,7 @@ class AuthContext:
 class RequestContext:
     ip: str
     auth: AuthContext | None = None
+    machine: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,7 @@ class OpenedRequest:
     route: str
     send_id: str
     response_key: bytes = field(repr=False)
+    machine: dict | None = None
 
 
 @dataclass
@@ -80,8 +82,16 @@ class RuntimeState:
     cooldown_until: dict
     replay_entries: dict
     http_slots: Any
+    login_in_flight: dict = field(default_factory=dict)
+    boot_wall_ms: int = 0
+    poll_slots: Any = None
+    relay_slots: Any = None
+    relay: Any = None
 
 
-def create_runtime_state(settings: Settings) -> RuntimeState:
+def create_runtime_state(settings: Settings, boot_wall_ms: int = 0) -> RuntimeState:
     from threading import RLock, BoundedSemaphore
-    return RuntimeState(RLock(), {}, {}, {}, {}, BoundedSemaphore(64))
+    from server.configuration import skeleton as cfg
+    from server.src.relay import RelayHub
+    return RuntimeState(RLock(), {}, {}, {}, {}, BoundedSemaphore(cfg.MAX_HTTP_REQUESTS), {}, boot_wall_ms,
+                        BoundedSemaphore(cfg.MAX_POLL_REQUESTS), BoundedSemaphore(cfg.MAX_RELAY_REQUESTS), RelayHub())

@@ -1,5 +1,7 @@
 # Cloud protection v1 · TLS + phong bì bên trong
 
+> **Cập nhật 12/10/2026:** `v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 User chốt giữ hai lớp ngay skeleton ngày 12/10/2026. Không TLS-only, không mTLS/chứng chỉ xưởng. Server mở phong bì từng chặng, kiểm phiên/quyền và đóng phản hồi của poll; không tự đọc trạng thái thay máy. Đây là lựa chọn kỹ thuật Planner theo cryptography.html; không mở LAN/BT vận hành.
 
 ## Bộ thuật toán / thư viện

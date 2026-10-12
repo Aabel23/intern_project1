@@ -1,5 +1,7 @@
 # Relay và đọc trạng thái · nghiệp vụ v1
 
+> **Cập nhật 12/10/2026:** `v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 Payload sau xác thực/giải mã; cổng wire B-01 còn mở. App tạo request_id UUIDv4 mới mỗi bấm Làm mới. Server không lấy identity từ body.
 
 | Người gửi → nhận / route | Request | Success |

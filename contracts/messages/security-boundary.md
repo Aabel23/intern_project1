@@ -1,5 +1,7 @@
 # Cổng C-05 và trạng thái phiếu
 
+> **Cập nhật 12/10/2026:** `v2-decisions.md` (D1–D10, cách 3 trên version1.1) thắng mọi chỗ mâu thuẫn với file này.
+
 ## Quyết định hiện tại
 
 User ngày12/10/2026 chốt serial+verifier niêm phong đăng ký trước bán, máy tự sinh khóa bật đầu, kiểm mã trước bind; không khóa/chứng chỉ xưởng, không PAKE mã dài. User chốt giữ **TLS + phong bì mã hóa trong ngay skeleton** theo cryptography.html; không TLS-only. `cloud-protection.md` thay phần mTLS/chứng chỉ xưởng của HTML cũ bằng HTTPS + chữ ký ứng dụng máy bound. Server mở lớp trong từng chặng theo ranh giới HTML user vừa chọn. Không lấy nội dung cũ về một token30 ngày.

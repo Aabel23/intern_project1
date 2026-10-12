@@ -16,7 +16,7 @@ def main() -> None:
         settings = load_settings()
         keys = load_server_keys(settings)
         deps = Dependencies(settings,lambda:open_connection(settings),lambda:datetime.now(timezone.utc),
-                            time.monotonic,SMTPMail(settings),keys,create_runtime_state(settings))
+                            time.monotonic,SMTPMail(settings),keys,create_runtime_state(settings,int(time.time()*1000)))
         server = create_app(deps)
         server.serve_forever()
     except KeyboardInterrupt:
