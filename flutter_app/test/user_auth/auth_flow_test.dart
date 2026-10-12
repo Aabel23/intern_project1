@@ -103,8 +103,11 @@ Future<void> registerForm(WidgetTester t, FakeAuth service) async {
   await t.tap(find.text('Đăng ký ngay'));
   await t.pumpAndSettle();
   await t.enterText(find.byKey(const ValueKey('email')), ' A@Example.Invalid ');
-  await t.enterText(find.byKey(const ValueKey('password')), 'password');
-  await t.enterText(find.byKey(const ValueKey('confirmation')), 'password');
+  await t.enterText(find.byKey(const ValueKey('password')), 'password-long-15');
+  await t.enterText(
+    find.byKey(const ValueKey('confirmation')),
+    'password-long-15',
+  );
   await t.ensureVisible(find.byType(FilledButton));
   await t.tap(find.byType(FilledButton));
   await t.pumpAndSettle();
@@ -120,7 +123,10 @@ void main() {
       ),
     );
     await t.enterText(find.byKey(const ValueKey('email')), 'a@example.invalid');
-    await t.enterText(find.byKey(const ValueKey('password')), 'password');
+    await t.enterText(
+      find.byKey(const ValueKey('password')),
+      'password-long-15',
+    );
     await t.ensureVisible(find.byType(FilledButton));
     await t.tap(find.byType(FilledButton));
     await t.pump();
@@ -187,7 +193,10 @@ void main() {
       ),
     );
     await t.enterText(find.byKey(const ValueKey('email')), 'a@example.invalid');
-    await t.enterText(find.byKey(const ValueKey('password')), 'password');
+    await t.enterText(
+      find.byKey(const ValueKey('password')),
+      'password-long-15',
+    );
     await t.ensureVisible(find.text('Đăng nhập').first);
     await t.tap(find.text('Đăng nhập').first);
     await t.pump();

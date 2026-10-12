@@ -6,11 +6,20 @@ import 'package:simple_app/feature/dashboard/ui/machines_tab.dart';
 import 'package:simple_app/feature/orders/ui/orders_tab.dart';
 import 'package:simple_app/feature/dashboard/ui/overview_tab.dart';
 import 'package:simple_app/feature/machine_menu/ui/machine_menu_tab.dart';
+import 'package:simple_app/feature/machine_register/data/claim_flow.dart';
+import 'package:simple_app/feature/machines/data/machine_controller.dart';
 
 // Khung chính sau đăng nhập, theo bố cục AdminShell của app Android cũ.
 class MainDashboard extends StatefulWidget {
-  const MainDashboard({super.key, required this.onLoggedOut});
+  const MainDashboard({
+    super.key,
+    required this.onLoggedOut,
+    required this.machines,
+    required this.claimFlow,
+  });
   final void Function(BuildContext context) onLoggedOut;
+  final MachineController machines;
+  final ClaimFlow claimFlow;
 
   @override
   State<MainDashboard> createState() => _MainDashboardState();
@@ -20,10 +29,16 @@ class _MainDashboardState extends State<MainDashboard> {
   int index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    widget.machines.refresh();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final sections = <({Widget page, NavigationDestination destination})>[
       (
-        page: const OverviewTab(),
+        page: OverviewTab(controller: widget.machines),
         destination: const NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
           selectedIcon: Icon(Icons.dashboard),
@@ -39,7 +54,7 @@ class _MainDashboardState extends State<MainDashboard> {
         ),
       ),
       (
-        page: const ProductsTab(),
+        page: ProductsTab(controller: widget.machines),
         destination: const NavigationDestination(
           icon: Icon(Icons.local_cafe_outlined),
           selectedIcon: Icon(Icons.local_cafe),
@@ -47,7 +62,7 @@ class _MainDashboardState extends State<MainDashboard> {
         ),
       ),
       (
-        page: const InventoryTab(),
+        page: InventoryTab(controller: widget.machines),
         destination: const NavigationDestination(
           icon: Icon(Icons.inventory_2_outlined),
           selectedIcon: Icon(Icons.inventory_2),
@@ -55,7 +70,10 @@ class _MainDashboardState extends State<MainDashboard> {
         ),
       ),
       (
-        page: const MachinesTab(),
+        page: MachinesTab(
+          controller: widget.machines,
+          claimFlow: widget.claimFlow,
+        ),
         destination: const NavigationDestination(
           icon: Icon(Icons.precision_manufacturing_outlined),
           selectedIcon: Icon(Icons.precision_manufacturing),
@@ -70,9 +88,12 @@ class _MainDashboardState extends State<MainDashboard> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Chưa chọn máy',
-              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            ListenableBuilder(
+              listenable: widget.machines,
+              builder: (context, _) => Text(
+                widget.machines.selected?.name ?? 'Chưa chọn máy',
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
             ),
             const Text(
               'FlexMix',

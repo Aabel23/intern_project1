@@ -61,6 +61,7 @@ class CloudClient {
     String route,
     Map<String, dynamic> body, {
     String? accessToken,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     await _bootstrap();
     return _send(
@@ -68,7 +69,7 @@ class CloudClient {
       body,
       accessToken,
       _serverTime! + _clock.elapsedMilliseconds - _receipt,
-      const Duration(seconds: 10),
+      timeout,
     );
   }
 
@@ -172,6 +173,17 @@ class CloudClient {
           'MAIL_UNAVAILABLE': 502,
           'SERVICE_UNAVAILABLE': 503,
           'TEST_RECIPIENT_NOT_ALLOWED': 403,
+          'FORBIDDEN': 403,
+          'MACHINE_UNTRUSTED': 401,
+          'ALREADY_OWNED': 409,
+          'CLAIM_ACCOUNT_MISMATCH': 403,
+          'CLAIM_PROOF_INVALID': 401,
+          'CLAIM_EXPIRED': 410,
+          'MACHINE_OFFLINE': 503,
+          'MACHINE_TIMEOUT': 504,
+          'BUSY': 409,
+          'REQUEST_CONFLICT': 409,
+          'REQUEST_GONE': 410,
         };
         final code = e['code'];
         final retry = e['retry_after_seconds'];
@@ -204,6 +216,7 @@ class CloudClient {
     String route,
     Map<String, dynamic> body, {
     bool retryAfterRefresh = false,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final session = await store.load();
     if (session == null) {
@@ -211,9 +224,15 @@ class CloudClient {
       throw const CloudError('SESSION_EXPIRED', status: 401);
     }
     try {
-      return await post(route, body, accessToken: session.accessToken);
+      return await post(
+        route,
+        body,
+        accessToken: session.accessToken,
+        timeout: timeout,
+      );
     } on CloudError catch (e) {
-      if (e.status != 401) rethrow;
+      // Other 401 codes (claim proof, untrusted machine) are business errors, not an expired session.
+      if (e.code != 'SESSION_EXPIRED') rethrow;
       // A request arriving after rotation reuses the new session instead of refreshing again.
       final current = await store.load();
       SessionData restored;
@@ -234,7 +253,12 @@ class CloudClient {
         }
       }
       if (!retryAfterRefresh) rethrow;
-      return post(route, body, accessToken: restored.accessToken);
+      return post(
+        route,
+        body,
+        accessToken: restored.accessToken,
+        timeout: timeout,
+      );
     }
   }
 }

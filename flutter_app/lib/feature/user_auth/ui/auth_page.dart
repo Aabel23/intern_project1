@@ -274,8 +274,12 @@ class _AuthPageState extends State<AuthPage> {
                                   if (value == null || value.isEmpty) {
                                     return 'Vui lòng nhập mật khẩu.';
                                   }
-                                  if (value.runes.length < 8) {
-                                    return 'Mật khẩu cần ít nhất 8 ký tự.';
+                                  // NIST SP 800-63B-4 (hợp đồng v2 D9), khớp kiểm của server.
+                                  if (value.runes.length < 15) {
+                                    return 'Mật khẩu cần ít nhất 15 ký tự.';
+                                  }
+                                  if (value.runes.length > 256) {
+                                    return 'Mật khẩu tối đa 256 ký tự.';
                                   }
                                   return null;
                                 },

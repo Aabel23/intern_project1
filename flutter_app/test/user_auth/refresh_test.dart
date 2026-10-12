@@ -21,6 +21,7 @@ class UnauthorizedClient extends CloudClient {
     String route,
     Map<String, dynamic> body, {
     String? accessToken,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     attempts++;
     if (accessToken == fixture.session.accessToken) {

@@ -8,7 +8,20 @@
 - Nếu Wi-Fi mới đã kết nối mà server tạm lỗi, máy giữ Wi-Fi và tự retry activation. Server quyết Owner duy nhất. Trạng thái trong mốc này phải là câu trả lời mới từ máy qua relay, không dùng cờ online của server thay thế.
 - Chỉ phát code theo phiếu Planner; mỗi task review nhỏ, mỗi module review lớn một lần. Vấn đề đổi thiết kế ghi lại để user quyết.
 
-## Đã xong
+## Cập nhật 12/10/2026 · cách 3 trên version1.1 (hợp đồng v2, D1–D10)
+
+User duyệt D1–D10 và chọn giữ nghiệp vụ máy pha của `version1.1`, chỉ thay lớp kết nối máy, cộng server và app. Hợp đồng: [`contracts/messages/v2-decisions.md`](../../contracts/messages/v2-decisions.md). Không chờ gate phần cứng; nghiệm thu thiết bị thật để sau.
+
+| Phần | Bằng chứng | Trạng thái |
+|---|---|---|
+| Server: đăng ký máy ở xưởng, claim, nhả máy, relay, route máy, vá tài khoản | `tests/server` 43 test với MySQL thật + HTTPS thật, trong đó 8 test tích hợp máy↔server↔app | Code xong |
+| Máy (version1.1): danh tính, phong bì cloud, vòng poll, chống chạy lặp lệnh, phiên BLE v2, GATT BlueZ, Wi-Fi NetworkManager | `tests/machine` 16 test | Code xong; GATT/Wi-Fi chưa chạy trên Pi thật |
+| App: nhận máy qua BLE (Kotlin), danh sách/nhả máy, trạng thái trực tiếp, Sản phẩm/Kho qua relay | `flutter test` 31 test; `flutter analyze` sạch | Code xong; chưa build APK (sandbox không tải được Android SDK) |
+| Interop app Kotlin (Bouncy Castle 1.86) ↔ máy Python (PyHPKE 0.6.5) | `tests/kotlin-interop` + `tests/machine/test_kotlin_interop.py`: trọn phiên probe→wifi→claim | Đạt trên JVM |
+
+Còn lại: build APK và chạy trên Android thật, chạy GATT/NetworkManager trên Pi thật, HTTPS domain/cert/pin thật, Gmail thật, nghiệm thu I-01.
+
+## Đã xong (trước 12/10/2026)
 
 | Phần | Bằng chứng | Trạng thái |
 |---|---|---|

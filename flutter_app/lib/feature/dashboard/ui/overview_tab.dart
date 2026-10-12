@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:simple_app/shared/ui/app_theme.dart';
 import 'package:simple_app/shared/ui/list_widgets.dart';
+import 'package:simple_app/feature/dashboard/ui/machine_status_card.dart';
+import 'package:simple_app/feature/machines/data/machine_controller.dart';
 
-// Tab Tổng quan: chỉ giữ giao diện, chưa nối nguồn dữ liệu.
+// Tab Tổng quan: doanh thu chưa nối dữ liệu; trạng thái máy hỏi trực tiếp qua relay.
 class OverviewTab extends StatelessWidget {
-  const OverviewTab({super.key});
+  const OverviewTab({super.key, required this.controller});
+  final MachineController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +22,8 @@ class OverviewTab extends StatelessWidget {
           date: '${twoDigits(now.day)}/${twoDigits(now.month)}/${now.year}',
           empty: 0,
         ),
+        const SizedBox(height: 16),
+        MachineStatusCard(controller: controller),
       ],
     );
   }
