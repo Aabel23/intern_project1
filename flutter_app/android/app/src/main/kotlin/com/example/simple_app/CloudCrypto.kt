@@ -18,7 +18,8 @@ class CloudCrypto(private val context: Context) {
     private fun prune() { val now = SystemClock.elapsedRealtime(); pending.entries.removeAll { if(now-it.value.created >= 30000) { it.value.key.fill(0); true } else false } }
     private fun b64(b: ByteArray) = Base64.encodeToString(b, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
     private fun decode(s: String, size: Int? = null): ByteArray { val b = try { Base64.decode(s, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP) } catch(_: Exception) { throw NativeFailure("INVALID_RESPONSE") }; if(b64(b)!=s || (size!=null && b.size!=size)) throw NativeFailure("INVALID_RESPONSE"); return b }
-    private fun array(vararg values: Any?): ByteArray = JSONArray(values.map { it ?: JSONObject.NULL }).toString().toByteArray(Charsets.UTF_8)
+    // J() must match the server byte for byte; org.json would escape "/" in routes.
+    private fun array(vararg values: Any?): ByteArray = FlexJson.array(*values)
     private fun hpke() = HPKE(HPKE.mode_base, HPKE.kem_X25519_SHA256, HPKE.kdf_HKDF_SHA256, HPKE.aead_AES_GCM128)
     private fun trust(): JSONObject {
         try {
