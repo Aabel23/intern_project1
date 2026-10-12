@@ -1,5 +1,7 @@
 # M-03 · Máy tự đọc trạng thái
 
+> **Đã code theo hợp đồng v2 (12/10/2026)** — [`v2-decisions.md`](../../../contracts/messages/v2-decisions.md) thắng mọi chỗ mâu thuẫn trong phiếu này (bind tại xưởng thay activation tại chỗ, BLE bỏ R2/Q2, Wi-Fi tùy chọn). Trạng thái BLOCKED bên dưới là lịch sử.
+
 **Trạng thái:** Sau M-02 review; trường trạng thái đã chốt Planner, handler có thể đặc tả nhưng chưa phát.
 
 ## Input chung / cổng

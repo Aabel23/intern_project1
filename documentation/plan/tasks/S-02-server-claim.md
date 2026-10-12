@@ -1,5 +1,7 @@
 # S-02 · Server nhận chủ và danh sách máy
 
+> **Đã code theo hợp đồng v2 (12/10/2026)** — [`v2-decisions.md`](../../../contracts/messages/v2-decisions.md) thắng mọi chỗ mâu thuẫn trong phiếu này (bind tại xưởng thay activation tại chỗ, BLE bỏ R2/Q2, Wi-Fi tùy chọn). Trạng thái BLOCKED bên dưới là lịch sử.
+
 **Trạng thái:** Sau S-01 review; BLOCKED B-01/B-02/B-03. Giữ server routing/http riêng rồi giao S-03.
 
 ## Input chung / cổng

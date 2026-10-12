@@ -1,5 +1,7 @@
 # C-01 · Đối chiếu quyết định cho contracts skeleton
 
+> **Cập nhật 12/10/2026 — quyết định mới thay bảng dưới:** user duyệt D1–D10 (`contracts/messages/v2-decisions.md`): khóa máy sinh và đăng ký ở xưởng, server không giữ mã niêm phong; ba đường khôi phục quyền chủ; BLE bỏ R2/Q2 và Wi-Fi tùy chọn; sàn khởi động chống replay; poll mới nhất thắng và ngân sách luồng riêng; mật khẩu ≥15 ký tự; phát hiện refresh dùng lại + hạn phiên 90 ngày. `product_key` đã bị gỡ khỏi version1.1. Các dòng "chặn"/"mâu thuẫn" dưới đây là lịch sử.
+
 **Ngày kiểm:** 12/10/2026. **Phạm vi:** tài khoản/phiên → nhận máy → relay → hỏi trạng thái trực tiếp. Đây là bảng đối chiếu cho Planner và Operator, chưa phải hợp đồng gói hay lệnh phát coder. User vừa báo phần mail đã xong; khả năng gửi OTP qua luồng sản phẩm sẽ được kiểm ở I-01, không suy từ việc cấu hình SMTP đã sẵn. Sau C-02/C-04, user chốt đăng ký serial và bản kiểm mã niêm phong trên server trước khi bán; máy vẫn tự sinh khóa lần bật đầu. User cũng chốt giữ TLS và phong bì mã hóa bên trong ngay từ skeleton.
 
 | Luồng | Yêu cầu và trách nhiệm | Trạng thái và nguồn | Mâu thuẫn / việc bị chặn |

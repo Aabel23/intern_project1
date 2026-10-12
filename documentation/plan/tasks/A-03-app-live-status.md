@@ -1,5 +1,7 @@
 # A-03 · App hỏi trạng thái trực tiếp
 
+> **Đã code theo hợp đồng v2 (12/10/2026)** — [`v2-decisions.md`](../../../contracts/messages/v2-decisions.md) thắng mọi chỗ mâu thuẫn trong phiếu này (bind tại xưởng thay activation tại chỗ, BLE bỏ R2/Q2, Wi-Fi tùy chọn). Trạng thái BLOCKED bên dưới là lịch sử.
+
 **Trạng thái:** Sau A-02 review; S-03/M-03 hợp đồng đã kiểm cloud-protection.md. A-03 giữ dashboard cuối.
 
 ## Input chung / cổng

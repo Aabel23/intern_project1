@@ -1,5 +1,7 @@
 # Review lớn module tài khoản · 12/10/2026
 
+> **Cập nhật (hợp đồng v2):** finding 1 (quota login đồng thời) đã sửa bằng giữ chỗ nguyên tử, có test `test_concurrent_wrong_logins_never_exceed_limit`. Kèm theo: login email không tồn tại cùng chi phí Argon2, mật khẩu ≥15 ký tự, phát hiện refresh token dùng lại, hạn phiên tuyệt đối 90 ngày. Finding 2 (ô nhập lại mật khẩu) vẫn giữ nguyên theo quyết định user.
+
 **Một lần review lớn sau review nhỏ S-01/A-01: đã thực hiện.** Hai task qua review nhỏ vòng 2; server 32 tests (gồm MySQL cô lập), app 20 Flutter tests, AndroidTest APK build. Đây chưa phải nghiệm thu Phase 1 trên Android thật.
 
 ## Findings và quyết định user

@@ -1,5 +1,7 @@
 # M-01 · Danh tính máy và nhận wifi
 
+> **Đã code theo hợp đồng v2 (12/10/2026)** — [`v2-decisions.md`](../../../contracts/messages/v2-decisions.md) thắng mọi chỗ mâu thuẫn trong phiếu này (bind tại xưởng thay activation tại chỗ, BLE bỏ R2/Q2, Wi-Fi tùy chọn). Trạng thái BLOCKED bên dưới là lịch sử.
+
 **Trạng thái:** BLOCKED B-01/B-02/B-03. Sau chốt mới làm; M-02 nhận transport/routing sau review.
 
 ## Input chung / cổng

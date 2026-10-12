@@ -1,5 +1,7 @@
 # M-02 · Máy nối cloud và phục hồi
 
+> **Đã code theo hợp đồng v2 (12/10/2026)** — [`v2-decisions.md`](../../../contracts/messages/v2-decisions.md) thắng mọi chỗ mâu thuẫn trong phiếu này (bind tại xưởng thay activation tại chỗ, BLE bỏ R2/Q2, Wi-Fi tùy chọn). Trạng thái BLOCKED bên dưới là lịch sử.
+
 **Trạng thái:** Sau M-01 review; BLOCKED B-01; M-02 giữ main.py/routing rồi giao M-03.
 
 ## Input chung / cổng

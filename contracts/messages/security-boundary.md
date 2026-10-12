@@ -14,15 +14,15 @@ B-03: User ngày12/10/2026 đã chốt **HPKE PSK + review phiên**, không Nois
 
 | Phiếu | Trạng thái phát | Phụ thuộc |
 |---|---|---|
-| S-01 | READY đặc tả, có thể giao coder | cloud-protection/auth/COMPATIBILITY; crypto vectors và SMTP thật là gate review/nghiệm thu |
-| A-01 | READY đặc tả, có thể giao coder | S-01 API contract; BC Kotlin/secure storage implementation gates |
-| M-01 | BLOCKED | BT cổng B-03 |
-| S-02 | BLOCKED | BT local-session binding chứng minh được; S-01 review |
-| A-02 | BLOCKED | BT cổng B-03; A-01 review |
-| M-02 | WAIT DEPENDENCY | M-01 review, danh tính bound; wire cloud đã định nghĩa |
-| S-03 | WAIT DEPENDENCY | S-02 review; wire cloud/relay đã định nghĩa |
-| M-03 | WAIT DEPENDENCY | M-02 review; handler/fields đã xác định |
-| A-03 | WAIT DEPENDENCY | A-02 review, S-03/M-03 |
-| I-01 | WAIT DEPENDENCY | mọi slot qua review, BT thật, Android/Pi/Gmail thật |
+| S-01 | DONE | Code + test; Gmail/HTTPS thật còn ở I-01 |
+| A-01 | DONE | Code + test; Android thật còn ở I-01 |
+| M-01 | DONE (v2) | Danh tính xưởng, phiên BLE v2, GATT, Wi-Fi; Pi thật còn ở I-01 |
+| S-02 | DONE (v2) | Đăng ký xưởng, claim, nhả máy, audit |
+| A-02 | DONE (v2) | Tem QR → BLE → Wi-Fi tùy chọn → claim |
+| M-02 | DONE (v2) | Phong bì ký, hello/poll/result |
+| S-03 | DONE (v2) | Relay RAM, poll mới nhất thắng, ngân sách luồng |
+| M-03 | DONE (v2) | `machine.status.read` + lệnh menu/kho version1.1 |
+| A-03 | DONE (v2) | Thẻ Máy trả lời, Sản phẩm/Kho qua relay |
+| I-01 | WAIT | Server thật, APK, Pi, Gmail |
 
 C-05 còn chưa hoàn tất BT/claim. Các phiếu BLOCKED là tài liệu phân công dự kiến, không lệnh bắt đầu. Không gọi coder nhận máy bằng bảng slots chung. Không tự sửa app/server/máy trong C-05.

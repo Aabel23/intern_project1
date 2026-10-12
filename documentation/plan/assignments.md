@@ -1,5 +1,7 @@
 # Phân công MVP: skeleton kết nối trước
 
+> **Cập nhật 12/10/2026 (hợp đồng v2):** User duyệt D1–D10 và chọn cách 3 trên `version1.1`. Các slot S-02, S-03, M-01, M-02, M-03, A-02, A-03 đã được code và test tự động; còn I-01 (nghiệm thu thiết bị thật). Trạng thái và việc còn lại: [mvp-fast-path.md](mvp-fast-path.md); hợp đồng: [`v2-decisions.md`](../../contracts/messages/v2-decisions.md). Phần "Cổng chưa mở" bên dưới là lịch sử, D1 đã thay quyết định bind tại chỗ.
+
 **Trạng thái:** lộ trình đã duyệt; C-01/C-02/C-03/C-04 hoàn tất. User chốt cách server kiểm máy thật, TLS + phong bì cloud và HPKE PSK Bluetooth ngày 12/10/2026. C-05 đã lập hợp đồng; S-01/A-01 đã code và qua review nhỏ vòng 2. [Review lớn module tài khoản](account-module-review-2026-10-12.md) đã chạy một lần: hai finding được user ghi nhận và quyết định chưa sửa. Nghiệm thu runtime thật còn thiếu Android, HTTPS pin/cert, Gmail; B-03 Bluetooth còn BLOCKED theo gate kỹ thuật.
 
 **Mốc đầu tiên:** người dùng mới đăng ký qua email/OTP, đăng nhập, quét mã niêm phong và nhận máy thật; app chọn máy, hỏi **trạng thái trực tiếp từ máy** qua server và hiển thị câu trả lời của chính máy. Không dùng tài khoản hoặc máy nạp sẵn, không dùng kết quả giả, không lấy cờ online lưu ở server thay câu trả lời máy. Menu sync làm sau mốc này.
