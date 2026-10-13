@@ -21,7 +21,7 @@ def main() -> None:
         deps = Dependencies(settings,lambda:open_connection(settings),lambda:datetime.now(timezone.utc),
                             time.monotonic,SMTPMail(settings),keys,create_runtime_state(settings,int(time.time()*1000)))
         server = create_app(deps)
-        logger.info('SERVER_READY https://%s:%s — Ctrl+C to stop', *server.server_address)
+        logger.info('SERVER_READY %s://%s:%s — Ctrl+C to stop', settings.server_transport, *server.server_address)
         server.serve_forever()
     except KeyboardInterrupt:
         pass

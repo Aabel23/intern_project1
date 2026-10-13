@@ -1,4 +1,4 @@
-"""Các hàm giao tiếp HTTPS giữa machine và server (relay-status.md, v2 D7).
+"""Các hàm giao tiếp HTTP LAN hoặc HTTPS giữa machine và server (relay-status.md, v2 D7).
 
 Đồng hồ gửi = giờ server lấy từ hello + monotonic kể từ lúc nhận, nên Pi không cần RTC/NTP.
 """
@@ -36,7 +36,8 @@ class ServerClient:
         request = urllib.request.Request(self.base_url + route, data=json.dumps(sealed.envelope).encode("utf-8"),
                                          headers={"Content-Type": "application/json"}, method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=timeout, context=self.ssl_context) as response:
+            options = {"context": self.ssl_context} if self.base_url.startswith("https://") else {}
+            with urllib.request.urlopen(request, timeout=timeout, **options) as response:
                 status, raw = response.status, response.read(65537)
         except urllib.error.HTTPError as error:
             status, raw = error.code, error.read(65537)

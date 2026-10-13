@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'cloud_error.dart';
 
 class CloudConfig {
   CloudConfig({required this.baseUrl, required this.trust}) {
-    if (baseUrl.scheme != 'https' ||
+    if ((baseUrl.scheme != 'https' &&
+            !(baseUrl.scheme == 'http' && _localIpv4(baseUrl.host))) ||
         baseUrl.host.isEmpty ||
         baseUrl.userInfo.isNotEmpty ||
         baseUrl.hasQuery ||
@@ -41,4 +43,16 @@ class CloudConfig {
   }
   final Uri baseUrl;
   final Map<String, Object?> trust;
+
+  static bool _localIpv4(String host) {
+    final address = InternetAddress.tryParse(host);
+    if (address == null || address.type != InternetAddressType.IPv4) {
+      return false;
+    }
+    final parts = address.rawAddress;
+    return parts[0] == 10 ||
+        parts[0] == 127 ||
+        (parts[0] == 172 && parts[1] >= 16 && parts[1] <= 31) ||
+        (parts[0] == 192 && parts[1] == 168);
+  }
 }

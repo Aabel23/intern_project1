@@ -5,19 +5,18 @@ trạng thái trực tiếp, menu và kho qua relay. Hợp đồng: `contracts/m
 
 ## Build APK
 
-Điều kiện một lần: server đã được dựng bằng `python3 server/tools/provision_keys.py --url https://<tên miền>`
+Điều kiện một lần: server đã được dựng bằng `python3 server/tools/provision_keys.py --url http://<IP-LAN>:8080`
 (xem `server/README.md`). Lệnh đó ghi `assets/server-trust.json` và `lib/shared/cloud/server_endpoint.dart`;
 commit hai file này là các máy khác chỉ cần pull rồi build.
 
 ```bash
 cd flutter_app
 flutter pub get
-flutter build apk --release
+flutter build apk --release --dart-define=FLEXMIX_SERVER_BASE_URL=http://<IP-LAN>:8080
 ```
 
-Trỏ tạm sang server khác mà không sửa file: `--dart-define=FLEXMIX_SERVER_BASE_URL=https://<host>`.
-Server phải có chứng chỉ HTTPS hợp lệ (CA công khai, ví dụ Let's Encrypt); app không chấp nhận
-HTTP hay chứng chỉ tự ký. Nếu `server-trust.json` còn là `{}`, app dừng ở màn "Không thể tải cấu hình kết nối an toàn".
+Trỏ sang server khác bằng `--dart-define=FLEXMIX_SERVER_BASE_URL=https://<host>` khi chuyển lên Internet.
+App chỉ chấp nhận HTTP tới IP nội bộ/loopback đã cấu hình; HTTPS vẫn dùng được. Cả hai đường giữ `server-trust.json`, phong bì HPKE và kiểm quyền. Nếu file trust còn là `{}`, app dừng ở màn "Không thể tải cấu hình kết nối an toàn". Kiểm thử trên Android thật được thực hiện ở cổng trước phát hành.
 
 ## Kiểm tra
 

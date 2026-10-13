@@ -1,4 +1,4 @@
-"""HTTPS stdlib entry point; business messages are always inside HPKE envelopes."""
+"""HTTP/HTTPS entry point; business messages are always inside HPKE envelopes."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import logging
 import ssl
@@ -65,7 +65,7 @@ def create_app(deps: Dependencies) -> ThreadingHTTPServer:
 
         def process_request(self, request, address):
             if not deps.state.http_slots.acquire(blocking=False):
-                # No TLS handshake has happened yet: reject without blocking accept.
+                # Reject before a TLS handshake or HTTP handler consumes a slot.
                 self.shutdown_request(request)
                 return
             try: super().process_request(request,address)
@@ -76,7 +76,8 @@ def create_app(deps: Dependencies) -> ThreadingHTTPServer:
         def process_request_thread(self, request, address):
             try:
                 request.settimeout(cfg.HTTP_READ_SECONDS)
-                request.do_handshake()
+                if deps.settings.server_transport == 'https':
+                    request.do_handshake()
                 super().process_request_thread(request,address)
             except OSError:
                 self.shutdown_request(request)
@@ -142,13 +143,14 @@ def create_app(deps: Dependencies) -> ThreadingHTTPServer:
 
     server = Server((deps.settings.server_bind_host,deps.settings.server_bind_port),Handler)
     server.deps = deps
-    try:
-        tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        tls.minimum_version = ssl.TLSVersion.TLSv1_2
-        tls.load_cert_chain(deps.settings.tls_cert_file,deps.settings.tls_key_file)
-        server.socket.settimeout(cfg.HTTP_READ_SECONDS)
-        server.socket = tls.wrap_socket(server.socket,server_side=True,do_handshake_on_connect=False)
-    except (OSError,ssl.SSLError):
-        server.server_close()
-        raise ValueError('CONFIG_INVALID') from None
+    if deps.settings.server_transport == 'https':
+        try:
+            tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            tls.minimum_version = ssl.TLSVersion.TLSv1_2
+            tls.load_cert_chain(deps.settings.tls_cert_file,deps.settings.tls_key_file)
+            server.socket.settimeout(cfg.HTTP_READ_SECONDS)
+            server.socket = tls.wrap_socket(server.socket,server_side=True,do_handshake_on_connect=False)
+        except (OSError,ssl.SSLError):
+            server.server_close()
+            raise ValueError('CONFIG_INVALID') from None
     return server

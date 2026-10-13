@@ -1,5 +1,6 @@
 """Planner defaults and fail-closed environment configuration."""
 import base64
+import ipaddress
 import os
 from pathlib import Path
 import stat
@@ -101,14 +102,25 @@ def load_settings() -> Settings:
                 raise ValueError()
         elif 'TEST_RECIPIENT_ALLOWLIST' in os.environ:
             raise ValueError()
+        transport = os.environ.get('SERVER_TRANSPORT', 'https')
+        if transport not in ('http', 'https'):
+            raise ValueError()
+        bind_host = os.environ.get('SERVER_BIND_HOST', '127.0.0.1')
+        if transport == 'http':
+            address = ipaddress.ip_address(bind_host)
+            if address.version != 4 or not (address.is_loopback or any(address in subnet for subnet in (
+                    ipaddress.ip_network('10.0.0.0/8'), ipaddress.ip_network('172.16.0.0/12'),
+                    ipaddress.ip_network('192.168.0.0/16')))):
+                raise ValueError()
         return Settings(
             required('DB_HOST'), port('DB_PORT', '3306'), required('DB_NAME'),
             required('DB_USER'), required('DB_PASSWORD'), smtp_user, smtp_from,
             required('SMTP_APP_PASSWORD'), secret,
-            os.environ.get('SERVER_BIND_HOST', '127.0.0.1'), port('SERVER_BIND_PORT', '8443'),
-            file('TLS_CERT_FILE'), file('TLS_KEY_FILE', True),
+            bind_host, port('SERVER_BIND_PORT', '8080' if transport == 'http' else '8443'),
+            file('TLS_CERT_FILE') if transport == 'https' else '',
+            file('TLS_KEY_FILE', True) if transport == 'https' else '',
             file('SERVER_HPKE_KEY_FILE', True), file('SERVER_SIGNING_KEY_FILE', True),
-            file('SERVER_TRUST_FILE'), app_env, allowlist,
+            file('SERVER_TRUST_FILE'), app_env, allowlist, transport,
         )
     except (KeyError, ValueError, OSError):
         raise ValueError('CONFIG_INVALID') from None

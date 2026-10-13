@@ -5,7 +5,7 @@ và không commit. Danh tính (khóa ký, mã niêm phong S) không nằm ở đ
 thư mục trạng thái do `python -m machine.config.provision` tạo ở xưởng.
 
     MACHINE_NAME=FlexMix-02
-    SERVER_URL=https://flexmix.example.com
+    SERVER_URL=http://192.168.1.10:8080  # LAN; khi mở Internet dùng https://...
     SERVER_TRUST_FILE=/etc/flexmix/server-trust.json   # tùy chọn; mặc định config/server-trust.json
     STATE_DIR=/var/lib/flexmix                         # tùy chọn
 
@@ -14,7 +14,9 @@ thư mục trạng thái do `python -m machine.config.provision` tạo ở xư�
 """
 
 import os
+import ipaddress
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ENV_PATH = Path(os.environ.get("FLEXMIX_MACHINE_ENV") or Path(__file__).with_name("machine.env"))
 SOFTWARE_VERSION = "1.1"
@@ -40,9 +42,22 @@ def get_machine_name():
 
 def get_server_url():
     url = read_env("SERVER_URL").rstrip("/")
-    # Không có HTTP fallback: máy chỉ nói chuyện với server qua TLS đã kiểm chứng chỉ.
-    if not url.startswith("https://"):
-        raise ValueError("SERVER_URL phải là https://")
+    if url.startswith("https://"):
+        return url
+    parsed = urlsplit(url)
+    if (not parsed.hostname or parsed.username or parsed.password or parsed.query
+            or parsed.fragment or parsed.path):
+        raise ValueError("SERVER_URL không hợp lệ")
+    if parsed.scheme != "http":
+        raise ValueError("SERVER_URL phải là HTTPS hoặc HTTP nội bộ")
+    try:
+        address = ipaddress.ip_address(parsed.hostname)
+    except ValueError:
+        raise ValueError("HTTP chỉ dùng địa chỉ IP nội bộ") from None
+    if address.version != 4 or not (address.is_loopback or any(address in subnet for subnet in (
+            ipaddress.ip_network('10.0.0.0/8'), ipaddress.ip_network('172.16.0.0/12'),
+            ipaddress.ip_network('192.168.0.0/16')))):
+        raise ValueError("HTTP chỉ dùng địa chỉ IP nội bộ")
     return url
 
 

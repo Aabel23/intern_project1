@@ -1,6 +1,6 @@
 """Chạy một lần khi dựng server: tạo khóa server và ghi cấu hình công khai cho app + máy.
 
-    python3 server/tools/provision_keys.py --url https://flexmix.example.com
+    python3 server/tools/provision_keys.py --url http://192.168.1.10:8080
 
 - Khóa bí mật (HPKE X25519, ký P-256) nằm ở server/secrets/ quyền 0600, đã gitignore.
   Chép thư mục này lên server; không commit, không gửi qua chat.
@@ -10,6 +10,7 @@
 """
 import argparse
 import base64
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -38,15 +39,24 @@ def private_key(path, generate):
 
 def check_url(url):
     parsed = urlparse(url)
-    if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.query
+    if (parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query
             or parsed.fragment or parsed.path not in ('', '/')):
-        raise SystemExit('URL phải dạng https://ten-mien[:cong], không path/query.')
+        raise SystemExit('URL phải là HTTPS hoặc HTTP tới IP nội bộ, không path/query.')
+    if parsed.scheme == 'http':
+        try:
+            address = ipaddress.ip_address(parsed.hostname)
+        except ValueError:
+            raise SystemExit('HTTP chỉ dùng địa chỉ IP nội bộ.') from None
+        if address.version != 4 or not (address.is_loopback or any(address in subnet for subnet in (
+                ipaddress.ip_network('10.0.0.0/8'), ipaddress.ip_network('172.16.0.0/12'),
+                ipaddress.ip_network('192.168.0.0/16')))):
+            raise SystemExit('HTTP chỉ dùng địa chỉ IP nội bộ.')
     return url.rstrip('/')
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Tạo khóa server và ghi cấu hình công khai cho app và máy.')
-    parser.add_argument('--url', required=True, help='Địa chỉ HTTPS công khai của server')
+    parser.add_argument('--url', required=True, help='URL server: HTTP IP nội bộ hoặc HTTPS')
     parser.add_argument('--secrets', default=str(ROOT / 'server' / 'secrets'))
     args = parser.parse_args(argv)
     url = check_url(args.url)

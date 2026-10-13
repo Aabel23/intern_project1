@@ -32,6 +32,7 @@ class Settings:
     server_trust_file: str
     app_env: str
     test_recipient_allowlist: tuple[str, ...]
+    server_transport: str = 'https'
 
 
 @dataclass(frozen=True)

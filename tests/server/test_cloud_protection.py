@@ -213,6 +213,31 @@ class CloudTests(unittest.TestCase):
                 if stalled is not None: stalled.close()
                 server.shutdown();server.server_close();worker.join(2)
 
+    def test_lan_http_still_requires_envelope(self):
+        config=replace(self.deps.settings,server_bind_port=0,tls_cert_file='',tls_key_file='',server_transport='http')
+        deps=replace(self.deps,settings=config)
+        server=create_app(deps)
+        worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
+        try:
+            conn=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=5)
+            env,sender=self.envelope(stamp=0)
+            conn.request('POST',env['route'],json_bytes(env),{'Content-Type':'application/json'})
+            response=conn.getresponse()
+            self.assertEqual(response.status,200)
+            outer=json.loads(response.read());conn.close()
+            aad=json_bytes(['flexmix-response-v1',env['send_id'],200,env['route']])
+            plain=json.loads(AESGCM(sender.export(b'flexmix-response-v1',16)).decrypt(
+                decode_b64u(outer['nonce']),decode_b64u(outer['ct']),aad))
+            self.assertEqual(plain['data']['server_time_ms'],int(self.clock[0].timestamp()*1000))
+            conn=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=5)
+            conn.request('POST',env['route'],b'{}',{'Content-Type':'application/json'})
+            response=conn.getresponse()
+            self.assertEqual(response.status,400)
+            self.assertEqual(json.loads(response.read()),{'pv':1,'error':{'code':'INVALID_ENVELOPE'}})
+            conn.close()
+        finally:
+            server.shutdown();server.server_close();worker.join(2)
+
     def test_replay_capacity_clock_and_bootstrap_rate_boundaries(self):
         from unittest.mock import patch
         with patch('server.src.cloud_protection.cfg.REPLAY_CACHE_LIMIT',1):
