@@ -45,7 +45,7 @@ Khối 1–2 có thể lập hợp đồng song song sau đường kết nối; 
 Python hệ thống ngày 13/10/2026 thiếu `pyhpke`; đã dựng môi trường test riêng ở `/tmp/flexmix-codex-test-venv` bằng `server/requirements.txt`. Bằng chứng sau khi sửa L-01:
 
 - `tests/server/test_cloud_protection.py`: 10/10 đạt, gồm phong bì bootstrap thật qua LAN/HTTP và từ chối gói hỏng.
-- `tests/server`: 48 ca, 23 đạt, 25 skip vì cần MySQL fixture thật.
+- `tests/server`: ban đầu 23 đạt, 25 skip vì thiếu MySQL fixture. Sau đó Codex agent chạy MySQL 8.4 cô lập trong `/tmp` trên `127.0.0.1:34367`, database chỉ dành cho test `flexmix_fixture_test`, áp migration 001/002: **48/48 đạt, 0 skip** (`python -m unittest discover -s tests/server -v`, 21 giây). Instance đã tắt; DB/service hiện có không bị đụng. Có `ResourceWarning` test về `HTTPError` chưa đóng, không làm fail.
 - `tests/machine`: 20 ca, 17 đạt, 3 skip vì cần Kotlin interop fixture.
 - `flutter test`: 33/33 đạt; `flutter analyze`: sạch.
 

@@ -1,6 +1,6 @@
 # M-01 · Menu, bật/tắt món và sửa giá
 
-**Planner draft 13/10/2026.** User đã chốt tách lệnh bật/tắt khỏi sửa giá; Owner/Manager sửa giá chỉ qua cloud. Phiếu này chưa cho phép coder làm toàn module vì hợp đồng phiên bản menu/CRC và quyền Manager còn phụ thuộc quyết định, share/vai chưa có code đầy đủ.
+**Planner draft 13/10/2026.** User đã chốt tách lệnh bật/tắt khỏi sửa giá; Owner/Manager sửa giá chỉ qua cloud. User cũng duyệt gói gồm món+công thức+danh mục tra cứu, giá nguyên đồng, ảnh tải riêng theo hash, CRC trên byte JSON canonical nội dung, tách phiên bản nội dung khỏi trạng thái bán/tồn, trần 256 KB trên gói nén trước base64. Cần phiếu wire/vector cụ thể trước coder; quyền Manager còn phụ thuộc share/vai chưa có code đầy đủ.
 
 ## Bằng chứng nền
 
@@ -11,7 +11,7 @@
 
 ## Phụ thuộc và thứ tự phiếu coder
 
-1. **M-01A · Hợp đồng đọc menu:** chốt byte canonical cho CRC, nội dung `recipes/lookups`, giới hạn 256 KB tính trên dạng nào, quan hệ `menu_version` với `available/in_stock`, ý nghĩa `up_to_date/conflict`. Viết vector gói hợp lệ/hỏng để máy và app cùng kiểm. Đây là điểm khóa thiết kế, chưa giao coder.
+1. **M-01A · Hợp đồng đọc menu:** viết biểu diễn byte canonical cho CRC, nội dung `recipes/lookups`, trần 256 KB trên gói nén trước base64, phiên bản nội dung/trạng thái, ý nghĩa `up_to_date/conflict`. Viết vector gói hợp lệ/hỏng để máy và app cùng kiểm. Đây là bước Planner trước coder.
 2. **M-01B · Đọc menu an toàn:** sau M-01A, máy dựng gói theo hợp đồng; app kiểm `v`, `menu_version`, CRC, kích thước, trường bắt buộc và cache đúng máy. Server relay cùng route hiện có và chỉ giữ gói RAM nếu hợp đồng yêu cầu. Test gói lỗi, đổi máy và dữ liệu thật MySQL. Android thật để cổng phát hành.
 3. **M-01C · Bật/tắt món:** lệnh riêng, dữ liệu chỉ `drink_id` và `available` cùng phiên bản phù hợp; máy kiểm, ghi một transaction, chống lặp theo request ID và trả trạng thái đọc lại; server/app cập nhật whitelist và hiển thị. Quyền vận hành Owner/Manager/Employee theo ma trận đã duyệt, cả cloud/LAN/Bluetooth ở các đường được phép.
 4. **S-roles · Share/vai:** hoàn thiện quyền Owner/Manager/Employee theo máy ở app, server và máy, trước M-01D. Server phải kiểm quyền theo instruction; chỉ kiểm `owner_of` hiện tại không đáp ứng Manager.
@@ -23,8 +23,8 @@ Menu 0 món, món đổi/xóa trong lúc app mở, packet bị cắt/CRC sai/qu�
 
 ## Quyết định còn mở
 
-- Chuỗi byte CRC chính xác và phiên bản nội dung/trạng thái; ảnh dùng hash tải riêng hay hiện có.
-- Recipe/lookups lấy bảng nào và định dạng trường; quy tắc menu tối đa 256 KB trên raw/nén.
+- Cách biểu diễn byte CRC chính xác và vector; user đã chốt nội dung/phiên bản về mặt ngữ nghĩa.
+- Recipe/lookups lấy bảng nào và định dạng trường cụ thể; ảnh dùng hash riêng và trần 256 KB áp gói nén trước base64 đã chốt.
 - Ma trận quyền tại chỗ và cách thu hồi khi máy offline trong module share/vai.
 
 Những điểm trên thuộc thiết kế đã ghi ở tài liệu menu nhưng còn “tạm chốt” hoặc thiếu vector. Khi phát hiện khác code, đưa user chọn trước khi sửa.

@@ -31,7 +31,7 @@ Các nhánh menu, kho và OTA có thể được **thiết kế** song song. Cod
 
 ### Menu và giá
 
-Máy đã có `nhan_menu` và `cap_nhat_menu` cho giá/trạng thái tại `version1.1/machine/menu_sync/`. App chỉ hiển thị menu và bật/tắt tại `flutter_app/lib/feature/machine_menu/`; decoder hiện chỉ kiểm hình dạng gói, chưa kiểm CRC/phiên bản. `documentation/architect/features/menu.html` mô tả lệnh bật/tắt riêng. **User chốt 13/10/2026:** tách lệnh bật/tắt khỏi sửa giá; Owner/Manager sửa giá chỉ qua cloud. Giá dùng số nguyên đồng và gói có công thức, trần 256 KB theo quyết định đã lưu. **Còn phải khóa ở hợp đồng module:** nội dung CRC/version và ảnh; quyền Manager phụ thuộc module share/vai vì relay/app hiện chỉ có Owner. Không thêm UI sửa giá theo lệnh gộp hiện có.
+Máy đã có `nhan_menu` và `cap_nhat_menu` cho giá/trạng thái tại `version1.1/machine/menu_sync/`. App chỉ hiển thị menu và bật/tắt tại `flutter_app/lib/feature/machine_menu/`; decoder hiện chỉ kiểm hình dạng gói, chưa kiểm CRC/phiên bản. `documentation/architect/features/menu.html` mô tả lệnh bật/tắt riêng. **User chốt 13/10/2026:** tách lệnh bật/tắt khỏi sửa giá; Owner/Manager sửa giá chỉ qua cloud; giá nguyên đồng; gói có món+công thức+danh mục tra cứu, ảnh tải riêng theo hash, CRC của byte JSON canonical nội dung không tính thời gian, phiên bản nội dung tách trạng thái bán/tồn, trần 256 KB trên gói nén trước base64. **Còn phải viết hợp đồng wire/vector:** biểu diễn byte CRC và trường từ schema máy. Quyền Manager phụ thuộc module share/vai vì relay/app hiện chỉ có Owner. Không thêm UI sửa giá theo lệnh gộp hiện có.
 
 ### Kho
 
