@@ -14,7 +14,9 @@
 |---|---|---|
 | G0 | Khóa phạm vi cụ thể, kênh phát app, máy đích, người ký phát hành và hỗ trợ | Phiếu `g0-first-customer-decision.md` được duyệt, việc chưa rõ có người và hạn xử lý |
 | Nền kết nối | Server LAN/HTTP, trust, tài khoản/claim/relay, máy tự chạy; sửa phiếu I-01 theo LAN | Test máy tính, server LAN và Pi; Android thật tại cổng phát hành |
-| Menu và giá | Khóa hợp đồng menu, giá, quyền, cache và lệnh ghi; sau đó máy → app → relay | Gói menu có kiểm phiên bản/toàn vẹn; sửa giá và bật/tắt đọc lại đúng, sai quyền bị từ chối |
+| Menu đọc và bật/tắt | Khóa hợp đồng menu, cache và lệnh vận hành tách riêng; sau đó máy → app → relay | Gói menu có kiểm phiên bản/toàn vẹn; bật/tắt đọc lại đúng, sai quyền bị từ chối |
+| Share và vai | Hoàn thiện Owner/Manager/Employee và kiểm quyền theo instruction ở server/máy/app | Hai tài khoản khác vai chỉ thực hiện đúng lệnh của vai mình |
+| Sửa giá | Sau vai/quyền, khóa lệnh riêng chỉ qua cloud cho Owner/Manager | Giá nguyên đồng đọc lại đúng, Employee và đường tại chỗ bị từ chối |
 | Kho | Khóa nạp gram, kiểm đếm, đơn vị, quyền và chống lặp; sau đó máy → app | Tồn trước/sau và ledger khớp, lệnh lặp không nạp hai lần, lỗi được hiển thị thật |
 | Đơn hàng | Khóa nghĩa của “đơn” và vòng đời; máy giữ dữ liệu, app đọc và thao tác được duyệt | Ticket/đơn trên app khớp máy; không hiển thị tiền, số ly, thanh toán nếu chưa có dữ liệu thật |
 | Báo cáo | Khóa chỉ số và nguồn; xây từ đơn/kho/sự kiện đã có thật | Tổng hợp đối chiếu dữ liệu gốc, rõ khoảng thời gian và quyền xem |
@@ -23,13 +25,13 @@
 | G3 | Server/DB/SMTP, backup-restore, release ký số, Android và Pi thật, diễn tập | Go/no-go có người ký, bản build và runbook cố định |
 | G4 | Lắp khách, khách tự thực hiện luồng, quan sát sau giao | Biên bản khách và nhật ký hỗ trợ theo thời gian đã chốt |
 
-Các nhánh menu, kho và OTA có thể được **thiết kế** song song. Coder chỉ nhận từng phiếu khi hợp đồng tương ứng được duyệt; server relay và hợp đồng chung có một người sửa mỗi lượt. Báo cáo phụ thuộc dữ liệu đơn hàng và các sự kiện được chọn. Bản phát hành đòi tất cả các module giao khách, không lấy trạng thái G2 cũ làm bằng chứng đủ phạm vi mới.
+Các nhánh menu, kho và OTA có thể được **thiết kế** song song. Coder chỉ nhận từng phiếu khi hợp đồng tương ứng được duyệt; server relay và hợp đồng chung có một người sửa mỗi lượt. Sửa giá cho Manager phụ thuộc share/vai thật vì relay hiện chỉ kiểm Owner; không gắn nhãn đạt cho giá trước khi quyền theo vai hoạt động. Báo cáo phụ thuộc dữ liệu đơn hàng và các sự kiện được chọn. Bản phát hành đòi tất cả các module giao khách, không lấy trạng thái G2 cũ làm bằng chứng đủ phạm vi mới.
 
 ## Kết quả kiểm code và quyết định cần khóa
 
 ### Menu và giá
 
-Máy đã có `nhan_menu` và `cap_nhat_menu` cho giá/trạng thái tại `version1.1/machine/menu_sync/`. App chỉ hiển thị menu và bật/tắt tại `flutter_app/lib/feature/machine_menu/`; decoder hiện chỉ kiểm hình dạng gói, chưa kiểm CRC/phiên bản. `documentation/architect/features/menu.html` lại mô tả lệnh bật/tắt riêng, Owner/Manager sửa giá qua cloud. **Cần chốt:** dùng lệnh tách hay hợp nhất; quyền Manager; giá theo đơn vị/kiểu số; công thức và ảnh; phạm vi CRC/version. Không thêm UI sửa giá theo lệnh hiện có khi hợp đồng còn lệch.
+Máy đã có `nhan_menu` và `cap_nhat_menu` cho giá/trạng thái tại `version1.1/machine/menu_sync/`. App chỉ hiển thị menu và bật/tắt tại `flutter_app/lib/feature/machine_menu/`; decoder hiện chỉ kiểm hình dạng gói, chưa kiểm CRC/phiên bản. `documentation/architect/features/menu.html` mô tả lệnh bật/tắt riêng. **User chốt 13/10/2026:** tách lệnh bật/tắt khỏi sửa giá; Owner/Manager sửa giá chỉ qua cloud. Giá dùng số nguyên đồng và gói có công thức, trần 256 KB theo quyết định đã lưu. **Còn phải khóa ở hợp đồng module:** nội dung CRC/version và ảnh; quyền Manager phụ thuộc module share/vai vì relay/app hiện chỉ có Owner. Không thêm UI sửa giá theo lệnh gộp hiện có.
 
 ### Kho
 
