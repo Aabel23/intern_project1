@@ -35,15 +35,15 @@ Máy đã có `nhan_menu` và `cap_nhat_menu` cho giá/trạng thái tại `vers
 
 ### Kho
 
-Máy có `nhan_kho`, `nap_kho`; app có đọc tồn và nạp đầy/tất cả. Thiết kế kho yêu cầu nạp gram, kiểm đếm và ledger actor/command ID, trong khi schema hiện chưa có ledger. **Cần chốt:** thao tác khách cần, đơn vị và sức chứa bình, quyền Owner/Manager, quy tắc trừ tồn/kiểm đếm và chống lặp. Chưa coi nút “Nạp đầy” là hoàn thành kho.
+Máy có `nhan_kho`, `nap_kho`; app có đọc tồn và nạp đầy/tất cả. **User chốt 13/10/2026:** kho bản đầu dùng nạp đầy theo bình, không giao thao tác nhập gram/kiểm đếm thủ công. Thiết kế kho trước đó đề xuất ledger actor/command ID trong khi schema hiện chưa có; vẫn cần khóa dung tích và ánh xạ bình–nguyên liệu, quyền Owner/Manager và chống lặp trước khi coi nút “Nạp đầy” là hoàn thành kho.
 
 ### Đơn hàng và báo cáo
 
-Máy có `order_ticket` QR và vòng đời `unused/in_progress/used/expired/noqr_err`; tab đơn hàng app là demo, server chưa có relay đọc đơn. Bảng ticket có snapshot tên/giá lúc bán, nhưng `recent()` hiện lấy tên từ bảng drink hiện thời. **Cần chốt:** khách muốn xem ticket QR hay đơn bán có hủy/hoàn, số ly, thanh toán; trạng thái và quyền thao tác; chỉ số báo cáo, khoảng thời gian và nguồn dữ liệu. Lát read-only đầu tiên sau quyết định là relay danh sách ticket giới hạn, dùng tên/giá snapshot và hiển thị trạng thái thật; không đưa số liệu demo vào báo cáo.
+Máy có `order_ticket` QR và vòng đời `unused/in_progress/used/expired/noqr_err`; tab đơn hàng app là demo, server chưa có relay đọc đơn. **User chốt 13/10/2026:** app bản đầu hiển thị ticket QR hiện có, không dựng đơn bán đầy đủ với số ly/thanh toán/hủy/hoàn. Bảng ticket có snapshot tên/giá lúc bán, nhưng `recent()` hiện lấy tên từ bảng drink hiện thời. Lát read-only là relay danh sách ticket giới hạn, dùng tên/giá snapshot và hiển thị trạng thái thật; vẫn cần chốt quyền xem, giới hạn lịch sử và chỉ số báo cáo.
 
 ### OTA
 
-Máy/server có hằng route OTA nhưng server chưa dispatch. `documentation/architect/features/software-update.html` yêu cầu tải gói qua TLS, xung đột với transport HTTP LAN đã chọn. **Cần chốt:** gói tải bằng đường nào trong LAN, chữ ký/hash và khóa phát bản, điều kiện máy rảnh, trình tự cài/rollback theo layout Pi. Lát đầu tiên là manifest và kiểm chữ ký gói trước khi cho cài; không kích hoạt OTA chỉ vì route đã tồn tại.
+Máy/server có hằng route OTA nhưng server chưa dispatch. **User chốt 13/10/2026:** gói OTA tải qua LAN/HTTP, máy bắt buộc kiểm chữ ký và hash trước khi cài; yêu cầu TLS của `documentation/architect/features/software-update.html` phải cập nhật khi khóa hợp đồng OTA. Còn phải chốt khóa phát bản, điều kiện máy rảnh và trình tự cài/rollback theo layout Pi. Lát đầu tiên là manifest và kiểm chữ ký/hash gói trước khi cho cài; không kích hoạt OTA chỉ vì route đã tồn tại.
 
 ### Transport và phát hành
 

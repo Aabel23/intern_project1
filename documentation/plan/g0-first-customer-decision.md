@@ -17,10 +17,10 @@
 | Tạo tài khoản, đăng nhập, nhận máy, chia sẻ máy | Hai tài khoản thật nhìn đúng máy và đúng vai; người lạ không nhận hoặc điều khiển được | Quyền Manager/Employee và thu hồi khi offline |
 | Đọc trạng thái, menu và dữ liệu máy | Mỗi lượt hỏi có dữ liệu mới từ đúng máy; menu app khớp dữ liệu MySQL máy | Hợp đồng CRC, công thức/ảnh và cache |
 | Bật/tắt món, sửa giá | Lệnh ghi một lần, app đọc lại giá/trạng thái thật, sai quyền bị từ chối | Đã chốt lệnh tách, giá nguyên đồng, Owner/Manager chỉ sửa giá qua cloud; quyền Manager cần module share/vai |
-| Xem và cập nhật kho | Tồn trước/sau khớp máy, lệnh lặp không ghi hai lần | Nạp gram, kiểm đếm, sức chứa, ledger |
-| Xem/xử lý đơn hàng | Danh sách và trạng thái phản ánh ticket/đơn thật trên máy | “Đơn” là ticket QR hay giao dịch bán; hủy/hoàn/thanh toán |
+| Xem và cập nhật kho | Tồn trước/sau khớp máy, lệnh lặp không ghi hai lần | User chốt nạp đầy theo bình; cần chốt sức chứa/ánh xạ bình và quyền |
+| Xem ticket QR | Danh sách và trạng thái phản ánh ticket thật trên máy | User chốt ticket QR hiện có; không đưa số ly, thanh toán, hủy/hoàn giả vào app |
 | Xem báo cáo | Chỉ số đối chiếu được với dữ liệu gốc cùng khoảng thời gian | Chỉ số, nguồn, kỳ và quyền xem |
-| Cập nhật phần mềm máy | Bản sai chữ ký bị từ chối; bản đúng chỉ cài khi máy an toàn và có cách quay lui | Nơi phát và tải gói khi dùng LAN/HTTP; điều kiện rảnh/rollback |
+| Cập nhật phần mềm máy | Bản sai chữ ký/hash bị từ chối; bản đúng chỉ cài khi máy an toàn và có cách quay lui | User chốt tải trong LAN/HTTP với chữ ký/hash; cần chốt điều kiện rảnh/rollback |
 
 Luồng pha chế trên máy và checklist an toàn phần cứng cần chốt theo phần cứng khách. Không đưa màn hình demo, hằng route hoặc test giả lập vào cột “đạt”.
 
