@@ -1,6 +1,6 @@
 # R-01 · Nguồn dữ liệu và chỉ số báo cáo đầu tiên
 
-Trạng thái: **đề xuất, cần user duyệt tên chỉ số và phạm vi trước khi viết code**. Phạm vi là báo cáo của **một máy được chọn**, đọc từ MySQL trên máy qua relay hiện có. Server chuyển yêu cầu/kết quả và kiểm quyền; chưa sao chép vé, kho hoặc sự kiện lên server. Khi máy offline, báo cáo mới không lấy được.
+Trạng thái: **user duyệt phạm vi bản đầu ngày 13/10/2026**: Owner xem số ly đã pha và “Tổng giá trên vé đã pha” theo ngày giờ máy Asia/Ho_Chi_Minh, mặc định 7 ngày/tối đa 31 ngày; tồn kho hiện tại hiển thị riêng; chưa có lịch sử kho/lỗi kỹ thuật. Phạm vi là báo cáo của **một máy được chọn**, đọc từ MySQL trên máy qua relay hiện có. Server chuyển yêu cầu/kết quả và kiểm quyền; chưa sao chép vé, kho hoặc sự kiện lên server. Khi máy offline, báo cáo mới không lấy được.
 
 ## Bằng chứng dữ liệu hiện có
 
@@ -43,8 +43,8 @@ Các giá trị trong ví dụ chỉ minh họa cấu trúc. Nếu bất kỳ gi
 ## Luồng đọc, quyền và bộ lọc
 
 - App gửi `machine_id`, `from`, `to` qua `MachineService.ask`; server xác thực và kiểm quyền **đọc báo cáo của máy** trước khi chuyển, kiểm lại trước khi trả. Server hiện chỉ mô hình owner trong relay, nên lát cắt đầu chỉ owner. Không cho app gửi SQL, status hoặc timezone tùy ý để thay nghĩa chỉ số.
-- Máy validate khoảng ngày, giới hạn độ dài kỳ và dùng query aggregate trong MySQL. Đề xuất mặc định 7 ngày gần nhất, giới hạn 31 ngày cho một request để tránh truy vấn quá rộng; số ngày này cần chốt. Bộ lọc đầu chỉ có máy và khoảng ngày, không cộng nhiều máy ở app hoặc server.
-- Khoảng thời gian là **nửa mở** `[from, to)` để hai ngày/kỳ liền nhau không đếm trùng. `DATETIME` MySQL không chứa múi giờ; phải định nghĩa timezone máy và serialize rõ offset. Ngày trong `days` lấy theo timezone đó, không theo timezone điện thoại.
+- Máy validate khoảng ngày, giới hạn độ dài kỳ và dùng query aggregate trong MySQL. User chốt mặc định 7 ngày gần nhất, giới hạn 31 ngày cho một request. Bộ lọc đầu chỉ có máy và khoảng ngày, không cộng nhiều máy ở app hoặc server.
+- Khoảng thời gian là **nửa mở** `[from, to)` để hai ngày/kỳ liền nhau không đếm trùng. `DATETIME` MySQL không chứa múi giờ; user chốt ngày giờ máy Asia/Ho_Chi_Minh cho bản đầu. Máy phải đặt/kiểm cấu hình timezone này; không tự diễn giải hàng lịch sử từ máy có timezone khác. Ngày trong `days` lấy theo timezone đó, không theo timezone điện thoại.
 - Kết quả là snapshot tại lúc máy đọc. App hiển thị `machine_time`/“Cập nhật lúc …”; khi máy offline chỉ có thể hiện cache có ghi “dữ liệu cũ” nếu sau này chốt cache. Không hứa hẹn báo cáo từ Internet khi máy không kết nối LAN/server.
 - Độ lớn kết quả bị chặn bởi giới hạn kỳ; máy trả aggregate, không đẩy toàn bộ vé lên server/app để tính. Không đưa QR payload/hash, tên hoặc ghi chú khách vào báo cáo aggregate.
 
@@ -57,9 +57,9 @@ Các giá trị trong ví dụ chỉ minh họa cấu trúc. Nếu bất kỳ gi
 
 ## Quyết định cần user chốt
 
-1. Tên hiển thị của tổng giá: đề xuất **“Tổng giá trên vé đã pha”**; có chấp nhận dùng số này trong thẻ Tổng quan thay “Doanh thu” không? Nếu cần doanh thu thực thu, phải có nguồn thanh toán/hoàn tiền được chốt riêng.
-2. Chọn timezone chuẩn cho `DATETIME` trên máy và kỳ báo cáo; xử lý khi đồng hồ máy bị lệch.
-3. Chọn mặc định 7 ngày và trần 31 ngày, hoặc phạm vi khác; có cần lọc từng món trong bản đầu không?
-4. Vai nào được xem báo cáo sau khi share machine hoàn tất; bản đầu đề xuất owner.
+1. User đã chốt nhãn **“Tổng giá trên vé đã pha”**, không gọi doanh thu; số ly và tổng giá theo ngày, tồn hiện tại riêng. Nếu cần doanh thu thực thu về sau, phải có nguồn thanh toán/hoàn tiền được chốt riêng.
+2. User đã chốt Asia/Ho_Chi_Minh trên máy; còn phải xác định cách phát hiện đồng hồ lệch và xử lý hàng lịch sử từ máy dùng timezone khác.
+3. User đã chốt mặc định 7 ngày, trần 31 ngày; bản đầu không thêm lọc từng món nếu không có quyết định mới.
+4. Owner xem báo cáo ở lát đầu; quyền sau share cần quyết định riêng, không tự mở cho Manager/Employee.
 5. Giá legacy null hoặc có phần lẻ VND: chỉ rõ hiển thị và có/không cộng vào tổng; không dùng giá món hiện tại để điền lịch sử.
-6. Có cần thống kê lỗi kỹ thuật/biến động kho lịch sử ở bản đầu? Nếu có, phải thiết kế nguồn sự kiện/sổ kho thật trước khi hứa chỉ số.
+6. User chọn chưa có thống kê lỗi kỹ thuật/biến động kho lịch sử ở bản đầu; nếu thêm về sau phải thiết kế nguồn sự kiện/sổ kho thật trước khi hứa chỉ số.

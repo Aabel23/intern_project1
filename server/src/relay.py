@@ -10,7 +10,7 @@ from uuid import UUID
 from server.configuration import skeleton as cfg
 from server.src.types import ApiError, HandlerResult
 
-INSTRUCTIONS = {'machine.status.read', 'nhan_menu', 'cap_nhat_menu', 'nhan_kho', 'nap_kho', 'nhan_ve_qr'}
+INSTRUCTIONS = {'machine.status.read', 'nhan_menu', 'cap_nhat_menu', 'nhan_kho', 'nap_kho', 'nhan_ve_qr', 'nhan_bao_cao'}
 RESULT_ERROR_CODES = {'COMMAND_FAILED','UNSUPPORTED_INSTRUCTION','INVALID_DATA','MACHINE_READ_FAILED','COMMAND_EXPIRED'}
 
 
