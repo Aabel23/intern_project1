@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Đồng bộ menu, kho, máy</title>
 <meta name="description" content="Giao thức đồng bộ menu, kho và trạng thái giữa máy pha và app: gói menu đầy đủ có số phiên bản CRC, đi qua cloud, wifi quán và Bluetooth.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+
+<link rel="stylesheet" href="../assets/fonts.css">
 <style>
   /* Tông kem – cam theo phong cách Claude */
   :root{
@@ -347,13 +347,13 @@ sequenceDiagram
   A2->>S: nhan_menu (CRC app = 1a2b)
   Note over S: máy này đã có yêu cầu đang chờ → gộp A2 vào
   M->>DB: đọc món, công thức, bảng tra
-  M->>M: dựng thân JSON, tính CRC = 9f3c
+  M->>M: • Dựng thân JSON<br/>• Tính CRC = 9f3c
   alt CRC khác CRC app
     M-->>S: phong bì + thân nén
     S->>S: giữ gói trong RAM theo (máy, 9f3c)
     S-->>A1: gói
     S-->>A2: cùng gói trong RAM
-    A1->>A1: giải nén, CRC(byte) = 9f3c → lưu
+    A1->>A1: • Giải nén<br/>• Kiểm CRC(byte) = 9f3c<br/>• Lưu bản mới
   else CRC trùng
     M-->>S: up_to_date
     S-->>A1: up_to_date
@@ -560,7 +560,7 @@ sequenceDiagram
   participant M as Máy pha
   A->>M: mở kết nối RFCOMM (đã ghép nối)
   A->>M: khung lệnh nhan_menu (CRC app)
-  M->>M: dựng gói, tính CRC
+  M->>M: • Dựng gói<br/>• Tính CRC
   M-->>A: khung đầu: độ dài + menu_version
   M-->>A: thân gói nhị phân
   A->>A: đủ độ dài → kiểm như 3.2
@@ -822,6 +822,7 @@ flowchart LR
   <div class="zoom-body" id="zoom-body"></div>
 </div>
 
+<script src="../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <script>
 (function(){
@@ -870,7 +871,7 @@ flowchart LR
     return {
       startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
       flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
-      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
       state:{ useMaxWidth:false }
     };
   }

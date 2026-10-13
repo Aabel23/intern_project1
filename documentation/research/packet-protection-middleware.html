@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lớp bảo vệ gói tin</title>
 <meta name="description" content="Thiết kế tầng 1: middleware niêm phong gói tin phía trên HTTPS cho app, server gateway và máy pha.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+
+<link rel="stylesheet" href="../assets/fonts.css">
 <style>
   /* Tông kem – cam theo phong cách Claude */
   :root{
@@ -371,13 +371,13 @@ sequenceDiagram
   participant M as Máy
   U->>A: bấm "tắt món"
   A->>MA: lệnh rõ
-  MA->>MA: niêm lõi cho đúng máy, ký bằng khoá thiết bị
+  MA->>MA: • Niêm lõi cho đúng máy<br/>• Ký bằng khoá thiết bị
   MA->>S: phong bì + lõi kín, bọc lớp chặng
-  S->>S: mở lớp chặng, đọc phong bì, người gửi có trên máy này không?
+  S->>S: • Mở lớp chặng<br/>• Đọc phong bì<br/>• Kiểm người gửi trên máy này
   S-->>MA: đã xếp hàng
   MM->>S: có lệnh mới không?
   S->>MM: lõi kín nguyên vẹn, bọc lớp chặng của máy
-  MM->>MM: mở lõi, kiểm chữ ký, kiểm quyền bản sao, chống phát lại
+  MM->>MM: • Mở lõi<br/>• Kiểm chữ ký<br/>• Kiểm quyền bản sao<br/>• Chống phát lại
   MM->>M: lệnh rõ
   M-->>MM: đã tắt món
   MM->>S: kết quả niêm cho app
@@ -712,6 +712,7 @@ stateDiagram-v2
   <div class="zoom-body" id="zoom-body"></div>
 </div>
 
+<script src="../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <script>
 (function(){
@@ -760,7 +761,7 @@ stateDiagram-v2
     return {
       startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
       flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
-      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
       state:{ useMaxWidth:false }
     };
   }

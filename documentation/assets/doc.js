@@ -44,7 +44,7 @@
     return {
       startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
       flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
-      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
       state:{ useMaxWidth:false }
     };
   }
@@ -60,6 +60,7 @@
     const pre = document.createElement('pre'); pre.className = 'fallback'; pre.textContent = text;
     canvas.appendChild(pre);
   }
+
 
   // Thu nhỏ vừa khung nếu chỉ rộng hơn khung một chút; quá rộng thì giữ cỡ thật và cho cuộn ngang.
   function fit(canvas){

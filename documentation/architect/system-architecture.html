@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kiến trúc hệ máy pha</title>
 <meta name="description" content="Kiến trúc ba sản phẩm app, server hãng, máy pha của project1_app v1.1: nguyên tắc, khối, luồng, repo đề xuất và quy trình.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+
+<link rel="stylesheet" href="../assets/fonts.css">
 <style>
   /* Tông kem – cam theo phong cách Claude */
   :root{
@@ -365,8 +365,8 @@ sequenceDiagram
   A->>S: lệnh tắt món, kèm mã lệnh và phiên bản hợp đồng
   S->>S: kiểm quyền theo bản chuẩn
   S->>M: chuyển lệnh qua kết nối máy đang giữ mở
-  M->>M: kiểm quyền bằng bản sao, kiểm mã lệnh chưa từng chạy
-  M->>M: tắt món, ghi nhật ký theo người
+  M->>M: • Kiểm quyền bằng bản sao<br/>• Kiểm mã lệnh chưa từng chạy
+  M->>M: • Tắt món<br/>• Ghi nhật ký theo người
   M-->>S: kết quả và trạng thái mới của máy
   S-->>A: đã tắt
   alt Mất Internet
@@ -903,6 +903,7 @@ flowchart TD
   <div class="zoom-body" id="zoom-body"></div>
 </div>
 
+<script src="../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <script>
 (function(){
@@ -951,7 +952,7 @@ flowchart TD
     return {
       startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
       flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
-      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
       state:{ useMaxWidth:false }
     };
   }

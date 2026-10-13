@@ -4,6 +4,7 @@ Python stdlib HTTPS + MySQL. Mọi body nằm trong phong bì HPKE (`contracts/m
 `v2-decisions.md`). Một process, không cần Redis hay framework.
 
 Hướng dẫn từng bước cho laptop Windows: [MySQL, HTTPS Tailscale, Gmail OTP và chạy app](SETUP_WINDOWS.md).
+Hướng dẫn cho Linux: [MySQL, chuyển khóa server, HTTPS Tailscale và lệnh chạy](SETUP_LINUX.md).
 
 ## Dựng lần đầu
 

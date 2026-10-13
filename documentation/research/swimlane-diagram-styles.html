@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiểu biểu đồ swimlane</title>
+<meta name="description" content="Nghiên cứu biểu đồ swimlane: nguồn gốc, quy tắc vẽ, và 11 kiểu thiết kế khác nhau vẽ trên cùng một kịch bản để so sánh.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Patrick+Hand&display=swap">
+<style>
+:root{
+  --bg:#F7F6F2; --surface:#FFFFFF; --surface-2:#F0EEE7; --ink:#1D1C1A; --ink-2:#4B4842; --ink-3:#86827A;
+  --line:#E2DED4; --line-2:#C9C4B7;
+  --accent:#D9622B; --on-accent:#FFFFFF; --danger:#C2362B; --danger-soft:#FBE3DF; --warn:#A97813; --warn-soft:#F8EDD2;
+  --u:#2F6FB0; --u-soft:#E2EDF8; --a:#7A4FB3; --a-soft:#EEE6F8; --s:#C25E24; --s-soft:#FAE8DC; --m:#24876A; --m-soft:#DDF1E9;
+  --on-lane:#FFFFFF;
+  --paper:#FBF7EA; --chalk:#2A2723;
+  --sans:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Menlo,monospace;
+  --hand:"Patrick Hand","Comic Sans MS","Segoe Print",cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141412; --surface:#1E1D1A; --surface-2:#292824; --ink:#EDEBE5; --ink-2:#C4C0B6; --ink-3:#8E8A80;
+    --line:#33312C; --line-2:#4A4740;
+    --accent:#F08A55; --on-accent:#1A120C; --danger:#F07466; --danger-soft:#3D1F1B; --warn:#E3B04F; --warn-soft:#3A2E14;
+    --u:#7DB1EA; --u-soft:#1B2A3A; --a:#B99BEA; --a-soft:#2A2238; --s:#F0A06E; --s-soft:#3A2618; --m:#6CCBA5; --m-soft:#15322A;
+    --on-lane:#121212;
+    --paper:#1F2A26; --chalk:#E6ECE5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141412; --surface:#1E1D1A; --surface-2:#292824; --ink:#EDEBE5; --ink-2:#C4C0B6; --ink-3:#8E8A80;
+  --line:#33312C; --line-2:#4A4740;
+  --accent:#F08A55; --on-accent:#1A120C; --danger:#F07466; --danger-soft:#3D1F1B; --warn:#E3B04F; --warn-soft:#3A2E14;
+  --u:#7DB1EA; --u-soft:#1B2A3A; --a:#B99BEA; --a-soft:#2A2238; --s:#F0A06E; --s-soft:#3A2618; --m:#6CCBA5; --m-soft:#15322A;
+  --on-lane:#121212;
+  --paper:#1F2A26; --chalk:#E6ECE5;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+
+header.hero{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+h1{font-size:clamp(30px,5vw,48px);line-height:1.08;letter-spacing:-.02em;margin:0 0 16px;font-weight:700;max-width:16ch}
+.lede{font-size:18px;color:var(--ink-2);max-width:68ch;margin:0}
+.hero-row{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.theme-btn{font:500 13px var(--sans);color:var(--ink-2);background:var(--surface);border:1px solid var(--line-2);border-radius:999px;padding:7px 14px;cursor:pointer}
+.theme-btn:hover{color:var(--ink)}
+
+nav.toc{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.toc .wrap{display:flex;gap:8px;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:thin}
+nav.toc a{flex:none;text-decoration:none;color:var(--ink-2);font-size:13px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+nav.toc a:hover{border-color:var(--accent);color:var(--ink)}
+nav.toc a b{font-family:var(--mono);font-weight:600;color:var(--accent);margin-right:5px;font-size:11.5px}
+
+section{padding:48px 0 8px}
+h2{font-size:28px;line-height:1.2;letter-spacing:-.01em;margin:0 0 14px}
+h3{font-size:18px;margin:30px 0 10px}
+p{max-width:75ch}
+.muted{color:var(--ink-3)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:820px){.grid-2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h4{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+dl.anat{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:8px 16px}
+dl.anat dt{font-weight:600}
+dl.anat dd{margin:0;color:var(--ink-2)}
+ol.rules{margin:0;padding-left:20px}
+ol.rules li{margin:0 0 8px;color:var(--ink-2)}
+ol.rules li b{color:var(--ink)}
+.timeline-list{list-style:none;margin:0;padding:0}
+.timeline-list li{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:8px 0;border-top:1px dashed var(--line)}
+.timeline-list li:first-child{border-top:0}
+.timeline-list .yr{font:600 13px var(--mono);color:var(--accent);padding-top:2px}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.chip i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+.variant{border-top:1px solid var(--line);margin-top:24px}
+.v-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.v-head .num{font:600 15px var(--mono);color:var(--accent)}
+.v-head h2{margin:0}
+.v-head .tag{font-size:13px;color:var(--ink-3);margin:0}
+figure.canvas{margin:18px 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;overflow-x:auto}
+figure.canvas svg{display:block;margin:0 auto;height:auto}
+figure.canvas.paper{background:var(--paper)}
+figure.canvas.cad{background:#0D2238;border-color:#1E3E60}
+figure.canvas svg text{font-family:var(--sans);fill:var(--ink)}
+.pc{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:820px){.pc{grid-template-columns:1fr}}
+.pc > div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.pc h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.pc .pro h4{color:var(--m)} .pc .con h4{color:var(--danger)} .pc .use h4{color:var(--u)}
+.pc ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:14.5px}
+.pc li{margin:3px 0}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.dots{font-family:var(--mono);color:var(--accent);letter-spacing:2px;white-space:nowrap}
+td a{text-decoration:none;font-weight:600}
+.pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px}
+.pick .card p{margin:4px 0 0;color:var(--ink-2);font-size:14.5px}
+.pick .card b{font-family:var(--mono);color:var(--accent)}
+footer{padding:48px 0 64px;color:var(--ink-3);font-size:13.5px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Nghiên cứu · Trình bày quy trình</p>
+    <div class="hero-row">
+      <h1>Swimlane: 11 cách vẽ một quy trình</h1>
+      <button class="theme-btn" id="themeBtn" type="button">Đổi sáng / tối</button>
+    </div>
+    <p class="lede">Swimlane là gì, từ đâu ra, vẽ thế nào cho tốt. Sau đó là 11 kiểu thiết kế khác hẳn nhau, cùng vẽ <b>một kịch bản</b> để so được với nhau: mỗi kiểu làm nổi một điều riêng (trách nhiệm, thông điệp, thời gian, điểm hỏng hay số lần chuyển giao).</p>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Mục lục">
+  <div class="wrap">
+    <a href="#research">Nghiên cứu</a>
+    <a href="#v01"><b>01</b>Cổ điển</a>
+    <a href="#v02"><b>02</b>BPMN dọc</a>
+    <a href="#v03"><b>03</b>Sequence</a>
+    <a href="#v04"><b>04</b>Ma trận pha</a>
+    <a href="#v05"><b>05</b>Service blueprint</a>
+    <a href="#v06"><b>06</b>Dòng thời gian</a>
+    <a href="#v07"><b>07</b>Bản đồ metro</a>
+    <a href="#v08"><b>08</b>Ma trận chấm</a>
+    <a href="#v09"><b>09</b>Bản vẽ kỹ thuật</a>
+    <a href="#v10"><b>10</b>Phác tay</a>
+    <a href="#v11"><b>11</b>Vòng đồng tâm</a>
+    <a href="#compare">So sánh</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="research">
+  <h2>Swimlane là gì</h2>
+  <p>Swimlane (biểu đồ làn bơi) là lưu đồ chia mặt phẳng thành các dải song song. Mỗi dải gán cho <b>một bên chịu trách nhiệm</b>: một vai trò, một phòng ban hay một hệ thống. Bước nằm trong làn nào thì bên đó làm. Giá trị lớn nhất của nó nằm ở <b>những mũi tên cắt qua ranh giới làn</b>. Mỗi lần cắt là một lần chuyển giao, và đó là chỗ thông tin dễ thất lạc, dễ phải chờ, dễ không ai nhận trách nhiệm.</p>
+
+  <div class="grid-2" style="margin-top:22px">
+    <div class="card">
+      <h4>Giải phẫu</h4>
+      <dl class="anat">
+        <dt>Làn (lane)</dt><dd>Một bên chịu trách nhiệm. Ngang hoặc dọc.</dd>
+        <dt>Pool</dt><dd>Khung bao một tổ chức hay hệ thống; trong pool có nhiều làn (thuật ngữ BPMN).</dd>
+        <dt>Pha (phase)</dt><dd>Dải cắt vuông góc với làn, chia quy trình theo giai đoạn hoặc mốc.</dd>
+        <dt>Bước</dt><dd>Một việc, bắt đầu bằng động từ.</dd>
+        <dt>Cổng quyết định</dt><dd>Hình thoi, hỏi một câu có/không, tách luồng thành nhánh.</dd>
+        <dt>Chuyển giao</dt><dd>Mũi tên đi từ làn này sang làn khác.</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h4>Nguồn gốc</h4>
+      <ul class="timeline-list">
+        <li><span class="yr">1984</span><span>G. Lynn Shostack, <i>Designing Services That Deliver</i> (Harvard Business Review): <b>service blueprint</b>, chia hoạt động theo “đường hiển thị” với khách hàng.</span></li>
+        <li><span class="yr">1990</span><span>Geary Rummler và Alan Brache, <i>Improving Performance: How to Manage the White Space on the Organization Chart</i>. Sách này phổ biến sơ đồ quy trình liên chức năng: quy trình hỏng ở “khoảng trắng” giữa các phòng ban.</span></li>
+        <li><span class="yr">1992</span><span>Message Sequence Chart (ITU-T Z.120): mỗi bên một đường đời (lifeline), thông điệp chạy ngang. Đây là tiền thân của sequence diagram trong UML.</span></li>
+        <li><span class="yr">1997</span><span>UML 1.x đưa “swimlanes” vào activity diagram; UML 2 đổi tên thành <i>activity partition</i>.</span></li>
+        <li><span class="yr">2004</span><span>BPMN 1.0 (BPMI). Từ 2011 là <b>BPMN 2.0</b> của OMG: chuẩn hoá pool, lane, sự kiện, cổng.</span></li>
+        <li><span class="yr">2010</span><span>Bài báo Dapper của Google: trace phân tán vẽ mỗi dịch vụ một hàng trên trục thời gian, thực chất là swimlane theo thời gian thực.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Quy tắc vẽ tốt</h3>
+  <div class="card">
+    <ol class="rules">
+      <li><b>Mỗi làn là một bên chịu trách nhiệm</b>, đặt tên theo vai trò hoặc hệ thống, không theo tên người.</li>
+      <li><b>Xếp làn theo tần suất trao đổi.</b> Hai bên nói chuyện nhiều thì đặt cạnh nhau để mũi tên ngắn và ít cắt qua làn thứ ba.</li>
+      <li><b>Luồng chính đi một hướng</b> (trái sang phải hoặc trên xuống dưới). Nhánh lỗi tách riêng bằng màu hoặc nét đứt.</li>
+      <li><b>Bước bắt đầu bằng động từ</b>; cổng quyết định là một câu hỏi có/không.</li>
+      <li><b>Giữ khoảng 3–7 làn.</b> Nhiều hơn thì gộp, hoặc tách thành biểu đồ con.</li>
+      <li><b>Làm nổi chỗ chuyển giao</b>: đây là nơi nên soi trước khi tìm lỗi và độ trễ.</li>
+      <li><b>Chọn một mức chi tiết.</b> Đừng trộn bước nghiệp vụ với lời gọi hàm trên cùng một hình.</li>
+    </ol>
+  </div>
+
+  <h3>Kịch bản dùng chung</h3>
+  <p>Người dùng chọn một ly đồ uống trên app. Lệnh đi qua server hãng tới máy pha. Server kiểm quyền, máy kiểm nguyên liệu; trượt một trong hai thì app báo lỗi. Đủ điều kiện thì máy pha, trạng thái đi ngược lên app và người dùng tới nhận ly. <span class="muted">Các con số thời gian chỉ để minh hoạ.</span></p>
+  <div class="legend">
+    <span class="chip"><i style="background:var(--u)"></i>Người dùng</span>
+    <span class="chip"><i style="background:var(--a)"></i>App điện thoại</span>
+    <span class="chip"><i style="background:var(--s)"></i>Server hãng</span>
+    <span class="chip"><i style="background:var(--m)"></i>Máy pha</span>
+    <span class="chip"><i style="background:var(--danger)"></i>Nhánh lỗi</span>
+  </div>
+</section>
+
+<section class="variant" id="v01">
+  <div class="v-head"><span class="num">01</span><h2>Liên chức năng cổ điển</h2><p class="tag">Rummler–Brache · làn ngang · pha theo cột</p></div>
+  <p>Dạng gốc. Làn nằm ngang, thời gian đi từ trái sang phải, pha chia thành cột phía trên. Hình chữ nhật là bước, hình thoi là quyết định, viên thuốc là điểm đầu và cuối.</p>
+  <figure class="canvas" data-render="classic" data-label="Biểu đồ swimlane liên chức năng cổ điển"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Ai cũng đọc được, không cần học ký hiệu</li><li>Thấy rõ bước nào thuộc ai</li><li>Pha giúp chia câu chuyện thành chương</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Bè ngang, khó xem trên điện thoại</li><li>Nhiều nhánh thì mũi tên bắt đầu chồng chéo</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Tài liệu tổng quan cho người mới</li><li>Thống nhất trách nhiệm giữa các bên</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v02">
+  <div class="v-head"><span class="num">02</span><h2>BPMN 2.0, làn dọc</h2><p class="tag">Chuẩn OMG · pool và lane · ký hiệu có nghĩa chính xác</p></div>
+  <p>Ký hiệu của BPMN mang nghĩa cố định. Vòng mảnh là sự kiện bắt đầu, vòng đậm là kết thúc, vòng đậm có tia sét là kết thúc do lỗi. Hình thoi có dấu × là cổng loại trừ: chỉ đi đúng một nhánh. Làn dọc hợp với trang cuộn và màn hình hẹp.</p>
+  <figure class="canvas" data-render="bpmn" data-label="Biểu đồ BPMN với làn dọc"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Không mơ hồ, công cụ đọc và kiểm được</li><li>Có thể chạy thẳng bằng workflow engine</li><li>Dọc nên vừa màn hình hẹp</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Người ngoài phải học ký hiệu</li><li>Dễ sa vào chi tiết ký hiệu thay vì câu chuyện</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Đặc tả quy trình nghiệp vụ chính thức</li><li>Trao đổi với đối tác dùng công cụ BPM</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v03">
+  <div class="v-head"><span class="num">03</span><h2>Sequence: làn là đường đời</h2><p class="tag">UML / MSC · thông điệp ngang · khung alt</p></div>
+  <p>Mỗi bên là một đường đời dọc; thời gian chạy từ trên xuống. Mũi tên liền là lời gọi, nét đứt là phản hồi, thanh đặc là lúc một bên đang bận xử lý. Khung <code>alt</code> gói các nhánh rẽ.</p>
+  <figure class="canvas" data-render="sequence" data-label="Sequence diagram với bốn đường đời"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Chính xác về thứ tự gọi và phản hồi</li><li>Chuẩn chung của dân phần mềm</li><li>Hợp với thiết kế giao thức, API</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Song song và vòng lặp dài khó thể hiện</li><li>Người nghiệp vụ thấy quá kỹ thuật</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Thiết kế luồng giữa app, server và máy</li><li>Gỡ lỗi: “ai gọi ai, theo thứ tự nào”</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v04">
+  <div class="v-head"><span class="num">04</span><h2>Ma trận làn × pha</h2><p class="tag">Lưới ô · thẻ đánh số · đường cong mềm</p></div>
+  <p>Mỗi ô của lưới trả lời một câu: <i>ở giai đoạn này, bên này làm gì</i>. Bước là thẻ có số thứ tự, nên không cần ép thời gian thành trục. Phong cách gọn, giống bảng làm việc.</p>
+  <figure class="canvas" data-render="matrix" data-label="Ma trận làn và pha với thẻ đánh số"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Gọn hơn kiểu cổ điển</li><li>Đọc theo hàng hoặc theo cột đều có nghĩa</li><li>Hợp workshop, dán thẻ được</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Thứ tự trong ô dựa vào số</li><li>Nhiều đường cong thì dễ rối</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Rà quy trình với nhiều bên liên quan</li><li>Lộ trình, kế hoạch theo giai đoạn</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v05">
+  <div class="v-head"><span class="num">05</span><h2>Service blueprint</h2><p class="tag">Shostack · làn theo mức hiển thị · điểm hỏng F, điểm chờ W</p></div>
+  <p>Ở đây làn không chia theo “ai”, mà theo <b>khách nhìn thấy tới đâu</b>. Ba đường ngang (đường tương tác, đường hiển thị, đường tương tác nội bộ) tách phần khách chạm vào, phần khách thấy và phần hậu trường. Dấu <b style="color:var(--danger)">F</b> là điểm dễ hỏng, <b style="color:var(--warn)">W</b> là chỗ khách phải chờ.</p>
+  <figure class="canvas" data-render="blueprint" data-label="Service blueprint với các đường tương tác và hiển thị"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Gắn thẳng quy trình với trải nghiệm</li><li>Lộ điểm hỏng và điểm chờ</li><li>Thấy được thứ khách cầm và nhìn</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Không hợp với logic rẽ nhánh</li><li>Ô nhiều chữ, khó vẽ gọn</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Thiết kế trải nghiệm dịch vụ</li><li>Tìm chỗ khách bực mình</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v06">
+  <div class="v-head"><span class="num">06</span><h2>Dòng thời gian (trace)</h2><p class="tag">Trục x là giây thật · thanh theo độ dài · kính lúp</p></div>
+  <p>Mỗi làn một hàng; mỗi bước là một thanh dài đúng bằng thời gian nó chiếm. Biểu đồ trả lời ngay câu “chậm ở đâu”. Bước ngắn bị bẹp lại, nên cần một khung phóng to cho đoạn mạng và kiểm tra.</p>
+  <figure class="canvas" data-render="timeline" data-label="Swimlane dạng dòng thời gian với khung phóng to"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Lộ ngay chỗ tốn thời gian</li><li>Giống giao diện trace quen thuộc</li><li>Thấy được thời gian chờ giữa các bên</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Cổng quyết định gần như biến mất</li><li>Bước ngắn cần phóng to mới đọc được</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Tối ưu độ trễ, đặt mục tiêu SLA</li><li>Phân tích log hoặc trace thật</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v07">
+  <div class="v-head"><span class="num">07</span><h2>Bản đồ metro</h2><p class="tag">Mỗi làn một tuyến · chuyển giao là đổi tuyến</p></div>
+  <p>Mỗi bên là một tuyến tàu. Hành trình của lệnh là đoàn tàu đổi tuyến ở mỗi lần chuyển giao, nên đường đổi màu. Nhánh lỗi là đường nhánh nét đứt màu đỏ. Pha được vẽ thành các “vùng vé”.</p>
+  <figure class="canvas" data-render="metro" data-label="Swimlane dạng bản đồ metro"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Rất dễ nhớ, đẹp trên slide và poster</li><li>Số lần đổi tuyến hiện ra rất rõ</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Mất nhiều chi tiết</li><li>Nhãn xoay khó đọc nếu dày</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Thuyết trình, onboarding</li><li>Ảnh bìa cho tài liệu quy trình</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v08">
+  <div class="v-head"><span class="num">08</span><h2>Ma trận chấm</h2><p class="tag">Tối giản kiểu Tufte · cột là bước · đếm chuyển giao</p></div>
+  <p>Cột là bước, hàng là làn, một chấm cho biết ai làm bước đó. Đường nối các chấm cho thấy hành trình; mỗi lần đường đổi hàng có một số thứ tự chuyển giao. Cột bên phải tổng hợp số bước và thời gian của từng bên.</p>
+  <figure class="canvas" data-render="dots" data-label="Ma trận chấm bước theo làn"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Mật độ thông tin cao, ít mực</li><li>Đếm được chuyển giao, có số liệu tổng</li><li>Tốt để so quy trình trước và sau</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Khô, cần đọc nhãn xoay</li><li>Không kể chuyện “vì sao”</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Phân tích, cải tiến quy trình</li><li>Báo cáo kèm số liệu</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v09">
+  <div class="v-head"><span class="num">09</span><h2>Bản vẽ kỹ thuật</h2><p class="tag">Nền blueprint · mã định danh · điểm chuyển giao H1…H6</p></div>
+  <p>Kiểu bản vẽ kỹ thuật. Mỗi bước có mã <code>S-01</code>…, mỗi chỗ đường cắt ranh giới làn có mã <code>H1</code>…. Trong review hay ticket chỉ cần nói “lỗi ở H3” là ai cũng biết chỗ nào. Ô tên bản vẽ ở góc giữ số phiên bản.</p>
+  <figure class="canvas cad" data-render="cad" data-label="Swimlane phong cách bản vẽ kỹ thuật"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Tham chiếu chính xác bằng mã</li><li>Chỗ chuyển giao được đánh dấu như mối nối</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Nặng về thẩm mỹ, nền tối khó in</li><li>Chữ in hoa đọc chậm hơn</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Tài liệu kỹ thuật, review thiết kế</li><li>Liên kết với ticket hoặc log</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v10">
+  <div class="v-head"><span class="num">10</span><h2>Phác tay trên bảng</h2><p class="tag">Giấy nhớ · nét run · sáng là giấy, tối là bảng phấn</p></div>
+  <p>Cùng nội dung, nhưng trông như vừa dán lên bảng. Nét run và giấy nhớ hơi lệch báo cho người xem rằng hình này còn đang bàn, cứ góp ý. Bật chế độ tối để xem bản bảng phấn.</p>
+  <figure class="canvas paper" data-render="sketch" data-label="Swimlane phong cách phác tay với giấy nhớ"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Gợi thảo luận, không có vẻ “đã chốt”</li><li>Thân thiện với người không kỹ thuật</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Kém trang trọng</li><li>Dày đặc thì khó đọc</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Workshop, giai đoạn bàn ý tưởng</li><li>Bản nháp trước khi chuẩn hoá</li></ul></div>
+  </div>
+</section>
+
+<section class="variant" id="v11">
+  <div class="v-head"><span class="num">11</span><h2>Vòng đồng tâm</h2><p class="tag">Thử nghiệm · làn là vòng · càng vào trong càng xa người dùng</p></div>
+  <p>Làn cuộn thành vòng tròn: ngoài cùng là người dùng, trong cùng là máy. Thứ tự bước chạy theo chiều kim đồng hồ từ đỉnh. Hình cho thấy lệnh “lặn sâu” vào hệ thống rồi “nổi lên” lại. Nhánh lỗi là nét đứt đỏ.</p>
+  <figure class="canvas" data-render="radial" data-label="Swimlane dạng vòng đồng tâm"></figure>
+  <div class="pc">
+    <div class="pro"><h4>Mạnh</h4><ul><li>Thể hiện rõ các lớp và độ sâu</li><li>Hình lạ, dễ gây chú ý</li></ul></div>
+    <div class="con"><h4>Yếu</h4><ul><li>Thứ tự khó dò hơn đường thẳng</li><li>Khó mở rộng khi nhiều bước</li></ul></div>
+    <div class="use"><h4>Dùng khi</h4><ul><li>Minh hoạ kiến trúc nhiều lớp</li><li>Bìa, slide mở đầu</li></ul></div>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>So sánh và chọn kiểu</h2>
+  <p>Không có kiểu tốt nhất; mỗi kiểu trả lời một câu hỏi khác. Điểm chấm là đánh giá tương đối trong kịch bản này.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Kiểu</th><th>Câu hỏi nó trả lời</th><th>Người đọc hợp nhất</th><th>Rẽ nhánh</th><th>Thời gian</th><th>Chuyển giao</th><th>Công vẽ</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#v01">01 Cổ điển</a></td><td>Ai làm bước nào?</td><td>Mọi người</td><td class="dots">●●●●○</td><td class="dots">●●○○○</td><td class="dots">●●●○○</td><td class="dots">●●○○○</td></tr>
+        <tr><td><a href="#v02">02 BPMN</a></td><td>Quy trình chạy chính xác ra sao?</td><td>Phân tích nghiệp vụ</td><td class="dots">●●●●●</td><td class="dots">●○○○○</td><td class="dots">●●●○○</td><td class="dots">●●●○○</td></tr>
+        <tr><td><a href="#v03">03 Sequence</a></td><td>Ai gọi ai, theo thứ tự nào?</td><td>Kỹ sư</td><td class="dots">●●●○○</td><td class="dots">●●●○○</td><td class="dots">●●●●○</td><td class="dots">●●○○○</td></tr>
+        <tr><td><a href="#v04">04 Ma trận pha</a></td><td>Mỗi giai đoạn ai làm gì?</td><td>Quản lý, workshop</td><td class="dots">●●○○○</td><td class="dots">●●○○○</td><td class="dots">●●●○○</td><td class="dots">●●○○○</td></tr>
+        <tr><td><a href="#v05">05 Blueprint</a></td><td>Khách thấy gì, hỏng ở đâu?</td><td>Thiết kế trải nghiệm</td><td class="dots">●○○○○</td><td class="dots">●●○○○</td><td class="dots">●●●○○</td><td class="dots">●●●●○</td></tr>
+        <tr><td><a href="#v06">06 Dòng thời gian</a></td><td>Chậm ở đâu?</td><td>Kỹ sư hiệu năng</td><td class="dots">●○○○○</td><td class="dots">●●●●●</td><td class="dots">●●●○○</td><td class="dots">●●●○○</td></tr>
+        <tr><td><a href="#v07">07 Metro</a></td><td>Hành trình đi qua những ai?</td><td>Khán giả thuyết trình</td><td class="dots">●●○○○</td><td class="dots">●○○○○</td><td class="dots">●●●●●</td><td class="dots">●●●○○</td></tr>
+        <tr><td><a href="#v08">08 Ma trận chấm</a></td><td>Bao nhiêu chuyển giao, ai gánh bao nhiêu?</td><td>Phân tích, cải tiến</td><td class="dots">●●○○○</td><td class="dots">●●●○○</td><td class="dots">●●●●●</td><td class="dots">●●○○○</td></tr>
+        <tr><td><a href="#v09">09 Bản vẽ kỹ thuật</a></td><td>Chỗ nào mang mã gì?</td><td>Review kỹ thuật</td><td class="dots">●●●●○</td><td class="dots">●●○○○</td><td class="dots">●●●●●</td><td class="dots">●●●○○</td></tr>
+        <tr><td><a href="#v10">10 Phác tay</a></td><td>Ta đang hình dung thế này, đúng không?</td><td>Workshop</td><td class="dots">●●●○○</td><td class="dots">●○○○○</td><td class="dots">●●○○○</td><td class="dots">●○○○○</td></tr>
+        <tr><td><a href="#v11">11 Vòng đồng tâm</a></td><td>Lệnh đi sâu tới lớp nào?</td><td>Minh hoạ, bìa</td><td class="dots">●○○○○</td><td class="dots">●○○○○</td><td class="dots">●●●○○</td><td class="dots">●●●●○</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pick">
+    <div class="card"><b>01 · 07 · 10</b><p>Giải thích cho người ngoài dự án hoặc người mới.</p></div>
+    <div class="card"><b>02 · 03</b><p>Đặc tả chính xác để người khác làm theo hoặc để code.</p></div>
+    <div class="card"><b>06</b><p>Tìm chỗ chậm, đặt mục tiêu thời gian.</p></div>
+    <div class="card"><b>05</b><p>Tìm chỗ trải nghiệm người dùng bị hỏng hoặc phải chờ.</p></div>
+    <div class="card"><b>08 · 09</b><p>Review, ticket, so sánh trước và sau khi cải tiến.</p></div>
+    <div class="card"><b>04</b><p>Kế hoạch theo giai đoạn, làm việc chung trên bảng.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">Trang tự chứa, không dùng chung asset với các tài liệu khác. Các biểu đồ được vẽ bằng SVG từ một bộ dữ liệu kịch bản trong mã nguồn trang.</div>
+</footer>
+
+<script>
+(function(){
+/* ---------- Chủ đề sáng/tối ---------- */
+const btn=document.getElementById('themeBtn');
+function current(){const t=document.documentElement.dataset.theme;if(t)return t;return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+try{const saved=localStorage.getItem('swim-theme');if(saved)document.documentElement.dataset.theme=saved;}catch(e){}
+btn.addEventListener('click',()=>{const n=current()==='dark'?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem('swim-theme',n);}catch(e){}});
+
+/* ---------- Dữ liệu kịch bản ---------- */
+const LANES=[
+  {id:'user',name:'Người dùng',key:'u'},
+  {id:'app',name:'App điện thoại',key:'a'},
+  {id:'server',name:'Server hãng',key:'s'},
+  {id:'machine',name:'Máy pha',key:'m'}];
+const LI=Object.fromEntries(LANES.map((l,i)=>[l.id,i]));
+const LK=Object.fromEntries(LANES.map(l=>[l.id,l.key]));
+const PHASES=[{name:'Đặt món',cols:[0,1]},{name:'Xác thực',cols:[2,3]},{name:'Thực thi',cols:[4,6]},{name:'Hoàn tất',cols:[7,9]}];
+const STEPS=[
+  {id:'s1',lane:'user',col:0,kind:'start',label:'Chọn\nđồ uống',short:'Chọn món',t:[0,2]},
+  {id:'s2',lane:'app',col:1,kind:'task',label:'Tạo lệnh pha',short:'Tạo lệnh',t:[2,2.3]},
+  {id:'s3',lane:'server',col:2,kind:'task',label:'Kiểm quyền',short:'Kiểm quyền',t:[2.3,2.6]},
+  {id:'g1',lane:'server',col:3,kind:'gate',label:'Có quyền?',short:'Quyền?'},
+  {id:'s4',lane:'machine',col:4,kind:'task',label:'Kiểm\nnguyên liệu',short:'Kiểm kho',t:[2.6,3.2]},
+  {id:'g2',lane:'machine',col:5,kind:'gate',label:'Đủ?',short:'Đủ?'},
+  {id:'s5',lane:'machine',col:6,kind:'task',label:'Pha chế',short:'Pha chế',t:[3.2,28]},
+  {id:'s6',lane:'server',col:7,kind:'task',label:'Chuyển\ntrạng thái',short:'Chuyển',t:[28,28.4]},
+  {id:'s7',lane:'app',col:8,kind:'task',label:'Báo đã xong',short:'Báo xong',t:[28.4,28.7]},
+  {id:'s8',lane:'user',col:9,kind:'end',label:'Nhận\nđồ uống',short:'Nhận ly',t:[28.7,40]},
+  {id:'err',lane:'app',col:5,kind:'error',label:'Báo lỗi',short:'Báo lỗi',slot:1}];
+const S=Object.fromEntries(STEPS.map(s=>[s.id,s]));
+/* [từ, tới, nhãn, kiểu đi: 'a' = dọc theo luồng trước, 'c' = cắt làn trước] */
+const EDGES=[['s1','s2'],['s2','s3'],['s3','g1'],['g1','s4','Có'],['g1','err','Không','c'],['s4','g2'],['g2','s5','Đủ'],['g2','err','Thiếu','c'],['s5','s6'],['s6','s7'],['s7','s8']];
+const HAPPY=['s1','s2','s3','g1','s4','g2','s5','s6','s7','s8'];
+const one=s=>s.label.replace(/\n/g,' ');
+const vn=n=>n.toFixed(1).replace('.',',');
+
+/* ---------- Tiện ích SVG ---------- */
+const NS='http://www.w3.org/2000/svg';
+function E(tag,attrs,parent){const e=document.createElementNS(NS,tag);if(attrs)for(const k in attrs){if(attrs[k]!=null)e.setAttribute(k,attrs[k]);}if(parent)parent.appendChild(e);return e;}
+function T(p,x,y,str,a){
+  a=Object.assign({},a||{});const fs=+(a['font-size']||12);const lh=a.lh||fs*1.28;delete a.lh;
+  const lines=String(str).split('\n');
+  const t=E('text',Object.assign({x,y,'text-anchor':'middle','font-size':fs},a),p);
+  lines.forEach((ln,i)=>{const s=E('tspan',{x,dy:i?lh:(-(lines.length-1)*lh/2+fs*0.35)},t);s.textContent=ln;});
+  return t;}
+function root(fig,w,h,minW){
+  const s=E('svg',{viewBox:`0 0 ${w} ${h}`,role:'img','aria-label':fig.dataset.label||''},fig);
+  s.style.width='100%';s.style.maxWidth=w+'px';s.style.minWidth=(minW||Math.round(w*0.72))+'px';
+  return s;}
+function defs(svg){return svg.querySelector('defs')||E('defs',{},svg);}
+function marker(svg,id,style,size,open){
+  size=size||9;
+  const m=E('marker',{id,viewBox:'0 0 10 10',refX:open?8.5:9,refY:5,markerWidth:size,markerHeight:size,orient:'auto',markerUnits:'userSpaceOnUse'},defs(svg));
+  E('path',{d:open?'M1,1.5 L8.5,5 L1,8.5':'M0,1 L10,5 L0,9 z',style:open?style+';fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round':style},m);
+  return `url(#${id})`;}
+function pathR(pts,r){
+  if(!r||pts.length<3)return 'M'+pts.map(p=>p[0]+','+p[1]).join(' L');
+  let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=1;i<pts.length-1;i++){
+    const [x0,y0]=pts[i-1],[x1,y1]=pts[i],[x2,y2]=pts[i+1];
+    const d1=Math.hypot(x1-x0,y1-y0),d2=Math.hypot(x2-x1,y2-y1),rr=Math.min(r,d1/2,d2/2);
+    d+=` L${x1+(x0-x1)/d1*rr},${y1+(y0-y1)/d1*rr} Q${x1},${y1} ${x1+(x2-x1)/d2*rr},${y1+(y2-y1)/d2*rr}`;}
+  const l=pts[pts.length-1];return d+` L${l[0]},${l[1]}`;}
+const HALO='paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round';
+function edgeLabel(g,P,txt,style,fs){
+  const [x0,y0]=P[0],[x1,y1]=P[1];
+  if(Math.abs(y1-y0)<1)T(g,x0+(x1>x0?6:-6),y0-9,txt,{'text-anchor':x1>x0?'start':'end','font-size':fs||11,style});
+  else T(g,x0+7,y0+(y1>y0?13:-13),txt,{'text-anchor':'start','font-size':fs||11,style});}
+function diamond(x,y,w,h){return `M${x},${y-h/2} L${x+w/2},${y} L${x},${y+h/2} L${x-w/2},${y} Z`;}
+
+/* Bố cục lưới dùng chung cho các kiểu luồng: trục a là hướng chạy của luồng, trục c là hướng cắt làn */
+function flowGeom(o){
+  const H=o.orient==='h';
+  const A=s=>o.a0+s.col*o.colSize+o.colSize/2;
+  const C=s=>o.c0+LI[s.lane]*o.laneSize+o.laneSize/2;
+  const xy=(a,c)=>H?[a,c]:[c,a];
+  const half=s=>{const [w,h]=o.size(s);return H?[w/2,h/2]:[h/2,w/2];};
+  function route(e){
+    const s=S[e[0]],t=S[e[1]],mode=e[3]||'a';
+    const sa=A(s),sc=C(s),ta=A(t),tc=C(t),[sha,shc]=half(s),[tha,thc]=half(t);
+    let P;
+    if(sc===tc)P=[[sa+sha,sc],[ta-tha,tc]];
+    else{const dir=Math.sign(tc-sc);
+      if(sa===ta)P=[[sa,sc+dir*shc],[ta,tc-dir*thc]];
+      else if(mode==='c')P=[[sa,sc+dir*shc],[sa,tc],[ta-tha,tc]];
+      else P=[[sa+sha,sc],[ta,sc],[ta,tc-dir*thc]];}
+    return P.map(p=>xy(p[0],p[1]));}
+  return {center:s=>xy(A(s),C(s)),route};}
+
+const R={};
+
+/* ---------- 01 Cổ điển ---------- */
+R.classic=fig=>{
+  const head=120,band=36,col=112,lane=100,pad=8,W=head+col*10+pad,H=band+lane*4+pad;
+  const svg=root(fig,W,H);
+  const arr=marker(svg,'cl-a','fill:var(--ink-2)');
+  const G=flowGeom({orient:'h',a0:head,c0:band,colSize:col,laneSize:lane,size:s=>s.kind==='gate'?[82,56]:[98,48]});
+  LANES.forEach((l,i)=>{const y=band+i*lane;
+    E('rect',{x:head,y,width:W-head-pad,height:lane,style:`fill:var(--${i%2?'surface':'surface-2'})`},svg);
+    E('rect',{x:0,y:y+1,width:head-8,height:lane-2,rx:4,style:`fill:var(--${l.key})`},svg);
+    T(svg,(head-8)/2,y+lane/2,l.name,{'font-size':13,style:'fill:var(--on-lane);font-weight:600'});
+    if(i)E('line',{x1:0,x2:W-pad,y1:y,y2:y,style:'stroke:var(--line-2)'},svg);});
+  E('rect',{x:head,y:band,width:W-head-pad,height:lane*4,style:'fill:none;stroke:var(--line-2)'},svg);
+  PHASES.forEach((p,i)=>{const x=head+p.cols[0]*col,w=(p.cols[1]-p.cols[0]+1)*col;
+    E('rect',{x:x+3,y:4,width:w-6,height:band-12,rx:5,style:'fill:var(--surface-2)'},svg);
+    T(svg,x+w/2,4+(band-12)/2,p.name.toUpperCase(),{'font-size':11,style:'fill:var(--ink-2);font-weight:600;letter-spacing:.08em'});
+    if(i)E('line',{x1:x,x2:x,y1:band,y2:band+lane*4,style:'stroke:var(--ink-3);stroke-dasharray:4 4'},svg);});
+  EDGES.forEach(e=>{const P=G.route(e);const err=S[e[1]].kind==='error';
+    E('path',{d:pathR(P,8),'marker-end':arr,style:`fill:none;stroke:var(--${err?'danger':'ink-2'});stroke-width:1.6${err?';stroke-dasharray:5 4':''}`},svg);
+    if(e[2])edgeLabel(svg,P,e[2],'fill:var(--ink-3);font-style:italic');});
+  STEPS.forEach(s=>{const [x,y]=G.center(s),k=LK[s.lane];
+    if(s.kind==='gate'){E('path',{d:diamond(x,y,82,56),style:'fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.6'},svg);}
+    else{const pill=s.kind!=='task';const fill=s.kind==='error'?'danger-soft':pill?k+'-soft':'surface';const st=s.kind==='error'?'danger':k;
+      E('rect',{x:x-49,y:y-24,width:98,height:48,rx:pill?24:6,style:`fill:var(--${fill});stroke:var(--${st});stroke-width:1.6`},svg);}
+    T(svg,x,y,s.label,{'font-size':s.kind==='gate'?11.5:12,style:'font-weight:500'});});
+};
+
+/* ---------- 02 BPMN dọc ---------- */
+R.bpmn=fig=>{
+  const laneW=170,row=76,poolH=30,laneHd=38,pad=10,a0=poolH+laneHd,W=pad*2+laneW*4,H=a0+row*10+12;
+  const svg=root(fig,W,H,560);
+  const arr=marker(svg,'bp-a','fill:var(--ink)',10);
+  const size=s=>s.kind==='gate'?[44,44]:s.kind==='task'?[134,44]:[34,34];
+  const G=flowGeom({orient:'v',a0,c0:pad,colSize:row,laneSize:laneW,size});
+  E('rect',{x:pad,y:1,width:laneW*4,height:H-2,rx:2,style:'fill:var(--surface);stroke:var(--ink-2);stroke-width:1.5'},svg);
+  E('rect',{x:pad,y:1,width:laneW*4,height:poolH,style:'fill:var(--surface-2);stroke:var(--ink-2);stroke-width:1.5'},svg);
+  T(svg,pad+laneW*2,1+poolH/2,'Pool · Quy trình pha một ly',{'font-size':12.5,style:'font-weight:600'});
+  LANES.forEach((l,i)=>{const x=pad+i*laneW;
+    E('rect',{x,y:poolH+1,width:laneW,height:laneHd,style:'fill:var(--surface);stroke:var(--ink-2)'},svg);
+    E('rect',{x:x+10,y:poolH+1+laneHd/2-4,width:8,height:8,rx:2,style:`fill:var(--${l.key})`},svg);
+    T(svg,x+24,poolH+1+laneHd/2,l.name,{'text-anchor':'start','font-size':12.5,style:'font-weight:600'});
+    if(i)E('line',{x1:x,x2:x,y1:poolH,y2:H-1,style:'stroke:var(--ink-2)'},svg);});
+  EDGES.forEach(e=>{const P=G.route(e);
+    E('path',{d:pathR(P,0),'marker-end':arr,style:'fill:none;stroke:var(--ink);stroke-width:1.4'},svg);
+    if(e[2])edgeLabel(svg,P,e[2],'fill:var(--ink-2)',11);});
+  STEPS.forEach(s=>{const [x,y]=G.center(s),k=LK[s.lane];
+    if(s.kind==='task'){E('rect',{x:x-67,y:y-22,width:134,height:44,rx:10,style:`fill:var(--${k}-soft);stroke:var(--${k});stroke-width:1.4`},svg);T(svg,x,y,one(s),{'font-size':12});}
+    else if(s.kind==='gate'){E('path',{d:diamond(x,y,44,44),style:'fill:var(--surface);stroke:var(--ink);stroke-width:1.5'},svg);
+      E('path',{d:`M${x-7},${y-7} L${x+7},${y+7} M${x+7},${y-7} L${x-7},${y+7}`,style:'stroke:var(--ink);stroke-width:3;stroke-linecap:round'},svg);
+      T(svg,x+26,y-22,s.label,{'text-anchor':'start','font-size':11.5,style:'fill:var(--ink-2)'});}
+    else{const sw=s.kind==='start'?1.5:4;const c=s.kind==='error'?'danger':'ink';
+      E('circle',{cx:x,cy:y,r:17-sw/2,style:`fill:var(--surface);stroke:var(--${c});stroke-width:${sw}`},svg);
+      if(s.kind==='error')E('path',{d:`M${x-5},${y+7} L${x-1},${y-3} L${x+2},${y+1} L${x+6},${y-8} L${x+3},${y+5} L${x},${y+1} Z`,style:'fill:var(--danger)'},svg);
+      const left=s.kind==='error';T(svg,left?x-24:x+24,y,s.label,{'text-anchor':left?'end':'start','font-size':11.5,style:'fill:var(--ink-2)'});}});
+};
+
+/* ---------- 03 Sequence ---------- */
+R.sequence=fig=>{
+  const W=900,xs=[130,330,530,730],act=5;
+  const items=[
+    {k:'pick',f:0,t:1,l:'Chọn đồ uống'},
+    {k:'send',f:1,t:2,l:'Gửi lệnh pha'},
+    {k:'auth',f:2,t:2,l:'Kiểm quyền',self:1},
+    {frame:'start',guard:'[có quyền và đủ nguyên liệu]'},
+    {k:'relay',f:2,t:3,l:'Chuyển lệnh'},
+    {k:'brew',f:3,t:3,l:'Kiểm nguyên liệu\nrồi pha chế',self:1},
+    {k:'done',f:3,t:2,l:'Đã xong',r:1},
+    {k:'status',f:2,t:1,l:'Trạng thái: xong',r:1},
+    {k:'notify',f:1,t:0,l:'Mời nhận đồ uống',r:1},
+    {divider:'[không có quyền hoặc thiếu nguyên liệu]'},
+    {k:'deny',f:2,t:1,l:'Từ chối kèm lý do',r:1},
+    {k:'error',f:1,t:0,l:'Báo lỗi',r:1},
+    {frame:'end'}];
+  let y=104,fy0=0,fy1=0;const at={};
+  items.forEach(it=>{
+    if(it.frame==='start'){fy0=y-14;it.y=y;y+=30;return;}
+    if(it.frame==='end'){fy1=y-14;return;}
+    if(it.divider){it.y=y-12;y+=26;return;}
+    it.y=y;at[it.k]=y;y+=it.self?56:44;});
+  const H=fy1+96;
+  const svg=root(fig,W,H,640);
+  const solid=marker(svg,'sq-s','fill:var(--ink)');
+  const open=marker(svg,'sq-o','stroke:var(--ink-2)',10,true);
+  // khung alt
+  E('rect',{x:34,y:fy0,width:W-48,height:fy1-fy0,rx:4,style:'fill:none;stroke:var(--ink-3);stroke-width:1.2'},svg);
+  E('path',{d:`M34,${fy0} h44 v14 l-8,8 h-36 z`,style:'fill:var(--surface-2);stroke:var(--ink-3)'},svg);
+  T(svg,52,fy0+11,'alt',{'font-size':12,style:'font-weight:700;font-family:var(--mono)'});
+  // đầu và chân đường đời
+  LANES.forEach((l,i)=>{const x=xs[i];
+    E('line',{x1:x,x2:x,y1:58,y2:H-46,style:'stroke:var(--ink-3);stroke-dasharray:5 5'},svg);
+    [18,H-46].forEach(yy=>{E('rect',{x:x-72,y:yy,width:144,height:38,rx:8,style:`fill:var(--${l.key}-soft);stroke:var(--${l.key});stroke-width:1.5`},svg);
+      T(svg,x,yy+19,l.name,{'font-size':12.5,style:'font-weight:600'});});});
+  // thanh kích hoạt
+  [[1,'pick','notify'],[2,'send','status'],[3,'relay','done'],[2,'deny','deny'],[1,'deny','error']].forEach(([li,a,b])=>{
+    const y0=at[a]-6,y1=at[b]+(a===b?8:6);
+    E('rect',{x:xs[li]-act,y:y0,width:act*2,height:y1-y0,style:`fill:var(--${LANES[li].key}-soft);stroke:var(--${LANES[li].key})`},svg);});
+  items.forEach(it=>{
+    if(it.frame==='start'){T(svg,90,it.y-3,it.guard,{'text-anchor':'start','font-size':11.5,style:'fill:var(--ink-2);font-style:italic'});return;}
+    if(it.divider){E('line',{x1:34,x2:W-14,y1:it.y,y2:it.y,style:'stroke:var(--ink-3);stroke-dasharray:6 4'},svg);
+      T(svg,44,it.y+14,it.divider,{'text-anchor':'start','font-size':11.5,style:'fill:var(--ink-2);font-style:italic'});return;}
+    if(!it.k)return;
+    if(it.self){const x=xs[it.f]+act;
+      E('path',{d:`M${x},${it.y} h38 v24 h-36`,'marker-end':solid,style:'fill:none;stroke:var(--ink);stroke-width:1.4'},svg);
+      T(svg,x+46,it.y+12,it.l,{'text-anchor':'start','font-size':12});return;}
+    const dir=Math.sign(xs[it.t]-xs[it.f]);
+    const x1=xs[it.f]+dir*act,x2=xs[it.t]-dir*act;
+    E('line',{x1,x2,y1:it.y,y2:it.y,'marker-end':it.r?open:solid,style:`stroke:var(--${it.r?'ink-2':'ink'});stroke-width:1.4${it.r?';stroke-dasharray:6 4':''}`},svg);
+    T(svg,(x1+x2)/2,it.y-9,it.l,{'font-size':12,style:HALO+(it.k==='deny'||it.k==='error'?';fill:var(--danger)':'')});});
+};
+
+/* ---------- 04 Ma trận làn × pha ---------- */
+R.matrix=fig=>{
+  const head=132,top=54,laneH=100,cw=112,ch=48,gap=14,cp=16,pad=6;
+  const ph=s=>PHASES.findIndex(p=>s.col>=p.cols[0]&&s.col<=p.cols[1]);
+  const slot={},nmax=PHASES.map(()=>1);
+  LANES.forEach(l=>PHASES.forEach((p,pi)=>{
+    STEPS.filter(s=>s.lane===l.id&&ph(s)===pi).sort((a,b)=>a.col-b.col).forEach((s,k)=>{slot[s.id]=s.slot!=null?s.slot:k;nmax[pi]=Math.max(nmax[pi],slot[s.id]+1);});}));
+  const px=[head];nmax.forEach((n,i)=>px.push(px[i]+n*(cw+gap)-gap+cp*2));
+  const W=px[4]+pad,H=top+laneH*4+pad;
+  const svg=root(fig,W,H,760);
+  const arr=marker(svg,'mx-a','fill:var(--ink-3)',8);
+  const arrE=marker(svg,'mx-e','fill:var(--danger)',8);
+  const pos=s=>({x:px[ph(s)]+cp+slot[s.id]*(cw+gap)+cw/2,y:top+LI[s.lane]*laneH+laneH/2});
+  PHASES.forEach((p,pi)=>{const x=px[pi],w=px[pi+1]-px[pi];
+    T(svg,x+8,22,String(pi+1).padStart(2,'0'),{'text-anchor':'start','font-size':11,style:'fill:var(--accent);font-family:var(--mono);font-weight:600'});
+    T(svg,x+30,22,p.name,{'text-anchor':'start','font-size':14,style:'font-weight:600'});
+    E('rect',{x:x+6,y:36,width:w-12,height:3,rx:1.5,style:'fill:var(--line-2)'},svg);
+    LANES.forEach((l,li)=>E('rect',{x:x+4,y:top+li*laneH+4,width:w-8,height:laneH-8,rx:12,style:`fill:var(--${(li+pi)%2?'surface-2':'surface'});stroke:var(--line)`},svg));});
+  LANES.forEach((l,li)=>{const y=top+li*laneH+laneH/2;
+    E('circle',{cx:14,cy:y,r:5,style:`fill:var(--${l.key})`},svg);
+    T(svg,26,y,l.name,{'text-anchor':'start','font-size':13,style:'font-weight:600'});});
+  function curve(a,b){const dx=b.x-a.x,dy=b.y-a.y;
+    if(Math.abs(dx)>cw*0.6){const sx=a.x+Math.sign(dx)*cw/2,tx=b.x-Math.sign(dx)*cw/2,m=(tx-sx)/2;
+      return {d:`M${sx},${a.y} C${sx+m},${a.y} ${tx-m},${b.y} ${tx},${b.y}`,mid:[(sx+tx)/2,(a.y+b.y)/2]};}
+    const sy=a.y+Math.sign(dy)*ch/2,ty=b.y-Math.sign(dy)*ch/2,m=(ty-sy)/2;
+    return {d:`M${a.x},${sy} C${a.x},${sy+m} ${b.x},${ty-m} ${b.x},${ty}`,mid:[(a.x+b.x)/2,(sy+ty)/2]};}
+  const labels=[];
+  EDGES.forEach(e=>{const c=curve(pos(S[e[0]]),pos(S[e[1]]));const bad=S[e[1]].kind==='error';
+    E('path',{d:c.d,'marker-end':bad?arrE:arr,style:`fill:none;stroke:var(--${bad?'danger':'ink-3'});stroke-width:1.6${bad?';stroke-dasharray:5 4':''}`},svg);
+    if(e[2])labels.push([c.mid,e[2],bad]);});
+  STEPS.forEach(s=>{const {x,y}=pos(s),k=LK[s.lane],n=HAPPY.indexOf(s.id)+1,bad=s.kind==='error';
+    E('rect',{x:x-cw/2,y:y-ch/2,width:cw,height:ch,rx:10,style:`fill:var(--${bad?'danger-soft':'surface'});stroke:var(--${bad?'danger':s.kind==='gate'?'ink-3':'line-2'});${s.kind==='gate'?'stroke-dasharray:4 3;':''}filter:drop-shadow(0 1px 2px rgba(0,0,0,.12))`},svg);
+    E('rect',{x:x-cw/2+6,y:y-ch/2+8,width:4,height:ch-16,rx:2,style:`fill:var(--${bad?'danger':k})`},svg);
+    T(svg,x+4,y,s.kind==='gate'?'◇ '+s.label:s.label,{'font-size':12,style:'font-weight:500'});
+    E('circle',{cx:x-cw/2+2,cy:y-ch/2+2,r:10,style:`fill:var(--${bad?'danger':k})`},svg);
+    T(svg,x-cw/2+2,y-ch/2+2,n?n:'!',{'font-size':10.5,style:'fill:var(--on-lane);font-weight:700'});});
+  labels.forEach(([[x,y],t,bad])=>{const w=t.length*6.6+14;
+    E('rect',{x:x-w/2,y:y-10,width:w,height:20,rx:10,style:`fill:var(--surface);stroke:var(--${bad?'danger':'line-2'})`},svg);
+    T(svg,x,y,t,{'font-size':11,style:`fill:var(--${bad?'danger':'ink-2'});font-weight:600`});});
+};
+
+/* ---------- 05 Service blueprint ---------- */
+R.blueprint=fig=>{
+  const head=160,colW=138,top=46,rowH=82,lineH=30,pad=8,nw=116,nh=54;
+  const cols=['Chọn món','Gửi lệnh','Xác thực','Pha chế','Báo xong','Nhận ly'];
+  const rows=[
+    {k:'ev',name:'Bằng chứng\nhữu hình',fill:'surface-2',stroke:'line-2',dash:1},
+    {k:'user',name:'Người dùng',fill:'u-soft',stroke:'u'},
+    {line:'Đường tương tác',st:'stroke:var(--ink-2);stroke-width:1.5'},
+    {k:'front',name:'Tiền cảnh\n(app, màn máy)',fill:'a-soft',stroke:'a'},
+    {line:'Đường hiển thị',st:'stroke:var(--ink-2);stroke-width:2;stroke-dasharray:9 5'},
+    {k:'back',name:'Hậu trường\n(server)',fill:'s-soft',stroke:'s'},
+    {line:'Đường tương tác nội bộ',st:'stroke:var(--ink-2);stroke-width:1.5;stroke-dasharray:2 4'},
+    {k:'sup',name:'Hỗ trợ\n(máy, kho, sổ quyền)',fill:'m-soft',stroke:'m'}];
+  const D={
+    ev:['Menu và giá\ntrên app','','','Đèn và %\ntrên máy','Thông báo\nđẩy','Ly đồ uống'],
+    user:['Chọn\nđồ uống','Bấm\nxác nhận','Chờ','Xem\ntiến độ','Mở\nthông báo','Lấy ly'],
+    front:['App hiện\nmenu','App gửi\nlệnh','App hiện\n“đang gửi”','Máy hiện\n% pha','App báo\n“đã xong”',''],
+    back:['','Server\nnhận lệnh','Kiểm quyền\nngười dùng','Chuyển lệnh\nxuống máy','Đẩy\ntrạng thái',''],
+    sup:['Đồng bộ\ntồn kho','','Sổ quyền\nchia sẻ máy','Bơm, van,\nkho nguyên liệu','Ghi\nnhật ký','']};
+  let y=top;const RY={};rows.forEach(r=>{r.y=y;if(r.k)RY[r.k]=y+rowH/2;y+=r.line?lineH:rowH;});
+  const W=head+colW*6+pad,H=y+pad;
+  const svg=root(fig,W,H,820);
+  const arr=marker(svg,'bl-a','fill:var(--ink-2)',8);
+  const cx=c=>head+c*colW+colW/2;
+  cols.forEach((c,i)=>{T(svg,cx(i),20,`${i+1} · ${c}`,{'font-size':12.5,style:'font-weight:600'});
+    if(i)E('line',{x1:head+i*colW,x2:head+i*colW,y1:top-6,y2:H-pad,style:'stroke:var(--line);stroke-dasharray:2 3'},svg);});
+  rows.forEach(r=>{
+    if(r.line){const ly=r.y+lineH/2;E('line',{x1:6,x2:W-pad,y1:ly,y2:ly,style:r.st},svg);
+      T(svg,10,ly-7,r.line.toUpperCase(),{'text-anchor':'start','font-size':9.5,style:'fill:var(--ink-3);font-weight:600;letter-spacing:.06em'});return;}
+    T(svg,12,r.y+rowH/2,r.name,{'text-anchor':'start','font-size':12.5,style:`fill:var(--${r.k==='ev'?'ink-2':r.stroke});font-weight:600`});
+    D[r.k].forEach((txt,c)=>{if(!txt)return;const x=cx(c),yy=r.y+rowH/2;
+      E('rect',{x:x-nw/2,y:yy-nh/2,width:nw,height:nh,rx:r.k==='ev'?14:6,style:`fill:var(--${r.fill});stroke:var(--${r.stroke});stroke-width:1.3${r.dash?';stroke-dasharray:4 3':''}`},svg);
+      T(svg,x,yy,txt,{'font-size':11.5});});});
+  const v=(c,a,b)=>{const x=cx(c),d=Math.sign(RY[b]-RY[a]);
+    E('line',{x1:x,x2:x,y1:RY[a]+d*nh/2,y2:RY[b]-d*(nh/2+1),'marker-end':arr,style:'stroke:var(--ink-2);stroke-width:1.4'},svg);};
+  const h=(k,c)=>{const yy=RY[k];E('line',{x1:cx(c)+nw/2,x2:cx(c+1)-nw/2-1,y1:yy,y2:yy,'marker-end':arr,style:'stroke:var(--ink-2);stroke-width:1.4'},svg);};
+  [[0,'sup','front'],[0,'front','user'],[1,'user','front'],[1,'front','back'],[2,'back','sup'],[3,'back','sup'],[3,'front','user'],[4,'back','front'],[4,'front','user'],[4,'back','sup']].forEach(a=>v(...a));
+  [0,1,2,3,4].forEach(c=>h('user',c));[1,2,3].forEach(c=>h('back',c));
+  [[2,'back','F','danger'],[3,'sup','F','danger'],[2,'user','W','warn'],[3,'user','W','warn']].forEach(([c,k,t,col])=>{
+    const x=cx(c)+nw/2-2,yy=RY[k]-nh/2+2;
+    E('circle',{cx:x,cy:yy,r:10,style:`fill:var(--${col})`},svg);
+    T(svg,x,yy,t,{'font-size':11,style:'fill:var(--surface);font-weight:700'});});
+};
+
+/* ---------- 06 Dòng thời gian ---------- */
+R.timeline=fig=>{
+  const head=128,top=48,laneH=66,plotW=880,TT=40,pad=26,bottom=78,W=head+plotW+pad,H=top+laneH*4+bottom;
+  const svg=root(fig,W,H,800);
+  const X=t=>head+t/TT*plotW,Y=i=>top+i*laneH+laneH/2;
+  const arr=marker(svg,'tl-a','fill:var(--ink-3)',7);
+  LANES.forEach((l,i)=>{E('rect',{x:head,y:top+i*laneH,width:plotW,height:laneH,style:`fill:var(--${i%2?'surface':'surface-2'})`},svg);
+    E('rect',{x:10,y:Y(i)-5,width:10,height:10,rx:2,style:`fill:var(--${l.key})`},svg);
+    T(svg,28,Y(i),l.name,{'text-anchor':'start','font-size':12.5,style:'font-weight:600'});});
+  for(let t=0;t<=TT;t+=5){E('line',{x1:X(t),x2:X(t),y1:top-6,y2:top+laneH*4,style:'stroke:var(--line-2);stroke-width:.8'},svg);
+    T(svg,X(t),top-16,t+' s',{'font-size':11,style:'fill:var(--ink-3);font-family:var(--mono)'});}
+  // vùng phóng to trên trục
+  const z0=1.9,z1=3.3;
+  E('rect',{x:X(z0),y:top-6,width:X(z1)-X(z0),height:6,style:'fill:var(--accent)'},svg);
+  const timed=HAPPY.map(id=>S[id]).filter(s=>s.t);
+  const total=TT,brew=S.s5.t[1]-S.s5.t[0];
+  timed.forEach(s=>{const i=LI[s.lane],x=X(s.t[0]),w=Math.max(3,X(s.t[1])-x);
+    E('rect',{x,y:Y(i)-11,width:w,height:22,rx:4,style:`fill:var(--${LK[s.lane]})`},svg);
+    let lab=one(s);if(s.id==='s5')lab=`Pha chế · ${vn(brew)} s (${Math.round(brew/total*100)}%)`;
+    if(w>=lab.length*6.6+14)T(svg,x+8,Y(i),lab,{'text-anchor':'start','font-size':11.5,style:'fill:var(--on-lane);font-weight:600'});
+    else T(svg,x,Y(i)+24,lab,{'text-anchor':'start','font-size':11,style:'fill:var(--ink-2)'});});
+  for(let k=0;k<timed.length-1;k++){const a=timed[k],b=timed[k+1];if(a.lane===b.lane)continue;
+    const x=X(a.t[1]),ia=LI[a.lane],ib=LI[b.lane],d=Math.sign(ib-ia);
+    E('line',{x1:x,x2:x,y1:Y(ia)+d*11,y2:Y(ib)-d*12,'marker-end':arr,style:'stroke:var(--ink-3);stroke-width:1.1;stroke-dasharray:3 3'},svg);}
+  // khung phóng to
+  const bx=X(7),bw=X(25)-X(7),by=top+12,bh=laneH*3-30;
+  E('line',{x1:X(z0),y1:top,x2:bx,y2:by,style:'stroke:var(--accent);stroke-dasharray:3 3'},svg);
+  E('line',{x1:X(z1),y1:top,x2:bx+bw,y2:by,style:'stroke:var(--accent);stroke-dasharray:3 3'},svg);
+  E('rect',{x:bx,y:by,width:bw,height:bh,rx:10,style:'fill:var(--surface);stroke:var(--accent);stroke-width:1.2;filter:drop-shadow(0 2px 6px rgba(0,0,0,.12))'},svg);
+  T(svg,bx+12,by+16,`Phóng to ${vn(z0)}–${vn(z1)} s · phần mạng và kiểm tra`,{'text-anchor':'start','font-size':11.5,style:'font-weight:600'});
+  const mx=t=>bx+14+(Math.min(Math.max(t,z0),z1)-z0)/(z1-z0)*(bw-28),rh=(bh-36)/4,my=i=>by+30+i*rh+rh/2;
+  LANES.forEach((l,i)=>E('line',{x1:bx+14,x2:bx+bw-14,y1:my(i),y2:my(i),style:'stroke:var(--line)'},svg));
+  timed.forEach(s=>{if(s.t[1]<z0||s.t[0]>z1)return;const i=LI[s.lane],x=mx(s.t[0]),w=mx(s.t[1])-x;
+    E('rect',{x,y:my(i)-9,width:w,height:18,rx:3,style:`fill:var(--${LK[s.lane]})`},svg);
+    if(w>s.short.length*6.4+10)T(svg,x+w/2,my(i),s.short,{'font-size':11,style:'fill:var(--on-lane);font-weight:600'});});
+  [['g1',2.6],['g2',3.2]].forEach(([id,t])=>{const s=S[id],x=mx(t),yy=my(LI[s.lane]);
+    E('path',{d:diamond(x,yy-16,12,12),style:'fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.4'},svg);
+    T(svg,x+9,yy-16,s.short,{'text-anchor':'start','font-size':10.5,style:'fill:var(--warn);font-weight:600'});});
+  // thanh tỷ lệ theo bên
+  const sum={};STEPS.forEach(s=>{if(s.t)sum[s.lane]=(sum[s.lane]||0)+(s.t[1]-s.t[0]);});
+  const yb=top+laneH*4+26;let x0=head;
+  T(svg,10,yb+7,'Ai giữ bao lâu',{'text-anchor':'start','font-size':11.5,style:'fill:var(--ink-3);font-weight:600'});
+  LANES.forEach(l=>{const w=sum[l.id]/total*plotW;
+    E('rect',{x:x0,y:yb,width:Math.max(w-2,2),height:14,rx:3,style:`fill:var(--${l.key})`},svg);
+    const lab=`${l.name} ${vn(sum[l.id])} s`;
+    if(w>lab.length*6.4+10)T(svg,x0+6,yb+7,lab,{'text-anchor':'start','font-size':10.5,style:'fill:var(--on-lane);font-weight:600'});
+    x0+=w;});
+  T(svg,head,yb+34,`Tổng ${vn(total)} s. App và server cộng lại chỉ ${vn(sum.app+sum.server)} s; phần lớn thời gian nằm ở máy pha và người dùng.`,{'text-anchor':'start','font-size':11.5,style:'fill:var(--ink-2)'});
+};
+
+/* ---------- 07 Metro ---------- */
+R.metro=fig=>{
+  const head=150,col=96,gap=74,top=104,pad=40,W=head+col*10+pad,H=top+gap*3+96;
+  const svg=root(fig,W,H,820);
+  const X=c=>head+col*c+col/2,Y=l=>top+LI[l]*gap;
+  PHASES.forEach((p,i)=>{const x=head+p.cols[0]*col,w=(p.cols[1]-p.cols[0]+1)*col;
+    E('rect',{x,y:4,width:w,height:H-8,style:`fill:var(--${i%2?'surface':'surface-2'})`},svg);
+    T(svg,x+10,20,'VÙNG '+(i+1),{'text-anchor':'start','font-size':10,style:'fill:var(--accent);font-family:var(--mono);font-weight:600;letter-spacing:.08em'});
+    T(svg,x+10,36,p.name,{'text-anchor':'start','font-size':12.5,style:'font-weight:600'});});
+  LANES.forEach(l=>{const y=Y(l.id);
+    E('line',{x1:head-6,x2:W-pad+16,y1:y,y2:y,style:`stroke:var(--${l.key});stroke-width:6;stroke-linecap:round;opacity:.25`},svg);
+    E('rect',{x:8,y:y-14,width:head-30,height:28,rx:14,style:`fill:var(--${l.key})`},svg);
+    T(svg,8+(head-30)/2,y,l.name,{'font-size':12,style:'fill:var(--on-lane);font-weight:600'});});
+  const seg=(a,b)=>{const xa=X(a.col),ya=Y(a.lane),xb=X(b.col),yb=Y(b.lane);
+    if(ya===yb)return [[xa,ya],[xb,yb]];if(xa===xb)return [[xa,ya],[xb,yb]];
+    const h=(xb-xa-Math.abs(yb-ya))/2;return [[xa,ya],[xa+h,ya],[xb-h,yb],[xb,yb]];};
+  for(let i=0;i<HAPPY.length-1;i++){const a=S[HAPPY[i]],b=S[HAPPY[i+1]];
+    E('path',{d:pathR(seg(a,b),10),style:`fill:none;stroke:var(--${LK[a.lane]});stroke-width:8;stroke-linecap:round;stroke-linejoin:round`},svg);}
+  [['g1','err'],['g2','err']].forEach(([a,b])=>E('path',{d:pathR(seg(S[a],S[b]),10),style:'fill:none;stroke:var(--danger);stroke-width:4;stroke-dasharray:7 5;stroke-linecap:round'},svg));
+  STEPS.forEach(s=>{const x=X(s.col),y=Y(s.lane);
+    if(s.kind==='gate')E('rect',{x:x-8,y:y-8,width:16,height:16,transform:`rotate(45 ${x} ${y})`,style:'fill:var(--surface);stroke:var(--ink);stroke-width:3'},svg);
+    else if(s.kind==='start'||s.kind==='end'){E('circle',{cx:x,cy:y,r:12,style:'fill:var(--surface);stroke:var(--ink);stroke-width:4'},svg);E('circle',{cx:x,cy:y,r:4.5,style:'fill:var(--ink)'},svg);}
+    else E('circle',{cx:x,cy:y,r:8.5,style:`fill:var(--surface);stroke:var(--${s.kind==='error'?'danger':'ink'});stroke-width:3`},svg);
+    const nxt=S[HAPPY[HAPPY.indexOf(s.id)+1]];const below=nxt&&LI[nxt.lane]<LI[s.lane];
+    const lx=x+10,ly=below?y+20:y-15;
+    T(svg,lx,ly,one(s),{'text-anchor':'start','font-size':12,transform:`rotate(${below?35:-35} ${lx} ${ly})`,style:HALO+';font-weight:600'+(s.kind==='error'?';fill:var(--danger)':'')});});
+  T(svg,W-pad+10,H-14,'Đổi màu đường = chuyển giao sang bên khác',{'text-anchor':'end','font-size':11,style:'fill:var(--ink-3)'});
+};
+
+/* ---------- 08 Ma trận chấm ---------- */
+R.dots=fig=>{
+  const order=['s1','s2','s3','g1','s4','g2','err','s5','s6','s7','s8'];
+  const head=134,colW=68,top=132,rowH=48,right=180,W=head+colW*order.length+right,H=top+rowH*4+64;
+  const svg=root(fig,W,H,820);
+  const X=id=>head+order.indexOf(id)*colW+colW/2,Y=l=>top+LI[l]*rowH+rowH/2;
+  LANES.forEach(l=>{const y=Y(l.id);
+    E('line',{x1:head-6,x2:head+colW*order.length,y1:y,y2:y,style:'stroke:var(--line-2);stroke-width:.8'},svg);
+    T(svg,head-14,y,l.name,{'text-anchor':'end','font-size':12.5,style:'fill:var(--ink-2)'});});
+  order.forEach(id=>{const s=S[id],x=X(id);
+    E('line',{x1:x,x2:x,y1:top-6,y2:top+rowH*4,style:'stroke:var(--line);stroke-dasharray:1 3'},svg);
+    T(svg,x-2,top-14,one(s),{'text-anchor':'start','font-size':11.5,transform:`rotate(-40 ${x-2} ${top-14})`,style:s.kind==='error'?'fill:var(--danger)':'fill:var(--ink-2)'});});
+  const pts=HAPPY.map(id=>[X(id),Y(S[id].lane)]);
+  E('polyline',{points:pts.map(p=>p.join(',')).join(' '),style:'fill:none;stroke:var(--ink-2);stroke-width:1.5'},svg);
+  ['g1','g2'].forEach(id=>E('line',{x1:X(id),y1:Y(S[id].lane),x2:X('err'),y2:Y('app'),style:'stroke:var(--danger);stroke-width:1.2;stroke-dasharray:3 3'},svg));
+  let hn=0;
+  for(let i=0;i<HAPPY.length-1;i++){const a=S[HAPPY[i]],b=S[HAPPY[i+1]];if(a.lane===b.lane)continue;hn++;
+    const mx=(X(a.id)+X(b.id))/2,my=(Y(a.lane)+Y(b.lane))/2;
+    E('circle',{cx:mx,cy:my,r:9,style:'fill:var(--accent)'},svg);
+    T(svg,mx,my,hn,{'font-size':10.5,style:'fill:var(--on-accent);font-weight:700'});}
+  order.forEach(id=>{const s=S[id],x=X(id),y=Y(s.lane),k=LK[s.lane];
+    if(s.kind==='gate')E('path',{d:diamond(x,y,16,16),style:`fill:var(--surface);stroke:var(--${k});stroke-width:2`},svg);
+    else if(s.kind==='error')E('circle',{cx:x,cy:y,r:6.5,style:'fill:var(--surface);stroke:var(--danger);stroke-width:2'},svg);
+    else{E('circle',{cx:x,cy:y,r:s.kind==='task'?6.5:7.5,style:`fill:var(--${k})`},svg);
+      if(s.kind!=='task')E('circle',{cx:x,cy:y,r:11,style:`fill:none;stroke:var(--${k});stroke-width:1.2`},svg);}});
+  const tx=head+colW*order.length+26;
+  T(svg,tx,top-14,'BƯỚC · THỜI GIAN',{'text-anchor':'start','font-size':10.5,style:'fill:var(--ink-3);font-weight:600;letter-spacing:.06em'});
+  LANES.forEach(l=>{const ss=STEPS.filter(s=>s.lane===l.id&&s.t),sec=ss.reduce((a,s)=>a+s.t[1]-s.t[0],0),y=Y(l.id);
+    T(svg,tx,y-8,`${ss.length} bước · ${vn(sec)} s`,{'text-anchor':'start','font-size':11.5,style:'fill:var(--ink-2)'});
+    E('rect',{x:tx,y:y+2,width:130,height:6,rx:3,style:'fill:var(--surface-2)'},svg);
+    E('rect',{x:tx,y:y+2,width:Math.max(2,130*sec/40),height:6,rx:3,style:`fill:var(--${l.key})`},svg);});
+  T(svg,head,H-22,`${hn} lần chuyển giao trên luồng chính · 2 điểm quyết định · 1 đích lỗi chung`,{'text-anchor':'start','font-size':12.5,style:'font-weight:600'});
+};
+
+/* ---------- 09 Bản vẽ kỹ thuật ---------- */
+R.cad=fig=>{
+  const head=136,band=44,col=110,lane=96,pad=12,foot=44,W=head+col*10+pad,H=band+lane*4+foot;
+  const C={line:'#8FC1EE',ink:'#E4EFFA',dim:'#5F88B0',hot:'#FFB547',bad:'#FF7A6B'};
+  const svg=root(fig,W,H);
+  const df=defs(svg);
+  const p1=E('pattern',{id:'cad-g',width:20,height:20,patternUnits:'userSpaceOnUse'},df);
+  E('path',{d:'M20 0 L0 0 0 20',fill:'none',stroke:'rgba(143,193,238,.10)','stroke-width':1},p1);
+  const p2=E('pattern',{id:'cad-G',width:100,height:100,patternUnits:'userSpaceOnUse'},df);
+  E('rect',{width:100,height:100,fill:'url(#cad-g)'},p2);
+  E('path',{d:'M100 0 L0 0 0 100',fill:'none',stroke:'rgba(143,193,238,.22)','stroke-width':1},p2);
+  const arr=marker(svg,'cad-a',`stroke:${C.line}`,10,true);
+  const arrB=marker(svg,'cad-b',`stroke:${C.bad}`,10,true);
+  E('rect',{x:0,y:0,width:W,height:H,fill:'#0D2238'},svg);
+  E('rect',{x:0,y:0,width:W,height:H,fill:'url(#cad-G)'},svg);
+  E('rect',{x:4,y:4,width:W-8,height:H-8,fill:'none',stroke:C.dim,'stroke-width':1},svg);
+  const mono=(fs,fill,extra)=>({'font-size':fs,style:`font-family:var(--mono);fill:${fill};${extra||''}`});
+  PHASES.forEach((p,i)=>{const x=head+p.cols[0]*col,w=(p.cols[1]-p.cols[0]+1)*col;
+    E('path',{d:`M${x+4},${band-10} v6 H${x+w-4} v-6`,fill:'none',stroke:C.dim},svg);
+    T(svg,x+w/2,band-22,`P${i+1} · ${p.name.toUpperCase()}`,mono(10.5,C.ink,'letter-spacing:.08em'));
+    if(i)E('line',{x1:x,x2:x,y1:band,y2:band+lane*4,stroke:C.dim,'stroke-dasharray':'2 4'},svg);});
+  LANES.forEach((l,i)=>{const y=band+i*lane;
+    E('line',{x1:8,x2:W-8,y1:y,y2:y,stroke:C.dim,'stroke-dasharray':i?'6 4':null},svg);
+    T(svg,18,y+lane/2-9,'L'+(i+1),{'text-anchor':'start',...mono(10,C.dim)});
+    T(svg,18,y+lane/2+8,l.name.toUpperCase(),{'text-anchor':'start',...mono(10.5,C.ink,'font-weight:600')});});
+  E('line',{x1:8,x2:W-8,y1:band+lane*4,y2:band+lane*4,stroke:C.dim},svg);
+  E('line',{x1:head-8,x2:head-8,y1:band,y2:band+lane*4,stroke:C.dim},svg);
+  const G=flowGeom({orient:'h',a0:head,c0:band,colSize:col,laneSize:lane,size:s=>s.kind==='gate'?[72,50]:[92,42]});
+  let hn=0;const hand=[];
+  EDGES.forEach(e=>{const P=G.route(e);const bad=S[e[1]].kind==='error';
+    E('path',{d:pathR(P,0),fill:'none',stroke:bad?C.bad:C.line,'stroke-width':1.2,'stroke-dasharray':bad?'5 3':null,'marker-end':bad?arrB:arr},svg);
+    for(let i=1;i<P.length-1;i++)E('circle',{cx:P[i][0],cy:P[i][1],r:2.6,fill:bad?C.bad:C.line},svg);
+    if(e[2])edgeLabel(svg,P,e[2].toUpperCase(),`font-family:var(--mono);fill:${bad?C.bad:C.dim}`,9.5);
+    if(S[e[0]].lane!==S[e[1]].lane){
+      for(let i=0;i<P.length-1;i++){const [x0,y0]=P[i],[x1,y1]=P[i+1];if(x0!==x1)continue;
+        for(let k=1;k<4;k++){const by=band+k*lane;if((by-y0)*(by-y1)<0)hand.push([x0,by,bad]);}}}});
+  hand.forEach(([x,y,bad])=>{hn++;E('circle',{cx:x,cy:y,r:4.5,fill:bad?C.bad:C.hot},svg);
+    T(svg,x+7,y-7,'H'+hn,{'text-anchor':'start',...mono(9.5,bad?C.bad:C.hot,'font-weight:600')});});
+  STEPS.forEach((s,i)=>{const [x,y]=G.center(s),bad=s.kind==='error',st=bad?C.bad:C.line;
+    if(s.kind==='gate')E('path',{d:diamond(x,y,72,50),fill:'rgba(143,193,238,.07)',stroke:st,'stroke-width':1.2},svg);
+    else{const pill=s.kind!=='task';E('rect',{x:x-46,y:y-21,width:92,height:42,rx:pill?21:0,fill:'rgba(143,193,238,.07)',stroke:st,'stroke-width':1.2},svg);
+      if(!pill)[[-46,-21,1,1],[46,-21,-1,1],[-46,21,1,-1],[46,21,-1,-1]].forEach(([dx,dy,sx,sy])=>E('path',{d:`M${x+dx},${y+dy+sy*6} v${-sy*6} h${sx*6}`,fill:'none',stroke:C.ink,'stroke-width':1.6},svg));}
+    const code=(s.kind==='gate'?'G-':bad?'E-':'S-')+String(i+1).padStart(2,'0');
+    T(svg,x-(s.kind==='gate'?36:46),y-(s.kind==='gate'?30:28),code,{'text-anchor':'start',...mono(9,C.dim)});
+    T(svg,x,y,s.label.toUpperCase(),{...mono(9.5,C.ink),lh:12});});
+  const fy=band+lane*4+10;
+  T(svg,16,fy+14,`${hand.filter(h=>!h[2]).length} ĐIỂM CHUYỂN GIAO · 2 CỔNG · NHÁNH LỖI ĐỎ`,{'text-anchor':'start',...mono(10,C.hot,'letter-spacing:.06em')});
+  const tb=[['BẢN VẼ','SWIM-09'],['TỶ LỆ','1:1'],['REV','A'],['NGÀY','13.10.2026']];let tx=W-12-4*92;
+  tb.forEach(([k,v])=>{E('rect',{x:tx,y:fy,width:92,height:28,fill:'none',stroke:C.dim},svg);
+    T(svg,tx+6,fy+9,k,{'text-anchor':'start',...mono(8,C.dim)});T(svg,tx+6,fy+20,v,{'text-anchor':'start',...mono(10,C.ink,'font-weight:600')});tx+=92;});
+};
+
+/* ---------- 10 Phác tay ---------- */
+R.sketch=fig=>{
+  const head=118,top=14,col=110,lane=106,pad=12,W=head+col*10+pad,H=top+lane*4+pad;
+  const svg=root(fig,W,H);
+  let seed=11;const rnd=()=>(seed=seed*16807%2147483647)/2147483647;
+  const f=E('filter',{id:'sk-r',x:'-5%',y:'-5%',width:'110%',height:'110%'},defs(svg));
+  E('feTurbulence',{type:'fractalNoise',baseFrequency:0.035,numOctaves:2,seed:3,result:'n'},f);
+  E('feDisplacementMap',{in:'SourceGraphic',in2:'n',scale:2.8,xChannelSelector:'R',yChannelSelector:'G'},f);
+  const arr=marker(svg,'sk-a','stroke:var(--chalk)',12,true);
+  const arrE=marker(svg,'sk-e','stroke:#D9483B',12,true);
+  const NOTE={user:'#FFE88A',app:'#FFC9DC',server:'#BFE3FF',machine:'#C9F0C2'};
+  const hand=(fs,extra)=>({'font-size':fs,style:`font-family:var(--hand);${extra||''}`});
+  const shapes=E('g',{filter:'url(#sk-r)'},svg);
+  LANES.forEach((l,i)=>{const y=top+i*lane;
+    if(i){let d=`M8,${y}`;for(let x=48;x<=W-8;x+=40)d+=` L${x},${y+(rnd()-.5)*3}`;E('path',{d,style:'fill:none;stroke:var(--chalk);stroke-width:1.6;opacity:.55'},shapes);}
+    T(svg,14,y+lane/2,l.name.replace(' ','\n'),{'text-anchor':'start',transform:`rotate(-4 14 ${y+lane/2})`,...hand(19,`fill:var(--${l.key});font-weight:700`),lh:20});});
+  E('path',{d:`M${head-10},${top+4} L${head-8},${H-pad}`,style:'stroke:var(--chalk);stroke-width:1.6;opacity:.55'},shapes);
+  const G=flowGeom({orient:'h',a0:head,c0:top,colSize:col,laneSize:lane,size:s=>s.kind==='gate'?[86,60]:[96,54]});
+  EDGES.forEach(e=>{const P=G.route(e),bad=S[e[1]].kind==='error';let d;
+    if(P.length===3)d=`M${P[0]} Q${P[1]} ${P[2]}`;
+    else{const [a,b]=P,mx=(a[0]+b[0])/2+(rnd()-.5)*6,my=(a[1]+b[1])/2+(a[1]===b[1]?-7:0);d=`M${a} Q${mx},${my} ${b}`;}
+    E('path',{d,'marker-end':bad?arrE:arr,style:`fill:none;stroke:${bad?'#D9483B':'var(--chalk)'};stroke-width:1.8;stroke-linecap:round`},shapes);
+    if(e[2])edgeLabel(svg,P,e[2],`font-family:var(--hand);fill:${bad?'#D9483B':'var(--chalk)'}`,15);});
+  STEPS.forEach(s=>{const [x,y]=G.center(s),rot=(rnd()-.5)*5,bad=s.kind==='error';
+    const g=E('g',{transform:`rotate(${rot} ${x} ${y})`},svg);
+    if(s.kind==='gate'){E('path',{d:diamond(x,y,86,60),style:'fill:#FFF8E5;stroke:#333;stroke-width:1.8',filter:'url(#sk-r)'},g);}
+    else if(s.kind==='start'||s.kind==='end'){E('ellipse',{cx:x,cy:y,rx:50,ry:28,style:`fill:${NOTE[s.lane]};stroke:#333;stroke-width:1.8`,filter:'url(#sk-r)'},g);}
+    else{E('rect',{x:x-46,y:y-25,width:96,height:54,style:'fill:rgba(0,0,0,.18)'},g);
+      E('rect',{x:x-48,y:y-27,width:96,height:54,style:`fill:${bad?'#FF9E8F':NOTE[s.lane]}`},g);
+      E('rect',{x:x-17,y:y-32,width:34,height:11,transform:`rotate(${(rnd()-.5)*10} ${x} ${y-27})`,style:'fill:rgba(255,255,255,.6)'},g);}
+    T(g,x,y,s.label,{...hand(15.5,'fill:#262626'),lh:16});});
+  const [bx,by]=G.center(S.s5);
+  T(svg,bx+6,by+44,'↑ lâu nhất, khoảng 25 s!',hand(15,'fill:var(--accent)'));
+};
+
+/* ---------- 11 Vòng đồng tâm ---------- */
+R.radial=fig=>{
+  const W=760,H=740,cx=380,cy=372,RR={user:300,app:236,server:172,machine:108};
+  const svg=root(fig,W,H,520);
+  const th=c=>(-90+c*34)*Math.PI/180,P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
+  const arr=marker(svg,'rd-a','fill:var(--ink-2)',8),arrE=marker(svg,'rd-e','fill:var(--danger)',8);
+  PHASES.forEach((p,i)=>{const a=th((p.cols[0]+p.cols[1])/2),[x,y]=P(352,a);
+    T(svg,x,y,p.name.toUpperCase(),{'font-size':10.5,style:'fill:var(--ink-3);font-weight:600;letter-spacing:.1em'});
+    if(i){const b=th(p.cols[0]-.5),[x1,y1]=P(78,b),[x2,y2]=P(334,b);E('line',{x1,y1,x2,y2,style:'stroke:var(--line-2);stroke-dasharray:3 5'},svg);}});
+  LANES.forEach(l=>{const r=RR[l.id];
+    E('circle',{cx,cy,r,style:`fill:none;stroke:var(--${l.key});stroke-width:28;opacity:.12`},svg);
+    E('circle',{cx,cy,r,style:`fill:none;stroke:var(--${l.key});stroke-width:1.2;opacity:.7`},svg);
+    const [x,y]=P(r,251*Math.PI/180),w=l.name.length*6.6+16;
+    E('rect',{x:x-w/2,y:y-10,width:w,height:20,rx:10,style:`fill:var(--${l.key})`},svg);
+    T(svg,x,y,l.name,{'font-size':11,style:'fill:var(--on-lane);font-weight:600'});});
+  const nodeR=15;
+  function link(a,b,first,bad){const r1=RR[a.lane],r2=RR[b.lane],t1=th(a.col),t2=th(b.col);let d;
+    if(first==='radial'){const dr=Math.sign(r2-r1);d=`M${P(r1+dr*nodeR,t1)} L${P(r2,t1)} A${r2},${r2} 0 0 1 ${P(r2,t2-nodeR/r2)}`;}
+    else if(r1===r2)d=`M${P(r1,t1+nodeR/r1)} A${r1},${r1} 0 0 1 ${P(r1,t2-nodeR/r1)}`;
+    else{const dr=Math.sign(r2-r1);d=(t1===t2?`M${P(r1+dr*nodeR,t1)}`:`M${P(r1,t1+nodeR/r1)} A${r1},${r1} 0 0 1 ${P(r1,t2)}`)+` L${P(r2-dr*nodeR,t2)}`;}
+    E('path',{d,'marker-end':bad?arrE:arr,style:`fill:none;stroke:var(--${bad?'danger':'ink-2'});stroke-width:${bad?1.6:2.4};${bad?'stroke-dasharray:5 4;':''}stroke-linecap:round`},svg);}
+  for(let i=0;i<HAPPY.length-1;i++)link(S[HAPPY[i]],S[HAPPY[i+1]]);
+  link(S.g1,S.err,'radial',1);link(S.g2,S.err,null,1);
+  const side={s1:1,s2:-1,s3:-1,g1:-1,s4:-1,g2:-1,s5:1,s6:1,s7:1,s8:1,err:1};
+  STEPS.forEach(s=>{const r=RR[s.lane],a=th(s.col),[x,y]=P(r,a),k=LK[s.lane],n=HAPPY.indexOf(s.id)+1,bad=s.kind==='error';
+    if(s.kind==='gate')E('path',{d:diamond(x,y,30,30),style:`fill:var(--surface);stroke:var(--${k});stroke-width:2.5`},svg);
+    else E('circle',{cx:x,cy:y,r:nodeR,style:`fill:var(--${bad?'surface':s.kind==='task'?'surface':k});stroke:var(--${bad?'danger':k});stroke-width:2.5`},svg);
+    T(svg,x,y,n||'!',{'font-size':11,style:`font-weight:700;fill:var(--${bad?'danger':s.kind==='task'||s.kind==='gate'?k:'on-lane'})`});
+    const [lx,ly]=P(r+side[s.id]*30,a);
+    T(svg,lx,ly,s.short,{'font-size':12,style:HALO+';font-weight:600'+(bad?';fill:var(--danger)':'')});});
+  T(svg,cx,cy,'Một ly\n40 s',{'font-size':13,style:'fill:var(--ink-3);font-weight:600',lh:17});
+};
+
+document.querySelectorAll('figure[data-render]').forEach(fig=>{try{R[fig.dataset.render](fig);}catch(e){fig.textContent='Không vẽ được biểu đồ: '+e.message;console.error(e);}});
+})();
+</script>
+</body>
+</html>

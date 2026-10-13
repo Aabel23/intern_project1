@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Share máy và quyền</title>
 <meta name="description" content="Tính năng Share máy và quyền: luồng, endpoint, gói tin, thông số.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="../assets/doc.css">
+
+
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/doc.css">
 </head>
 <body>
 <div class="page">
@@ -60,7 +60,7 @@ sequenceDiagram
   S-->>AO: chờ xác nhận: tên, email người mới
   O->>AO: xác nhận đúng người
   AO->>S: MACHINE_SHARE_SIGN
-  S->>S: kiểm người share còn quyền · ghi Employee · tăng phiên bản quyền
+  S->>S: • Kiểm quyền người share<br/>• Ghi vai Employee<br/>• Tăng phiên bản quyền
   S-->>AN: đã vào máy
   M->>S: MACHINE_COMMAND_POLL
   S-->>M: có phiên bản quyền mới
@@ -199,7 +199,8 @@ sequenceDiagram
   <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
   <div class="zoom-body" id="zoom-body"></div>
 </div>
+<script src="../../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
-<script src="../assets/doc.js"></script>
+<script src="../../assets/doc.js"></script>
 </body>
 </html>

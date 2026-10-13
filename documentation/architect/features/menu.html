@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Menu</title>
 <meta name="description" content="Tính năng Menu: luồng, endpoint, gói tin, thông số.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="../assets/doc.css">
+
+
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/doc.css">
 </head>
 <body>
 <div class="page">
@@ -54,12 +54,12 @@ sequenceDiagram
   S->>M: chuyển lệnh
   A2->>S: nhan_menu · menu_version 1a2b
   S->>S: gộp vào yêu cầu đang chờ cùng máy
-  M->>M: đọc MySQL · dựng gói · CRC 9f3c
+  M->>M: • Đọc MySQL<br/>• Dựng gói<br/>• Tính CRC 9f3c
   M-->>S: status ok · gói menu
   S->>S: giữ gói trong RAM
   S-->>A1: gói 9f3c
   S-->>A2: gói 9f3c
-  A1->>A1: giải nén · kiểm CRC · thay bản chụp
+  A1->>A1: • Giải nén<br/>• Kiểm CRC<br/>• Thay bản chụp
         </script>
         <div class="dg-canvas"></div>
         <figcaption>Máy chỉ dựng và gửi gói một lần dù nhiều app cùng hỏi. Mỗi app vẫn được so riêng: app nào giữ đúng số của gói thì nhận <code>up_to_date</code>. Mất Internet thì app hỏi thẳng máy qua wifi quán hoặc Bluetooth, cùng lệnh, cùng gói.</figcaption>
@@ -162,7 +162,8 @@ sequenceDiagram
   <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
   <div class="zoom-body" id="zoom-body"></div>
 </div>
+<script src="../../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
-<script src="../assets/doc.js"></script>
+<script src="../../assets/doc.js"></script>
 </body>
 </html>

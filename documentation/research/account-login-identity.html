@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tài khoản và danh tính</title>
 <meta name="description" content="Đăng ký, đăng nhập, phiên và danh tính điện thoại với máy pha: luồng đề xuất, thông số và câu hỏi mở.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+
+<link rel="stylesheet" href="../assets/fonts.css">
 <style>
   /* Tông kem – cam theo phong cách Claude */
   :root{
@@ -621,7 +621,7 @@ sequenceDiagram
   M-->>A: khoá tạm của máy + chữ ký bằng khoá máy + số dùng một lần
   Note over A,M: Hai bên cùng tính ra khoá phiên từ hai khoá tạm
   A->>M: lệnh đã mã hoá, kèm số dùng một lần và bộ đếm
-  M->>M: tra điện thoại trong bản quyền, kiểm vai, ghi nhật ký
+  M->>M: • Tra điện thoại trong bản quyền<br/>• Kiểm vai<br/>• Ghi nhật ký
   M-->>A: kết quả đã mã hoá
         </script>
         <div class="dg-canvas"></div>
@@ -789,6 +789,7 @@ sequenceDiagram
   <div class="zoom-body" id="zoom-body"></div>
 </div>
 
+<script src="../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <script>
 (function(){
@@ -837,7 +838,7 @@ sequenceDiagram
     return {
       startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
       flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
-      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
       state:{ useMaxWidth:false }
     };
   }

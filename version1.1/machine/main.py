@@ -36,7 +36,8 @@ def _business_commands():
     from machine.ingredient_sync.machine_ingredient_request import COMMANDS as INGREDIENT_COMMANDS
     from machine.menu_sync.machine_menu_request import COMMANDS as MENU_COMMANDS
     from machine.order_ticket.machine_order_ticket_request import COMMANDS as TICKET_COMMANDS
-    return {**MENU_COMMANDS, **INGREDIENT_COMMANDS, **TICKET_COMMANDS}
+    from machine.reporting.machine_reporting_request import COMMANDS as REPORT_COMMANDS
+    return {**MENU_COMMANDS, **INGREDIENT_COMMANDS, **TICKET_COMMANDS, **REPORT_COMMANDS}
 
 
 _IDENTITY = None

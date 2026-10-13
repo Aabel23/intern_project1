@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>IoT v1.1 · Thiết kế tầng 1</title>
 <meta name="description" content="Thiết kế tầng 1 hệ IoT máy pha v1.1: ba khối, ba chế độ kết nối, vai và quyền, kích hoạt kiểu Matter.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+
+<link rel="stylesheet" href="../assets/fonts.css">
 <style>
   /* Tông kem – cam theo phong cách Claude */
   :root{
@@ -321,8 +321,8 @@ sequenceDiagram
   A->>M: gửi tên và mật khẩu wifi (trong kênh)
   M->>S: vào wifi, lên server, trình giấy khai sinh
   A->>S: "tôi nhận máy này", kèm bằng chứng có mã
-  S->>S: kiểm máy thật, chưa có chủ, bằng chứng đúng
-  S->>S: ghi người · máy · Owner, bật khoá kích hoạt
+  S->>S: • Kiểm máy thật<br/>• Kiểm chưa có chủ<br/>• Kiểm bằng chứng
+  S->>S: • Ghi người · máy · Owner<br/>• Bật khoá kích hoạt
   S-->>M: bản sao danh sách quyền đầu tiên
   S-->>A: thành công
         </script>
@@ -491,7 +491,7 @@ sequenceDiagram
   A->>S: giấy phép có chữ ký: máy · người nhận · Employee · hạn dùng
   S->>S: ghi người · máy · Employee vào danh sách chuẩn
   S->>M: chuyển giấy phép
-  M->>M: kiểm chữ ký người share, thêm vào bản sao
+  M->>M: • Kiểm chữ ký người share<br/>• Thêm vào bản sao
   S-->>B: máy hiện trong danh sách của người mới
           </script>
           <div class="dg-canvas"></div>
@@ -540,6 +540,7 @@ sequenceDiagram
   <div class="zoom-body" id="zoom-body"></div>
 </div>
 
+<script src="../assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <script>
 (function(){
@@ -588,7 +589,7 @@ sequenceDiagram
     return {
       startOnLoad:false, theme:'base', themeVariables:v, securityLevel:'loose',
       flowchart:{ htmlLabels:true, curve:'basis', nodeSpacing:28, rankSpacing:40, padding:8, useMaxWidth:false },
-      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:true, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
+      sequence:{ useMaxWidth:false, mirrorActors:false, wrap:false, width:118, actorMargin:22, boxMargin:6, messageMargin:26, messageFontSize:13, noteFontSize:13, actorFontSize:13, showSequenceNumbers:true },
       state:{ useMaxWidth:false }
     };
   }

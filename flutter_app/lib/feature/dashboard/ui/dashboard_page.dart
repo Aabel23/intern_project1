@@ -46,11 +46,11 @@ class _MainDashboardState extends State<MainDashboard> {
         ),
       ),
       (
-        page: const OrdersTab(),
+        page: OrdersTab(controller: widget.machines),
         destination: const NavigationDestination(
           icon: Icon(Icons.receipt_long_outlined),
           selectedIcon: Icon(Icons.receipt_long),
-          label: 'Đơn hàng',
+          label: 'Vé QR',
         ),
       ),
       (
