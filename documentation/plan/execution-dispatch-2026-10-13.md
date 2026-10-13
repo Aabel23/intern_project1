@@ -1,6 +1,6 @@
 # Phân luồng thực thi · phạm vi khách đầu ngày 13/10/2026
 
-**Trạng thái:** Codex đã tự phân task theo yêu cầu hiện tại của user; hai subagent Codex được gọi nhưng dừng do giới hạn sử dụng, nên operator Codex thực hiện trước L-01S/M/A và ghi bằng chứng bên dưới. Không dùng Claude. User để kiểm thử trên Android thật sau. G0 và roadmap 44 bước chưa được duyệt lại cho phạm vi mới; không đánh dấu đã qua cổng hay review độc lập đã đạt.
+**Trạng thái:** Codex đã commit lát transport LAN/HTTP ở `2c4ec6b` và hướng dẫn ở `aae08e8`. Ba Codex agent đã rà độc lập menu/giá, kho–đơn hàng–báo cáo, và OTA cùng transport; kết quả nằm trong [lộ trình mở rộng](first-customer-expanded-roadmap.md). Không dùng Claude. User để kiểm thử trên Android thật sau. G0 và roadmap 44 bước chưa được duyệt lại cho phạm vi mới; không đánh dấu đã qua cổng.
 
 ## Đích và thứ tự
 
@@ -49,4 +49,10 @@ Python hệ thống ngày 13/10/2026 thiếu `pyhpke`; đã dựng môi trườn
 - `tests/machine`: 20 ca, 17 đạt, 3 skip vì cần Kotlin interop fixture.
 - `flutter test`: 33/33 đạt; `flutter analyze`: sạch.
 
-**Chưa đạt cổng module:** chưa có reviewer nhỏ độc lập; chưa thử Pi/LAN thật và Android thật. Chưa có biên bản G0 hoặc lộ trình mở rộng được user duyệt. Không ghi L-01 là nghiệm thu sản phẩm.
+**Chưa đạt cổng module:** reviewer độc lập mới rà code và thiết kế, chưa có biên bản review nhỏ/đạt theo phiếu; chưa thử Pi/LAN thật và Android thật. Chưa có biên bản G0 hoặc lộ trình mở rộng được user duyệt. Không ghi L-01 là nghiệm thu sản phẩm.
+
+## Commit hiện tại
+
+- `2c4ec6b Add LAN HTTP transport with pinned envelopes`: server, app và máy chấp nhận URL HTTP chỉ với IP nội bộ/loopback; server giữ cùng dispatch, phong bì và kiểm quyền. Có test tự động theo bằng chứng trên.
+- `aae08e8 Document LAN HTTP setup`: hướng dẫn cấu hình tại `server/LAN_HTTP.md` và liên kết từ hướng dẫn Windows/Flutter.
+- Chưa đưa các thay đổi tài liệu có sẵn trong working tree vào hai commit trên.
