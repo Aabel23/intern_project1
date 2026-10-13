@@ -6,7 +6,7 @@ trạng thái trực tiếp, menu và kho qua relay. Hợp đồng: `contracts/m
 ## Build APK
 
 Điều kiện một lần: server đã được dựng bằng `python3 server/tools/provision_keys.py --url http://<IP-LAN>:8080`
-(xem `server/README.md`). Lệnh đó ghi `assets/server-trust.json` và `lib/shared/cloud/server_endpoint.dart`;
+(xem `server/LAN_HTTP.md`). Lệnh đó ghi `assets/server-trust.json` và `lib/shared/cloud/server_endpoint.dart`;
 commit hai file này là các máy khác chỉ cần pull rồi build.
 
 ```bash

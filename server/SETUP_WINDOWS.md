@@ -1,6 +1,6 @@
 # Chạy server FlexMix trên laptop Windows
 
-> Hướng dẫn này là đường HTTPS/Tailscale cũ. Với bản đầu LAN/HTTP theo quyết định mới, xem mục **Bản đầu qua LAN/HTTP** trong [server/README.md](README.md); không cần chứng chỉ/Tailscale cho đường app → server nội bộ.
+> Hướng dẫn này là đường HTTPS/Tailscale cũ. Với bản đầu LAN/HTTP theo quyết định mới, xem [hướng dẫn LAN/HTTP](LAN_HTTP.md); không cần chứng chỉ/Tailscale cho đường app → server nội bộ.
 
 Hướng dẫn dùng laptop làm server, MySQL lưu dữ liệu, Gmail gửi OTP và Tailscale cung cấp HTTPS.
 Điện thoại và máy pha cần tham gia cùng mạng Tailscale với laptop, được phép truy cập server.
