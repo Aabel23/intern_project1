@@ -26,3 +26,12 @@ User chốt bản đầu kết nối qua LAN/HTTP, giữ phong bì mã hóa/ki�
 ## Cổng review
 
 Reviewer nhỏ so từng task L-01S/M/A/I với phiếu và phát hiện sửa thừa; reviewer lớn chỉ một lần sau toàn module. Android thật chưa chạy thì ghi rõ `chưa nghiệm thu thiết bị`, không dùng test tự động thay thế.
+
+### Review nhỏ Codex ngày 13/10/2026 · chưa đạt
+
+- Test HTTP bootstrap và phong bì hỏng đã có, nhưng test quyền/auth trên HTTP và hello/poll/result máy qua HTTP chưa có; cần ca chữ ký máy sai qua HTTP. `tests/server/test_machine_relay.py` hiện chỉ chạy HTTPS.
+- Flutter kiểm local/public URL nhưng chưa có ca trust sai theo tiêu chí L-01A.
+- `server/tools/provision_keys.py` và `version1.1/machine/config/env.py` chưa đọc/kiểm `.port`, nên `:abc` hoặc `:99999` được chấp nhận lúc cấu hình rồi mới lỗi khi dùng.
+- Review xác nhận HTTP và HTTPS đi cùng `open_request → dispatch → close_response`, mặc định HTTPS và HTTP chỉ bind IP nội bộ/loopback. Chưa thấy bỏ qua phong bì/kiểm quyền. Android cleartext bật toàn app cần rà chính sách khi đưa ra Internet.
+
+Các phát hiện trên là phạm vi sửa của L-01 sau khi user quyết; chưa sửa code theo review này và chưa đánh dấu module đạt.
