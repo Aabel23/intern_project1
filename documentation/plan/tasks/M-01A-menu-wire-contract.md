@@ -79,6 +79,7 @@ Mỗi hàng gồm `drink_id`, `available`, `in_stock`, sắp `drink_id` tăng. I
 - **Nhất quán và cạnh tranh ghi**: đọc nhiều bảng phải cùng snapshot DB; hai lệnh sửa giá dùng cùng version không được cùng ghi thành công. Cần xác định quy tắc khóa/kiểm lại version trong transaction và ca test hai yêu cầu đồng thời.
 - **Dữ liệu cũ**: kiểm dữ liệu giá `DECIMAL(10,2)` hiện có; nếu có phần lẻ, chốt cách chuyển/khước từ trước khi packer chạy. `min_app_v` ở đây là version schema menu, không phải version phát hành Android; app v1 gặp máy v2 cần mã lỗi hoặc chính sách tương thích rõ.
 - **Lookup và hướng dẫn pha**: schema `drink_type` còn `method/detail`; `recipe_action` chứa bước thao tác xen bước rót. Nếu app khách đầu phải hiển thị hướng dẫn pha đầy đủ, gói chỉ có `recipe` là thiếu; chốt phạm vi trước khi dựng vector.
+- **Trần và kiểu dữ liệu**: `category.description` là TEXT nên có thể tự làm gói vượt trần; chỉ giữ nếu UI thực sự dùng. MySQL BOOLEAN là TINYINT, packer phải ép `available/in_stock` thành JSON boolean ổn định. Seed không ghi giá nên dùng mặc định 0, chưa chứng minh dữ liệu khách không có giá lẻ. `drink.image` trong seed là đường file, không phải hash.
 
 ## Vị trí mã hiện tại cần thay sau khi chốt
 
