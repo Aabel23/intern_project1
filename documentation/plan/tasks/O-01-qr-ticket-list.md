@@ -12,8 +12,8 @@ Trạng thái: **đề xuất triển khai, chưa duyệt hợp đồng chi ti�
 ## Lát cắt chỉ đọc
 
 1. App chọn máy qua `MachineController`, gọi relay cloud/LAN đang dùng với instruction đề xuất `nhan_ve_qr` và `{ "before_serial": null, "limit": 20 }`. Trên làm mới, bỏ cursor và tải trang đầu. Khi đổi máy, xóa ngay danh sách/cursor máy cũ và bỏ kết quả cũ về trễ. Không mở quyền xem vé qua Bluetooth trong lát cắt này.
-2. Server thêm instruction vào allowlist relay; xác thực session và **quyền xem máy** trước khi chuyển lệnh, kiểm lại quyền trước khi trả. Bản server hiện chỉ có owner, nên lát cắt đầu cho owner; khi module share machine hoàn tất, áp chính sách quyền xem của vai được chốt, không suy ra quyền từ UI. Server không đọc nội dung vé.
-3. Máy đọc `order_ticket` trực tiếp, không join `drink`. Query keyset: `WHERE (%s IS NULL OR serial < %s) ORDER BY serial DESC LIMIT %s` với `limit + 1` để biết còn trang; hoặc hai nhánh SQL tương đương khi cursor null. Giới hạn đề xuất **20 vé/trang, max 20**; `before_serial` là số nguyên dương hoặc null. Mỗi lời gọi đọc trạng thái hiện thời trong một truy vấn; trạng thái có thể đổi giữa hai trang, nhưng serial không đổi và không lặp hàng do phân trang keyset.
+2. Server thêm instruction vào allowlist relay; xác thực session và **quyền xem máy** trước khi chuyển lệnh, kiểm lại quyền trước khi trả. Bản server hiện chỉ có owner, nên lát cắt đầu cho owner; khi module share machine hoàn tất, áp chính sách quyền xem của vai được chốt, không suy ra quyền từ UI. Server không query/biến đổi vé, nhưng relay hiện nhìn thấy và giữ kết quả plaintext trong RAM ngắn hạn; không hứa riêng tư đầu cuối máy→app.
+3. Máy đọc các cột cần thiết của `order_ticket` trực tiếp, không join `drink`, không `SELECT *`. Query keyset: `WHERE (%s IS NULL OR serial < %s) ORDER BY serial DESC LIMIT %s` với `validated_limit + 1` để biết còn trang; hoặc hai nhánh SQL tương đương khi cursor null. Giới hạn đề xuất **20 vé/trang, max 20**, cần đo worst-case tên Unicode + phong bì HPKE dưới giới hạn HTTP 65536 byte, nếu quá thì hạ max hoặc đổi trần có chọn lọc. `before_serial` là số nguyên dương hoặc null. Mỗi lời gọi đọc trạng thái hiện thời trong một truy vấn; trạng thái có thể đổi giữa hai trang, nhưng serial không đổi và không lặp hàng do phân trang keyset.
 4. Trả `serial`, `drink_name` snapshot, `price_vnd` snapshot, `status` nguyên giá trị DB, `created_at`, `scanned_at`, `completed_at`. Dùng `next_before_serial` bằng serial cuối trang khi còn dữ liệu, ngược lại null. Không trả `payload`, `payload_hash`, ghi chú khách, và không suy ra thanh toán/số ly/doanh thu từ vé.
 5. App hiển thị `Vé #<serial>`, tên/giá tại lúc phát vé và nhãn trạng thái đúng. `unused` = "Chưa quét" (có thể đã quá hạn nhưng chưa có lượt quét); `in_progress` = "Đang pha"; `used` = "Đã pha"; `expired` = "Hết hạn"; `noqr_err` = "Pha lỗi, không có QR". Không gộp `noqr_err` thành "Đã hủy". Hàng snapshot null hiển thị "Tên/giá chưa được lưu"; không lấy giá/tên hiện tại trong `drink` làm dữ liệu lịch sử.
 
@@ -32,11 +32,11 @@ Trạng thái: **đề xuất triển khai, chưa duyệt hợp đồng chi ti�
       "completed_at": "2026-10-13T10:45:00+07:00"
     }
   ],
-  "next_before_serial": 132
+  "next_before_serial": null
 }
 ```
 
-`next_before_serial` trong ví dụ chỉ có giá trị nếu máy thấy hàng thứ 21. Nếu trang có 20 hoặc ít hơn và không còn hàng, trả null. Không thêm tổng số vì sẽ cần một truy vấn và dễ lệch với trạng thái live. Trần 20 hàng giữ kết quả dưới giới hạn plaintext hiện có của cloud; implementation vẫn phải kiểm kích thước thực tế.
+`next_before_serial` chỉ bằng serial cuối **trong hàng đã trả** nếu máy thấy hàng thứ `limit+1`; ví dụ một hàng trên không còn trang nên là null. Không thêm tổng số vì sẽ cần một truy vấn và dễ lệch với trạng thái live. Implementation phải đo kích thước thực tế kể cả phong bì mã hóa/base64.
 
 ## Quyền và lỗi
 
@@ -50,7 +50,7 @@ Trạng thái: **đề xuất triển khai, chưa duyệt hợp đồng chi ti�
 2. Đổi tên/giá món và xóa mềm món sau khi phát vé: app vẫn nhận `order_ticket.drink_name`/`price`; hàng lịch sử null hiển thị thiếu snapshot, không lấy giá hiện hành.
 3. Năm trạng thái DB được truyền/hiện nguyên nghĩa. Vé `unused` quá tuổi nhưng chưa quét vẫn là `unused`; test không tự biến thành `expired` trên đường chỉ đọc. `release()` có thể đưa `in_progress` về `unused` khi trang sau tải lại.
 4. Server từ chối tài khoản không có quyền và thu hồi quyền trong lúc relay chờ. App đổi máy khi request cũ còn chạy không được trộn vé hai máy. Dữ liệu giả bị gỡ khỏi UI khách.
-5. Kết quả tối đa 20 hàng nằm trong giới hạn envelope/HTTP thực tế, gồm trường tên dài và timestamp; test đường máy → relay → app bằng dữ liệu thật hoặc fixture tương ứng.
+5. Kết quả tối đa 20 hàng nằm trong giới hạn envelope/HTTP thực tế, gồm tên Unicode 100 ký tự và timestamp; nếu không, điều chỉnh max/trần trước khi nhận phiếu. Test đường máy → relay → app bằng dữ liệu thật hoặc fixture tương ứng; xác nhận payload/hash/note vắng ở response, không chỉ UI. `OrdersTab` phải nhận `MachineController` từ dashboard và gắn cursor/generation với machine ID.
 
 ## Quyết định còn cần chốt
 
