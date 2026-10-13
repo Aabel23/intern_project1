@@ -67,7 +67,7 @@ Mỗi hàng gồm `drink_id`, `available`, `in_stock`, sắp `drink_id` tăng. I
 1. Cố định hai chuỗi UTF-8 JSON đúng như ví dụ gọn ở trên, không khoảng trắng. Tạo `content.hex`, `state.hex`, CRC32 unsigned của từng chuỗi, phong bì JSON với `generated_at` cố định và byte zlib/base64. Lưu tất cả vào **một fixture** để Python và Dart đọc cùng byte. Không hard-code riêng hai bản kỳ vọng.
 2. Python packer phải cho cùng `content.hex` và `state.hex` khi DB trả hàng với thứ tự bất kỳ, `Decimal('35000.00')`, Unicode có dạng tổ hợp, và timestamp khác. `content_version` không đổi khi chỉ `available`/`in_stock` đổi; `state_version` không đổi khi chỉ giá/công thức/lookup đổi.
 3. Dart decoder xác nhận `v`, `min_app_v`, giới hạn kích thước, hai CRC, version ngoài khớp trong, schema cột, kiểu số và tập ID. Sửa 1 byte sau giải nén, cắt zlib, đổi version hoặc tráo ID trạng thái đều bị từ chối mà snapshot cũ còn nguyên.
-4. Round trip Python → Dart qua kết quả relay JSON, raw LAN và khung Bluetooth phải giải ra cùng byte nội dung/trạng thái. Gói zlib đúng 262144 byte được nhận; 262145 byte bị từ chối ở máy và phía nhận. Giới hạn giải nén cần tránh cấp phát không giới hạn.
+4. Round trip Python → Dart qua kết quả relay JSON phải giải ra cùng byte nội dung/trạng thái. Codec raw LAN/Bluetooth dùng cùng fixture khi các transport menu đó được triển khai ở phiếu sau; không chặn M-01A vì chúng chưa tồn tại. Gói zlib đúng 262144 byte được nhận; 262145 byte bị từ chối ở máy và phía nhận. Giới hạn giải nén cần tránh cấp phát không giới hạn.
 
 ## Các lựa chọn còn phải chốt trước khi sửa production code
 
@@ -76,6 +76,9 @@ Mỗi hàng gồm `drink_id`, `available`, `in_stock`, sắp `drink_id` tăng. I
 - **Đơn vị gram**: đề xuất centigram vì `recipe.target_gram` là `DECIMAL(10,2)`; cần xác nhận với cách app sẽ hiển thị gram.
 - **Lệnh phiên bản**: đề xuất `null` thay số 0 để xin gói lần đầu vì CRC32 hợp lệ có thể là 0. Cần chốt tên khóa và cách chuyển từ `menu_version` v1.
 - **Recipe action**: tài liệu menu ghi không có ở bản đầu; công thức `recipe` chỉ gồm phần nguyên liệu được rót. Cần xác nhận phạm vi này với chức năng hướng dẫn pha.
+- **Nhất quán và cạnh tranh ghi**: đọc nhiều bảng phải cùng snapshot DB; hai lệnh sửa giá dùng cùng version không được cùng ghi thành công. Cần xác định quy tắc khóa/kiểm lại version trong transaction và ca test hai yêu cầu đồng thời.
+- **Dữ liệu cũ**: kiểm dữ liệu giá `DECIMAL(10,2)` hiện có; nếu có phần lẻ, chốt cách chuyển/khước từ trước khi packer chạy. `min_app_v` ở đây là version schema menu, không phải version phát hành Android; app v1 gặp máy v2 cần mã lỗi hoặc chính sách tương thích rõ.
+- **Lookup và hướng dẫn pha**: schema `drink_type` còn `method/detail`; `recipe_action` chứa bước thao tác xen bước rót. Nếu app khách đầu phải hiển thị hướng dẫn pha đầy đủ, gói chỉ có `recipe` là thiếu; chốt phạm vi trước khi dựng vector.
 
 ## Vị trí mã hiện tại cần thay sau khi chốt
 
