@@ -42,6 +42,12 @@ def check_url(url):
     if (parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query
             or parsed.fragment or parsed.path not in ('', '/')):
         raise SystemExit('URL phải là HTTPS hoặc HTTP tới IP nội bộ, không path/query.')
+    try:
+        port = parsed.port
+    except ValueError:
+        raise SystemExit('URL có port không hợp lệ (1..65535).') from None
+    if port == 0:
+        raise SystemExit('URL có port không hợp lệ (1..65535).')
     if parsed.scheme == 'http':
         try:
             address = ipaddress.ip_address(parsed.hostname)

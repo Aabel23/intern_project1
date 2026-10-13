@@ -40,16 +40,27 @@ def get_machine_name():
     return read_env("MACHINE_NAME")
 
 
+def _check_port(parsed):
+    try:
+        port = parsed.port
+    except ValueError:
+        raise ValueError("SERVER_URL có port không hợp lệ (1..65535)") from None
+    if port == 0:
+        raise ValueError("SERVER_URL có port không hợp lệ (1..65535)")
+
+
 def get_server_url():
     url = read_env("SERVER_URL").rstrip("/")
-    if url.startswith("https://"):
-        return url
     parsed = urlsplit(url)
+    if url.startswith("https://"):
+        _check_port(parsed)
+        return url
     if (not parsed.hostname or parsed.username or parsed.password or parsed.query
             or parsed.fragment or parsed.path):
         raise ValueError("SERVER_URL không hợp lệ")
     if parsed.scheme != "http":
         raise ValueError("SERVER_URL phải là HTTPS hoặc HTTP nội bộ")
+    _check_port(parsed)
     try:
         address = ipaddress.ip_address(parsed.hostname)
     except ValueError:

@@ -13,6 +13,13 @@ import urllib.request
 from machine.config.routing import MACHINE_COMMAND_POLL, MACHINE_HELLO_SEND, MACHINE_RESULT_SEND
 from machine.server_connection.cloud_protection import CloudError, open_response, seal_request
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Không theo redirect: server LAN/HTTPS không được đẩy máy sang địa chỉ khác."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise CloudError("REDIRECT_REFUSED", code)
+
+
 POLL_HTTP_SECONDS = 25   # lớn hơn thời gian server giữ poll (20 s)
 SHORT_HTTP_SECONDS = 10
 CLOCK_REFRESH_SECONDS = 300
@@ -36,8 +43,10 @@ class ServerClient:
         request = urllib.request.Request(self.base_url + route, data=json.dumps(sealed.envelope).encode("utf-8"),
                                          headers={"Content-Type": "application/json"}, method="POST")
         try:
-            options = {"context": self.ssl_context} if self.base_url.startswith("https://") else {}
-            with urllib.request.urlopen(request, timeout=timeout, **options) as response:
+            handlers = [_NoRedirect()]
+            if self.base_url.startswith("https://"):
+                handlers.append(urllib.request.HTTPSHandler(context=self.ssl_context))
+            with urllib.request.build_opener(*handlers).open(request, timeout=timeout) as response:
                 status, raw = response.status, response.read(65537)
         except urllib.error.HTTPError as error:
             status, raw = error.code, error.read(65537)
