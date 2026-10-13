@@ -521,3 +521,35 @@ def recent(limit: int = 20) -> list[dict]:
         return list(cursor.fetchall())
     finally:
         close_database_resources(cursor, conn)
+
+
+def recent_page(before_serial: int | None, limit: int) -> list[dict]:
+    """Read at most limit + 1 ticket snapshots in descending serial order.
+
+    The extra row lets the caller form a next-page cursor. Never fetch the
+    QR payload, hash, customer note, or current drink row for this view.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = connect_database()
+        cursor = conn.cursor(dictionary=True)
+        columns = (
+            "serial, drink_name, price, status, created_at, "
+            "scanned_at, completed_at"
+        )
+        if before_serial is None:
+            cursor.execute(
+                f"SELECT {columns} FROM order_ticket "
+                "ORDER BY serial DESC LIMIT %s",
+                (limit + 1,),
+            )
+        else:
+            cursor.execute(
+                f"SELECT {columns} FROM order_ticket "
+                "WHERE serial < %s ORDER BY serial DESC LIMIT %s",
+                (before_serial, limit + 1),
+            )
+        return list(cursor.fetchall())
+    finally:
+        close_database_resources(cursor, conn)

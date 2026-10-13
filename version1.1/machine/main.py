@@ -35,7 +35,8 @@ def _business_commands():
     # Nạp module nghiệp vụ version1.1 lúc chạy để test lớp kết nối không cần MySQL máy pha.
     from machine.ingredient_sync.machine_ingredient_request import COMMANDS as INGREDIENT_COMMANDS
     from machine.menu_sync.machine_menu_request import COMMANDS as MENU_COMMANDS
-    return {**MENU_COMMANDS, **INGREDIENT_COMMANDS}
+    from machine.order_ticket.machine_order_ticket_request import COMMANDS as TICKET_COMMANDS
+    return {**MENU_COMMANDS, **INGREDIENT_COMMANDS, **TICKET_COMMANDS}
 
 
 _IDENTITY = None
