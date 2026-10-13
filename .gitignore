@@ -3,3 +3,4 @@ tests/manual/__pycache__/
 __pycache__/
 *.pyc
 server/secrets/
+tools/button_logger/logs/
