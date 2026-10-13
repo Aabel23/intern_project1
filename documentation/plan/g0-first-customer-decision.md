@@ -10,6 +10,20 @@
 
 **Cần đặc tả tiếp:** ca sử dụng, quyền và tiêu chí đạt cho năm nhóm mới; luồng pha món và an toàn phần cứng trên máy; danh sách món/thiết bị để nghiệm thu. Không suy ra rằng code hoặc lộ trình hiện tại đã hoàn thành các nhóm mới.
 
+**Ca sử dụng đề xuất để duyệt phạm vi (chưa phải nghiệm thu):**
+
+| Người dùng làm gì | Dấu hiệu đạt cần chứng minh | Phần phải quyết trước phiếu coder |
+|---|---|---|
+| Tạo tài khoản, đăng nhập, nhận máy, chia sẻ máy | Hai tài khoản thật nhìn đúng máy và đúng vai; người lạ không nhận hoặc điều khiển được | Quyền Manager/Employee và thu hồi khi offline |
+| Đọc trạng thái, menu và dữ liệu máy | Mỗi lượt hỏi có dữ liệu mới từ đúng máy; menu app khớp dữ liệu MySQL máy | Hợp đồng CRC, công thức/ảnh và cache |
+| Bật/tắt món, sửa giá | Lệnh ghi một lần, app đọc lại giá/trạng thái thật, sai quyền bị từ chối | Tách hay gộp lệnh, đơn vị giá và quyền sửa |
+| Xem và cập nhật kho | Tồn trước/sau khớp máy, lệnh lặp không ghi hai lần | Nạp gram, kiểm đếm, sức chứa, ledger |
+| Xem/xử lý đơn hàng | Danh sách và trạng thái phản ánh ticket/đơn thật trên máy | “Đơn” là ticket QR hay giao dịch bán; hủy/hoàn/thanh toán |
+| Xem báo cáo | Chỉ số đối chiếu được với dữ liệu gốc cùng khoảng thời gian | Chỉ số, nguồn, kỳ và quyền xem |
+| Cập nhật phần mềm máy | Bản sai chữ ký bị từ chối; bản đúng chỉ cài khi máy an toàn và có cách quay lui | Nơi phát và tải gói khi dùng LAN/HTTP; điều kiện rảnh/rollback |
+
+Luồng pha chế trên máy và checklist an toàn phần cứng cần chốt theo phần cứng khách. Không đưa màn hình demo, hằng route hoặc test giả lập vào cột “đạt”.
+
 **Bằng chứng đóng bước:** danh sách ca sử dụng và ngoài phạm vi của bản giao đầu được user duyệt, gồm cả năm nhóm mới.
 
 ## 0.2 · Đường khách tới server
