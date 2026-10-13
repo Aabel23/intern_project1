@@ -207,6 +207,28 @@ class MachineRelayTests(unittest.TestCase):
         status,body = app.post(routing.MACHINE_COMMAND_SEND,{**request,'request_id':str(uuid4()),'retry':True})
         self.assertEqual((status,body['error']['code']),(410,'REQUEST_GONE'))
 
+    def test_qr_ticket_read_is_relayed_only_to_owner(self):
+        owner = self.user('ticket-owner@example.invalid')
+        stranger = self.user('ticket-stranger@example.invalid')
+        self.assertEqual(self.claim(owner)[0], 200)
+        ticket = {'serial': 21, 'drink_name': 'Trà đào', 'price_vnd': '35000.00',
+                  'status': 'used', 'created_at': '2026-10-13T10:42:00',
+                  'scanned_at': None, 'completed_at': '2026-10-13T10:45:00'}
+        dispatcher = Dispatcher({'nhan_ve_qr': lambda data: {'tickets': [ticket], 'next_before_serial': None}})
+        self.assertIsNone(self.poll_once(dispatcher))
+        request = {'v': 1, 'request_id': str(uuid4()), 'machine_id': self.registered['machine_id'],
+                   'instruction': 'nhan_ve_qr', 'data': {'before_serial': None, 'limit': 20}}
+        denied = stranger.post(routing.MACHINE_COMMAND_SEND, request)
+        self.assertEqual((denied[0], denied[1]['error']['code']), (403, 'FORBIDDEN'))
+        with ThreadPoolExecutor(1) as pool:
+            sent = pool.submit(owner.post, routing.MACHINE_COMMAND_SEND, request)
+            command = None
+            while command is None: command = self.poll_once(dispatcher)
+            status, body = sent.result()
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body['data']['result']['data'], {'tickets': [ticket], 'next_before_serial': None})
+        self.assertNotIn('payload', body['data']['result']['data']['tickets'][0])
+
     def test_claim_race_single_owner_and_retry_returns_result(self):
         first,second = self.user('a@example.invalid'),self.user('b@example.invalid')
         with ThreadPoolExecutor(2) as pool: results = list(pool.map(self.claim,(first,second)))
