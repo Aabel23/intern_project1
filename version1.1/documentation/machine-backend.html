@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kiến trúc backend máy pha</title>
 <meta name="description" content="Kiến trúc backend chạy trên máy pha FlexMix 1.1: tiến trình, thread, khối, luồng một đơn, giao thức liên lạc giữa các luồng và thông số.">
-<link rel="stylesheet" href="../assets/fonts.css">
-<link rel="stylesheet" href="../assets/doc.css">
+<link rel="stylesheet" href="../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../documentation/assets/doc.css">
 <style>
   pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
   .comp code, .prose code, .note code, figcaption code, ol.steps code{white-space:normal; overflow-wrap:anywhere}
@@ -19,7 +19,7 @@
     <div style="display:grid;gap:4px">
       <div class="eyebrow">Kiến trúc backend máy · project1_app v1.1</div>
       <h1>Backend máy pha: tiến trình, khối, luồng và giao thức nội bộ</h1>
-      <p class="lead">Tài liệu này chỉ nói về phần mềm chạy trên chính máy pha (Raspberry Pi): một service, ba thread, hai tiến trình con, vài file JSON làm cầu nối và hai cổng HTTP nội bộ. Server hãng và app nằm ngoài phạm vi; khối kết nối của máy chỉ được nhắc tới ở chỗ nó chạm vào dữ liệu máy. Mọi tên hàm, file và con số lấy từ mã hiện tại; chỗ mã còn lỗi được đánh dấu và dẫn sang <a href="version1-1-code-manual.html">cẩm nang mã nguồn</a>.</p>
+      <p class="lead">Tài liệu này chỉ nói về phần mềm chạy trên chính máy pha (Raspberry Pi): một service, ba thread, hai tiến trình con, vài file JSON làm cầu nối và hai cổng HTTP nội bộ. Server hãng và app nằm ngoài phạm vi; khối kết nối của máy chỉ được nhắc tới ở chỗ nó chạm vào dữ liệu máy. Mọi tên hàm, file và con số lấy từ mã hiện tại; chỗ mã còn lỗi được đánh dấu và dẫn sang <a href="../../documentation/review/version1-1-code-manual.html">cẩm nang mã nguồn</a>.</p>
     </div>
     <div class="meta">
       <span><b>Đối chiếu mã:</b> <code>version1.1/</code> · <code>ad76714</code></span>
@@ -935,7 +935,7 @@ sequenceDiagram
 
     <section id="ghi-chu">
       <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Đã biết và để sau</h2></div>
-      <div class="note crit"><b>Lỗi đã kiểm, chưa sửa mã</b>(1) Database cài mới không có công thức nào vì <code>seed.sql</code> dùng mã món 1–5 thay vì 1001–1005. (2) Nhãn chỉ quét được trong 10 phút do <code>qrproto.verify</code> dùng tuổi mặc định 600 s, trong khi vé còn hạn 24 giờ. (3) Năm lỗi DBG-01, 02, 03, 06, 07 vẫn tái hiện. Chi tiết, bằng chứng và kết quả chạy ở <a href="version1-1-code-manual.html#findings">cẩm nang mã nguồn, mục 5</a>.</div>
+      <div class="note crit"><b>Lỗi đã kiểm, chưa sửa mã</b>(1) Database cài mới không có công thức nào vì <code>seed.sql</code> dùng mã món 1–5 thay vì 1001–1005. (2) Nhãn chỉ quét được trong 10 phút do <code>qrproto.verify</code> dùng tuổi mặc định 600 s, trong khi vé còn hạn 24 giờ. (3) Năm lỗi DBG-01, 02, 03, 06, 07 vẫn tái hiện. Chi tiết, bằng chứng và kết quả chạy ở <a href="../../documentation/review/version1-1-code-manual.html#findings">cẩm nang mã nguồn, mục 5</a>.</div>
       <div class="tbl">
         <table>
           <thead><tr><th>Điểm thiết kế còn hở</th><th>Hiện trạng</th><th>Mục</th></tr></thead>
@@ -977,7 +977,7 @@ sequenceDiagram
       </ol>
     </section>
 
-    <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật. Xem kèm <a href="version1-1-code-manual.html">cẩm nang mã nguồn v1.1</a> cho bản đồ file và kết quả review.</footer>
+    <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật. Xem kèm <a href="../../documentation/review/version1-1-code-manual.html">cẩm nang mã nguồn v1.1</a> cho bản đồ file và kết quả review.</footer>
     </main>
   </div>
 </div>
@@ -987,8 +987,8 @@ sequenceDiagram
   <div class="zoom-body" id="zoom-body"></div>
 </div>
 
-<script src="../assets/sequence-layout.js"></script>
+<script src="../../documentation/assets/sequence-layout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
-<script src="../assets/doc.js"></script>
+<script src="../../documentation/assets/doc.js"></script>
 </body>
 </html>
