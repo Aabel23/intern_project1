@@ -1,0 +1,13 @@
+{
+  "pv": 1,
+  "route": "/app/user/account/register",
+  "method": "POST",
+  "receiver": "server",
+  "kid": "server-hpke-1",
+  "send_id": "b965e5e1-aab0-4257-aa8f-68cd53f73b7d",
+  "sent_at_ms": 1791968400000,
+  "machine_key_id": null,
+  "enc": "EXAMPLE_ONLY_ENC",
+  "ct": "EXAMPLE_ONLY_CIPHERTEXT",
+  "sig": null
+}

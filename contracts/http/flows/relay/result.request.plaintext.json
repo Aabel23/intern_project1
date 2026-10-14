@@ -1,0 +1,16 @@
+{
+  "auth": null,
+  "body": {
+    "v": 1,
+    "request_id": "d4215a48-60d9-46bd-91c7-41186f1badb1",
+    "result": {
+      "ok": true,
+      "data": {
+        "serial": "10000000EXAMPLE01",
+        "software_version": "1.1",
+        "uptime_seconds": 63,
+        "read_sequence": 2
+      }
+    }
+  }
+}

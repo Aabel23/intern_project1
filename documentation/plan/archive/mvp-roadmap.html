@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lộ trình MVP · tài khoản tới máy pha</title>
+<meta name="description" content="Lộ trình và dự kiến phân công MVP từ đăng ký, đăng nhập tới tải menu và điều khiển máy pha.">
+
+
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/doc.css">
+<style>
+  .roadmap{display:grid;gap:10px}
+  .rail{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px}
+  .rail svg{display:block;min-width:850px;width:100%;height:auto;font-family:var(--sans)}
+  .rail .box{fill:var(--card);stroke:var(--line-2);stroke-width:1.5}
+  .rail .gate{fill:var(--amber-soft);stroke:var(--amber)}
+  .rail .done{fill:var(--ok-soft);stroke:var(--ok)}
+  .rail .t{fill:var(--ink);font-size:15px;font-weight:600}
+  .rail .s{fill:var(--ink-2);font-size:11px}
+  .rail .line{stroke:var(--accent);stroke-width:2;fill:none}
+  .rail .arrow{fill:var(--accent)}
+  .compact{display:grid;gap:14px}
+  .compact p,.compact ul{margin:0}
+  .compact ul{padding-left:1.3em}
+  .compact li{margin:4px 0}
+  .phase{display:grid;gap:10px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+  .phase h3{font-size:21px}
+  .phase .tag{font-family:var(--sans);font-size:12px;color:var(--accent-ink);font-weight:700;letter-spacing:.08em}
+  .phase .files{font-family:var(--sans);font-size:12px;color:var(--ink-3);overflow-wrap:anywhere}
+  .phase .go{font-family:var(--sans);font-size:13px;color:var(--ok);font-weight:600}
+  .phase-grid{display:grid;gap:12px}
+  @media(min-width:1000px){.phase-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .mini{font-size:13px;color:var(--ink-2)}
+  .mini strong{color:var(--ink)}
+  .tbl table{min-width:890px}
+  .tbl td:first-child,.tbl th:first-child{white-space:nowrap}
+  .tbl td{vertical-align:top}
+  .tbl code{white-space:normal;overflow-wrap:anywhere}
+  .stack{display:grid;gap:12px}
+  .decision{padding:13px 16px;background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px}
+  .decision strong{font-family:var(--sans);font-size:13px;color:var(--amber)}
+  .decision p{margin:5px 0 0;font-size:14px}
+  .scope{display:grid;gap:12px}
+  @media(min-width:900px){.scope{grid-template-columns:1fr 1fr}}
+  .scope .phase{height:100%}
+  .footnotes{font-family:var(--sans);font-size:13px;color:var(--ink-2)}
+  .footnotes li{margin:8px 0}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:7px">
+      <div class="eyebrow">Lộ trình thực thi · project1_app</div>
+      <h1>Từ tài khoản thật đến lệnh thật trên máy pha</h1>
+      <p class="lead">Mục tiêu đầu tiên là một skeleton chạy thật: người dùng đăng ký, đăng nhập, nhận máy, rồi hỏi trạng thái trực tiếp từ máy và thấy câu trả lời trên app. Sau đó mới phát triển menu, thao tác ghi và các tính năng con để hoàn tất MVP<sup><a href="#fn-mvp" id="ref-mvp">1</a></sup>.</p>
+    </div>
+    <div class="meta"><span><b>Repo:</b> <code>project1_app</code> · <code>c34d55e</code></span><span><b>Ngày:</b> 12/10/2026</span><span><b>Trạng thái:</b> đã duyệt lộ trình; đang phân công</span></div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục"><div class="lbl">Mục lục</div><ol>
+      <li><a href="#dich-den">1. Đích nghiệm thu</a></li>
+      <li><a href="#thu-tu">2. Thứ tự phụ thuộc</a></li>
+      <li><a href="#phan-cong">3. Dự kiến phân công</a></li>
+      <li><a href="#cong">4. Cổng quyết định</a></li>
+      <li><a href="#lam-viec">5. Cách triển khai</a></li>
+      <li><a href="#nguon">6. Nguồn và chú thích</a></li>
+    </ol></nav>
+    <main>
+      <section id="dich-den">
+        <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Đích nghiệm thu</h2></div>
+        <div class="scope">
+          <div class="phase compact"><h3>Mốc 1 · Skeleton kết nối thật</h3><p>Trên điện thoại Android và máy pha thật: đăng ký bằng email và mã OTP<sup><a href="#fn-otp" id="ref-otp">2</a></sup> → đăng nhập → nhận máy bằng mã niêm phong → chọn máy → app hỏi trạng thái <em>trực tiếp từ máy</em> qua server → máy trả lời → app hiển thị kết quả.</p><p>Không dùng tài khoản/máy nạp sẵn; không giả lập câu trả lời máy. Trạng thái lưu tại server chỉ giúp hiển thị danh sách, không thay lượt hỏi đáp này.</p></div>
+          <div class="phase compact"><h3>Mốc 2 · MVP theo các phần đã chốt</h3><p>Sau skeleton mới tải menu từ MySQL trên máy, tắt/bật món và kiểm kết quả đã ghi; hoàn tất chuyển đường tự động cloud → LAN → Bluetooth, quyền theo máy, bản sao quyền có hạn, bàn giao bằng cả QR lẫn BLE<sup><a href="#fn-ble" id="ref-ble">3</a></sup>.</p><p>Hai đường tại chỗ chỉ thực hiện lệnh vận hành được phép. Sửa giá, kho, đơn hàng, OTA và báo cáo chưa nằm trong đích nghiệm thu này.</p></div>
+        </div>
+        <div class="note"><b>Điểm cắt đầu tiên</b>Skeleton chứng minh đường hỏi đáp app → server → máy → app bằng một câu hỏi trạng thái do máy tự trả lời. Menu sync là việc tiếp theo, không phải điều kiện để chứng minh kết nối. Tắt/bật món là thao tác ghi đầu tiên sau khi có menu thật.</div>
+      </section>
+
+      <section id="thu-tu">
+        <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Thứ tự phụ thuộc</h2></div>
+        <figure class="rail"><svg viewBox="0 0 1080 300" role="img" aria-label="Contracts, tài khoản, nhận máy, chuyển lệnh, hỏi trạng thái trực tiếp, skeleton, rồi menu và tính năng con">
+          <defs><marker id="arr" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path class="arrow" d="M0 0 L9 4.5 L0 9 Z"/></marker></defs>
+          <path class="line" marker-end="url(#arr)" d="M125 85 H150"/><path class="line" marker-end="url(#arr)" d="M285 85 H310"/><path class="line" marker-end="url(#arr)" d="M445 85 H470"/><path class="line" marker-end="url(#arr)" d="M605 85 H630"/><path class="line" marker-end="url(#arr)" d="M765 85 H790"/><path class="line" marker-end="url(#arr)" d="M925 85 H950"/>
+          <g><rect class="box gate" x="0" y="35" width="125" height="100" rx="12"/><text class="t" x="14" y="65">Khối 0</text><text class="s" x="14" y="87">Contracts</text><text class="s" x="14" y="104">chốt trước code</text></g>
+          <g><rect class="box" x="150" y="35" width="135" height="100" rx="12"/><text class="t" x="164" y="65">Tài khoản</text><text class="s" x="164" y="87">OTP · đăng nhập</text><text class="s" x="164" y="104">phiên</text></g>
+          <g><rect class="box" x="310" y="35" width="135" height="100" rx="12"/><text class="t" x="324" y="65">Nhận máy</text><text class="s" x="324" y="87">mã niêm phong</text><text class="s" x="324" y="104">Owner · chọn máy</text></g>
+          <g><rect class="box" x="470" y="35" width="135" height="100" rx="12"/><text class="t" x="484" y="65">Chuyển lệnh</text><text class="s" x="484" y="87">server ↔ máy</text><text class="s" x="484" y="104">quyền · gửi lại</text></g>
+          <g><rect class="box" x="630" y="35" width="135" height="100" rx="12"/><text class="t" x="644" y="65">Trạng thái</text><text class="s" x="644" y="87">máy tự trả lời</text><text class="s" x="644" y="104">app hiển thị</text></g>
+          <g><rect class="box done" x="790" y="35" width="135" height="100" rx="12"/><text class="t" x="804" y="65">Mốc 1</text><text class="s" x="804" y="87">skeleton thật</text><text class="s" x="804" y="104">qua cloud</text></g>
+          <g><rect class="box" x="950" y="35" width="130" height="100" rx="12"/><text class="t" x="964" y="65">Menu</text><text class="s" x="964" y="87">MySQL → máy</text><text class="s" x="964" y="104">→ app</text></g>
+          <path class="line" marker-end="url(#arr)" d="M1015 135 V182 H840"/><rect class="box" x="620" y="182" width="220" height="90" rx="12"/><text class="t" x="636" y="210">Tính năng con</text><text class="s" x="636" y="232">tắt/bật · share QR/BLE</text><text class="s" x="636" y="250">LAN/BT dự phòng</text>
+          <path class="line" marker-end="url(#arr)" d="M620 227 H590"/><rect class="box done" x="370" y="182" width="220" height="90" rx="12"/><text class="t" x="386" y="210">Mốc 2 · MVP</text><text class="s" x="386" y="232">nghiệm thu cả ba đường</text><text class="s" x="386" y="250">và hai cách share</text>
+        </svg><figcaption>Contracts là khối đầu tiên. Skeleton được nghiệm thu bằng tài khoản, máy và câu trả lời trực tiếp thật; nó không phụ thuộc menu sync. Các tính năng con dùng lại đường kết nối đã chứng minh, rồi Mốc 2 kiểm cả ba đường và hai cách share.</figcaption></figure>
+      </section>
+
+      <section id="phan-cong">
+        <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Dự kiến phân công theo module</h2></div>
+        <p class="prose">Lộ trình đã được duyệt với skeleton kết nối thật là mốc đầu tiên. <a href="assignments.md">Bảng phân công và các phiếu khối contracts</a> ghi người giữ việc, điều kiện bắt đầu và slot coder; phiếu coder đầy đủ được phát sau khi hợp đồng liên quan được chốt.</p>
+        <div class="tbl"><table><thead><tr><th>Module / thứ tự</th><th>Người phụ trách chính</th><th>Đầu việc dự kiến</th><th>Codespace và điểm nối</th><th>Điều kiện qua module</th></tr></thead><tbody>
+          <tr><td>0 · Contracts</td><td>Planner + operator; user duyệt thiết kế</td><td>Khóa trước hợp đồng tối thiểu cho đăng ký, đăng nhập, nhận máy và câu hỏi trạng thái trực tiếp. Sau skeleton mới mở hợp đồng menu, thao tác ghi, share và offline. Mỗi hợp đồng nêu bên gửi/nhận, ý nghĩa, kết quả/lỗi, quyền, giới hạn và tương thích.</td><td>Đầu ra dự kiến: <code>contracts/messages/</code>, <code>contracts/examples/</code>, <code>contracts/COMPATIBILITY.md</code>. Đối chiếu hai file routing; không sửa handler ở khối này.</td><td>Ví dụ luồng skeleton được duyệt; app, server, máy hiểu cùng một câu hỏi trạng thái. Các phần bảo mật còn mở được quyết trước khi giao coder liên quan.</td></tr>
+          <tr><td>1 · Tài khoản</td><td>Coder server + coder app</td><td>Server gửi OTP từ Gmail của chủ dự án qua SMTP với App Password, tới đúng email đăng ký; xác minh, đăng nhập, access 1 giờ và refresh trượt 30 ngày, đăng xuất. App nối form đang có với server, lưu phiên an toàn, đổi ô đăng nhập sang email. Hai địa chỉ đã cung cấp là tài khoản nhận thử nghiệm ở môi trường thử.</td><td><code>server/src/</code> (đang trống), <code>server/configuration/routing.py</code>; <code>flutter_app/lib/feature/user_auth/</code>, <code>flutter_app/lib/app/</code>.</td><td>OTP thật tới đúng người đăng ký; lỗi Gmail hiện rõ; tài khoản chưa xác minh không đăng nhập; sai mật khẩu không vào được; hết access có refresh; đăng xuất thu hồi phiên.</td></tr>
+          <tr><td>2 · Nhận và chọn máy</td><td>Coder machine + coder server + coder app</td><td>Máy tạo danh tính ở lần bật đầu, mở kênh bằng mã niêm phong, nhận wifi. Server gắn máy chưa có chủ với người kích hoạt thành Owner. App quét mã, đi qua kích hoạt, tải danh sách máy và chọn máy.</td><td><code>version1.1/machine/pairing/</code>, <code>version1.1/machine/server_connection/</code>; <code>server/src/</code>; <code>flutter_app/lib/feature/machine_register/</code>, <code>feature/dashboard/</code>.</td><td>Quét lại không tạo Owner thứ hai; reset tại máy không gỡ chủ; máy chưa nhận không được giao lệnh.</td></tr>
+          <tr><td>3 · Chuyển lệnh qua cloud</td><td>Coder server + coder machine + coder app</td><td>Server xác thực, kiểm quyền theo máy và chuyển câu hỏi; máy tự mở kết nối, nhận câu hỏi, trả kết quả; app giữ mã yêu cầu khi gửi lại. Cơ chế chống chạy lặp bền chỉ cần khi thêm lệnh ghi.</td><td><code>server/src/</code>; <code>version1.1/machine/main.py</code>, <code>machine/server_connection/</code>; lớp kết nối mới dưới <code>flutter_app/lib/</code>.</td><td>Máy offline trả lỗi rõ; timeout không tạo kết quả giả; mất server giữa chừng không làm máy dừng vòng lặp.</td></tr>
+          <tr><td>4 · Trạng thái trực tiếp</td><td>Coder machine + coder server + coder app</td><td>Định nghĩa một câu hỏi chỉ đọc đi qua relay đã có; máy tự trả trạng thái hiện tại, app hiện đúng câu trả lời. Không thay bằng cờ online mà server suy ra từ poll.</td><td><code>version1.1/machine/main.py</code>, <code>machine/server_connection/</code>; relay server; <code>flutter_app/lib/feature/dashboard/</code>.</td><td>Trên thiết bị thật, mỗi lần app hỏi có một lượt app → server → máy → server → app; ngắt máy thì không có câu trả lời giả. Đây là Mốc 1.</td></tr>
+          <tr><td>5 · Tải menu</td><td>Coder machine + coder app; server chỉ chuyển gói</td><td>Máy đọc MySQL, dựng gói đầy đủ có công thức, kiểm số phiên bản CRC32<sup><a href="#fn-crc" id="ref-crc">4</a></sup>, trả “không đổi” hoặc toàn gói. App giải gói, kiểm phiên bản/CRC, lưu bản chụp theo máy và vẽ tab menu.</td><td><code>version1.1/machine/menu_sync/</code>, <code>version1.1/database/core/</code>; <code>flutter_app/lib/feature/machine_menu/</code>; relay module 3.</td><td>Đọc được menu thật; mở lại khi không đổi không tải lại gói; gói lỗi bị từ chối; giới hạn 256 KB được kiểm.</td></tr>
+          <tr><td>6 · Tắt/bật món</td><td>Coder machine + coder app</td><td>Tách lệnh trạng thái bán khỏi sửa giá. App gửi thao tác với mã lệnh; máy kiểm vai, đường đến, món tồn tại, ghi MySQL và trả trạng thái mới; app đọc lại menu để xác nhận.</td><td><code>version1.1/machine/menu_sync/</code>, <code>version1.1/machine/main.py</code>; <code>flutter_app/lib/feature/machine_menu/</code>.</td><td>Gửi lại cùng mã chỉ ghi một lần; sai vai bị chặn ở server và máy; trạng thái đọc lại đúng với MySQL.</td></tr>
+          <tr><td>7 · Quyền, share và dự phòng</td><td>Coder server + coder machine + coder app</td><td>Server ký bản quyền theo máy; máy giữ bản sao có hạn; share QR và BLE hai điện thoại có mã so 6 số; app tự đổi cloud → LAN → Bluetooth. Lệnh nguy hiểm không chạy tại chỗ.</td><td><code>server/src/</code>, <code>machine/pairing/</code>, lớp kết nối app, <code>feature/machine_share/</code>; dùng lại hợp đồng module 0.</td><td>Người mới vào vai Employee; mất Internet vẫn tải menu và tắt/bật món trong hạn quyền; hết hạn chỉ xem/bán; hai đường tại chỗ không tăng quyền.</td></tr>
+          <tr><td>8 · Nghiệm thu</td><td>Tester tích hợp + operator</td><td>Tự gửi OTP thật cho hai email thử nghiệm; user báo mã để xác minh. Chạy skeleton trước, rồi menu và thao tác trên điện thoại/máy thật; thử ngắt Internet, ngắt wifi, gửi lệnh lặp, tài khoản bị gỡ và gói menu hỏng. Khi các ca đạt, xóa đúng dữ liệu thử trong DB và lưu biên bản không chứa OTP.</td><td>Test trong repo, cấu hình môi trường triển khai; không thêm tính năng.</td><td>Mốc 1 đạt trước khi làm menu; Mốc 2 đạt sau khi các tính năng con hoàn tất. Lỗi còn lại được ghi riêng để bàn.</td></tr>
+        </tbody></table></div>
+        <div class="note"><b>Điều phối file chung</b><code>server/configuration/routing.py</code>, hợp đồng gói và lớp kết nối app chỉ có một người ghi mỗi thời điểm. Kiểm môi trường Android, MySQL, email và server có thể làm song song như công việc chuẩn bị; không thay cổng duyệt contracts. Module server/machine/app chỉ bắt đầu <em>sau</em> khi hợp đồng liên quan đã được duyệt.</div>
+      </section>
+
+      <section id="cong">
+        <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Quyết định để khóa contracts</h2></div>
+        <p class="prose">Các file kiến trúc hiện hành là bản nháp và có vài chi tiết khác quyết định đã chốt. Planner phải sửa đặc tả của đúng module rồi đưa quyết định còn mở ra bàn; coder không tự chọn cách khác khi thấy xung đột.</p>
+        <div class="stack">
+          <div class="decision"><strong>G0-A · Phiên đăng nhập</strong><p>Quyết định đã chốt là access 1 giờ và refresh trượt 30 ngày. Tài liệu <code>features/account.html</code> còn ghi một token phiên 30 ngày cố định. Plan dùng quyết định đã chốt; tài liệu và hợp đồng phải sửa trước khi giao module tài khoản.</p></div>
+          <div class="decision"><strong>G0-B · Danh tính máy khi nhận chủ</strong><p>Quyết định đã chốt: máy tự sinh cặp khóa ở lần bật đầu và dùng mã niêm phong dài in QR; không yêu cầu xưởng nạp chứng chỉ, không dùng PAKE. Tài liệu <code>features/machine-activation.html</code> vẫn mô tả chứng chỉ xưởng và PAKE. Cần chốt cách server kiểm một máy thật trong mô hình đã chọn, rồi mới có phiếu kích hoạt.</p></div>
+          <div class="decision"><strong>G0-C · Gói bảo mật trên ba đường</strong><p>Quyết định đã chốt yêu cầu LAN/Bluetooth mã hóa và vé gắn khóa điện thoại; tài liệu <code>system-architecture.html</code> mô tả giao thức cloud và tại chỗ theo hai cách khác nhau. Cần đặc tả ranh giới kiểm quyền, nội dung server nhìn thấy và cách máy kiểm vé. Đây là điều kiện cho module chuyển lệnh và đường dự phòng.</p></div>
+          <div class="decision"><strong>G0-D · Trạng thái trực tiếp và menu</strong><p>Skeleton cần câu hỏi trạng thái do máy tự trả lời qua relay; phải phân biệt với trạng thái online mà server suy ra từ poll. Menu là bước sau: đã chốt đồng bộ bằng CRC, khác thì gửi cả gói có công thức, trần 256 KB; mã máy hiện chưa có công thức trong gói. Cần chốt byte nào tham gia CRC và trạng thái tắt/bật món có làm đổi phiên bản menu hay không.</p></div>
+        </div>
+      </section>
+
+      <section id="lam-viec">
+        <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Cách triển khai sau khi duyệt lộ trình</h2></div>
+        <ol class="steps"><li><strong>Planner</strong> phát phiếu từng task: bối cảnh cần đọc, file và hàm, hợp đồng, ca kiểm, phạm vi cấm. Phiếu thiếu hoặc sai quay lại Planner.</li><li><strong>Coder</strong> làm đúng phiếu, một người giữ quyền ghi mỗi file chung. Phần đã chốt được hiện thực tối thiểu; không thêm lớp hay tính năng “để sau”.</li><li><strong>Reviewer nhỏ</strong> độc lập đối chiếu code với phiếu ngay sau mỗi task, gồm cả phần làm thừa. Chỉ sửa lệch phiếu; vấn đề thiết kế phải quay lại bàn.</li><li><strong>Reviewer lớn</strong> kiểm một lần khi toàn bộ task của một module đã qua review nhỏ: so với đặc tả, phiếu, đích phase và hệ thống lớn. Phát hiện được ghi lại để quyết, không tự kích hoạt sửa.</li><li><strong>Tester tích hợp</strong> nghiệm thu từng mốc bằng điện thoại Android, máy MySQL và server/email thật. Bài test mô phỏng giúp bắt lỗi sớm nhưng không thay bài nghiệm thu thiết bị thật.</li></ol>
+        <div class="note"><b>Trạng thái</b>Lộ trình đã được duyệt. Stage 2 bắt đầu từ phân công thiết kế contracts; phiếu coder của mỗi module chỉ phát khi hợp đồng và quyết định liên quan đã đủ rõ để coder làm đúng phiếu.</div>
+      </section>
+
+      <section id="nguon">
+        <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Nguồn và chú thích</h2></div>
+        <p class="prose">Đối chiếu cấu trúc repo tại commit <code>c34d55e</code> và working tree ngày 12/10/2026. Điểm vào: <a href="../../architect/index.html">tài liệu kiến trúc</a>; <a href="../../research/menu-inventory-machine-sync.html">menu và đồng bộ</a>; <a href="../../research/account-login-identity.html">tài khoản và danh tính</a>. File code đang có: <code>server/configuration/routing.py</code>, <code>flutter_app/lib/feature/</code>, <code>version1.1/machine/</code>. Các nhánh chờ quyết định được ghi ở Mục 4, không xem là hợp đồng đã duyệt.</p>
+        <ol class="footnotes"><li id="fn-mvp"><strong>MVP — Minimum Viable Product:</strong> bản nhỏ nhất có thể dùng và nghiệm thu bằng luồng thực tế. Ở đây Mốc 1 xác nhận lõi end to end; Mốc 2 hoàn tất các ràng buộc bản đầu đã xác nhận. <a href="#ref-mvp">↩</a></li><li id="fn-otp"><strong>OTP — One-Time Password:</strong> mã dùng một lần gửi qua email để chứng minh người đăng ký kiểm soát hộp thư. <a href="#ref-otp">↩</a></li><li id="fn-ble"><strong>BLE — Bluetooth Low Energy:</strong> kiểu kết nối Bluetooth dùng để bàn giao giữa hai điện thoại theo thiết kế bản đầu. <a href="#ref-ble">↩</a></li><li id="fn-crc"><strong>CRC32 — Cyclic Redundancy Check 32 bit:</strong> mã kiểm thay đổi dữ liệu; dùng để biết bản menu đã khác, không phải bằng chứng chống giả mạo. <a href="#ref-crc">↩</a></li></ol>
+      </section>
+    </main>
+  </div>
+</div>
+</body>
+</html>

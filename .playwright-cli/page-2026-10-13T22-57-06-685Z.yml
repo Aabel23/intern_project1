@@ -1,0 +1,72 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Blueprint · codespace dự án mới
+    - heading "Tạo cùng một điểm bắt đầu cho mỗi dự án" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Gói khởi tạo tạo cấu trúc tài liệu và assets dùng chung khi mở codespace mới. Quy trình làm việc hiện có tiếp tục được dùng; blueprint này chỉ định nghĩa bộ khung ban đầu.
+    - paragraph [ref=e7]:
+      - generic [ref=e8]: Bản đề xuất · chờ duyệt chi tiết
+    - generic [ref=e9]: "Phạm vi: cấu trúc thư mục · trang index · plan JSON · tài nguyên dùng chung"
+  - region [ref=e10]:
+    - heading "Luồng khởi tạo" [level=2] [ref=e11]
+    - paragraph [ref=e12]: Gói chuẩn nằm trong second brain. Operator dùng gói đó để tạo bộ khung trong codespace mới; các trang tài liệu tải assets chung từ chính bộ khung.
+    - figure "Blueprint mô tả điểm bắt đầu trống; nội dung và quyết định riêng của dự án được thêm sau theo quy trình hiện hành." [ref=e13]:
+      - img "Gói khởi tạo đi vào codespace mới Second brain giữ blueprint và assets. Operator tạo cấu trúc codespace. Hai trang index dùng chung assets cục bộ." [ref=e14]:
+        - generic [ref=e16]: Second brain
+        - generic [ref=e17]: Blueprint + cấu trúc
+        - generic [ref=e18]: Assets tài liệu dùng chung
+        - generic [ref=e20]: Operator
+        - generic [ref=e21]: Tạo codespace
+        - generic [ref=e22]: Điền định danh dự án
+        - generic [ref=e24]: Codespace mới
+        - generic [ref=e25]: documentation/index.html
+        - generic [ref=e26]: plan/index.html + data JSON
+        - generic [ref=e28]: assets cục bộ dùng chung cho cả hai index
+      - generic [ref=e30]:
+        - generic [ref=e31]: Nguồn chuẩn
+        - generic [ref=e33]: Khởi tạo
+        - generic [ref=e35]: Codespace
+        - generic [ref=e37]: Assets dùng chung
+  - region [ref=e39]:
+    - heading "Khung thư mục đề xuất" [level=2] [ref=e40]
+    - paragraph [ref=e41]: "Ở gốc `documentation/` và `documentation/plan/` chỉ có `index.html` cùng thư mục con. JSON là nguồn dữ liệu; index chỉ dựng trang để xem."
+    - generic [ref=e42]: <project>/ ├── documentation/ │ ├── index.html │ ├── assets/ │ ├── architect/ │ │ ├── architect/ │ │ ├── cryptography/ │ │ └── features/ │ ├── research/ │ └── plan/ │ ├── index.html │ ├── data/ │ │ └── plan.json │ ├── progress/ │ ├── tasks/ │ ├── decisions/ │ └── archive/ └── scripts/ └── serve_documentation.py
+    - generic [ref=e43]: "Các thư mục con khởi tạo rỗng, không chép báo cáo, quyết định hay dữ liệu FlexMix. Script phục vụ trang nằm ngoài `documentation/` để gốc tài liệu giữ đúng quy ước."
+  - region [ref=e44]:
+    - heading "Trách nhiệm từng khối" [level=2] [ref=e45]
+    - generic [ref=e46]:
+      - article [ref=e47]:
+        - generic [ref=e48]: 01 · BLUEPRINT
+        - heading "Gói trong second brain" [level=3] [ref=e49]
+        - paragraph [ref=e50]: Giữ cây thư mục mẫu, hướng dẫn khởi tạo và danh mục nguồn assets. Đây là nơi operator tra cứu khi có codespace mới.
+      - article [ref=e51]:
+        - generic [ref=e52]: 02 · INDEX
+        - heading "Điểm vào tài liệu" [level=3] [ref=e53]
+        - paragraph [ref=e54]: "`documentation/index.html` dẫn tới architect, research và plan; `plan/index.html` tải `data/plan.json` và sổ tiến độ riêng."
+      - article [ref=e55]:
+        - generic [ref=e56]: 03 · ASSETS
+        - heading "Tài nguyên offline" [level=3] [ref=e57]
+        - paragraph [ref=e58]: "Tái dùng template, CSS và font offline trong `document-framework/`. Chỉ đóng gói thêm renderer nào đã tách được khỏi dữ liệu riêng của FlexMix."
+  - region [ref=e59]:
+    - heading "Luồng dùng gói" [level=2] [ref=e60]
+    - list [ref=e61]:
+      - listitem [ref=e62]: Nhận tên và phạm vi codespace mới.
+      - listitem [ref=e63]: Sao chép bộ khung và assets chuẩn từ vault.
+      - listitem [ref=e64]: Điền tên dự án, giữ plan ban đầu trống.
+      - listitem [ref=e65]: Kiểm thư mục, liên kết tương đối và font offline.
+      - listitem [ref=e66]: Bắt đầu quy trình thiết kế hiện hành.
+  - region [ref=e67]:
+    - heading "Điểm cần bạn chốt ở vòng này" [level=2] [ref=e68]
+    - generic [ref=e69]:
+      - article [ref=e70]:
+        - generic [ref=e71]: Nhánh kiến trúc trống
+        - paragraph [ref=e72]: "Có nên tạo sẵn `architect/architect`, `cryptography`, `features` cho mọi dự án, hay chỉ tạo nhánh con khi dự án cần?"
+      - article [ref=e73]:
+        - generic [ref=e74]: Renderer plan
+        - paragraph [ref=e75]: Renderer hiện tại gắn với cấu trúc plan FlexMix. Cần tách phần hiển thị chung và để dữ liệu/progress riêng cho từng dự án trước khi đưa vào gói.
+      - article [ref=e76]:
+        - generic [ref=e77]: Assets trong vault
+        - paragraph [ref=e78]: "Bộ `document-framework/` đã có template, CSS và font. Gói bootstrap sẽ tham chiếu bộ này và chỉ bổ sung phần còn thiếu, tránh nhân đôi fonts."
+      - article [ref=e79]:
+        - generic [ref=e80]: Kiểm khởi tạo
+        - paragraph [ref=e81]: Blueprint đề xuất checklist cấu trúc/link/assets; chưa tạo lệnh tự động cho tới khi bạn duyệt hợp đồng chi tiết.
+  - generic [ref=e82]: "Đầu ra vòng này: blueprint và gói khởi tạo được mô tả để user duyệt. Chưa dùng gói để thay đổi codespace dự án khác."

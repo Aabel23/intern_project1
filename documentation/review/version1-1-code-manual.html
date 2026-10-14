@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Máy pha FlexMix 1.1 · bản đồ mã và kết quả review</title>
+  <link rel="stylesheet" href="../assets/fonts.css">
+  <link rel="stylesheet" href="../assets/doc.css">
+  <style>
+    .review-lead{max-width:78ch}.review-tag{font:600 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid var(--line-2);white-space:nowrap}
+    .review-tag.fact{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}.review-tag.risk{color:var(--red);border-color:var(--red);background:var(--red-soft)}.review-tag.limit{color:var(--amber);border-color:var(--amber);background:var(--amber-soft)}
+    .review-list{margin:0;padding-left:1.5em;display:grid;gap:8px;max-width:84ch}.review-list li::marker{color:var(--accent)}
+    .review-flow{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:8px;overflow-x:auto;font:13px var(--sans)}.review-flow div{padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--card)}.review-flow strong{display:block;color:var(--accent-ink);margin-bottom:5px}
+    .review-seq{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px}.review-seq svg{display:block;min-width:800px;width:100%;height:auto;font:12px var(--sans)}
+    .review-finding{border-left:4px solid var(--red);padding:13px 17px;border-radius:5px 10px 10px 5px;background:var(--red-soft);display:grid;gap:5px}.review-finding h3{font-size:19px}.review-finding p{margin:0}.review-finding.limit{border-color:var(--amber);background:var(--amber-soft)}
+    .review-terms{font:13px/1.6 var(--sans);max-width:85ch}.review-terms li{margin-bottom:10px}
+    @media(max-width:700px){.review-flow{grid-template-columns:repeat(5,170px)}.review-seq{padding:7px}.review-finding{padding:12px}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Cẩm nang mã nguồn · review tĩnh · project1_app</div>
+      <h1>Phần mềm trên máy pha FlexMix 1.1</h1>
+      <p class="lead review-lead">Bản đồ này chỉ ra các tiến trình đang có trong mã, đường đi của một đơn từ màn bán hàng đến bơm, cách máy nhận lệnh từ server và các điểm cần quyết định trước khi triển khai. Kết luận về vận hành chỉ dựa trên mã đã đọc; chưa chạy trên phần cứng thật.</p>
+    </div>
+    <div class="meta"><span><b>Nguồn</b> <code>project1_app/version1.1/</code></span><span><b>Commit nền</b> <code>a88668c</code></span><span><b>Kiểm</b> 14/10/2026</span><span><b>Phạm vi</b> mã Python, JavaScript, HTML, SQL, deploy và test liên quan</span></div>
+  </header>
+
+  <section class="overview" id="overview">
+    <div class="ov-head"><h2>1 · Bức tranh toàn cục</h2><span class="review-tag fact">Hiện trạng mã nguồn</span></div>
+    <div class="legend"><span><i class="sw ui"></i>Giao diện</span><span><i class="sw proc"></i>Xử lý</span><span><i class="sw store"></i>Dữ liệu</span><span><i class="sw hw"></i>Phần cứng</span><span><i class="sw hot"></i>Điểm cần xem xét</span></div>
+    <div class="ov-frame">
+      <svg class="ov" viewBox="0 0 1100 510" role="img" aria-labelledby="overview-title overview-desc">
+        <title id="overview-title">Các khối của phần mềm máy pha</title><desc id="overview-desc">Màn bán hàng tạo vé QR, luồng đơn nhận vé rồi đưa công thức cho tiến trình pha và phần cứng. Khối machine riêng kết nối server và BLE, dùng chung cơ sở dữ liệu cục bộ.</desc>
+        <defs><marker id="arr" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="var(--accent)"/></marker></defs>
+        <rect class="zn" x="15" y="20" width="1070" height="205" rx="16"/><text class="zt" x="35" y="48">ĐƠN HÀNG TẠI MÁY</text>
+        <g class="nd ui"><rect x="37" y="87" width="175" height="80" rx="11"/></g><text class="tt" x="125" y="119" text-anchor="middle">store_gui</text><text class="ts" x="125" y="143" text-anchor="middle">màn bán + HTTP</text>
+        <g class="nd proc"><rect x="263" y="87" width="175" height="80" rx="11"/></g><text class="tt" x="350" y="119" text-anchor="middle">qrproto / scan</text><text class="ts" x="350" y="143" text-anchor="middle">vé QR + quét</text>
+        <g class="nd proc"><rect x="489" y="87" width="175" height="80" rx="11"/></g><text class="tt" x="576" y="119" text-anchor="middle">order</text><text class="ts" x="576" y="143" text-anchor="middle">xác nhận + điều phối</text>
+        <g class="nd hw"><rect x="715" y="87" width="175" height="80" rx="11"/></g><text class="tt" x="802" y="119" text-anchor="middle">bơm / cân / panel</text><text class="ts" x="802" y="143" text-anchor="middle">thao tác vật lý</text>
+        <g class="nd store"><rect x="925" y="87" width="137" height="80" rx="11"/></g><text class="tt" x="993" y="119" text-anchor="middle">MySQL</text><text class="ts" x="993" y="143" text-anchor="middle">đơn + kho</text>
+        <path class="e main" d="M212 127H251" marker-end="url(#arr)"/><path class="e main" d="M438 127H477" marker-end="url(#arr)"/><path class="e main" d="M664 127H703" marker-end="url(#arr)"/><path class="e main" d="M890 127H913" marker-end="url(#arr)"/>
+        <rect class="zn" x="15" y="250" width="1070" height="215" rx="16"/><text class="zt" x="35" y="279">KẾT NỐI APP VÀ SERVER · TIẾN TRÌNH RIÊNG</text>
+        <g class="nd ui"><rect x="40" y="320" width="170" height="85" rx="11"/></g><text class="tt" x="125" y="351" text-anchor="middle">App / BLE</text><text class="ts" x="125" y="376" text-anchor="middle">nhận máy tại chỗ</text>
+        <g class="nd proc"><rect x="265" y="320" width="205" height="85" rx="11"/></g><text class="tt" x="367" y="351" text-anchor="middle">machine.pairing</text><text class="ts" x="367" y="376" text-anchor="middle">claim + Wi-Fi</text>
+        <g class="nd hot"><rect x="530" y="320" width="230" height="85" rx="11"/></g><text class="tt" x="645" y="351" text-anchor="middle">machine.main</text><text class="ts" x="645" y="376" text-anchor="middle">poll + xử lý lệnh</text>
+        <g class="nd ui"><rect x="820" y="320" width="235" height="85" rx="11"/></g><text class="tt" x="937" y="351" text-anchor="middle">Server</text><text class="ts" x="937" y="376" text-anchor="middle">hello / poll / result</text>
+        <path class="e main" d="M210 362H253" marker-end="url(#arr)"/><path class="e main" d="M760 362H808" marker-end="url(#arr)"/><path class="e dash" d="M470 362H518" marker-end="url(#arr)"/>
+        <path class="e dash" d="M645 320V225H993V179"/><text class="tl" x="787" y="239">lệnh menu, kho, vé, báo cáo dùng MySQL</text>
+      </svg>
+    </div>
+    <p class="ov-note">Nguồn: <code>main.py</code>, <code>order/run_flow.py</code>, <code>machine/main.py</code>, <code>machine/pairing/machine_bluetooth_pair.py</code>. Mũi tên đứt chỉ phụ thuộc dữ liệu; sơ đồ không có nghĩa là hai tiến trình <code>machine</code> đã được cấu hình tự khởi động.</p>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục"><div class="lbl">Nội dung</div><ol>
+      <li><a href="#overview">1 · Toàn cục</a></li><li><a href="#flow">2 · Một đơn đi qua máy</a></li><li><a href="#modules">3 · Bản đồ module</a></li><li><a href="#cloud">4 · App và server</a></li><li><a href="#findings">5 · Phát hiện review</a></li><li><a href="#verification">6 · Kiểm chứng</a></li><li><a href="#terms">Chú thích</a></li>
+    </ol></nav>
+    <main>
+      <section id="flow"><div class="sec-head"><span class="sec-no">02 · Luồng đại diện</span><h2>Một đơn đi qua máy như thế nào?</h2></div>
+        <p class="prose">Màn bán hàng gửi lựa chọn đến máy chủ HTTP<sup class="fn" id="ref-http"><a href="#term-http">1</a></sup> cục bộ. Máy cấp vé QR<sup class="fn" id="ref-qr"><a href="#term-qr">2</a></sup> dùng một lần, lưu vé vào MySQL<sup class="fn" id="ref-mysql"><a href="#term-mysql">3</a></sup>, rồi đợi mã được quét hoặc lệnh bắt đầu từ màn bán hàng.</p>
+        <figure class="review-seq"><svg viewBox="0 0 1000 365" role="img" aria-labelledby="seq-title seq-desc"><title id="seq-title">Trình tự xử lý đơn</title><desc id="seq-desc">Màn bán gọi HTTP để cấp vé. Quét mã vào run_flow, xác thực và nhận vé trong cơ sở dữ liệu, dựng công thức, chuyển cho process_runner và phần cứng, cuối cùng ghi kết quả.</desc>
+          <g fill="none" stroke="var(--line-2)" stroke-dasharray="4 5"><path d="M100 48V340M295 48V340M490 48V340M685 48V340M880 48V340"/></g>
+          <g fill="var(--ink)" text-anchor="middle" font-weight="600"><text x="100" y="30">Màn bán</text><text x="295" y="30">store_gui</text><text x="490" y="30">run_flow</text><text x="685" y="30">MySQL</text><text x="880" y="30">process_runner</text></g>
+          <g stroke="var(--accent)" stroke-width="2" fill="none"><path d="M100 85H285"/><path d="M295 130H675"/><path d="M490 180H675"/><path d="M490 230H870"/><path d="M880 280H695"/><path d="M490 330H675"/></g>
+          <g fill="var(--accent)"><path d="M285 80l9 5-9 5M675 125l9 5-9 5M675 175l9 5-9 5M870 225l9 5-9 5M695 275l-9 5 9 5M675 325l9 5-9 5"/></g>
+          <g fill="var(--ink-2)"><text x="135" y="75">① POST /api/ticket</text><text x="355" y="120">② issue vé + payload</text><text x="535" y="170">③ claim vé</text><text x="590" y="220">④ công thức + chạy</text><text x="710" y="270">⑤ kết quả bước pha</text><text x="535" y="320">⑥ hoàn tất / trả vé</text></g>
+        </svg><figcaption>Nguồn: <code>store_gui/serve.py</code> (<code>_issue_ticket</code>), <code>database/services/order_ticket.py</code>, <code>order/qr_to_recipe.py</code>, <code>order/run_flow.py</code>, <code>order/process_runner.py</code>. “Claim vé” là chuyển vé từ chưa dùng sang đang xử lý để chặn quét lại.</figcaption></figure>
+        <div class="tbl"><table><thead><tr><th>Trong sơ đồ</th><th>Trong mã</th><th>Vì sao có bước này</th></tr></thead><tbody>
+          <tr><td>① Tạo vé</td><td><a href="../../version1.1/store_gui/serve.py"><code>StoreHandler._issue_ticket</code></a></td><td>Chỉ backend giữ khóa QR; trình duyệt gửi lựa chọn món.</td></tr>
+          <tr><td>② Ghi vé</td><td><a href="../../version1.1/database/services/order_ticket.py"><code>issue</code></a></td><td>Gắn payload đã cấp với một bản ghi để quản lý vòng đời.</td></tr>
+          <tr><td>③ Nhận mã</td><td><a href="../../version1.1/order/qr_to_recipe.py"><code>process_payload</code></a></td><td>Kiểm payload, nhận vé và dựng công thức tương ứng.</td></tr>
+          <tr><td>④–⑤ Pha</td><td><a href="../../version1.1/order/process_runner.py"><code>run_process</code></a></td><td>Giữ luồng điều khiển bơm, cân, panel và màn pha chế trong tiến trình riêng.</td></tr>
+          <tr><td>⑥ Kết thúc</td><td><a href="../../version1.1/order/run_flow.py"><code>run_one_order</code></a></td><td>Ghi trạng thái vé, xử lý lỗi và làm sạch file bàn giao.</td></tr>
+        </tbody></table></div>
+        <p class="note"><b>Ngoại lệ đã có</b><code>POST /api/start</code> ghi vào file đầu vào của máy quét để chạy đơn khi máy quét hoặc máy in lỗi. Đây là đường dự phòng có chủ ý, vẫn đi qua quy trình vé.</p>
+      </section>
+
+      <section id="modules"><div class="sec-head"><span class="sec-no">03 · Bản đồ mã</span><h2>Trách nhiệm của từng khối</h2></div>
+        <p class="prose">Bảng bao phủ các nhánh mã thực thi trong <code>version1.1/</code>. Các tệp ảnh, font và tài nguyên trang là đầu vào giao diện; chúng không tự chạy nghiệp vụ.</p>
+        <div class="tbl"><table><thead><tr><th>Khối</th><th>Điểm vào / dữ liệu</th><th>Trách nhiệm quan sát được</th></tr></thead><tbody>
+          <tr><td><code>main.py</code></td><td><a href="../../version1.1/main.py">3 thread</a></td><td>Mở <code>store_gui.serve</code>, <code>sync_menu</code>, <code>run_flow</code>; một thread kết thúc làm cả tiến trình thoát để systemd khởi động lại.</td></tr>
+          <tr><td><code>configuration/</code></td><td><a href="../../version1.1/configuration/machine.py">hồ sơ máy</a>, <a href="../../version1.1/configuration/net_addresses.py">địa chỉ</a></td><td>Thông số thiết bị, đường dẫn runtime, chế độ đơn, màn hình, khóa QR và địa chỉ phục vụ.</td></tr>
+          <tr><td><code>store_gui/</code></td><td><a href="../../version1.1/store_gui/serve.py">serve.py</a>, <a href="../../version1.1/store_gui/sync_menu.py">sync_menu.py</a></td><td>Phục vụ màn bán, tạo/in vé, ảnh QR, bắt đầu đơn, chuyển tiếp nút pha chế; dựng snapshot menu từ database.</td></tr>
+          <tr><td><code>scan/</code>, <code>qrproto/</code></td><td><a href="../../version1.1/scan/scanner.py">scanner.py</a>, <a href="../../version1.1/qrproto/api.py">api.py</a></td><td>Đọc máy quét, tạo và xác thực payload QR v1.4. <code>scan/qr_payload.py</code> và <code>qr_protocol.py</code> vẫn là mã giao thức cũ, cần tránh nhầm với <code>qrproto</code> đang được dùng.</td></tr>
+          <tr><td><code>order/</code></td><td><a href="../../version1.1/order/run_flow.py">run_flow.py</a>, <a href="../../version1.1/order/qr_to_recipe.py">qr_to_recipe.py</a>, <a href="../../version1.1/order/process_runner.py">process_runner.py</a></td><td>Nhận đơn, kiểm vé, dựng công thức, chạy từng bước pha, điều phối màn pha chế và xử lý khôi phục sau lỗi.</td></tr>
+          <tr><td><code>database/</code></td><td><a href="../../version1.1/database/schema/schema.sql">schema.sql</a>, <a href="../../version1.1/database/services/order_ticket.py">services/</a></td><td>11 bảng và 5 trigger; vé, kho, công thức, báo cáo, log lỗi. <code>schema/apply.py</code> dựng schema; không có migration tăng dần trong thư mục này.</td></tr>
+          <tr><td><code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/</code>, <code>printer/</code></td><td><a href="../../version1.1/pump_control/pump_ml_parallel.py">bơm</a>, <a href="../../version1.1/loadcell/loadcell.py">cân</a>, <a href="../../version1.1/panel_control/panel.py">panel</a>, <a href="../../version1.1/printer/spool.py">in</a></td><td>Truy cập GPIO, HX711, I²C và máy in; có công cụ hiệu chuẩn và chẩn đoán riêng.</td></tr>
+          <tr><td><code>bartender_gui/</code>, <code>test_gui/</code></td><td><a href="../../version1.1/bartender_gui/index.html">màn pha</a>, <a href="../../version1.1/test_gui/serve.py">màn thử</a></td><td>Hướng dẫn thao tác bằng tay và kiểm phần cứng; màn thử chặn xung đột với đơn đang chạy.</td></tr>
+          <tr><td><code>machine/</code></td><td><a href="../../version1.1/machine/main.py">cloud loop</a>, <a href="../../version1.1/machine/pairing/machine_bluetooth_pair.py">BLE</a></td><td>Danh tính máy, ghim khóa server, nhận máy qua BLE, poll lệnh cloud và ánh xạ lệnh menu/kho/vé/báo cáo vào database cục bộ.</td></tr>
+          <tr><td><code>deploy/</code></td><td><a href="../../version1.1/deploy/install.sh">install.sh</a>, <a href="../../version1.1/deploy/kiosk/flexmix-backend.service">systemd unit</a></td><td>Cài phần mềm, MySQL, kiosk, dịch vụ backend và kiểm môi trường máy.</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section id="cloud"><div class="sec-head"><span class="sec-no">04 · Kết nối bên ngoài</span><h2>App và server nói chuyện với máy ra sao?</h2></div>
+        <div class="review-flow"><div><strong>① Provision</strong><code>machine.config.provision</code> tạo khóa máy và mã niêm phong.</div><div><strong>② BLE</strong><code>ClaimSession</code> nhận probe, Wi-Fi tùy chọn và challenge nhận máy.</div><div><strong>③ Hello</strong><code>ServerClient.hello</code> lấy giờ server và machine_id.</div><div><strong>④ Poll</strong><code>machine.main</code> nhận một lệnh, dispatch vào module nghiệp vụ.</div><div><strong>⑤ Result</strong>Kết quả được mã hóa và gửi về server theo request_id.</div></div>
+        <p class="prose">Kết nối cloud dùng HPKE<sup class="fn" id="ref-hpke"><a href="#term-hpke">4</a></sup> để bọc request và khóa xuất từ cùng phiên để mở response. Lệnh chỉ định các tác vụ đã đăng ký: <code>machine.status.read</code>, <code>nhan_menu</code>, <code>cap_nhat_menu</code>, <code>nhan_kho</code>, <code>nap_kho</code>, <code>nhan_ve_qr</code>, <code>nhan_bao_cao</code>. <code>Dispatcher</code> giữ tối đa 32 kết quả trong RAM để trả lại khi nhận trùng <code>request_id</code>.</p>
+        <div class="tbl"><table><thead><tr><th>Ranh giới</th><th>Mã nguồn</th><th>Điều kiện / giới hạn</th></tr></thead><tbody>
+          <tr><td>Danh tính</td><td><a href="../../version1.1/machine/config/identity.py"><code>identity.py</code></a></td><td>Khóa P-256 và mã niêm phong được tạo một lần; khóa thiếu hoặc hỏng làm máy dừng.</td></tr>
+          <tr><td>Đường truyền</td><td><a href="../../version1.1/machine/server_connection/cloud_protection.py"><code>cloud_protection.py</code></a></td><td>Ghim khóa server từ <code>server-trust.json</code>; HTTP chỉ được cấu hình cho địa chỉ IPv4 riêng/loopback.</td></tr>
+          <tr><td>Nhận máy</td><td><a href="../../version1.1/machine/pairing/claim_session.py"><code>claim_session.py</code></a></td><td>Mỗi kết nối BLE là một phiên; challenge có chữ ký server; phiên đóng sau proof.</td></tr>
+          <tr><td>Dữ liệu nghiệp vụ</td><td><a href="../../version1.1/machine/menu_sync/machine_menu_sync.py">menu</a>, <a href="../../version1.1/machine/ingredient_sync/machine_ingredient_sync.py">kho</a>, <a href="../../version1.1/machine/order_ticket/machine_order_ticket_request.py">vé</a>, <a href="../../version1.1/machine/reporting/machine_reporting_request.py">báo cáo</a></td><td>Đọc hoặc ghi MySQL tại máy; trạng thái màn bán lấy từ snapshot <code>menu-data.js</code>.</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section id="findings"><div class="sec-head"><span class="sec-no">05 · Kết quả review</span><h2>Điểm cần quyết định trước khi triển khai</h2></div>
+        <p class="prose">Đây là phát hiện từ mã, chưa phải quyết định sửa. Mỗi mục nêu bằng chứng và cách xác minh tiếp theo; không thay đổi code trong lần review này.</p>
+        <article class="review-finding"><h3>R1 · File service còn trỏ đến <code>version1.0</code></h3><p><b>Bằng chứng:</b> <a href="../../version1.1/deploy/kiosk/flexmix-backend.service"><code>flexmix-backend.service</code></a> đặt <code>WorkingDirectory</code> và <code>ExecStart</code> dưới <code>/home/flexxource/hungvu/version1.0</code>. <a href="../../version1.1/deploy/install.sh"><code>install.sh</code></a> có preflight cảnh báo đường dẫn khác, nhưng unit chưa thể đại diện chắc chắn cho thư mục đang review.</p><p><b>Ảnh hưởng:</b> cài nguyên unit này có thể chạy bản cũ hoặc không khởi động. Cần xác nhận đường dẫn triển khai thật trước khi sửa.</p></article>
+        <article class="review-finding"><h3>R2 · Hai tiến trình <code>machine</code> chưa nằm trong đường khởi động backend</h3><p><b>Bằng chứng:</b> <a href="../../version1.1/main.py"><code>main.py</code></a> chỉ mở ba thread <code>store_gui</code>, <code>sync_menu</code>, <code>run_flow</code>. Unit ở trên chỉ gọi <code>main.py</code>. <code>machine.main</code> và <code>machine.pairing.machine_bluetooth_pair</code> có điểm vào riêng nhưng không thấy được gọi từ các điểm khởi động này.</p><p><b>Ảnh hưởng:</b> chỉ cài backend hiện có không đủ chứng minh máy sẽ poll server hay quảng bá BLE. Cần quyết định cách vận hành và giám sát hai tiến trình này.</p></article>
+        <article class="review-finding limit"><h3>R3 · Chống chạy lệnh trùng chỉ được giữ trong RAM</h3><p><b>Bằng chứng:</b> <a href="../../version1.1/machine/main.py"><code>Dispatcher.results</code></a> là <code>OrderedDict</code> tối đa 32 mục. Sau khi tiến trình khởi động lại hoặc mục bị đẩy khỏi cache, cùng <code>request_id</code> đi vào handler như lệnh mới.</p><p><b>Ảnh hưởng:</b> với lệnh ghi như nạp kho hoặc cập nhật menu, cần kiểm hợp đồng retry của server và tính lặp an toàn của từng handler trước khi khẳng định thực thi đúng một lần.</p></article>
+        <article class="review-finding limit"><h3>R4 · Máy chưa tự so hạn của challenge nhận máy</h3><p><b>Bằng chứng:</b> <a href="../../version1.1/machine/pairing/claim_session.py"><code>ClaimSession._claim</code></a> kiểm kiểu của <code>expires_at</code> và chữ ký server, nhưng không so hạn với đồng hồ. Máy vẫn tạo proof cho challenge đã quá hạn nếu chữ ký hợp lệ.</p><p><b>Ảnh hưởng:</b> cần xác minh server từ chối proof quá hạn ở bước hoàn tất và ghi rõ ranh giới trách nhiệm. Đây là điểm cần kiểm xuyên hệ thống, chưa kết luận có thể nhận máy trái phép.</p></article>
+      </section>
+
+      <section id="verification"><div class="sec-head"><span class="sec-no">06 · Phép kiểm và giới hạn</span><h2>Đã kiểm được gì?</h2></div>
+        <div class="tbl"><table><thead><tr><th>Phép kiểm</th><th>Kết quả</th><th>Giới hạn</th></tr></thead><tbody>
+          <tr><td>Kiểm cú pháp toàn bộ <code>*.py</code> bằng <code>ast.parse</code></td><td>108 file Python, không gặp lỗi cú pháp.</td><td>Không kiểm import, SQL hay hành vi runtime.</td></tr>
+          <tr><td><code>python3 -m unittest discover -s tests/machine -p 'test_*.py' -v</code></td><td>1 test địa chỉ URL chạy đạt; 5 module test không nạp được.</td><td>Môi trường hiện tại thiếu <code>pyhpke</code> và <code>mysql.connector</code>.</td></tr>
+          <tr><td><code>python3 -m unittest discover -s version1.1/qrproto/tests -p 'test_*.py' -q</code></td><td>2 module test không nạp được.</td><td>Môi trường hiện tại thiếu <code>pytest</code>.</td></tr>
+          <tr><td><code>python3 -m pytest -q tests/machine tests/server/test_machine_relay.py</code></td><td>Không chạy được.</td><td>Python hệ thống thiếu <code>pytest</code>; chưa cài thêm gói.</td></tr>
+          <tr><td>Thử trên Raspberry Pi, MySQL, bơm, cân, panel, máy in, BLE</td><td>Chưa thực hiện.</td><td>Không khởi động entry point phần cứng trong phiên review.</td></tr>
+        </tbody></table></div>
+        <p class="note"><b>Phương pháp review</b>Liệt kê toàn bộ file dưới <code>version1.1</code>, phân tích cấu trúc tất cả file Python, đọc các điểm vào, hợp đồng giữa module, schema/deploy và test liên quan. Review này cho bản đồ và phát hiện tĩnh; không phải chứng nhận toàn bộ đường chạy trên máy thật.</p>
+      </section>
+
+      <section id="terms"><div class="sec-head"><span class="sec-no">Chú thích</span><h2>Thuật ngữ</h2></div><ol class="review-terms fnotes">
+        <li id="term-http"><b>HTTP (Hypertext Transfer Protocol):</b> giao thức yêu cầu và phản hồi giữa trình duyệt, máy pha và server. Ở đây màn bán gọi server cục bộ trên chính máy. <a class="fn-back" href="#ref-http">↩</a></li>
+        <li id="term-qr"><b>QR (Quick Response):</b> mã hai chiều in hoặc hiển thị cho máy quét. Payload trong code là chuỗi số được mã hóa và kiểm tra trước khi tạo công thức. <a class="fn-back" href="#ref-qr">↩</a></li>
+        <li id="term-mysql"><b>MySQL:</b> hệ quản trị cơ sở dữ liệu quan hệ, giữ danh mục món, nguyên liệu, vé và lịch sử xử lý tại máy. <a class="fn-back" href="#ref-mysql">↩</a></li>
+        <li id="term-hpke"><b>HPKE (Hybrid Public Key Encryption):</b> chuẩn mã hóa dùng khóa công khai để hai bên thiết lập vật liệu khóa và bảo vệ thông điệp; xem <a href="https://www.rfc-editor.org/rfc/rfc9180">RFC 9180</a>. <a class="fn-back" href="#ref-hpke">↩</a></li>
+      </ol></section>
+    </main>
+  </div>
+  <footer class="end">Sơ đồ tổng quan và trình tự là SVG nội tuyến; CSS và font dùng chung từ <code>documentation/assets/</code>, mở được khi không có mạng. Các liên kết mã dùng đường dẫn tương đối đến nguồn trong repo.</footer>
+</div>
+<div id="zoom" class="zoom" hidden><div class="zoom-bar"><span>Sơ đồ</span><button id="zoom-close" type="button">Đóng</button></div><div id="zoom-body" class="zoom-body"></div></div>
+<script src="../assets/doc.js"></script>
+</body>
+</html>

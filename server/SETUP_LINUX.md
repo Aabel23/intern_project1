@@ -2,7 +2,7 @@
 
 > Hướng dẫn này ghi cách dựng HTTPS qua tailnet. Bản đầu LAN/HTTP theo quyết định mới xem mục **Bản đầu qua LAN/HTTP** trong [server/README.md](README.md); không dùng các lệnh chứng chỉ/Tailscale bên dưới cho đường LAN đó.
 
-Hướng dẫn này dành cho Ubuntu có MySQL 8, Python 3, Tailscale và một bản sao repo. Điện thoại Android và máy pha phải truy cập được máy Linux qua cùng tailnet. Chạy các lệnh từ **thư mục gốc repo**. Đây là cách dựng server để nghiệm thu trên thiết bị thật; chưa thay cho biên bản nghiệm thu [I-01](../documentation/plan/tasks/I-01-skeleton-acceptance.md).
+Hướng dẫn này dành cho Ubuntu có MySQL 8, Python 3, Tailscale và một bản sao repo. Điện thoại Android và máy pha phải truy cập được máy Linux qua cùng tailnet. Chạy các lệnh từ **thư mục gốc repo**. Đây là cách dựng server để nghiệm thu trên thiết bị thật; chưa thay cho biên bản nghiệm thu [I-01](../documentation/plan/tasks/archive/I-01-skeleton-acceptance.md).
 
 Server Python tự phục vụ HTTPS ở `127.0.0.1:8443`; Tailscale Serve đưa nó ra `https://<tên-máy>.ts.net` trong tailnet. Server cần MySQL, Gmail SMTP, hai khóa ứng dụng và chứng chỉ TLS. Không có chế độ chạy HTTP hoặc khóa placeholder.
 
@@ -140,4 +140,4 @@ curl -i -X POST "https://$FLEXMIX_FQDN/"
 
 `/` không phải API: kết quả mong đợi là HTTP `404` với `INVALID_ENVELOPE`. Nó chỉ kiểm HTTPS và đường chuyển tiếp. `https+insecure` bỏ kiểm chứng chỉ **ở kết nối loopback từ Tailscale Serve tới Python**; điện thoại vẫn kiểm chứng chỉ HTTPS của tên Tailscale. Xem [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve).
 
-Sau đó bật Tailscale trên điện thoại và máy pha, build/chạy app theo [README Flutter](../flutter_app/README.md), thử đăng ký bằng email thật và hỏi trạng thái máy theo [I-01](../documentation/plan/tasks/I-01-skeleton-acceptance.md). Không coi `curl /` là nghiệm thu luồng sản phẩm.
+Sau đó bật Tailscale trên điện thoại và máy pha, build/chạy app theo [README Flutter](../flutter_app/README.md), thử đăng ký bằng email thật và hỏi trạng thái máy theo [I-01](../documentation/plan/tasks/archive/I-01-skeleton-acceptance.md). Không coi `curl /` là nghiệm thu luồng sản phẩm.

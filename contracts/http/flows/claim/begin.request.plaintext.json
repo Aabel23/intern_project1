@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "access_token": "EXAMPLE_ONLY_NOT_A_TOKEN"
+  },
+  "body": {
+    "v": 1,
+    "step": "begin",
+    "serial": "10000000EXAMPLE01"
+  }
+}

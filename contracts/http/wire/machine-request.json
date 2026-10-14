@@ -1,0 +1,13 @@
+{
+  "pv": 1,
+  "route": "/machine/result/send",
+  "method": "POST",
+  "receiver": "server",
+  "kid": "server-hpke-1",
+  "send_id": "fd852c1c-11fc-48b7-befd-6e3453fd4542",
+  "sent_at_ms": 1791968400000,
+  "machine_key_id": "mk_EXAMPLE_ONLY",
+  "enc": "EXAMPLE_ONLY_ENC",
+  "ct": "EXAMPLE_ONLY_CIPHERTEXT",
+  "sig": "EXAMPLE_ONLY_SIGNATURE"
+}

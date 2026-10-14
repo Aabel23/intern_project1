@@ -1,0 +1,8 @@
+{
+  "auth": null,
+  "body": {
+    "v": 1,
+    "email": "example@example.invalid",
+    "password": "example-long-password"
+  }
+}

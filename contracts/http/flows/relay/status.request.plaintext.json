@@ -1,0 +1,12 @@
+{
+  "auth": {
+    "access_token": "EXAMPLE_ONLY_NOT_A_TOKEN"
+  },
+  "body": {
+    "v": 1,
+    "request_id": "d4215a48-60d9-46bd-91c7-41186f1badb1",
+    "machine_id": "example-machine",
+    "instruction": "machine.status.read",
+    "data": {}
+  }
+}

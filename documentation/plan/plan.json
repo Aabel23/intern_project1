@@ -1,0 +1,758 @@
+{
+  "version": 1,
+  "banner": "PLAN HIỆN HÀNH · giữ nguyên ID và bằng chứng đã đạt; chỉ bổ sung bước mới khi phạm vi được chốt.",
+  "header": {
+    "eyebrow": "Lộ trình thực thi · project1_app",
+    "title": "Đưa FlexMix tới khách hàng đầu tiên",
+    "lead": "Roadmap này đi từ code hiện có tới một máy pha được lắp tại khách hàng, app Android bản release, server thật và quy trình hỗ trợ sau bàn giao. Mỗi bước nêu việc làm và bằng chứng đóng bước; không dùng “code xong” thay cho nghiệm thu.",
+    "meta": [
+      {
+        "label": "Ngày đối chiếu:",
+        "value": "14/10/2026"
+      },
+      {
+        "label": "Repo:",
+        "value": "HEAD a88668c + thay đổi tài liệu chưa commit"
+      },
+      {
+        "label": "Thứ tự roadmap:",
+        "value": "đã chốt 13/10/2026"
+      },
+      {
+        "label": "Trạng thái:",
+        "value": "G0 đã duyệt; 21 bước bổ sung là bản chi tiết chờ bạn duyệt"
+      }
+    ]
+  },
+  "summary": [
+    {
+      "label": "Đích được chọn",
+      "body": "Phát hành giới hạn cho <strong>khách hàng đầu tiên</strong>, có người chịu trách nhiệm hỗ trợ và biên bản chấp nhận trên thiết bị của khách."
+    },
+    {
+      "label": "Mốc gần nhất",
+      "body": "G0 đã qua. Tiếp theo là kiểm nền LAN và khóa hợp đồng từng module; bốn bước G0 đã đạt được giữ nguyên."
+    },
+    {
+      "label": "Điều kiện phát hành",
+      "body": "Toàn bộ phạm vi G0 đã duyệt hoạt động, bản release cài được, server phục hồi được, máy tự chạy lại sau mất điện và khách hoàn thành luồng sử dụng."
+    }
+  ],
+  "progress": {
+    "title": "Tiến độ có bằng chứng",
+    "intro": "Đếm bước đã được kiểm và xác nhận; sổ mới chưa đánh giá lại phần code có sẵn.",
+    "guide": "Agent nhận bước → ghi Đang làm → khi có bằng chứng ghi Chờ kiểm → người kiểm xác nhận mới ghi Đạt. Quyết định và cổng G0–G4 chỉ qua khi bạn xác nhận. <a href=\"progress/roadmap-progress.md\">Cách cập nhật tiến độ</a>."
+  },
+  "sections": [
+    {
+      "id": "hien-trang",
+      "title": "1 · Điểm xuất phát thật",
+      "intro": "Đây là trạng thái để lập đường đi, không phải báo cáo kiểm thử mới. Các test trong tài liệu là bằng chứng đã ghi ngày 12/10; lần này chưa chạy lại sản phẩm.",
+      "facts": [
+        {
+          "flag": "Đã có code",
+          "flagClass": "have",
+          "title": "Lõi kết nối v2",
+          "body": "Server tài khoản/claim/relay, máy danh tính/BLE/poll và app đăng nhập/nhận máy/trạng thái đã được code; có test tự động và JVM ↔ Python interop. Chưa có I-01 trên Android và Pi thật."
+        },
+        {
+          "flag": "Chưa chứng minh",
+          "flagClass": "missing",
+          "title": "Thiết bị và dịch vụ thật",
+          "body": "Chưa có biên bản OTP Gmail qua sản phẩm, BLE Android ↔ BlueZ Pi, Wi-Fi máy, LAN/HTTP trên thiết bị thật và hỏi trạng thái trọn luồng. Phiếu I-01 có nhưng công cụ và biên bản chưa thấy trong repo."
+        },
+        {
+          "flag": "Cần khóa hợp đồng",
+          "flagClass": "decision",
+          "title": "MVP sau skeleton",
+          "body": "Menu đầy đủ có công thức/CRC, tắt-bật món, quyền theo máy, share QR/BLE và chuyển cloud → LAN → Bluetooth là Mốc 2. App hiện có menu/kho qua relay nhưng chưa được xem là đã đạt toàn bộ Mốc 2."
+        },
+        {
+          "flag": "Khoảng cách deploy",
+          "flagClass": "missing",
+          "title": "Hạ tầng và bản giao khách",
+          "body": "URL app hiện là tên máy trong tailnet; hướng dẫn Linux chạy server trong terminal. Bộ cài máy còn service trỏ đường dẫn <code>version1.0</code>. Chưa có bản release/biên bản triển khai cho khách."
+        }
+      ],
+      "callout": "<b>Cách xử lý chỗ lệch nguồn:</b> <code>mvp-fast-path.md</code> còn nói trust app là <code>{}</code>, nhưng file hiện đã có khóa công khai và URL tailnet. I-01 và một số mô tả cũ cũng có chi tiết trước hợp đồng v2. Phase 0 phải đối chiếu và cập nhật kế hoạch kiểm; không suy ra runtime production đã sẵn sàng từ file công khai."
+    },
+    {
+      "id": "ban-do",
+      "title": "2 · Bản đồ phụ thuộc tới ngày giao khách",
+      "intro": "Năm cổng kết quả; phần hạ tầng LAN có thể chuẩn bị song song, nhưng chỉ mở cho khách khi các module, Android/Pi thật và diễn tập đạt.",
+      "route": [
+        {
+          "href": "#p0",
+          "code": "G0",
+          "title": "Khóa đích giao khách",
+          "detail": "Phạm vi, thiết bị, đường truy cập, kênh app"
+        },
+        {
+          "href": "#p1",
+          "code": "G1",
+          "title": "Nền LAN đạt",
+          "detail": "Server + Pi; Android thật tại G3"
+        },
+        {
+          "href": "#p3",
+          "code": "G2",
+          "title": "Module đạt",
+          "detail": "Menu, vai, giá, kho, ticket, báo cáo, OTA"
+        },
+        {
+          "href": "#p5",
+          "code": "G3",
+          "title": "Sẵn sàng phát hành",
+          "detail": "Hạ tầng, release, phục hồi, diễn tập"
+        },
+        {
+          "href": "#p7",
+          "code": "G4 · Đích",
+          "title": "Khách hàng chấp nhận",
+          "detail": "Lắp máy, chạy thật, hỗ trợ, ký biên bản"
+        }
+      ],
+      "table": {
+        "headers": [
+          "Thứ tự",
+          "Phase",
+          "Phụ thuộc",
+          "Đầu ra buộc phải có"
+        ],
+        "rows": [
+          [
+            "0",
+            "Khóa phạm vi bản giao khách",
+            "Không",
+            "Định nghĩa bản v1, thiết bị và cách khách kết nối"
+          ],
+          [
+            "1",
+            "Đồng bộ hợp đồng và chuẩn bị I-01",
+            "G0",
+            "Phiếu kiểm v2, LAN/HTTP, server và Pi thử; APK kiểm tự động"
+          ],
+          [
+            "2",
+            "Nghiệm thu skeleton thật",
+            "Phase 1",
+            "Biên bản nền server/Pi; ca Android chuyển G3"
+          ],
+          [
+            "3",
+            "Menu và thao tác máy",
+            "G1",
+            "Menu/CRC/công thức, sửa menu, tắt-bật và đọc lại đạt"
+          ],
+          [
+            "4",
+            "Share, quyền, LAN/Bluetooth",
+            "G1 + hợp đồng riêng",
+            "Share/vai, giá, kho, ticket, báo cáo, OTA đạt test và Pi/LAN; Android tại G3"
+          ],
+          [
+            "5",
+            "Hạ tầng production và vận hành",
+            "G0; song song Phase 3–4",
+            "Server LAN truy cập được, tự chạy, backup/restore, quan sát lỗi"
+          ],
+          [
+            "6",
+            "Release và diễn tập cuối",
+            "G2 + Phase 5",
+            "Bản app/máy/server cố định; Android/Pi thật, diễn tập và go/no-go"
+          ],
+          [
+            "7",
+            "Triển khai tại khách",
+            "G3",
+            "Thiết bị được lắp, khách dùng được, biên bản bàn giao"
+          ],
+          [
+            "8",
+            "Ổn định sau giao",
+            "G4",
+            "Theo dõi lỗi, xử lý sự cố, kết thúc pilot có kết luận"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "chi-tiet",
+      "title": "3 · Từng bước triển khai",
+      "intro": "“Bằng chứng” trong từng bước là tiêu chí cần thu được. Trạng thái thực tế và đường dẫn bằng chứng nằm ngay dưới tên bước. Từng module mới vẫn đi theo chu trình đặc tả → quyết định → phiếu Planner → coder → review nhỏ → review lớn một lần → nghiệm thu; bảng này không thay phiếu coder.",
+      "callout": "<b>Phần bổ sung sau G0 · bản chi tiết chờ duyệt:</b> 21 bước mới nằm trong Phase 1–6, theo thứ tự module đã duyệt. Các bước 0.1–0.4 và bằng chứng G0 giữ nguyên. Các bước tương lai cũ vẫn giữ ID; phần mô tả Android/HTTPS cũ được hiểu theo quyết định mới: bản đầu LAN/HTTP, kiểm Android thật tại G3. Hợp đồng chi tiết từng module còn phải chốt trước phiếu coder. Xem <a href=\"decisions/g0-first-customer-decision.md\">G0</a> và <a href=\"decisions/module-decisions-and-gaps.md\">quyết định module</a>.",
+      "phases": [
+        {
+          "anchor": "p0",
+          "title": "Phase 0 · Khóa định nghĩa bản giao khách",
+          "intro": "Các quyết định này làm thay đổi phạm vi và hạ tầng. Chốt trước khi giao coder hoặc đặt lịch triển khai.",
+          "mark": "G0 · quyết định",
+          "steps": [
+            {
+              "id": "0.1",
+              "title": "Viết một trang “khách đầu tiên dùng được gì”.",
+              "body": "Phạm vi user chọn gồm Mốc 2 cùng sửa menu/giá, kho, đơn hàng, OTA và báo cáo. Chốt ca sử dụng, luồng pha món và phần ngoài phạm vi trong <a href=\"decisions/g0-first-customer-decision.md\">phiếu G0</a>.",
+              "proof": "Danh sách ca sử dụng và phần ngoài phạm vi được bạn duyệt."
+            },
+            {
+              "id": "0.2",
+              "title": "Chốt kênh truy cập server.",
+              "body": "Bản đầu app và máy kết nối server qua LAN bằng HTTP, giữ lớp bảo vệ bên trong. Về sau đổi điểm kết nối sang Internet/HTTPS, giữ cùng routing và logic sản phẩm. Ghi vị trí server và người vận hành trong <a href=\"decisions/g0-first-customer-decision.md\">phiếu G0</a>.",
+              "proof": "Sơ đồ đường LAN hiện tại và đường Internet về sau được bạn duyệt."
+            },
+            {
+              "id": "0.3",
+              "title": "Chốt kênh phát app và bộ thiết bị đích.",
+              "body": "Chọn APK ký số giao trực tiếp hay kênh Google Play phù hợp; chọn điện thoại/phiên bản Android và model Pi/OS của máy khách để kiểm. Lập danh sách phần cứng, tem, thông tin xưởng và ca nghiệm thu pha chế tại chỗ.",
+              "proof": "Kênh phân phối, thiết bị và checklist máy cụ thể."
+            },
+            {
+              "id": "0.4",
+              "title": "Chốt tiêu chí go/no-go.",
+              "body": "Định nghĩa lỗi nào chặn giao, ai duyệt bản release, thời gian quan sát sau lắp và kênh khách báo sự cố. Không đưa ra số ngày/SLA giả khi chưa biết nguồn lực.",
+              "proof": "Bảng tiêu chí nghiệm thu, người ký và người trực được ghi."
+            }
+          ],
+          "gate": {
+            "label": "Qua G0",
+            "body": "Bạn hiểu và duyệt phạm vi giao khách; các việc còn mở được ghi thành quyết định, không để coder tự chọn."
+          }
+        },
+        {
+          "anchor": "p1",
+          "title": "Phase 1 · Đồng bộ tài liệu và dựng môi trường I-01",
+          "intro": "Chuẩn bị server và Pi trên LAN, test tự động; ca Android thật gom về cổng G3.",
+          "mark": "Chuẩn bị G1",
+          "steps": [
+            {
+              "id": "1.1",
+              "title": "Đối chiếu hợp đồng v2 với phiếu I-01 và tài liệu cũ.",
+              "body": "Giữ D1–D10 làm chuẩn; kiểm lại đăng ký xưởng, claim, BLE v2, mật khẩu/phiên, relay và các bước I-01. Sửa phiếu/biên bản trước khi chạy, không sửa code theo mô tả lỗi thời.",
+              "proof": "Bảng lệch và phiếu I-01 thống nhất với hợp đồng v2."
+            },
+            {
+              "id": "1.2",
+              "title": "Chốt baseline kiểm thử.",
+              "body": "Ghi commit/bản build và chạy bộ test server, máy, Kotlin interop, Flutter; phân biệt test đạt, lỗi đã biết và ca chưa chạy. Rà các phát hiện D9/D10/DB retry trong note trạng thái theo code hiện tại.",
+              "proof": "Biên bản test có lệnh, môi trường, kết quả và issue còn mở."
+            },
+            {
+              "id": "1.3",
+              "title": "Dựng server thử thật.",
+              "body": "MySQL mới hoặc bản dữ liệu thử; migration 001/002; khóa HPKE/ký; địa chỉ LAN/HTTP nội bộ; SMTP Gmail với allowlist thử; cấu hình và quyền file theo <a href=\"../../server/SETUP_LINUX.md\">SETUP_LINUX</a>. Kiểm URL và public trust khớp đúng instance.",
+              "proof": "Server lên qua LAN/HTTP, kết nối DB, không dùng secret placeholder."
+            },
+            {
+              "id": "1.4",
+              "title": "Chuẩn bị bản app thử cho cổng thiết bị.",
+              "body": "Build từ đúng commit với URL LAN/khóa tin cậy của server thử; kiểm tự động Keystore, HPKE, đăng ký/OTP/đăng nhập và quyền Bluetooth. Cài/chạy Android thật ở 6.6.",
+              "proof": "APK thử và test tự động có định danh; danh sách ca Android chuyển 6.6."
+            },
+            {
+              "id": "1.5",
+              "title": "Provision và chạy Pi thật.",
+              "body": "Kiểm OS, BlueZ GATT, NetworkManager, MySQL máy, quyền file; chạy provision để giữ khóa qua reboot, đăng ký serial/public key tại server, dán QR niêm phong. Chạy machine client và BLE service.",
+              "proof": "Serial/key ổn định qua reboot; máy hello/poll được; BLE quét thấy."
+            },
+            {
+              "id": "1.6",
+              "title": "Chuẩn bị công cụ và dữ liệu nghiệm thu.",
+              "body": "Tạo client/manifest thử đúng phiếu I-01; giữ OTP và khóa khỏi file/log; xác nhận máy và email thử chưa thuộc dữ liệu thật của người khác. Chuẩn bị cách dọn đúng ID sau thử.",
+              "proof": "Công cụ và kế hoạch cleanup được review trước khi chạy."
+            },
+            {
+              "id": "1.7",
+              "title": "Đối chiếu nền LAN/HTTP đã code.",
+              "body": "Kiểm cùng routing, phong bì mã hóa, chữ ký và quyền trên app/server/máy; ghi rõ URL LAN, phạm vi mạng và cấu hình bản thử. Chỉ chuyển phiếu I-01 sang đường LAN sau khi hợp đồng khớp.",
+              "proof": "Bảng đối chiếu ba bên, test tự động và cấu hình LAN thử; lỗi còn mở có người nhận."
+            }
+          ],
+          "gate": {
+            "label": "Sẵn sàng I-01",
+            "body": "Ba thiết bị/đầu hệ thống thật lên được, có bản build được nhận diện và phiếu kiểm đúng hợp đồng v2."
+          }
+        },
+        {
+          "anchor": "p2",
+          "title": "Phase 2 · Nghiệm thu skeleton I-01",
+          "intro": "Kiểm server/Pi và luồng nền trên LAN; phần Android thật của phiếu I-01 thực hiện tại G3.",
+          "mark": "Đóng G1",
+          "steps": [
+            {
+              "id": "2.1",
+              "title": "Kiểm đường tài khoản/OTP trên server thử.",
+              "body": "Gửi OTP thật tới email thử theo phiếu; kiểm chưa xác minh, sai mã, đăng xuất và phiên bằng bộ kiểm không dùng điện thoại. Luồng Android thật ở 6.6.",
+              "proof": "Biên bản từng email, không ghi OTP/password."
+            },
+            {
+              "id": "2.2",
+              "title": "Kiểm hợp đồng nhận máy trước nghiệm thu Android.",
+              "body": "Kiểm đăng ký xưởng, QR/phiên BLE bảo vệ, owner duy nhất, QR sai, claim trùng và tài khoản khác trên server/Pi và test tự động. Luồng Android ↔ Pi thật ở 6.6.",
+              "proof": "Owner đúng; tài khoản khác bị từ chối; khóa máy giữ qua reboot."
+            },
+            {
+              "id": "2.3",
+              "title": "Hỏi trạng thái trực tiếp.",
+              "body": "Quan sát request ID xuyên app → server → poll máy → result → app; hỏi hai lượt để xác nhận câu trả lời mới từ máy. Không dùng cờ online của server.",
+              "proof": "App, server và máy có cùng ID; dữ liệu trạng thái mới khớp."
+            },
+            {
+              "id": "2.4",
+              "title": "Thử lỗi kết nối và kết quả muộn.",
+              "body": "Ngắt máy trước/sau câu hỏi, reconnect, restart server khi pending; kiểm offline/timeout, kết quả muộn không hiện thành lượt mới, chọn máy khác/đăng xuất không nhận câu trả lời cũ.",
+              "proof": "Không có “thành công giả”; thời gian lỗi đo được."
+            },
+            {
+              "id": "2.5",
+              "title": "Chốt biên bản và dọn dữ liệu thử.",
+              "body": "Ghi ca đạt/chưa đạt, ID bản ghi thử; dọn chỉ dữ liệu do lượt thử tạo theo phiếu I-01. Issue phát hiện được ghi cùng bằng chứng và đưa bạn chọn hướng xử lý trước khi sửa.",
+              "proof": "Biên bản phần nền I-01 và đối chiếu DB trước/sau cleanup; Android còn chờ 6.6."
+            },
+            {
+              "id": "2.6",
+              "title": "Kiểm skeleton trên server và Pi qua LAN.",
+              "body": "Chạy đăng ký máy, poll, relay, mất kết nối, kết quả muộn và khởi động lại trên thiết bị máy thật; ghi riêng ca còn chờ Android để chuyển sang 6.6.",
+              "proof": "Trace server/Pi qua LAN và danh sách ca Android còn chờ; không nhận G1 là nghiệm thu điện thoại."
+            }
+          ],
+          "gate": {
+            "label": "Qua G1",
+            "body": "Đường server/Pi qua LAN, OTP, claim, poll/relay, offline/timeout và cleanup có bằng chứng; ca Android thật chuyển G3."
+          }
+        },
+        {
+          "anchor": "p3",
+          "title": "Phase 3 · Menu thật và thao tác ghi đầu tiên",
+          "intro": "Mốc 2 bắt đầu sau G1. Đừng coi tab Sản phẩm/Kho hiện có là đã đủ gói menu theo thiết kế đã duyệt.",
+          "mark": "MVP · module dữ liệu",
+          "steps": [
+            {
+              "id": "3.1",
+              "title": "Khóa hợp đồng menu.",
+              "body": "Bàn và chốt byte tham gia CRC, trường công thức, trần 256 KB, “không đổi”, gói lỗi, cache theo máy; chốt tắt/bật có đổi version menu hay không. Cập nhật document và ví dụ hợp đồng.",
+              "proof": "Contract + ví dụ máy/app cùng hiểu, quyết định được bạn duyệt."
+            },
+            {
+              "id": "3.2",
+              "title": "Planner chia task và nghiệm thu từng task.",
+              "body": "Phiếu nêu file máy đọc MySQL, server relay, app kiểm/lưu/hiển thị, lỗi và test độc lập. Coder làm đúng phiếu; review nhỏ theo task, review lớn một lần sau module.",
+              "proof": "Phiếu, review nhỏ và review lớn có kết luận."
+            },
+            {
+              "id": "3.3",
+              "title": "Đưa menu đầy đủ từ máy lên app.",
+              "body": "Máy dựng gói từ MySQL gồm công thức; CRC khác thì gửi toàn gói, giống thì báo không đổi. App xác thực giới hạn, kiểm gói và chỉ dùng cache đúng máy/version.",
+              "proof": "Menu app khớp MySQL; gói sai/hỏng/quá giới hạn bị từ chối."
+            },
+            {
+              "id": "3.4",
+              "title": "Thực hiện tắt/bật món qua relay.",
+              "body": "Đặc tả quyền và kết quả ghi; máy nhận mã lệnh, không thực hiện lặp, ghi MySQL; app đọc lại để biết kết quả thật. Không kéo theo sửa giá hay kho nếu chưa thuộc phạm vi.",
+              "proof": "Một thao tác ghi một lần; trạng thái đọc lại đúng, sai quyền bị chặn."
+            },
+            {
+              "id": "3.5",
+              "title": "Chạy ca thực tế sau test tự động.",
+              "body": "Đổi menu/tắt món trên máy thử, đối chiếu app; reboot máy, đổi điện thoại, mất mạng giữa tải gói, kiểm cache và kết quả cuối.",
+              "proof": "Biên bản máy/Pi và test tự động; Android thật chuyển 6.6."
+            },
+            {
+              "id": "3.6",
+              "title": "Khóa phạm vi sửa menu.",
+              "body": "Bàn trường món/công thức được sửa, nguồn chuẩn trên máy, quyền, tác động tới CRC và phiên bản nội dung. Tách sửa trạng thái bán và sửa giá thành lệnh riêng theo quyết định đã chốt.",
+              "proof": "Hợp đồng, ví dụ và ca từ chối được bạn duyệt trước phiếu coder."
+            },
+            {
+              "id": "3.7",
+              "title": "Thực hiện sửa menu theo hợp đồng.",
+              "body": "Planner lập phiếu máy, server và app sau khi 3.6 được chốt; coder làm từng task, review nhỏ rồi review module một lần. Đọc lại dữ liệu máy sau thao tác.",
+              "proof": "Test và review đạt; món/công thức đọc lại khớp MySQL máy, lệnh lặp không tạo thay đổi kép."
+            },
+            {
+              "id": "3.8",
+              "title": "Hoàn thiện ảnh món tách khỏi gói menu.",
+              "body": "Khóa cách lấy ảnh theo hash, kiểm kích thước và cache theo máy; không nhét byte ảnh vào gói menu 256 KB.",
+              "proof": "Ảnh đúng món/hash, cache sai hoặc ảnh hỏng bị từ chối; gói menu vẫn trong trần đã chốt."
+            }
+          ],
+          "gate": {
+            "label": "Module đạt",
+            "body": "Menu đầy đủ và thao tác tắt/bật đúng qua cloud; mọi phần chưa chốt được xử lý trước khi viết code."
+          }
+        },
+        {
+          "anchor": "p4",
+          "title": "Phase 4 · Chia sẻ, quyền và đường tại chỗ",
+          "intro": "Hoàn tất Mốc 2 đã duyệt: share QR/BLE và vận hành được khi cloud không tới, trong ranh giới quyền của máy.",
+          "mark": "MVP · module quyền/kết nối",
+          "steps": [
+            {
+              "id": "4.1",
+              "title": "Chốt vòng đời quyền.",
+              "body": "Owner/Manager/Employee theo từng máy; cách mời, xác nhận, thu hồi, vé gắn khóa điện thoại và hạn bản quyền cục bộ. Bàn rõ Manager có được gỡ Employee và máy offline xử lý thu hồi thế nào.",
+              "proof": "Sơ đồ quyền, ca cho phép/từ chối và quyết định còn tranh luận được chốt."
+            },
+            {
+              "id": "4.2",
+              "title": "Thiết kế và triển khai share QR/BLE.",
+              "body": "Đặc tả luồng hai điện thoại và server ký share; planner phát phiếu cho ba bên, coder/review theo quy trình. Không dùng màn share mẫu làm bằng chứng có API.",
+              "proof": "Test hợp đồng share và Pi/BLE; hai điện thoại thật kiểm ở 6.6."
+            },
+            {
+              "id": "4.3",
+              "title": "Khóa hợp đồng LAN/Bluetooth vận hành.",
+              "body": "Định nghĩa lúc chuyển đường, bản quyền có hạn, lệnh nào được phép tại chỗ, cách mã hóa và chống lặp; máy kiểm quyền dù không hỏi được server. Chốt trước phiếu coder.",
+              "proof": "Hợp đồng + ma trận quyền cho cloud/LAN/BT không mâu thuẫn."
+            },
+            {
+              "id": "4.4",
+              "title": "Triển khai đường dự phòng.",
+              "body": "App tự thử cloud rồi LAN rồi Bluetooth theo quyết định đã chốt; máy xử lý cùng ngữ nghĩa lệnh vận hành. Bảo đảm một lệnh đổi đường không bị thực hiện hai lần.",
+              "proof": "Trace chuyển đường và kết quả cuối duy nhất; review module đạt."
+            },
+            {
+              "id": "4.5",
+              "title": "Nghiệm thu Mốc 2.",
+              "body": "Thử ngắt Internet/Wi-Fi, quyền hết hạn/thu hồi, share cả hai cách, menu và tắt/bật qua đường được phép; test với tài khoản khác vai và máy khác.",
+              "proof": "Biên bản module trên Pi/LAN, test tự động và danh sách ca Android chờ 6.6."
+            },
+            {
+              "id": "4.6",
+              "title": "Hoàn thiện quyền theo vai trên ba bên.",
+              "body": "Sau khi khóa 4.1, Planner tách phiếu kiểm Owner/Manager/Employee theo từng máy; server và máy đều từ chối thao tác ngoài quyền, kể cả khi đổi đường kết nối.",
+              "proof": "Ma trận ca cho phép/từ chối, review module và test hai tài khoản khác vai."
+            },
+            {
+              "id": "4.7",
+              "title": "Khóa hợp đồng sửa giá.",
+              "body": "Giá nguyên đồng; Owner/Manager chỉ sửa qua cloud, Employee và đường tại chỗ bị từ chối. Quyết mã lệnh, chống lặp, giới hạn giá và cách đọc lại trước phiếu coder.",
+              "proof": "Hợp đồng và vector quyền/giá được bạn duyệt sau 4.6."
+            },
+            {
+              "id": "4.8",
+              "title": "Thực hiện sửa giá.",
+              "body": "Máy giữ giá chuẩn; app gửi lệnh riêng qua server, rồi đọc lại. Phiếu nêu file, lỗi và ca kiểm; review nhỏ từng task và review lớn một lần.",
+              "proof": "Giá đọc lại đúng trên máy/app; lệnh lặp và sai quyền không đổi giá."
+            },
+            {
+              "id": "4.9",
+              "title": "Khóa hợp đồng kho nạp đầy theo bình.",
+              "body": "Chốt ánh xạ bình–nguyên liệu, dung tích, đơn vị, quyền Owner/Manager, chống lặp và dữ liệu trước/sau. Không đưa nhập gram hay kiểm đếm thủ công vào bản đầu.",
+              "proof": "Hợp đồng kho, ca lỗi và số liệu mẫu được bạn duyệt."
+            },
+            {
+              "id": "4.10",
+              "title": "Thực hiện kho và đối chiếu tồn.",
+              "body": "Planner phát phiếu máy, server, app sau 4.9; lệnh nạp đầy ghi đúng một lần, app đọc lại tồn thật và báo lỗi thật.",
+              "proof": "Tồn trước/sau và lịch sử khớp máy; lệnh lặp không nạp hai lần; review module đạt."
+            },
+            {
+              "id": "4.11",
+              "title": "Khóa phạm vi ticket QR.",
+              "body": "Giữ ticket QR hiện có, tên/giá snapshot và trạng thái thật; chốt quyền xem, giới hạn lịch sử, sắp xếp và lỗi khi máy không tới. Không suy ra số ly, thanh toán hay hủy/hoàn.",
+              "proof": "Hợp đồng đọc ticket và ví dụ trạng thái được bạn duyệt."
+            },
+            {
+              "id": "4.12",
+              "title": "Đưa danh sách ticket lên app.",
+              "body": "Máy trả danh sách giới hạn, server relay, app hiển thị snapshot/trạng thái; không dùng dữ liệu demo. Phiếu và review theo từng task/module.",
+              "proof": "Danh sách app khớp ticket máy, phân trang/giới hạn và lỗi được kiểm."
+            },
+            {
+              "id": "4.13",
+              "title": "Khóa chỉ số báo cáo và quyền xem.",
+              "body": "Chọn chỉ số, nguồn ticket/kho/sự kiện, khoảng thời gian, ranh giới ngày và hành vi thiếu dữ liệu. Báo cáo phụ thuộc dữ liệu gốc đã kiểm ở 4.10 và 4.12.",
+              "proof": "Bảng chỉ số–nguồn–quyền và mẫu đối chiếu được bạn duyệt."
+            },
+            {
+              "id": "4.14",
+              "title": "Thực hiện báo cáo từ dữ liệu thật.",
+              "body": "Planner tách phiếu truy vấn máy, relay và hiển thị app; mỗi tổng hợp phải đối chiếu được với bản ghi gốc cùng khoảng thời gian.",
+              "proof": "Số liệu app khớp truy vấn gốc; dữ liệu rỗng, trễ hoặc thiếu được diễn đạt đúng; review đạt."
+            },
+            {
+              "id": "4.15",
+              "title": "Khóa hợp đồng OTA qua LAN.",
+              "body": "Chốt người phát và ký bản, manifest, hash/chữ ký, điều kiện máy rảnh, trình tự cài và rollback theo layout Pi. Máy không cài chỉ vì route OTA tồn tại.",
+              "proof": "Hợp đồng và ca từ chối/cài/khôi phục được bạn duyệt."
+            },
+            {
+              "id": "4.16",
+              "title": "Kiểm gói OTA trước khi cài.",
+              "body": "Sau 4.15, máy tải gói trong LAN và bắt buộc kiểm chữ ký/hash; gói hỏng hoặc sai người ký bị từ chối trước bước thay phần mềm.",
+              "proof": "Vector gói đúng/sai, test máy và review task xác nhận không cài gói sai."
+            },
+            {
+              "id": "4.17",
+              "title": "Cài và khôi phục OTA trên Pi thử.",
+              "body": "Chỉ cài khi điều kiện an toàn đã chốt thỏa; diễn tập mất điện/lỗi cài và rollback, kiểm nghiệp vụ pha sau khởi động.",
+              "proof": "Pi nâng cấp/khôi phục đúng phiên bản, không ngắt pha nguy hiểm; review module đạt."
+            },
+            {
+              "id": "4.18",
+              "title": "Đối chiếu toàn bộ phạm vi G2.",
+              "body": "Gom review menu, share/quyền, giá, kho, ticket, báo cáo và OTA với test tự động và Pi/LAN; lập danh sách ca Android thật chuyển sang G3.",
+              "proof": "Bảng phạm vi–module–bằng chứng–ca chờ Android, được bạn xem trước cổng."
+            }
+          ],
+          "gate": {
+            "label": "Qua G2",
+            "body": "Menu, share/vai, giá, kho, ticket, báo cáo, OTA và đường tại chỗ đạt kiểm module/Pi/LAN; ca Android thật ở G3."
+          }
+        },
+        {
+          "anchor": "p5",
+          "title": "Phase 5 · Hạ tầng production và vận hành máy",
+          "intro": "Có thể chuẩn bị song song Phase 3–4 sau G0; chỉ mở cho khách khi G2 và diễn tập cuối đều đạt.",
+          "mark": "Chuẩn bị G3",
+          "steps": [
+            {
+              "id": "5.1",
+              "title": "Dựng đường LAN/HTTP khách dùng được.",
+              "body": "Đặt server trong LAN cửa hàng, chốt IP/đường truy cập, cấu hình app/máy cùng bản release và giữ phong bì, chữ ký, phiên, quyền. Internet/HTTPS là bước mở rộng sau, cần quyết định riêng.",
+              "proof": "Android và Pi truy cập đúng server LAN từ mạng khách tại G3/G4."
+            },
+            {
+              "id": "5.2",
+              "title": "Dựng MySQL và bí mật production.",
+              "body": "Database/user quyền tối thiểu, migration trên DB mới hoặc kế hoạch chuyển dữ liệu nếu đã có; khóa server, OTP hash secret, SMTP, file mode và backup khóa. Tách dữ liệu thử khỏi dữ liệu khách.",
+              "proof": "Migration, kết nối và SMTP production đạt; không lộ secret trong repo/log."
+            },
+            {
+              "id": "5.3",
+              "title": "Cho server tự khởi động và có cách cập nhật/quay lui.",
+              "body": "Hướng dẫn Linux hiện chạy trong terminal. Đặc tả service, user chạy, restart, log, thứ tự migration và cách quay về bản trước; thử reboot server.",
+              "proof": "Server tự lên lại sau reboot; runbook cập nhật/quay lui được diễn tập."
+            },
+            {
+              "id": "5.4",
+              "title": "Kiểm bộ cài máy đúng nhánh hiện hành.",
+              "body": "<code>version1.1/deploy/kiosk/flexmix-backend.service</code> còn trỏ <code>version1.0</code>. Kiểm và chốt cách cài service nghiệp vụ, machine cloud client và BLE cùng khởi động; không tự sửa đường dẫn khi chưa xác nhận layout Pi khách.",
+              "proof": "Installer/service đúng path, tự chạy sau mất điện, nghiệp vụ pha vẫn hoạt động."
+            },
+            {
+              "id": "5.5",
+              "title": "Sao lưu và khôi phục.",
+              "body": "Backup MySQL server và máy, khóa/trust và cấu hình theo phạm vi cần giữ; thử restore vào môi trường tách biệt, xác nhận owner, menu và lịch sử không mất/sai. Ghi trách nhiệm và cách xử lý khóa bị mất.",
+              "proof": "Restore drill có kết quả đọc lại dữ liệu; file backup và người giữ được ghi."
+            },
+            {
+              "id": "5.6",
+              "title": "Quan sát và xử lý sự cố.",
+              "body": "Chọn vài tín hiệu tối thiểu: server sống, DB/SMTP lỗi, máy mất kết nối, claim/relay fail, dung lượng backup; log không chứa OTP/khóa. Viết cách nhận báo, xác định nguyên nhân, khôi phục và liên hệ khách.",
+              "proof": "Một sự cố giả lập tạo cảnh báo và có người xử lý theo runbook."
+            },
+            {
+              "id": "5.7",
+              "title": "Chuẩn bị server LAN tại địa điểm khách.",
+              "body": "Chốt vị trí, IP nội bộ, người vận hành, điện và mạng; kiểm app/máy tới server trong LAN, SMTP đi ra ngoài và phong bì/kiểm quyền không bị bỏ qua.",
+              "proof": "Sơ đồ mạng khách, cấu hình bản phát và ca mất/kết nối lại LAN được kiểm."
+            }
+          ],
+          "gate": {
+            "label": "Hạ tầng đạt",
+            "body": "Server/máy tự phục hồi sau reboot, dữ liệu khôi phục được, đường khách truy cập được và có người vận hành."
+          }
+        },
+        {
+          "anchor": "p6",
+          "title": "Phase 6 · Đóng bản release và diễn tập phát hành",
+          "intro": "Đây là cổng chuyển từ “MVP đã nghiệm thu” sang “bản có thể giao”. Không dùng APK debug hoặc cấu hình thử.",
+          "mark": "Đóng G3",
+          "steps": [
+            {
+              "id": "6.1",
+              "title": "Khóa phiên bản ba bên.",
+              "body": "Chọn commit/tag cho server, app, máy và phiên bản hợp đồng tương thích; ghi migration, URL, public key, lệnh cài và cách xác minh hash artifact. Không trộn bản build từ các commit khác nhau.",
+              "proof": "Manifest release gồm commit, version, hash, migration và thiết bị đích."
+            },
+            {
+              "id": "6.2",
+              "title": "Kiểm bảo mật/khả năng dùng trước giao.",
+              "body": "Đối chiếu D9/D10/deadlock với code và test hiện hành; xử lý finding còn mở theo quyết định user. Kiểm phân quyền, lộ secret/log, token cũ, claim trùng, gói lỗi và giới hạn tài nguyên trên bản release.",
+              "proof": "Danh sách issue chặn phát hành đã đóng hoặc được bạn chấp nhận rõ ràng."
+            },
+            {
+              "id": "6.3",
+              "title": "Build app release ký số.",
+              "body": "Ứng dụng ID, version, icon, quyền Android, URL LAN/khóa tin cậy, logging/debug; giữ khóa ký an toàn. Build APK ký số phát trực tiếp theo G0; thử cài và nâng cấp trên Android đích.",
+              "proof": "Artifact ký số, hash, cài/nâng cấp thành công, không dùng cấu hình test."
+            },
+            {
+              "id": "6.4",
+              "title": "Diễn tập triển khai từ đầu trên môi trường sạch.",
+              "body": "Thực hiện đúng runbook: backup → cài server/migration → provision máy → cài app → đăng ký/claim → menu/thao tác/share/offline → restart/rollback. Đo thời gian và ghi bước thủ công dễ sai.",
+              "proof": "Biên bản rehearsal đạt; runbook đủ để lặp lại mà không sửa dữ liệu tay."
+            },
+            {
+              "id": "6.5",
+              "title": "Chuẩn bị hồ sơ go/no-go.",
+              "body": "Đối chiếu cổng G1/G2, lỗi còn mở, người hỗ trợ và thiết bị khách; bổ sung biên bản Android/Pi ở 6.6 trước khi trình user quyết phát hành.",
+              "proof": "Hồ sơ phát hành có bản, ngày, giới hạn, người chịu trách nhiệm và chỗ chờ user ký."
+            },
+            {
+              "id": "6.6",
+              "title": "Nghiệm thu Android thật trên bản release.",
+              "body": "Trên Samsung SM-A256E và Pi 5 tham chiếu, chạy lại ca I-01, menu, share/vai, giá, kho, ticket, báo cáo, OTA và chuyển đường; dùng APK ký số và server LAN đúng manifest. Ghi ca trên thiết bị khách thực tế khi lắp.",
+              "proof": "Biên bản từng ca Android/Pi, bản build và lỗi còn mở; test tự động không thay kết quả này."
+            },
+            {
+              "id": "6.7",
+              "title": "Đối chiếu cổng phát hành mở rộng.",
+              "body": "Trước khi user ký go/no-go, đối chiếu 21 bước bổ sung, các bước cũ chưa đạt, phục hồi, người hỗ trợ và toàn bộ phạm vi G0. Không dùng G2 cũ để thay bằng chứng năm nhóm mới.",
+              "proof": "Checklist G3 gắn từng ca/bản build/người chịu trách nhiệm; user quyết go/no-go."
+            }
+          ],
+          "gate": {
+            "label": "Qua G3",
+            "body": "Toàn bộ ca Android/Pi thật, artifact release và runbook đạt; user ký go/no-go."
+          }
+        },
+        {
+          "anchor": "p7",
+          "title": "Phase 7 · Lắp và bàn giao cho khách hàng đầu tiên",
+          "intro": "Triển khai có kiểm soát trên máy/điện thoại/mạng của khách, không dùng tài khoản hoặc máy giả.",
+          "mark": "Đóng G4",
+          "steps": [
+            {
+              "id": "7.1",
+              "title": "Khảo sát trước ngày lắp.",
+              "body": "Kiểm nguồn điện, mạng cửa hàng, điện thoại Android, vị trí máy, người nhận quyền Owner và người hỗ trợ. Chốt lịch và cách quay lại nếu mạng hoặc thiết bị chưa đạt.",
+              "proof": "Checklist địa điểm và người chịu trách nhiệm đã xác nhận."
+            },
+            {
+              "id": "7.2",
+              "title": "Cài bản release và đăng ký máy khách.",
+              "body": "Cài server/máy/app đúng manifest; provision serial/key, factory register, tem niêm phong, MySQL máy và service tự khởi động. Không chép khóa/QR bí mật vào biên bản công khai.",
+              "proof": "Serial, version/hash, service health và quyền sở hữu ban đầu được ghi."
+            },
+            {
+              "id": "7.3",
+              "title": "Cho khách tự làm luồng chính và kiểm máy pha.",
+              "body": "Khách tạo tài khoản, nhận OTP, claim máy, xem menu, làm thao tác được phép, chia sẻ người thứ hai và dùng máy theo nghiệp vụ đã chốt ở Phase 0. Chạy checklist pha chế/phần cứng đã duyệt trên máy lắp thực tế; người triển khai quan sát, không thao tác hộ để tạo thành công giả.",
+              "proof": "Biên bản người dùng hoàn thành từng ca và máy pha đạt checklist; dữ liệu hiển thị khớp máy."
+            },
+            {
+              "id": "7.4",
+              "title": "Thử sự cố có kiểm soát tại chỗ.",
+              "body": "Rút Internet/khởi động lại máy theo cách an toàn đã chốt; xác nhận đường dự phòng, quyền offline, server reconnect, không mất menu hay lặp lệnh. Phục hồi cấu hình bình thường sau thử.",
+              "proof": "Biên bản lỗi/khôi phục có thời điểm và kết quả thực tế."
+            },
+            {
+              "id": "7.5",
+              "title": "Bàn giao vận hành.",
+              "body": "Hướng dẫn chủ máy thêm/gỡ người, kiểm trạng thái, xử lý mất mạng, liên hệ hỗ trợ và quy trình bảo trì/cập nhật. Ghi giới hạn bản đầu và cách yêu cầu thay đổi.",
+              "proof": "Khách nhận hướng dẫn, đầu mối hỗ trợ và ký nghiệm thu/ngoại lệ."
+            }
+          ],
+          "gate": {
+            "label": "Qua G4",
+            "body": "Máy khách vận hành, khách tự dùng được luồng đã hứa, sự cố mẫu phục hồi được và biên bản bàn giao được ký."
+          }
+        },
+        {
+          "anchor": "p8",
+          "title": "Phase 8 · Theo dõi sau bàn giao",
+          "intro": "Deploy chỉ có nghĩa nếu sản phẩm tiếp tục hoạt động khi người triển khai rời khỏi địa điểm.",
+          "mark": "Sau G4",
+          "steps": [
+            {
+              "id": "8.1",
+              "title": "Quan sát theo cửa sổ đã chốt.",
+              "body": "Kiểm uptime server/máy, lỗi OTP/claim/relay, backup, cảnh báo và phản hồi khách; ghi lỗi theo mức ảnh hưởng, không sửa code trực tiếp trên bản đang chạy.",
+              "proof": "Nhật ký vận hành và phản hồi khách có người xử lý."
+            },
+            {
+              "id": "8.2",
+              "title": "Vá lỗi theo quy trình thay đổi.",
+              "body": "Với lỗi phát hiện: tái hiện, ghi bằng chứng/hướng xử lý, bạn chốt nếu đổi thiết kế; phát phiếu, review, build bản mới, thử nâng cấp/rollback rồi mới cập nhật cho khách.",
+              "proof": "Mỗi thay đổi có version, test, quyết định và biên bản cập nhật."
+            },
+            {
+              "id": "8.3",
+              "title": "Kết thúc pilot khách đầu tiên.",
+              "body": "Đối chiếu tiêu chí Phase 0, sự cố còn mở, chi phí hỗ trợ và mức dùng thật; quyết giữ phạm vi, sửa trước khách tiếp theo hoặc mở rộng phân phối.",
+              "proof": "Kết luận pilot và roadmap phiên bản kế tiếp."
+            }
+          ],
+          "gate": {
+            "label": "Đích hoàn tất",
+            "body": "Khách dùng ổn định trong thời gian đã duyệt; có quyết định rõ cho khách tiếp theo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "song-song",
+      "title": "4 · Việc có thể chạy song song và đường găng",
+      "workstreams": [
+        {
+          "title": "Đường găng sản phẩm",
+          "items": [
+            "G0 → nền LAN/server/Pi → menu/sửa món → share/vai → giá/kho/ticket/báo cáo/OTA → Android thật → phát hành.",
+            "Mỗi module mới phải có hợp đồng/phiếu/review trước khi coi là xong.",
+            "Lỗi phần cứng hoặc đổi hợp đồng quay về bàn thiết kế, không tự vá."
+          ]
+        },
+        {
+          "title": "Đường hạ tầng",
+          "items": [
+            "Sau G0, có thể chuẩn bị server LAN, MySQL, SMTP, backup, máy và APK ký số cùng lúc với các module.",
+            "Không mở production cho khách khi chưa có G2 và rehearsal."
+          ]
+        },
+        {
+          "title": "Điểm dễ kéo dài lịch",
+          "items": [
+            "Android ↔ BLE ↔ BlueZ Pi thật; sai khác bản build và trust/URL.",
+            "Bộ cài/service Pi chưa xác nhận path và vòng khởi động.",
+            "Quyền offline, share và chuyển đường còn cần quyết định chi tiết."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "can-ban",
+      "title": "5 · Quyết định cần bạn bàn trước khi giao việc tương ứng",
+      "decisions": [
+        {
+          "label": "D-01 · Phạm vi khách đầu",
+          "body": "Phạm vi Mốc 2 và sửa menu/giá, nạp đầy kho theo bình, ticket QR, OTA, báo cáo đã chốt; hợp đồng chi tiết từng module còn cần duyệt."
+        },
+        {
+          "label": "D-02 · Đường server cho khách",
+          "body": "Bản đầu dùng LAN/HTTP với bảo vệ bên trong; về sau dùng Internet/HTTPS cùng routing. Cần ghi điểm đặt server và cách vận hành tại khách."
+        },
+        {
+          "label": "D-03 · Phân phối Android",
+          "body": "Đã chốt APK release ký số giao trực tiếp cho khách đầu; cần ghi khóa ký, phiên bản và cách cập nhật."
+        },
+        {
+          "label": "D-04 · Quyền và offline",
+          "body": "Manager có được gỡ Employee; lúc máy offline nhận thu hồi muộn thì hành vi chính xác là gì; những lệnh nào tuyệt đối không chạy tại chỗ?"
+        },
+        {
+          "label": "D-05 · Menu",
+          "body": "Đã chốt gói menu, ảnh tách theo hash, CRC byte JSON canonical, phiên bản nội dung tách trạng thái; còn cần khóa wire/vector và phạm vi sửa món."
+        },
+        {
+          "label": "D-06 · Điều kiện go/no-go",
+          "body": "User ký go/no-go, có người hỗ trợ trước ngày lắp và theo dõi 7 ngày; còn cần thiết bị khách, checklist nghiệm thu và người hỗ trợ cụ thể."
+        }
+      ]
+    },
+    {
+      "id": "nguon",
+      "title": "6 · Nguồn và giới hạn",
+      "intro": "Roadmap giữ 44 ID gốc và bổ sung 21 bước vào cùng plan.json theo phạm vi G0 ngày 13/10/2026. Thứ tự module đã được duyệt; chi tiết bước bổ sung chờ user duyệt trước khi dùng làm lộ trình thực thi. Hợp đồng từng module cần chốt trước phiếu coder. Chưa có ngày hoàn thành vì thiết bị, người thực hiện và tốc độ xử lý lỗi chưa được chốt.",
+      "sources": [
+        "<a href=\"archive/mvp-fast-path.md\">Trạng thái thực thi skeleton/MVP</a>, <a href=\"archive/mvp-roadmap.html\">Mốc 1 và Mốc 2 đã duyệt</a>, <a href=\"archive/assignments.md\">phase/module và quy trình review</a>, <a href=\"../../contracts/messages/v2-decisions.md\">hợp đồng v2 ưu tiên</a>.",
+        "<a href=\"tasks/archive/I-01-skeleton-acceptance.md\">Phiếu I-01</a>, <a href=\"../../server/SETUP_LINUX.md\">hướng dẫn server thử trên Linux</a>, <a href=\"../../flutter_app/README.md\">build app</a>, <a href=\"../../version1.1/deploy/install.sh\">bộ cài máy</a>.",
+        "<a href=\"https://aceacademy.vn/roadmap-la-gi-cach-trinh-bay-roadmap-chuan-trong-kinh-doanh/\">ACE Academy: roadmap gắn mục tiêu, giai đoạn, việc và kết quả</a>; <a href=\"https://sre.google/sre-book/launch-checklist/\">Google SRE: checklist launch, phục hồi, monitoring, rollout</a>.",
+        "<a href=\"https://developer.android.com/studio/publish/preparing\">Android Developers: chuẩn bị, ký và thử bản release</a>; <a href=\"https://tailscale.com/docs/features/tailscale-funnel/how-to/host-websites\">Tailscale: Serve trong tailnet, Funnel cho truy cập công khai</a>.",
+        "<a href=\"https://linear.app/docs/project-milestones\">Linear Project Milestones</a>: tham khảo cách đặt cột mốc và tiến độ cạnh nhau khi thiết kế phần hiển thị Phase."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Khởi tạo codespace dự án mới</title>
+  <link rel="stylesheet" href="../assets/fonts.css">
+  <link rel="stylesheet" href="../assets/doc.css">
+  <style>
+    :root{--paper:#f5f2e9;--card:#fffefa;--ink:#24231f;--muted:#69675f;--line:#ded9cb;--accent:#d45f31;--blue:#476d9b;--green:#487a5b;--gold:#b78b31}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 "Be Vietnam Pro",sans-serif}
+    .page{max-width:1160px;margin:auto;padding:42px 28px 80px}.eyebrow{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    h1,h2,h3{font-family:"Source Serif 4",serif;line-height:1.2}h1{font-size:clamp(34px,5vw,58px);max-width:780px;margin:10px 0 14px}h2{font-size:29px;margin:0 0 10px}h3{font-size:21px;margin:0 0 8px}
+    p{margin:0 0 12px}.lead{font-size:18px;color:#4e4b44;max-width:76ch}.meta{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+    .status{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff0d4;color:#805c13;font-size:12px;font-weight:700}
+    section{margin-top:42px}.diagram,.card,.structure,.flow li,.question{background:var(--card);border:1px solid var(--line);border-radius:16px}
+    .diagram{padding:22px;margin-top:18px}.diagram svg{display:block;width:100%;height:auto;max-height:300px}.legend{display:flex;flex-wrap:wrap;gap:16px;margin:10px 0 0;color:var(--muted);font-size:12px}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}.card{padding:19px}.card p{font-size:14px;color:#514f49}.num{color:var(--accent);font:700 12px "JetBrains Mono",monospace;letter-spacing:.05em}
+    .tree{margin-top:16px;padding:20px 22px;background:#282a2d;color:#f2efe8;border-radius:14px;overflow:auto;font:13px/1.65 "JetBrains Mono",monospace;white-space:pre}
+    .note{margin-top:14px;padding:14px 17px;border-left:4px solid var(--gold);background:#fff6df;border-radius:4px 12px 12px 4px;color:#514830}
+    .flow{list-style:none;counter-reset:step;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}.flow li{counter-increment:step;padding:17px;font-size:14px}.flow li:before{content:counter(step);display:grid;place-items:center;width:30px;height:30px;margin-bottom:13px;border-radius:50%;background:var(--accent);color:white;font-weight:700}
+    .questions{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:18px}.question{padding:16px 18px}.question b{display:block;margin-bottom:5px}.question p{color:var(--muted);font-size:14px;margin:0}
+    footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+    @media(max-width:760px){.page{padding:28px 17px 54px}.grid,.questions{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.diagram{padding:12px}.meta{line-height:1.8}}
+  </style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <div class="eyebrow">Blueprint · codespace dự án mới</div>
+    <h1>Tạo cùng một điểm bắt đầu cho mỗi dự án</h1>
+    <p class="lead">Gói khởi tạo tạo cấu trúc tài liệu và assets dùng chung khi mở codespace mới. Quy trình làm việc hiện có tiếp tục được dùng; blueprint này chỉ định nghĩa bộ khung ban đầu.</p>
+    <p><span class="status">Bản đề xuất · chờ duyệt chi tiết</span></p>
+    <div class="meta">Phạm vi: cấu trúc thư mục · trang index · plan JSON · tài nguyên dùng chung</div>
+  </header>
+
+  <section aria-labelledby="overview-title">
+    <h2 id="overview-title">Luồng khởi tạo</h2>
+    <p>Gói chuẩn nằm trong second brain. Operator dùng gói đó để tạo bộ khung trong codespace mới; các trang tài liệu tải assets chung từ chính bộ khung.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 1080 270" role="img" aria-labelledby="flow-title flow-desc">
+        <title id="flow-title">Gói khởi tạo đi vào codespace mới</title>
+        <desc id="flow-desc">Second brain giữ blueprint và assets. Operator tạo cấu trúc codespace. Hai trang index dùng chung assets cục bộ.</desc>
+        <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#d45f31"/></marker></defs>
+        <rect x="26" y="45" width="260" height="150" rx="18" fill="#fffefa" stroke="#b78b31" stroke-width="2"/>
+        <text x="156" y="83" text-anchor="middle" font-size="17" font-weight="700" fill="#24231f">Second brain</text>
+        <text x="156" y="116" text-anchor="middle" font-size="14" fill="#514f49">Blueprint + cấu trúc</text>
+        <text x="156" y="143" text-anchor="middle" font-size="14" fill="#514f49">Assets tài liệu dùng chung</text>
+        <rect x="410" y="45" width="260" height="150" rx="18" fill="#fffefa" stroke="#d45f31" stroke-width="2"/>
+        <text x="540" y="83" text-anchor="middle" font-size="17" font-weight="700" fill="#24231f">Operator</text>
+        <text x="540" y="116" text-anchor="middle" font-size="14" fill="#514f49">Tạo codespace</text>
+        <text x="540" y="143" text-anchor="middle" font-size="14" fill="#514f49">Điền định danh dự án</text>
+        <rect x="794" y="45" width="260" height="150" rx="18" fill="#fffefa" stroke="#476d9b" stroke-width="2"/>
+        <text x="924" y="83" text-anchor="middle" font-size="17" font-weight="700" fill="#24231f">Codespace mới</text>
+        <text x="924" y="116" text-anchor="middle" font-size="14" fill="#514f49">documentation/index.html</text>
+        <text x="924" y="143" text-anchor="middle" font-size="14" fill="#514f49">plan/index.html + data JSON</text>
+        <path d="M292 120H398" stroke="#d45f31" stroke-width="3" marker-end="url(#arrow)"/>
+        <path d="M676 120H782" stroke="#d45f31" stroke-width="3" marker-end="url(#arrow)"/>
+        <path d="M924 203V238H540V203" fill="none" stroke="#487a5b" stroke-width="2" stroke-dasharray="6 6"/>
+        <text x="731" y="261" text-anchor="middle" font-size="13" fill="#487a5b">assets cục bộ dùng chung cho cả hai index</text>
+      </svg>
+      <figcaption>Blueprint mô tả điểm bắt đầu trống; nội dung và quyết định riêng của dự án được thêm sau theo quy trình hiện hành.</figcaption>
+      <div class="legend"><span><i style="background:#b78b31"></i>Nguồn chuẩn</span><span><i style="background:#d45f31"></i>Khởi tạo</span><span><i style="background:#476d9b"></i>Codespace</span><span><i style="background:#487a5b"></i>Assets dùng chung</span></div>
+    </figure>
+  </section>
+
+  <section aria-labelledby="structure-title">
+    <h2 id="structure-title">Khung thư mục đề xuất</h2>
+    <p>Ở gốc `documentation/` và `documentation/plan/` chỉ có `index.html` cùng thư mục con. JSON là nguồn dữ liệu; index chỉ dựng trang để xem.</p>
+    <div class="tree">&lt;project&gt;/
+├── documentation/
+│   ├── index.html
+│   ├── assets/
+│   ├── architect/
+│   │   ├── architect/
+│   │   ├── cryptography/
+│   │   └── features/
+│   ├── research/
+│   └── plan/
+│       ├── index.html
+│       ├── data/
+│       │   └── plan.json
+│       ├── progress/
+│       ├── tasks/
+│       ├── decisions/
+│       └── archive/
+└── scripts/
+    └── serve_documentation.py</div>
+    <div class="note">Các thư mục con khởi tạo rỗng, không chép báo cáo, quyết định hay dữ liệu FlexMix. Script phục vụ trang nằm ngoài `documentation/` để gốc tài liệu giữ đúng quy ước.</div>
+  </section>
+
+  <section aria-labelledby="blocks-title">
+    <h2 id="blocks-title">Trách nhiệm từng khối</h2>
+    <div class="grid">
+      <article class="card"><div class="num">01 · BLUEPRINT</div><h3>Gói trong second brain</h3><p>Giữ cây thư mục mẫu, hướng dẫn khởi tạo và danh mục nguồn assets. Đây là nơi operator tra cứu khi có codespace mới.</p></article>
+      <article class="card"><div class="num">02 · INDEX</div><h3>Điểm vào tài liệu</h3><p>`documentation/index.html` dẫn tới architect, research và plan; `plan/index.html` tải `data/plan.json` và sổ tiến độ riêng.</p></article>
+      <article class="card"><div class="num">03 · ASSETS</div><h3>Tài nguyên offline</h3><p>Tái dùng template, CSS và font offline trong `document-framework/`. Chỉ đóng gói thêm renderer nào đã tách được khỏi dữ liệu riêng của FlexMix.</p></article>
+    </div>
+  </section>
+
+  <section aria-labelledby="steps-title">
+    <h2 id="steps-title">Luồng dùng gói</h2>
+    <ol class="flow">
+      <li>Nhận tên và phạm vi codespace mới.</li>
+      <li>Sao chép bộ khung và assets chuẩn từ vault.</li>
+      <li>Điền tên dự án, giữ plan ban đầu trống.</li>
+      <li>Kiểm thư mục, liên kết tương đối và font offline.</li>
+      <li>Bắt đầu quy trình thiết kế hiện hành.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="open-title">
+    <h2 id="open-title">Điểm cần bạn chốt ở vòng này</h2>
+    <div class="questions">
+      <article class="question"><b>Nhánh kiến trúc trống</b><p>Có nên tạo sẵn `architect/architect`, `cryptography`, `features` cho mọi dự án, hay chỉ tạo nhánh con khi dự án cần?</p></article>
+      <article class="question"><b>Renderer plan</b><p>Renderer hiện tại gắn với cấu trúc plan FlexMix. Cần tách phần hiển thị chung và để dữ liệu/progress riêng cho từng dự án trước khi đưa vào gói.</p></article>
+      <article class="question"><b>Assets trong vault</b><p>Bộ `document-framework/` đã có template, CSS và font. Gói bootstrap sẽ tham chiếu bộ này và chỉ bổ sung phần còn thiếu, tránh nhân đôi fonts.</p></article>
+      <article class="question"><b>Kiểm khởi tạo</b><p>Blueprint đề xuất checklist cấu trúc/link/assets; chưa tạo lệnh tự động cho tới khi bạn duyệt hợp đồng chi tiết.</p></article>
+    </div>
+  </section>
+
+  <footer>Đầu ra vòng này: blueprint và gói khởi tạo được mô tả để user duyệt. Chưa dùng gói để thay đổi codespace dự án khác.</footer>
+</main>
+</body>
+</html>

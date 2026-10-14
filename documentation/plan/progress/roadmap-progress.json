@@ -1,0 +1,557 @@
+{
+  "version": 1,
+  "steps": {
+    "0.1": {
+      "status": "done",
+      "owner": "Codex",
+      "updated": "2026-10-13",
+      "evidence": "documentation/plan/decisions/g0-first-customer-decision.md",
+      "reviewer": "User",
+      "note": "Duyệt trong hội thoại 13/10/2026; chi tiết module và thiết bị khách chốt ở cổng tương ứng."
+    },
+    "0.2": {
+      "status": "done",
+      "owner": "Codex",
+      "updated": "2026-10-13",
+      "evidence": "documentation/plan/decisions/g0-first-customer-decision.md",
+      "reviewer": "User",
+      "note": "Duyệt trong hội thoại 13/10/2026; chi tiết module và thiết bị khách chốt ở cổng tương ứng."
+    },
+    "0.3": {
+      "status": "done",
+      "owner": "Codex",
+      "updated": "2026-10-13",
+      "evidence": "documentation/plan/decisions/g0-first-customer-decision.md",
+      "reviewer": "User",
+      "note": "Duyệt trong hội thoại 13/10/2026; chi tiết module và thiết bị khách chốt ở cổng tương ứng."
+    },
+    "0.4": {
+      "status": "done",
+      "owner": "Codex",
+      "updated": "2026-10-13",
+      "evidence": "documentation/plan/decisions/g0-first-customer-decision.md",
+      "reviewer": "User",
+      "note": "Duyệt trong hội thoại 13/10/2026; chi tiết module và thiết bị khách chốt ở cổng tương ứng."
+    },
+    "1.1": {
+      "status": "review",
+      "owner": "Codex",
+      "updated": "2026-10-14",
+      "evidence": "documentation/plan/tasks/SK-01-skeleton-acceptance.md",
+      "reviewer": "",
+      "note": "Đã lập bảng lệch và phiếu nghiệm thu theo D1-D10/G0; chờ review độc lập. Không chạy code/test."
+    },
+    "1.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "1.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "1.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "1.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "1.6": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "1.7": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "2.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "2.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "2.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "2.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "2.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "2.6": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.6": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.7": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "3.8": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.6": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.7": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.8": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.9": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.10": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.11": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.12": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.13": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.14": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.15": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.16": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.17": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "4.18": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.6": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "5.7": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.6": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "6.7": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "7.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "7.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "7.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "7.4": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "7.5": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "8.1": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "8.2": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    },
+    "8.3": {
+      "status": "todo",
+      "owner": "",
+      "updated": "",
+      "evidence": "",
+      "reviewer": "",
+      "note": ""
+    }
+  },
+  "gates": {
+    "G0": {
+      "approved": true,
+      "reviewer": "User",
+      "updated": "2026-10-13",
+      "evidence": "documentation/plan/decisions/g0-first-customer-decision.md"
+    },
+    "G1": {
+      "approved": false,
+      "reviewer": "",
+      "updated": "",
+      "evidence": ""
+    },
+    "G2": {
+      "approved": false,
+      "reviewer": "",
+      "updated": "",
+      "evidence": ""
+    },
+    "G3": {
+      "approved": false,
+      "reviewer": "",
+      "updated": "",
+      "evidence": ""
+    },
+    "G4": {
+      "approved": false,
+      "reviewer": "",
+      "updated": "",
+      "evidence": ""
+    }
+  }
+}

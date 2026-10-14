@@ -4,7 +4,7 @@
 
 ## Đầu vào
 
-User chốt bản đầu kết nối qua LAN/HTTP, giữ phong bì mã hóa/kiểm quyền bên trong; về sau đổi điểm kết nối sang Internet/HTTPS với cùng routing và logic sản phẩm. Đọc `documentation/plan/g0-first-customer-decision.md`, hợp đồng v2 và code hiện tại ở bảng dưới. Không sửa giao thức nghiệp vụ hoặc nới quyền offline.
+User chốt bản đầu kết nối qua LAN/HTTP, giữ phong bì mã hóa/kiểm quyền bên trong; về sau đổi điểm kết nối sang Internet/HTTPS với cùng routing và logic sản phẩm. Đọc `documentation/plan/decisions/g0-first-customer-decision.md`, hợp đồng v2 và code hiện tại ở bảng dưới. Không sửa giao thức nghiệp vụ hoặc nới quyền offline.
 
 ## Chia task theo người giữ file
 

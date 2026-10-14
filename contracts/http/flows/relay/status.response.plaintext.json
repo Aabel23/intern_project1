@@ -1,0 +1,19 @@
+{
+  "v": 1,
+  "ok": true,
+  "data": {
+    "request_id": "d4215a48-60d9-46bd-91c7-41186f1badb1",
+    "machine_id": "example-machine",
+    "source": "machine",
+    "received_at": "2026-10-14T02:00:01Z",
+    "result": {
+      "ok": true,
+      "data": {
+        "serial": "10000000EXAMPLE01",
+        "software_version": "1.1",
+        "uptime_seconds": 63,
+        "read_sequence": 2
+      }
+    }
+  }
+}

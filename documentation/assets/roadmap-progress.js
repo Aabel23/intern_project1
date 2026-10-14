@@ -122,7 +122,7 @@
 
   async function refresh() {
     try {
-      const response = await fetch('roadmap-progress.json', { cache: 'no-store' });
+      const response = await fetch('progress/roadmap-progress.json', { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       render(await response.json());
     } catch (error) {
