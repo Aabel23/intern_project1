@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Driver phần cứng</title>
+<meta name="description" content="Khối 7: bơm PWM, hiệu chuẩn và mồi bơm, cân HX711, panel PCF8575, máy in TSPL, đầu quét QR.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 7 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Driver phần cứng: năm thiết bị, mỗi cái một cách hỏng</h1>
+      <p class="lead">Khối này gom mọi mã chạm tới chân GPIO, I²C, cổng serial và hàng in. Mỗi driver được viết để thất bại rõ ràng (trả <code>None</code>, mã thoát, ngoại lệ có tên) chứ không im lặng trả số sai, vì lớp trên dựa vào đó để quyết định dừng đơn.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/panel.py</code>, <code>printer/</code>, <code>scan/scanner.py</code></span>
+      <span><b>Chạy trong:</b> thư viện được <code>process_runner</code>, <code>run_flow</code>, <code>test_gui</code> gọi; <code>scan.scanner</code> và máy in chạy như tiến trình con</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Thiết bị và đường nối</a></li>
+        <li><a href="#bom">2. Bơm</a></li>
+        <li><a href="#can">3. Cân HX711</a></li>
+        <li><a href="#panel">4. Panel đèn và nút</a></li>
+        <li><a href="#in">5. Máy in tem</a></li>
+        <li><a href="#quet">6. Đầu quét QR</a></li>
+        <li><a href="#ghi-chu">7. Điểm còn hở</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="tong-quan">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Thiết bị và đường nối</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  PR["process_runner"] --> P["pump_ml_parallel: PWMLED 1 kHz"]
+  PR --> L["loadcell: HX711, SCK 4, DT 18"]
+  PR --> PN["panel: PCF8575 0x21 đèn, 0x20 nút"]
+  RF["run_flow"] --> SP["printer.spool"]
+  SP --> PQ["printer_qr: TSPL, lp -o raw"]
+  RF --> SC["scan.scanner: serial 9600"]
+  P --> HP["10 bơm"]
+  L --> HC["Cân"]
+  PN --> HB["16 đèn, 16 nút"]
+  PQ --> HPR["XP-350BM"]
+  SC --> HS["Đầu quét"]
+  class PR,RF proc
+  class P,L,PN,SP,PQ,SC proc
+  class HP,HC,HB,HPR,HS hw
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Máy in và đầu quét luôn chạy trong tiến trình riêng: treo USB chỉ làm chết tiến trình con, không kéo theo vòng đơn.</figcaption>
+      </figure>
+    </section>
+
+    <section id="bom">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Bơm</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Bơm</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td></tr></thead>
+          <tbody><tr><th>BCM</th><td>26</td><td>15</td><td>21</td><td>20</td><td>16</td><td>12</td><td>13</td><td>6</td><td>5</td><td>14</td></tr></tbody>
+        </table>
+      </div>
+      <ol class="steps">
+        <li><b>Chạy</b>: <code>gpiozero.PWMLED</code> tần số 1 kHz; <code>run_pump_for_duration</code> kiểm cờ dừng mỗi 0.05 s.</li>
+        <li><b>Tắt tất cả</b>: <a href="../../pump_control/pump_ml_parallel.py"><code>all_pumps_off</code></a> mở, tắt, đóng từng chân rồi <a href="../../pump_control/gpio_lines.py"><code>free_gpio_line</code></a> (<code>lgpio.gpio_free</code>) để tiến trình sau không gặp "GPIO busy".</li>
+        <li><b>Hiệu chuẩn</b> <a href="../../pump_control/calib_pump.py"><code>calib_pump</code></a>: vòng kín tới 100/200/300/400 g, dừng sớm 4 g, chờ lặng (độ lệch &lt; 0.5 trong 5 s), hồi quy tuyến tính ra <code>gram_per_sec</code>, <code>dead_gram</code>, <code>r_squared</code>, ghi <code>/var/lib/flexmix/pump_calib.json</code>.</li>
+        <li><b>Mồi bơm</b> <a href="../../pump_control/prime_all.py"><code>prime_all</code></a>: mục tiêu 8 g; hạn = theo hiệu chuẩn + 6 s cho khí, tối đa 25 s; kết quả <code>PRIMED</code>, <code>PARTIAL</code>, <code>NO FLOW</code>, <code>SKIPPED</code>; dùng <code>GPIO_TO_PUMP</code>.</li>
+      </ol>
+    </section>
+
+    <section id="can">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Cân HX711</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  A["read_hx711"] --> W{"DT xuống thấp trong 0.25 s?"}
+  W -->|"không"| N["None"]
+  W -->|"có"| F["SCHED_FIFO mức 10 trong 25 xung"]
+  F --> S{"Xung SCK > 55 µs?"}
+  S -->|"có"| N
+  S -->|"không"| D{"Mất đồng bộ?"}
+  D -->|"có"| RS["Resync tối đa 30 xung"] --> N
+  D -->|"không"| V{"raw = 0, -1 hoặc |raw| > 4 000 000?"}
+  V -->|"có"| N
+  V -->|"không"| OK["raw hợp lệ"]
+  class A,F,RS proc
+  class W,S,D,V dec
+  class OK ok
+  class N bad
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Xung bị kéo dài làm HX711 hiểu là lệnh tắt nguồn; vì vậy đọc chạy ở ưu tiên thời gian thực (cần <code>CAP_SYS_NICE</code> trong unit) và bỏ mẫu khi đo được xung dài.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hàm</th><th>Làm gì</th></tr></thead>
+          <tbody>
+            <tr><td><code>open_pins()</code></td><td>Chạy lúc import: SCK là <code>OutputDevice(4)</code>, DT là input 18 kéo lên.</td></tr>
+            <tr><td><code>tare(30)</code>, <code>load_calibration</code></td><td>Offset trung bình 30 mẫu; offset và scale từ <code>calib_loadcell.json</code>.</td></tr>
+            <tr><td><code>read_weight_smooth</code></td><td>Bỏ gai &gt; 15 g, tối đa 5 lần bỏ liên tiếp.</td></tr>
+            <tr><td><a href="../../loadcell/cup_detection.py"><code>read_current_gram</code></a></td><td>10 mẫu (+4 lần thử), giữ khi ≥ 6 mẫu nằm trong ±3 g quanh trung vị.</td></tr>
+            <tr><td><code>check_cup</code></td><td>Ổn định 1 s, hỏi mỗi 0.05 s.</td></tr>
+            <tr><td><code>init_loadcell</code></td><td>Hiệu chuẩn bằng quả chuẩn 83.3 g.</td></tr>
+            <tr><td><a href="../../hx711_diag.py"><code>hx711_diag.py</code></a></td><td>Phân loại lỗi dây, nguồn, chip.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Panel đèn và nút</h2></div>
+      <p class="prose">Hai chip PCF8575: 0x21 cho đèn, 0x20 cho nút, mức tích cực thấp. <code>LED_PIN_MAP</code> = (8..15, 0..7); <code>BUTTON_PIN_MAP</code> = (7, 6, 5, 4, 3, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2).</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant PR as run_manual_step
+  participant Q as panel_command_queue
+  participant W as panel_worker
+  participant I2C as PCF8575
+  PR->>Q: ("show", nút đang chờ)
+  loop mỗi 0.02 s
+    W->>Q: lấy lệnh show, done, retry, clear
+    W->>I2C: ghi đèn 0x21
+    W->>I2C: đọc nút 0x20
+    W->>W: tìm cạnh xuống, lọc nút được phép
+    W-->>PR: button_event_queue
+  end
+  PR->>Q: ("clear", None)
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Lỗi I²C đặt <code>stop_event</code>; khối <code>finally</code> luôn ghi tắt mọi đèn. <code>reset_panel</code> ghi 0xFFFF vào cả hai chip. <code>PANEL_MAX_LEDS_ON</code> = 4 chỉ để cảnh báo.</figcaption>
+      </figure>
+    </section>
+
+    <section id="in">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Máy in tem</h2></div>
+      <ol class="steps">
+        <li><a href="../../printer/spool.py"><code>spool</code></a> chạy <code>python3 -m printer.printer_qr --payload …</code>, timeout 30 s; coi là in được khi mã 0 và đầu ra không có "LOI:".</li>
+        <li><code>qrcode</code> mức H, box 10, viền 4 → <code>order_qr.png</code> → thu nhỏ vừa 400×240 điểm trừ lề 8 → ảnh 1 bit.</li>
+        <li>Gửi bằng <code>lp -d XP-350BM -o raw</code>.</li>
+      </ol>
+      <pre class="wire">SIZE 50.0 mm,30.0 mm
+GAP 2.0 mm,0 mm
+DIRECTION 1
+CLS
+BITMAP x,y,wbytes,h,0,&lt;dữ liệu&gt;
+PRINT 1,1</pre>
+    </section>
+
+    <section id="quet">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Đầu quét QR</h2></div>
+      <ol class="steps">
+        <li>Tìm cổng trong <code>/dev/serial/by-id</code> có chữ <code>usbscn</code>, không có thì <code>/dev/ttyACM0</code>; 9600 baud, mở độc quyền, timeout đọc 0.2 s.</li>
+        <li>Một khung kết thúc bằng CR/LF hoặc 0.4 s im lặng; cùng mã trong 2 s bị bỏ.</li>
+        <li>Mất cổng sau lần mở đầu thì thử lại mỗi 2 s; thoát 1 hoặc 2 khi không mở được lần đầu.</li>
+        <li>Đầu quét phải ở chế độ CDC <code>0218:0212</code>; chế độ HID <code>0218:0210</code> gõ phím vào màn hình, backend không thấy gì.</li>
+      </ol>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Điểm còn hở</h2></div>
+      <div class="note crit"><b>Mã hiện có, chưa sửa</b>(1) <code>test_gui/hardware.py</code> ghi cứng chân cân 4/18 thay vì đọc hồ sơ máy. (2) <code>prime_all</code> và bộ chạy dùng bảng <code>GPIO_TO_PUMP</code> đảo từ <code>PUMP_GPIO</code>; hai chân trùng sẽ âm thầm ghi đè. (3) Mọi tiến trình mở chân lúc import <code>loadcell</code>, nên import nhầm ở tiến trình khác làm "GPIO busy".</div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="06-process-runner.html">← Bộ chạy công thức</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="08-data.html">Dữ liệu: MySQL, vé, kho, nhật ký →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

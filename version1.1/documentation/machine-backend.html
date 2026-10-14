@@ -243,9 +243,9 @@ sequenceDiagram
 
     <section id="thanh-phan">
       <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Từng khối</h2></div>
-
+      <p class="prose">Mỗi khối có trang chi tiết riêng trong <a href="blocks/index.html"><code>blocks/</code></a>: luồng, hàm, giao thức, thông số và điểm còn hở.</p>
       <article class="comp" id="c-main">
-        <header><h3>4.1 · Tiến trình chủ và vòng đời service <span class="pill m">Đang chạy</span></h3><div class="src"><code>main.py</code>, <code>deploy/kiosk/flexmix-backend.service</code> · Sơ đồ: trạng thái · 5 trạng thái</div></header>
+        <header><h3>4.1 · Tiến trình chủ và vòng đời service <span class="pill m">Đang chạy</span></h3><div class="src"><code>main.py</code>, <code>deploy/kiosk/flexmix-backend.service</code> · Sơ đồ: trạng thái · 5 trạng thái · <a href="blocks/01-main-service.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Dựng ba phần dài hạn trong một tiến trình và bảo đảm rằng hễ một phần dừng thì cả tiến trình dừng, để systemd khởi động lại từ đầu sau 3 giây. Phần cứng không cần dọn ở đây: lần chạy kế tiếp tự đưa bơm và bảng nút về nghỉ khi <code>run_flow</code> khởi động.</p>
         <figure class="dg dg-split">
@@ -298,7 +298,7 @@ stateDiagram-v2
       </article>
 
       <article class="comp" id="c-serve">
-        <header><h3>4.2 · Máy chủ cổng 8080 <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/serve.py</code> · Sơ đồ: luồng · 5 nhánh xử lý</div></header>
+        <header><h3>4.2 · Máy chủ cổng 8080 <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/serve.py</code> · Sơ đồ: luồng · 5 nhánh xử lý · <a href="blocks/02-store-server.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Cổng duy nhất trình duyệt cần. Mọi màn hình (bán, pha chế, thử) được phục vụ từ đây. Ngoài file tĩnh, nó làm bốn việc mà trình duyệt không tự làm được: mã hoá vé, nói với máy in, ghi mã thay máy quét, và chuyển nút của màn pha chế sang runner. Mỗi request là một thread của <code>ThreadingHTTPServer</code>.</p>
         <figure class="dg dg-split">
@@ -357,7 +357,7 @@ flowchart TD
       </article>
 
       <article class="comp" id="c-menu">
-        <header><h3>4.3 · Đồng bộ menu ra màn bán <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/sync_menu.py</code>, <code>store_gui/drinks-pos.js</code> · Sơ đồ: luồng · 2 vòng</div></header>
+        <header><h3>4.3 · Đồng bộ menu ra màn bán <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/sync_menu.py</code>, <code>store_gui/drinks-pos.js</code> · Sơ đồ: luồng · 2 vòng · <a href="blocks/03-menu-sync.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Màn bán là trang tĩnh, không gọi được MySQL. Khối này đọc database và ghi một bản chụp <code>store_gui/menu-data.js</code> (một câu gán <code>window.MENU_DATA</code>). Hai vòng giữ bản chụp mới: thread <code>sync_menu</code> mỗi 60 s, và máy chủ dựng lại khi trang hỏi mà file đã cũ hơn 20 s. Lệnh nạp kho từ xa và việc trừ kho sau mỗi đơn cũng gọi dựng lại.</p>
         <figure class="dg">
@@ -393,7 +393,7 @@ flowchart LR
       </article>
 
       <article class="comp" id="c-flow">
-        <header><h3>4.4 · Điều phối đơn <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/run_flow.py</code> · Sơ đồ: trạng thái · 8 trạng thái</div></header>
+        <header><h3>4.4 · Điều phối đơn <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/run_flow.py</code> · Sơ đồ: trạng thái · 8 trạng thái · <a href="blocks/04-order-flow.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Người nhạc trưởng: không chạm phần cứng, không truy vấn trực tiếp ngoài qua <code>order_ticket</code> và <code>error_log</code>. Nó chờ mã mới, nhờ <code>qr_to_recipe</code> đổi mã thành công thức, sinh runner, báo trình duyệt chuyển màn, đợi runner xong và dọn dẹp, bất kể đơn kết thúc thế nào. Chỉ một flow được chạy: khoá <code>flock</code> trên <code>order/.run_flow.lock</code>, kernel tự nhả khi tiến trình chết.</p>
         <figure class="dg">
@@ -435,7 +435,7 @@ stateDiagram-v2
       </article>
 
       <article class="comp" id="c-qr">
-        <header><h3>4.5 · Mã QR thành công thức <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/qr_to_recipe.py</code>, <code>qrproto/</code>, <code>database/services/recipe_export.py</code> · Sơ đồ: luồng · 8 tầng kiểm</div></header>
+        <header><h3>4.5 · Mã QR thành công thức <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/qr_to_recipe.py</code>, <code>qrproto/</code>, <code>database/services/recipe_export.py</code> · Sơ đồ: luồng · 8 tầng kiểm · <a href="blocks/05-qr-to-recipe.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Nhận chuỗi chữ số vừa quét, chứng minh nó do chính máy này cấp, rồi biến SKU (mã món) và các lựa chọn trong đó thành một công thức chạy được: danh sách bước có số bơm và số giây bơm đã tính theo hiệu chuẩn.</p>
         <figure class="dg dg-split">
@@ -510,7 +510,7 @@ flowchart TD
       </article>
 
       <article class="comp" id="c-runner">
-        <header><h3>4.6 · Bộ chạy công thức <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/process_runner.py</code> · Sơ đồ: trạng thái bước + thread · 5 trạng thái</div></header>
+        <header><h3>4.6 · Bộ chạy công thức <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/process_runner.py</code> · Sơ đồ: trạng thái bước + thread · 5 trạng thái · <a href="blocks/06-process-runner.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Tiến trình duy nhất được chạm bơm, cân và bảng nút trong lúc pha. Nó đọc công thức, chạy từng bước theo <code>order</code>, ghi trạng thái từng bước ngược lại vào cùng file sau mỗi thay đổi, và phục vụ màn pha chế trên 127.0.0.1:8000. Chạy lại cùng file thì bỏ qua các bước đã <code>done</code>.</p>
         <figure class="dg dg-split">
@@ -580,7 +580,7 @@ stateDiagram-v2
       </article>
 
       <article class="comp" id="c-driver">
-        <header><h3>4.7 · Driver phần cứng <span class="pill m">Đang chạy</span></h3><div class="src"><code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/</code>, <code>printer/</code>, <code>scan/</code> · Sơ đồ: luồng · 5 thiết bị</div></header>
+        <header><h3>4.7 · Driver phần cứng <span class="pill m">Đang chạy</span></h3><div class="src"><code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/</code>, <code>printer/</code>, <code>scan/</code> · Sơ đồ: luồng · 5 thiết bị · <a href="blocks/07-hardware-drivers.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Mỗi thiết bị một module, mọi con số đi dây đọc từ <code>configuration/machine.py</code> (máy #1 làm mặc định, ghi đè bằng <code>/etc/flexmix/machine_profile.json</code>). Không module nào trong lõi đơn hàng tự mở thiết bị: chỉ runner, công cụ hiệu chuẩn, màn thử và <code>ButtonWatcher</code> làm việc đó, và không bao giờ cùng lúc.</p>
         <figure class="dg">
@@ -632,7 +632,7 @@ flowchart LR
       </article>
 
       <article class="comp" id="c-data">
-        <header><h3>4.8 · Dữ liệu: MySQL, vé, kho, nhật ký <span class="pill m">Đang chạy</span></h3><div class="src"><code>database/</code> · Sơ đồ: luồng · vòng đời vé</div></header>
+        <header><h3>4.8 · Dữ liệu: MySQL, vé, kho, nhật ký <span class="pill m">Đang chạy</span></h3><div class="src"><code>database/</code> · Sơ đồ: luồng · vòng đời vé · <a href="blocks/08-data.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Một module mở kết nối (<code>database/core/connection.py</code>); mỗi lời gọi dịch vụ mở một kết nối mới và đóng ngay, không có pool. Schema và dữ liệu mặc định áp lại được nhiều lần bằng <code>apply_database_sql</code>; không có migration tăng dần.</p>
         <figure class="dg">
@@ -671,7 +671,7 @@ stateDiagram-v2
       </article>
 
       <article class="comp" id="c-heal">
-        <header><h3>4.9 · Giám sát và tự hồi phục <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/kiosk_watchdog.py</code>, <code>panel_control/button_watch.py</code>, <code>order/run_flow.py</code> · Sơ đồ: luồng · 4 cơ chế</div></header>
+        <header><h3>4.9 · Giám sát và tự hồi phục <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/kiosk_watchdog.py</code>, <code>panel_control/button_watch.py</code>, <code>order/run_flow.py</code> · Sơ đồ: luồng · 4 cơ chế · <a href="blocks/09-self-healing.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Máy đặt ở quán, không có bàn phím, thường không ai đứng cạnh. Khối này gom các cơ chế tự đưa máy về trạng thái bán được mà không cần người kỹ thuật.</p>
         <figure class="dg">
@@ -710,7 +710,7 @@ flowchart TD
       </article>
 
       <article class="comp" id="c-machine">
-        <header><h3>4.10 · Cửa vào từ xa trên máy <span class="pill h">Chưa có unit</span></h3><div class="src"><code>machine/</code> · chỉ phần chạm dữ liệu máy · không gồm server</div></header>
+        <header><h3>4.10 · Cửa vào từ xa trên máy <span class="pill h">Chưa có unit</span></h3><div class="src"><code>machine/</code> · chỉ phần chạm dữ liệu máy · không gồm server · <a href="blocks/10-remote-entry.html">Chi tiết khối →</a></div></header>
         <h4>Làm gì</h4>
         <p>Một tiến trình riêng (<code>python -m machine.main</code>) nhận lệnh từ xa và đổi chúng thành lời gọi vào cùng các dịch vụ database ở mục 4.8. Nó không chạm phần cứng và không đi qua <code>run_flow</code>; hiệu ứng duy nhất lên màn bán là dựng lại <code>menu-data.js</code>. Một tiến trình khác (<code>machine.pairing.machine_bluetooth_pair</code>) lo nhận máy qua BLE<sup class="fn" id="fnr-8"><a href="#fn-8">8</a></sup>. Cả hai chưa có unit khởi động.</p>
         <div class="tbl">

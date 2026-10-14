@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bộ chạy công thức</title>
+<meta name="description" content="Khối 6: process_runner, chạy từng bước của một đơn, cân kiểm, châm thêm, tạm dừng, hủy, ghi lỗi và trừ kho.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 6 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Bộ chạy công thức: một tiến trình, một đơn, từng bước có kiểm</h1>
+      <p class="lead"><code>run_flow</code> sinh ra một tiến trình <code>process_runner</code> cho mỗi đơn đã duyệt. Tiến trình đọc file công thức, chạy lần lượt từng bước (bấm bắt đầu, đặt ly, bơm, thao tác tay), cân lại sau mỗi lần bơm, châm thêm khi thiếu, và ghi trạng thái ra file sau mỗi thay đổi để màn pha vẽ lại. Màn pha điều khiển nó qua một máy chủ HTTP nhỏ chỉ nghe 127.0.0.1:8000.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>order/process_runner.py</code></span>
+      <span><b>Chạy trong:</b> tiến trình con <code>process_runner</code>, một tiến trình cho mỗi đơn, 127.0.0.1:8000</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#trang-thai">2. Trạng thái của một bước</a></li>
+        <li><a href="#cau-noi">3. GuiBridge và API 8000</a></li>
+        <li><a href="#can-kiem">4. Cân kiểm sau mỗi bước bơm</a></li>
+        <li><a href="#buoc">5. Các loại bước</a></li>
+        <li><a href="#luong-thread">6. Thread bên trong tiến trình</a></li>
+        <li><a href="#loi">7. Hủy, lỗi và tính phí</a></li>
+        <li><a href="#thong-so">8. Thông số và dòng lệnh</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: một đơn từ đầu tới cuối</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant RF as run_flow
+  participant PR as process_runner
+  participant F as current_recipe.json
+  participant UI as Màn pha
+  participant HW as Bơm, cân, panel
+  participant DB as MySQL
+  RF->>PR: python -m order.process_runner recipe.json
+  PR->>PR: ensure_start_step thêm bước 0 BẮT ĐẦU
+  PR->>F: save_process, mọi bước waiting
+  UI->>PR: POST /api/confirm (bước 0)
+  loop từng bước
+    PR->>F: waiting, rồi running
+    PR->>HW: run_step theo loại bước
+    HW-->>PR: xong hoặc lỗi
+    PR->>HW: verify_pump_step, đọc cân, châm thêm
+    PR->>F: done kèm weight_check
+  end
+  PR->>DB: consume_inventory
+  PR-->>RF: thoát mã 0
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Mọi thay đổi trạng thái đều qua <code>save_process</code> (ghi file tạm rồi thay), nên màn pha chỉ cần đọc file là đủ, không phải nói chuyện với tiến trình. Chiều ngược lại (người bấm) mới đi qua HTTP.</figcaption>
+      </figure>
+      <ol class="steps">
+        <li><b>Bước 0 luôn có.</b> <code>ensure_start_step</code> chèn bước thủ công <code>"0"</code>, chủ là <code>gui</code>, cờ <code>start: true</code>, nút xác nhận "BẮT ĐẦU". Nhờ vậy máy không bơm khi chưa có người đứng trước máy.</li>
+        <li><b>Giữa hai bước nghỉ <code>STEP_DELAY</code> = 2 s</b>, trừ ngay sau bước bắt đầu. Trạng thái lúc nghỉ là <code>waiting</code>.</li>
+        <li><b>Thành công</b>: trừ kho; lỗi lúc trừ kho chỉ được in ra, đơn vẫn coi là xong vì đồ uống đã ở trong ly.</li>
+        <li><b>Thất bại</b>: ghi lỗi, đợi 1 s cho màn pha kịp vẽ (<code>linger_for_screen</code>), tính phí nguyên liệu đã dùng, thoát mã 1.</li>
+      </ol>
+    </section>
+
+    <section id="trang-thai">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Trạng thái của một bước</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "waiting" as w
+  state "running" as r
+  state "done" as d
+  state "failed" as f
+  state "Tạm dừng" as p
+  [*] --> w
+  w --> r: hết STEP_DELAY
+  r --> d: chạy xong, cân khớp
+  r --> f: lỗi phần cứng, sai khối lượng
+  r --> p: POST /api/pause
+  p --> r: POST /api/resume
+  p --> f: POST /api/cancel
+  r --> f: POST /api/cancel
+  d --> [*]
+  f --> [*]
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Tạm dừng giữ máy ở cuối bước đang chạy (<code>hold_while_paused</code>): bơm đang chạy thì chạy hết bước đó rồi mới dừng. Hủy thì được kiểm ở mọi vòng chờ.</figcaption>
+      </figure>
+    </section>
+
+    <section id="cau-noi">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>GuiBridge và API 8000</h2></div>
+      <p class="prose"><code>GuiBridge</code> là chỗ duy nhất thread HTTP và thread chạy bước gặp nhau. Mọi trường đều là <code>threading.Event</code>, hàng đợi hoặc biến có khoá; không có trạng thái chung nào khác.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trường</th><th>Kiểu</th><th>Ai đặt</th><th>Ai chờ</th></tr></thead>
+          <tbody>
+            <tr><td><code>confirm_event</code></td><td>Event</td><td><code>/api/confirm</code></td><td>bước bắt đầu, bước thao tác, bước đặt ly</td></tr>
+            <tr><td><code>button_queue</code></td><td>Queue, tối đa 32, phần tử <code>(step_label, panel)</code></td><td><code>/api/process/button</code></td><td><code>run_manual_step</code></td></tr>
+            <tr><td><code>detect_request</code>, <code>detect_done</code>, <code>detected</code>, <code>detect_sensor</code></td><td>Event và giá trị</td><td><code>/api/process/detect</code> và bước dò</td><td>hai bên chờ nhau</td></tr>
+            <tr><td><code>pause_event</code>, <code>paused_now</code>, <code>resume_event</code></td><td>Event</td><td><code>/api/pause</code>, <code>/api/resume</code></td><td><code>hold_while_paused</code></td></tr>
+            <tr><td><code>cancel_event</code>, <code>cancel_lock</code>, <code>cancel_reason</code> (≤ 64), <code>cancel_note</code> (≤ 500)</td><td>Event và chuỗi có khoá</td><td><code>/api/cancel</code></td><td>mọi vòng chờ</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Đường</th><th>Thân</th><th>Trả</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/confirm</code></td><td>trống</td><td>202</td></tr>
+            <tr><td><code>POST /api/pause</code>, <code>/api/resume</code></td><td>trống</td><td>202</td></tr>
+            <tr><td><code>POST /api/cancel</code></td><td><code>{reason, note}</code>; lý do đầu tiên thắng, thiếu thì <code>"khac"</code></td><td>202</td></tr>
+            <tr><td><code>POST /api/process/button</code></td><td><code>{step, panel}</code></td><td>202; 400 thân sai; 503 hàng đợi đầy</td></tr>
+            <tr><td><code>POST /api/process/detect</code></td><td>trống</td><td>chờ tối đa 10 s, trả 200 <code>{detected, current_gram, min_gram}</code>; 503 khi hết giờ</td></tr>
+            <tr><td>Còn lại</td><td></td><td>404</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Chỉ nghe 127.0.0.1</b><code>GuiServer</code> là <code>ThreadingHTTPServer</code> với <code>allow_reuse_address</code>, gắn vào 127.0.0.1. Máy chủ 8080 chuyển tiếp các lệnh của màn pha tới đây, nên điện thoại trong mạng quán không bấm thẳng được vào bộ chạy.</div>
+    </section>
+
+    <section id="can-kiem">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Cân kiểm sau mỗi bước bơm</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  S["Bơm xong"] --> R["read_settled_gram: chờ 2 s, đọc, None thì thử thêm tối đa 3 lần"]
+  R --> G{"poured < -10 g?"}
+  G -->|"có"| CL["cup_lost: Ly rời khỏi cân"]
+  G -->|"không"| D{"thiếu > 20 g và bước chỉ một bơm?"}
+  D -->|"có, chưa quá 2 lần"| T["Châm thêm: số giây theo hiệu chuẩn, không quá seconds của bước"]
+  T --> R
+  D -->|"không"| C{"|chênh| > 20 g?"}
+  C -->|"có"| F["failed: Cân không khớp ở bước ..."]
+  C -->|"không"| OK["ok, lưu weight_check"]
+  class S,R,T proc
+  class G,D,C dec
+  class OK ok
+  class CL,F bad
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Châm thêm chỉ áp dụng cho bước một bơm và khi lượng thiếu ít nhất 2 g; bước nhiều bơm không biết bơm nào thiếu nên chỉ kiểm.</figcaption>
+      </figure>
+      <pre class="wire">"weight_check": {
+  "status": "ok | failed | skipped | cup_lost",
+  "target_gram": 120, "poured_gram": 114.6, "difference_gram": -5.4,
+  "tolerance_gram": 20, "baseline_gram": 212.3, "measured_gram": 326.9,
+  "topups": 1
+}</pre>
+      <p class="prose">Bước không bơm (thao tác tay, dò) làm mới mốc cân sau khi xong, trừ khi ly nhẹ hơn <code>cup_gram - 2</code>: lúc đó mốc giữ nguyên để lần cân sau phát hiện ly bị nhấc.</p>
+    </section>
+
+    <section id="buoc">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Các loại bước</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Loại</th><th>Hàm</th><th>Chờ gì</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td>Đặt ly</td><td><code>measure_cup_weight</code></td><td>Mỗi lần bấm xác nhận cân tối đa 3 lần</td><td>≥ 15 g thì nhận. Không thì đặt lỗi "Chưa thấy ly trên bàn cân…" và theo dõi cân 30 s. Không màn hình: vòng <code>check_cup</code>.</td></tr>
+            <tr><td>Dò</td><td><code>run_detect_step</code></td><td>Xác nhận hoặc <code>detect_request</code></td><td>Cân trả <code>None</code> thì vẫn cho đi tiếp; &lt; 15 g đặt lỗi và theo dõi 30 s.</td></tr>
+            <tr><td>Thao tác</td><td><code>run_action_step</code></td><td><code>confirm_event</code></td><td>Cần màn hình.</td></tr>
+            <tr><td>Thủ công</td><td><code>run_manual_step</code></td><td>Nút trên panel</td><td>Gửi <code>("show", danh sách chờ)</code> sang <code>panel_command_queue</code>; nhận nút từ <code>bridge.button_queue</code> (nhãn bước phải khớp) hoặc <code>button_event_queue</code>, timeout 0.2 s; đánh dấu đèn đã bấm, lưu; cuối cùng gửi <code>("clear", None)</code>.</td></tr>
+            <tr><td>Bơm</td><td><code>run_pump_for_duration</code> theo từng bơm</td><td>Hết giờ hoặc cờ dừng</td><td>Mỗi bơm một thread <code>pump-N</code>; kiểm cờ dừng mỗi 0.05 s.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="luong-thread">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Thread bên trong tiến trình</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thread</th><th>Việc</th><th>Kết thúc</th></tr></thead>
+          <tbody>
+            <tr><td>main</td><td><code>run_process</code></td><td>Đơn xong hoặc lỗi</td></tr>
+            <tr><td><code>pump-N</code></td><td>Giữ một chân PWM trong số giây của bước</td><td>Hết giờ hoặc <code>stop</code></td></tr>
+            <tr><td><code>panel_worker</code></td><td>Đèn và nút panel (khối 7)</td><td><code>stop_event</code></td></tr>
+            <tr><td><code>gui-server</code></td><td>API 8000</td><td>Cùng tiến trình</td></tr>
+            <tr><td><code>link_panel_failure</code></td><td>Theo dõi panel chết</td><td>Chỉ kết thúc đơn khi công thức có bước thủ công</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="loi">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Hủy, lỗi và tính phí</h2></div>
+      <ol class="steps">
+        <li><b><code>hold_while_paused</code></b> đặt <code>paused_at</code>, <code>paused_now</code>, rồi chờ <code>resume_event</code> hoặc <code>cancel_event</code>.</li>
+        <li><b><code>finish_cancelled</code></b> ghi <code>cancelled_at</code>, lý do, ghi chú, lỗi "Đơn đã bị hủy.", gọi <code>record_step_failure</code> mức <code>warning</code>, rồi <code>charge_for_failed_order</code>.</li>
+        <li><b><code>record_step_failure</code></b> ghi một trong ba dạng: "Phần cứng: … [Kiểu lỗi]", "Sai khối lượng: …", "Hủy đơn: …" vào <code>error_log</code> (khối 8).</li>
+        <li><b><code>charge_for_failed_order</code></b> trừ kho theo các bước đã chạy cộng <code>partial_step_usage</code> của bước đang dở, để số tồn khớp với nguyên liệu thật đã ra.</li>
+      </ol>
+      <div class="note"><b>Nút 14 trong lúc pha</b>Khi Event <code>POURING</code> đang bật, <code>restart_backend_if_idle</code> bỏ qua nút 14. Ngoài lúc đó: <code>announce_restart</code> báo màn bán, đặt <code>restarting_at</code>, chờ 5 s, rồi <code>restart_backend</code> (khối 9).</div>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Thông số và dòng lệnh</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Giá trị</th></tr></thead>
+          <tbody>
+            <tr><td>Nghỉ giữa bước</td><td class="num">2 s</td></tr>
+            <tr><td>Dung sai cân</td><td class="num">20 g</td></tr>
+            <tr><td>Ly rời cân khi poured &lt;</td><td class="num">-10 g</td></tr>
+            <tr><td>Châm thêm tối đa</td><td class="num">2 lần</td></tr>
+            <tr><td>Ly tối thiểu</td><td class="num">15 g</td></tr>
+            <tr><td>Theo dõi cân khi thiếu ly</td><td class="num">30 s</td></tr>
+            <tr><td>Chờ dò qua API</td><td class="num">10 s</td></tr>
+            <tr><td>Hàng đợi nút</td><td class="num">32</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="wire">python -m order.process_runner RECIPE.json [--dry-run] [--no-inventory] [--restart]
+                              [--serve PORT (mặc định 8000) | --no-serve] [--step-delay S]
+# thoát 0: đơn xong · 1: lỗi hoặc hủy</pre>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="05-qr-to-recipe.html">← Mã QR thành công thức</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="07-hardware-drivers.html">Driver phần cứng →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

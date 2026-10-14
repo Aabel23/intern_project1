@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cửa vào từ xa trên máy</title>
+<meta name="description" content="Khối 10: vòng hỏi lệnh từ server, Dispatcher, bảy lệnh, danh tính máy, ghép đôi Bluetooth và cài Wi-Fi. Chỉ phía máy.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 10 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Cửa vào từ xa: máy tự hỏi lệnh, không mở cổng nào</h1>
+      <p class="lead">Máy không nhận kết nối vào. Nó tự gọi ra server bằng long-poll, nhận lệnh đã niêm phong, chạy qua <code>Dispatcher</code> và gửi kết quả. Trang này chỉ nói phía máy; giao thức niêm phong và server nằm ngoài phạm vi.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>machine/</code></span>
+      <span><b>Chạy trong:</b> tiến trình <code>machine.main</code> và <code>machine_bluetooth_pair</code>, chưa có unit systemd</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#vong">1. Vòng hỏi lệnh</a></li>
+        <li><a href="#dispatcher">2. Dispatcher</a></li>
+        <li><a href="#danh-tinh">3. Danh tính máy</a></li>
+        <li><a href="#ghep-doi">4. Ghép đôi Bluetooth và Wi-Fi</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="vong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Vòng hỏi lệnh</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant M as machine.main run
+  participant C as ServerClient
+  participant D as Dispatcher
+  participant DB as Dữ liệu máy
+  M->>C: hello khi chưa có machine_id
+  loop
+    M->>C: poll_command, HTTP timeout 25 s
+    C-->>M: lệnh hoặc không có gì
+    M->>M: write_cache machine_id, owned, seen_at
+    M->>D: handle(lệnh)
+    D->>DB: đọc hoặc ghi
+    D-->>M: kết quả hoặc mã lỗi
+    M->>C: send_result
+  end
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Lỗi <code>UNKNOWN_KEY</code> dừng hẳn vòng (máy đã bị gỡ khỏi server); lỗi khác nghỉ 1 s rồi hỏi tiếp.</figcaption>
+      </figure>
+    </section>
+
+    <section id="dispatcher">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Dispatcher</h2></div>
+      <ol class="steps">
+        <li><b>Nhớ 32 kết quả gần nhất</b> (<code>RESULT_CACHE_SIZE</code>): lệnh gửi lại cùng mã thì trả kết quả cũ, không chạy lần hai.</li>
+        <li><b>Hết hạn</b>: <code>COMMAND_EXPIRED</code> tính từ <code>remaining_ms</code> và thời điểm nhận theo đồng hồ đơn điệu.</li>
+        <li><b>Mã lỗi</b>: <code>UNSUPPORTED_INSTRUCTION</code>, <code>INVALID_DATA</code>, <code>COMMAND_FAILED</code> (thông điệp ≤ 200), <code>MACHINE_READ_FAILED</code>; kết quả dạng <code>{"loi": …}</code> được đổi thành <code>COMMAND_FAILED</code>.</li>
+      </ol>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Lệnh</th><th>Dữ liệu</th><th>Trả</th></tr></thead>
+          <tbody>
+            <tr><td><code>machine.status.read</code></td><td>trống</td><td>Trạng thái, thời gian chạy</td></tr>
+            <tr><td><code>nhan_menu</code></td><td>trống</td><td><code>menu_version</code> CRC32, gói <code>base64(zlib(json))</code></td></tr>
+            <tr><td><code>cap_nhat_menu</code></td><td><code>thay_doi: [{drink_id, price ≥ 0, available}]</code></td><td>Phiên bản mới</td></tr>
+            <tr><td><code>nhan_kho</code></td><td>trống</td><td>Tồn kho, <code>version</code> CRC32</td></tr>
+            <tr><td><code>nap_kho</code></td><td>đích là id hoặc <code>"all"</code>, giá trị <code>"full"</code> hoặc gram</td><td>Tồn mới; dựng lại menu</td></tr>
+            <tr><td><code>nhan_ve_qr</code></td><td><code>before_serial</code>, <code>limit</code> 1–20</td><td>Danh sách vé kèm <code>price_vnd</code></td></tr>
+            <tr><td><code>nhan_bao_cao</code></td><td><code>days</code> 1–31</td><td>Báo cáo theo giờ Asia/Ho_Chi_Minh</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="danh-tinh">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Danh tính máy</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thứ</th><th>Ở đâu</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td>Số serial</td><td>devicetree hoặc <code>/proc/cpuinfo</code></td><td>Không đổi được</td></tr>
+            <tr><td><code>machine-key.pem</code></td><td><code>/var/lib/flexmix</code>, quyền 0600</td><td>Khoá P-256 ký yêu cầu</td></tr>
+            <tr><td><code>seal-code</code></td><td>cùng chỗ, 0600, 32 byte</td><td>Mã dán trên máy, làm PSK khi ghép đôi</td></tr>
+            <tr><td><code>machine.env</code></td><td><code>MACHINE_NAME</code>, <code>SERVER_URL</code>, <code>SERVER_TRUST_FILE</code>, <code>STATE_DIR</code></td><td><code>SERVER_URL</code> phải https, http chỉ cho IPv4 riêng hoặc loopback</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Tạo lần đầu bằng CLI <a href="../../machine/config/provision.py"><code>machine.config.provision</code></a>.</p>
+    </section>
+
+    <section id="ghep-doi">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Ghép đôi Bluetooth và Wi-Fi</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "probe" as p
+  state "wifi" as w
+  state "claim" as c
+  state "Đóng" as x
+  [*] --> p
+  p --> w: cần Wi-Fi
+  p --> c: đã có mạng
+  w --> c
+  c --> [*]: chữ ký và machine_id đúng
+  p --> x: rỗi 120 s, tổng 600 s, quá 3 send_id
+  w --> x
+  c --> x
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption><code>ClaimSession</code> mã hoá bằng HPKE chế độ PSK với seal code; mỗi chặng cập nhật hash bản ghi để không chèn được tin giữa chừng.</figcaption>
+      </figure>
+      <ol class="steps">
+        <li><b>Quảng bá</b>: <code>machine_bluetooth_pair</code> chỉ quảng bá khi máy chưa có chủ hoặc trong 600 s đầu sau khởi động.</li>
+        <li><b>GATT</b>: service <code>8b9bf000-01f0-4e5e-ae8f-c8a0e70a5100</code>, RX <code>…001</code> (write), TX <code>…002</code> (indicate). <code>ClaimLink</code> nhận một thiết bị mỗi phiên, có hàng đợi indication.</li>
+        <li><b>Khung</b>: độ dài u32 big-endian, 1–8192 byte, chia mảnh MTU-3, ráp lại trong 10 s.</li>
+        <li><b>Wi-Fi</b>: <code>wifi_setup</code> ghi keyfile NetworkManager quyền 0600, <code>nmcli up</code> chờ 45 s; cần root.</li>
+      </ol>
+      <div class="note crit"><b>Điểm còn hở</b>(1) Chưa có unit systemd cho <code>machine.main</code> và tiến trình ghép đôi. (2) <code>dbus</code>, <code>gi</code> chưa có trong requirements. (3) Bước claim kiểm trường, chữ ký và <code>machine_id</code> nhưng không kiểm <code>expires_at</code>.</div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="09-self-healing.html">← Giám sát và tự hồi phục</a> · <a href="../machine-backend.html">Kiến trúc backend</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

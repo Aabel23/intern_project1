@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Giám sát và tự hồi phục</title>
+<meta name="description" content="Khối 9: kiosk watchdog, ButtonWatcher, khởi động lại backend bằng nút, dọn trạng thái khi khởi động, màn thử phần cứng.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 9 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Giám sát và tự hồi phục: máy tự đứng dậy mà không cần bàn phím</h1>
+      <p class="lead">Máy đặt ở quán không có bàn phím và người đứng máy không biết SSH. Khối này cho máy ba cách tự cứu: watchdog khởi động lại trình duyệt khi trang treo, nút 14 khởi động lại cả backend, và lúc khởi động backend tự dọn vé kẹt, chân GPIO và tiến trình quét mồ côi.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>store_gui/kiosk_watchdog.py</code>, <code>panel_control/button_watch.py</code>, <code>test_gui/</code></span>
+      <span><b>Chạy trong:</b> thread trong <code>main.py</code> và <code>run_flow</code></span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#watchdog">1. Kiosk watchdog</a></li>
+        <li><a href="#nut">2. ButtonWatcher</a></li>
+        <li><a href="#khoi-dong">3. Dọn trạng thái khi khởi động</a></li>
+        <li><a href="#test-gui">4. Màn thử phần cứng</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="watchdog">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Kiosk watchdog</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  T["Mỗi 5 s"] --> E{"FLEXMIX_KIOSK_WATCHDOG=1?"}
+  E -->|"không"| X["Không làm gì"]
+  E -->|"có"| S{"Trang im lặng 45 s và có tiến trình kiosk?"}
+  S -->|"có"| C{"Đã qua cooldown 90 s?"}
+  S -->|"không"| M{"CMA < 120 MB hai lần liền và không có handoff.json?"}
+  M -->|"có"| C
+  M -->|"không"| X
+  C -->|"có"| K["SIGTERM firefox hoặc chrome cấp cao nhất có store_gui hoặc drinks-pos.html trong cmdline"]
+  C -->|"không"| X
+  class T,K proc
+  class E,S,M,C dec
+  class X muted
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Script autostart chạy Firefox trong vòng <code>while true</code>, nên giết trình duyệt là cách khởi động lại. Không giết khi có <code>handoff.json</code> vì lúc đó đơn đang được giao sang màn pha.</figcaption>
+      </figure>
+      <div class="note crit"><b>DBG-03</b>Bài thử DBG-03 ghi nhận 7 lần khởi động lại trình duyệt trong 10 phút; cần xem lại ngưỡng trước khi bật mặc định.</div>
+    </section>
+
+    <section id="nut">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>ButtonWatcher: nút 14 và 15</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant B as ButtonWatcher
+  participant S as Màn bán
+  participant SD as systemd
+  participant N as backend mới
+  participant K as Kiosk
+  B->>B: hỏi nút mỗi 0.25 s, chống dội 0.35 s
+  B->>S: warn_store_screen_of_restart, đếm 5 s
+  B->>B: ghi order/.kiosk_refresh
+  B->>SD: systemctl show MainPID, gửi SIGTERM
+  SD->>N: khởi động lại sau 3 s
+  N->>N: _refresh_kiosk_now đợi server tối đa 90 s
+  N->>K: pkill trình duyệt
+  S->>S: dò server mỗi 0.5 s, tối đa 60 s, rồi tải lại
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Trong systemd (có <code>INVOCATION_ID</code>) dùng SIGTERM tới MainPID, tự <code>os._exit</code> nếu chính nó là MainPID; ngoài systemd dùng <code>sudo -n systemctl restart --no-block</code>.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Nút</th><th>Việc</th></tr></thead>
+          <tbody>
+            <tr><td>15</td><td>Bật tắt chế độ bán, ghi <code>mode.json</code> <code>{open, id, port, path}</code>.</td></tr>
+            <tr><td>14</td><td>Khởi động lại backend; bị bỏ qua khi đang pha (<code>POURING</code>).</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note crit"><b>Mã hiện có, chưa sửa</b>(1) <code>_refresh_kiosk_now</code> dùng <code>pkill -f 'chromium-browser/chrome --password-store'</code> trong khi kiosk là Firefox, nên lệnh không làm gì; trang tự tải lại nhờ vòng dò. (2) Tạm dừng và tiếp tục dùng chung một Event (DBG-06). (3) Test DBG-01/02 về mốc <code>mode.json</code> đang đỏ. Lỗi I²C khi hỏi nút thì lùi 3 s.</div>
+    </section>
+
+    <section id="khoi-dong">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Dọn trạng thái khi khởi động</h2></div>
+      <ol class="steps">
+        <li><b>Vé kẹt</b>: <code>release_stranded</code> trả vé <code>in_progress</code> của lần chạy trước.</li>
+        <li><b>Phần cứng</b>: <code>reset_machine_hardware</code> tắt mọi bơm, giải phóng chân, tắt đèn panel.</li>
+        <li><b>Tiến trình mồ côi</b>: giết <code>scan.scanner</code> còn sống từ lần trước để cổng serial trống.</li>
+      </ol>
+    </section>
+
+    <section id="test-gui">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Màn thử phần cứng</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Việc</th><th>Quy tắc</th></tr></thead>
+          <tbody>
+            <tr><td>Hàng việc</td><td>Một <code>Job</code> chạy một lúc; từ chối khi đang pha, hoặc khi <code>run_flow</code> đang chạy mà chưa vào chế độ thử.</td></tr>
+            <tr><td>Giữ bơm</td><td><code>hold_pump</code>: phải gia hạn mỗi 1 s (<code>HOLD_TIMEOUT</code>), tối đa 60 s; mất kết nối là bơm tự tắt.</td></tr>
+            <tr><td>Thử đèn</td><td>0.35 s mỗi đèn, 0.8 s mỗi nhóm.</td></tr>
+            <tr><td>Thử nút</td><td>30 s.</td></tr>
+            <tr><td>Kết thúc</td><td><code>release_all_gpio</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="08-data.html">← Dữ liệu: MySQL, vé, kho, nhật ký</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="10-remote-entry.html">Cửa vào từ xa trên máy →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

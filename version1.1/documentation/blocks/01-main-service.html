@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tiến trình chủ</title>
+<meta name="description" content="Khối 1: main.py, unit systemd, vòng đời khởi động, tự khởi động lại, cấu hình đọc lúc import.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 1 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Tiến trình chủ: một service, ba thread, chết là thoát hẳn</h1>
+      <p class="lead">Toàn bộ backend bán hàng chạy trong một tiến trình Python do systemd quản lý. Tiến trình này chỉ làm một việc: dựng ba thread dài hạn và bảo đảm hễ một thread dừng thì cả tiến trình dừng, để systemd dựng lại từ trạng thái sạch. Trang này mô tả thứ tự khởi động, cách cấu hình được nạp, cách máy thoát và quay lại, và mối quan hệ với trình duyệt kiosk.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>main.py</code>, <code>deploy/kiosk/</code>, <code>configuration/</code></span>
+      <span><b>Chạy trong:</b> tiến trình <code>main.py</code> do systemd chạy</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#thanh-phan">2. Thành phần</a></li>
+        <li><a href="#vong-doi">3. Vòng đời và cách thoát</a></li>
+        <li><a href="#cau-hinh">4. Cấu hình</a></li>
+        <li><a href="#thong-so">5. Thông số</a></li>
+        <li><a href="#ghi-chu">6. Ghi chú và điểm còn hở</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: từ lúc cắm điện tới lúc màn bán hiện</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant SD as systemd
+  participant M as main.py
+  participant C as configuration
+  participant T as 3 thread
+  participant X as Openbox autostart
+  participant FF as Firefox
+  SD->>SD: đợi network, mysql, time-sync (tối đa 90 s)
+  SD->>M: chạy .venv/bin/python3 main.py, user flexxource
+  M->>C: import machine.py, đọc /etc/flexmix/machine_profile.json
+  M->>C: import qrproto_config, database.config, nạp biến môi trường
+  M->>T: start store_gui, sync_menu, run_flow
+  T-->>T: store_gui mở 127.0.0.1:8080
+  X->>X: xset tắt màn chờ, apply độ phân giải đã lưu
+  X->>T: curl /store_gui/drinks-pos.html cho tới khi trả lời
+  X->>FF: firefox --kiosk --private-window
+  FF->>T: tải trang bán, bắt đầu poll
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Service và kiosk là hai đường riêng: systemd chạy backend trước khi có X, còn Openbox chạy script autostart sau khi người dùng <code>flexxource</code> tự đăng nhập. Script chờ trang trả lời thật rồi mới mở trình duyệt, để màn hình không hiện "không kết nối được".</figcaption>
+      </figure>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Thành phần</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Phần</th><th>File</th><th>Trách nhiệm</th></tr></thead>
+          <tbody>
+            <tr><td>Điểm vào</td><td><a href="../../main.py"><code>main.py</code></a></td><td>Ba thread daemon: <code>store_gui.serve.main([])</code>, <code>sync_menu.main(["--interval", "1"])</code>, <code>run_flow.main([])</code>. Hàm <code>_run</code> bọc mỗi thread; kết thúc vì lỗi hay tự return đều in lý do, flush stdout/stderr, rồi <code>os._exit(1)</code>.</td></tr>
+            <tr><td>Unit</td><td><a href="../../deploy/kiosk/flexmix-backend.service"><code>flexmix-backend.service</code></a></td><td><code>Restart=always</code>, <code>RestartSec=3</code>; <code>AmbientCapabilities=CAP_SYS_NICE</code> và chỉ capability đó trong bounding set; <code>EnvironmentFile=/etc/flexmix/qrproto.env</code>; <code>FLEXMIX_KIOSK_WATCHDOG=1</code>; log ra journal.</td></tr>
+            <tr><td>Kiosk</td><td><a href="../../deploy/kiosk/kiosk-openbox-autostart.sh"><code>kiosk-openbox-autostart.sh</code></a></td><td>Tắt màn chờ, ẩn chuột, áp độ phân giải đã lưu (<code>configuration.display_mode --apply-saved</code>), đợi 8080, chạy Firefox trong vòng <code>while true</code>; log qua <code>logger -t kiosk-browser</code>.</td></tr>
+            <tr><td>Hồ sơ máy</td><td><a href="../../configuration/machine.py"><code>configuration/machine.py</code></a></td><td>Giá trị máy #1 làm mặc định; hồ sơ JSON ghi đè từng tên; kiểm kiểu, khoảng, tên lạ và trùng chân BCM ngay lúc import.</td></tr>
+            <tr><td>Biến môi trường</td><td><a href="../../configuration/env_files.py"><code>env_files.py</code></a></td><td>Cho lệnh chạy tay: điền tên chưa có từ <code>.env</code> của dự án rồi <code>/etc/flexmix/qrproto.env</code>; không bao giờ ném lỗi.</td></tr>
+            <tr><td>Khoá QR, mã máy</td><td><a href="../../configuration/qrproto_config.py"><code>qrproto_config.py</code></a></td><td><code>MACHINE_ID</code> đọc lúc import (mặc định 1); <code>get_key()</code> đọc <code>QRPROTO_KEY</code> lần đầu được gọi rồi giữ trong bộ nhớ.</td></tr>
+            <tr><td>Kết nối DB</td><td><a href="../../database/core/config.py"><code>database/core/config.py</code></a></td><td>Ném <code>RuntimeError</code> lúc import nếu thiếu <code>BEVERAGE_DB_PASSWORD</code>; không có mật khẩu mặc định.</td></tr>
+            <tr><td>Đường dẫn trạng thái</td><td><a href="../../configuration/configuration.py"><code>configuration.py</code></a></td><td><code>runtime_path(name)</code>: dùng <code>/var/lib/flexmix/name</code> nếu đã có, không thì file cũ trong <code>configuration/</code>; chốt một lần lúc import.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="vong-doi">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Vòng đời và cách thoát</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "Chờ phụ thuộc" as wait
+  state "Import" as imp
+  state "Chạy" as run
+  state "Thoát mã 1" as dead
+  [*] --> wait
+  wait --> imp
+  imp --> dead: MachineProfileError, thiếu mật khẩu DB, lỗi cú pháp
+  imp --> run: ba thread đã start
+  run --> dead: một thread kết thúc
+  run --> dead: SIGTERM từ nút 14
+  dead --> wait: sau 3 s
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Không có trạng thái "chạy thiếu một phần". Thiết kế này chấp nhận khởi động lại cả khối (khoảng 3 s cộng thời gian nạp) để đổi lấy việc không bao giờ có màn bán thu tiền mà không có ai pha.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thread kết thúc khi</th><th>Nguyên nhân hay gặp</th><th>Hệ quả</th></tr></thead>
+          <tbody>
+            <tr><td><code>store_gui</code> trả 1</td><td>Không mở được 127.0.0.1:8080 (cổng bị chiếm)</td><td>Cả service quay vòng; <code>ss -ltnp | grep 8080</code> để tìm tiến trình chiếm.</td></tr>
+            <tr><td><code>sync_menu</code> trả 1</td><td>Lần đọc đầu không tới MySQL, hoặc bảng <code>drink</code> rỗng</td><td>Cả service quay vòng, kể cả màn bán.</td></tr>
+            <tr><td><code>run_flow</code> trả 1</td><td>Đã có flow khác giữ khoá, hoặc cổng 8000 đang bị chiếm</td><td>Cả service quay vòng.</td></tr>
+            <tr><td>Bất kỳ thread nào ném lỗi</td><td>Lỗi không được bắt</td><td>Traceback đầy đủ vào journal, rồi thoát.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="cau-hinh">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Cấu hình: ba nơi, ba loại</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Nơi</th><th>Loại</th><th>Ai ghi</th><th>Đọc khi nào</th></tr></thead>
+          <tbody>
+            <tr><td><code>/etc/flexmix/qrproto.env</code></td><td>Bí mật: khoá QR, mã máy, 5 biến MySQL</td><td><code>install.sh secrets</code>; quyền <code>root:flexxource 640</code></td><td>systemd truyền vào môi trường; lệnh tay đọc qua <code>env_files</code></td></tr>
+            <tr><td><code>/etc/flexmix/machine_profile.json</code></td><td>Đi dây, cổng, thiết bị, chính sách khác máy #1</td><td>Người lắp máy</td><td>Lúc import <code>configuration.machine</code></td></tr>
+            <tr><td><code>/var/lib/flexmix/</code></td><td>Số đo máy tự ghi: hiệu chuẩn bơm, cân, độ phân giải</td><td>Công cụ hiệu chuẩn, màn quản lý</td><td>Đường dẫn chốt lúc import; đổi file phải khởi động lại</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Xem cấu hình đang dùng và mỗi giá trị lấy từ đâu: <code>./.venv/bin/python -m configuration.machine</code>; in hồ sơ đầy đủ đúng định dạng file: thêm <code>--json</code>.</p>
+      <pre class="wire">{
+  "_note": "máy quán Quận 3 -- bơm 3 chuyển sang chân 19 ngày 02/10",
+  "PUMP_GPIO": {"1": 26, "2": 15, "3": 19, "4": 20, "5": 16, "6": 12, "7": 13, "8": 6, "9": 5, "10": 14},
+  "PRINTER_NAME": "XP-365B"
+}</pre>
+      <ol class="steps">
+        <li><b>Hồ sơ hỏng thì từ chối chạy</b>, không rơi về mặc định: mặc định là dây của một máy khác, đọc sai im lặng là bơm sai nguyên liệu.</li>
+        <li><b><code>PUMP_GPIO</code> ghi cả bảng.</b> Bảng thiếu nghĩa là máy ít bơm hơn, không phải "các bơm còn lại như máy #1".</li>
+        <li><b>Tên bắt đầu bằng <code>_</code> bị bỏ qua</b> để ghi chú; tên lạ bị từ chối kèm gợi ý tên gần đúng.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Thông số</th><th>Giá trị</th><th>Ở đâu</th></tr></thead>
+          <tbody>
+            <tr><td>Chờ khởi động lại</td><td class="num">3 s</td><td><code>RestartSec</code></td></tr>
+            <tr><td>Chờ đồng hồ đúng</td><td class="num">90 s</td><td>drop-in <code>systemd-time-wait-sync</code> do <code>install.sh service</code> tạo</td></tr>
+            <tr><td>Mã thoát khi thread chết</td><td class="num">1</td><td><code>EXIT_CODE_THREAD_DIED</code></td></tr>
+            <tr><td>Chu kỳ dựng menu truyền cho thread</td><td class="num">1 phút</td><td><code>MENU_SYNC_INTERVAL_MINUTES</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Ghi chú và điểm còn hở</h2></div>
+      <div class="note crit"><b>Mã hiện có, chưa sửa</b>(1) Unit, script autostart và drop-in debug đều trỏ tới <code>/home/flexxource/hungvu/version1.0</code>; phase <code>service</code> của <code>install.sh</code> dừng khi đường dẫn khác. (2) <code>flexmix_debug.FLEXMIX_DEBUG_ON = True</code> mặc định và unit không đặt <code>FLEXMIX_DEBUG=0</code>, nên trace chạy trên máy bán. (3) MySQL vắng lúc khởi động làm <code>sync_menu</code> thoát và kéo cả máy chủ 8080 quay vòng.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hiện trạng</th></tr></thead>
+          <tbody>
+            <tr><td>Hai tiến trình <code>machine</code></td><td>Không nằm trong <code>main.py</code> và không có unit (khối 10)</td></tr>
+            <tr><td>Bật trace ra file</td><td>Drop-in <code>flexmix-backend-debug.conf</code>: <code>FLEXMIX_DEBUG=1</code>, <code>FLEXMIX_DEBUG_FILE=…/order/debug.log</code>, <code>PYTHONUNBUFFERED=1</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="../machine-backend.html">Kiến trúc backend</a> · <a href="02-store-server.html">Máy chủ cổng 8080 →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

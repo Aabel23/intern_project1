@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Đồng bộ menu</title>
+<meta name="description" content="Khối 3: sync_menu.py dựng menu-data.js, cấu trúc dữ liệu, dải nổi bật và bán chạy, cách màn bán nhận menu mới.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 3 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Đồng bộ menu: MySQL thành một bản chụp mà trang tĩnh đọc được</h1>
+      <p class="lead">Màn bán là trang tĩnh, không gọi được database. Khối này đọc MySQL, dựng toàn bộ những gì trang cần (món, giá, ảnh, nhóm, tuỳ chọn của từng món, còn hàng hay không, hai dải đầu trang, thứ tự khối) và ghi thành <code>store_gui/menu-data.js</code>. Trang so mốc thời gian của file và tự nhận bản mới mà không tải lại, trừ khi khách đang chọn món.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>store_gui/sync_menu.py</code>, <code>store_gui/drinks-pos.js</code></span>
+      <span><b>Chạy trong:</b> thread <code>sync_menu</code>, thread request của 8080, dịch vụ kho</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#doc">2. Đọc gì từ MySQL</a></li>
+        <li><a href="#ghi">4. Ghi và nhận bản mới</a></li>
+        <li><a href="#lenh">5. Chạy tay</a></li>
+        <li><a href="#thong-so">6. Thông số</a></li>
+        <li><a href="#ghi-chu">7. Ghi chú và điểm còn hở</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: kho hết sữa trong lúc khách đang chọn món</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant R as process_runner
+  participant DB as MySQL
+  participant SM as sync_menu / publish_menu
+  participant F as menu-data.js
+  participant B as Màn bán
+  R->>DB: consume_recipe_usage, sữa dưới ngưỡng
+  DB->>DB: trigger tính lại ingredient.in_stock và drink.in_stock
+  R->>SM: sync_inventory_outputs, publish_menu
+  SM->>DB: read_menu
+  SM->>SM: build_menu, so với file trên đĩa bỏ generatedAt
+  SM->>F: khác, ghi tạm rồi đổi tên
+  B->>F: GET mỗi 5 s, đọc generatedAt bằng regex
+  B->>B: khác mốc, khách đang chọn món, giữ menu cũ, chip báo update ready
+  B->>B: khách bấm Place Order hoặc bỏ món, màn rảnh
+  B->>F: GET lại
+  B->>B: adoptMenu, chạy file trong sandbox, thay dữ liệu, vẽ lại
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Có ba đường gọi dựng lại: thread <code>sync_menu</code> mỗi 60 s, máy chủ 8080 khi trang hỏi mà file cũ hơn 20 s, và dịch vụ kho sau khi trừ hoặc nạp kho. Cả ba dùng chung <code>publish_menu</code>, nên chỉ ghi khi dữ liệu thật sự đổi.</figcaption>
+      </figure>
+    </section>
+
+    <section id="doc">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Đọc gì từ MySQL</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Truy vấn</th><th>Bảng</th><th>Dùng làm</th></tr></thead>
+          <tbody>
+            <tr><td><code>DRINK_QUERY</code></td><td><code>drink</code> chưa xoá mềm</td><td>Món, giá, ảnh, <code>available</code>, <code>in_stock</code>, <code>featured</code></td></tr>
+            <tr><td><code>CATEGORY_QUERY</code>, <code>MAPPING_QUERY</code></td><td><code>category</code>, <code>drink_category_mapping</code></td><td>Thanh nhóm món và số món bán được mỗi nhóm</td></tr>
+            <tr><td><code>RECIPE_QUERY</code></td><td><code>recipe</code> nối <code>ingredient</code></td><td>Tuỳ chọn của từng món và nguyên liệu đang hết</td></tr>
+            <tr><td><code>SETTING_QUERY</code></td><td><code>store_setting</code></td><td>Tiêu đề, kiểu hiển thị, số cột, cửa sổ bán chạy, thứ tự khối</td></tr>
+            <tr><td><code>BESTSELLER_QUERY</code></td><td><code>order_ticket</code> nối <code>drink</code></td><td>Món bán chạy: vé <code>used</code>, <code>completed_at</code> trong N ngày, món còn bán được; xếp theo số bán, rồi lần bán gần nhất, rồi mã món</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Bảng hoặc cột chưa có (database cũ) được <code>read_optional</code> coi là "tính năng chưa bật": dải tương ứng không hiện, phần còn lại của menu vẫn được dựng. Lỗi khác vẫn ném ra.</p>
+    </section>
+
+    <section id="cau-truc">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Cấu trúc <code>menu-data.js</code></h2></div>
+<pre class="wire">window.MENU_DATA = {
+  "generatedAt": "2026-10-14T15:20:31.482+07:00",       // mili giây; trang so chuỗi này
+  "categories": [{"id": "all", "name": "All Menu", "count": 4},
+                 {"id": "c4003", "name": "Tea", "count": 2}],
+  "drinks": [{
+    "drinkId": 1001, "name": "Peach Tea", "price": 45000.0,
+    "image": "../recipe/image/Peach%20Tea.webp", "emoji": "&#127825;",
+    "categoryIds": [4003, 4001], "category": "Tea",
+    "available": true, "inStock": true, "orderable": true, "unavailableReason": null,
+    "featured": false,
+    "options": [
+      {"ingredientId": 7, "name": "Sugar", "kind": "percentage", "inStock": true,
+       "default": 100.0, "choices": [0, 25, 50, 75, 100], "gram": 50.0},
+      {"ingredientId": 12, "name": "Ice", "kind": "boolean", "inStock": true, "default": true}
+    ]}],
+  "layout": ["featured", "bestseller", "grid"],
+  "featured":   {"enabled": true, "title": "Món nổi bật", "style": "carousel", "columns": 1, "drinkIds": []},
+  "bestseller": {"enabled": true, "title": "Bán chạy nhất", "windowDays": 30, "count": 6,
+                 "style": "carousel", "columns": 1, "drinkIds": [1002], "sold": {"1002": 41}},
+  "toppings": [{"ingredientId": 12, "name": "Ice", "inStock": true}]
+};</pre>
+      <ol class="steps">
+        <li><b>Tuỳ chọn lấy từ chính công thức của món.</b> Nguyên liệu <code>boolean</code> thành ô tick, mặc định tick; <code>percentage</code> thành nút xoay, mặc định 100%, kèm <code>gram</code> là tổng gram của nguyên liệu đó trong mọi bước; <code>weight</code> không hiện. Nhờ vậy màn bán không thể bán thêm thứ công thức không có.</li>
+        <li><b>Lý do không bán được</b>: <code>available</code> sai là "Off the menu"; <code>in_stock</code> sai là "Out of &lt;nguyên liệu đang hết&gt;". Món vẫn hiện, chỉ không bấm được.</li>
+        <li><b>Hai dải chỉ chứa món bán được.</b> Món nổi bật hết hàng thì rơi khỏi dải nhưng vẫn ở lưới bên dưới kèm lý do. Danh sách bán chạy được lọc lại theo danh sách món của chính lần dựng này.</li>
+        <li><b>Kiểu hiển thị</b>: <code>carousel</code>, <code>cinematic</code>, <code>board</code>, <code>bubble</code>, <code>chart</code> (chỉ dải bán chạy dùng <code>chart</code>); số cột 1–3 chỉ áp cho <code>board</code> và <code>chart</code>. Giá trị lạ rơi về <code>carousel</code>; số ngoài khoảng bị kẹp lại, không làm hỏng lần dựng.</li>
+        <li><b>Thứ tự khối</b> lấy từ <code>layout_order</code>; tên lạ và tên trùng bị bỏ, khối thiếu được thêm vào theo thứ tự mặc định, <code>grid</code> luôn có.</li>
+      </ol>
+    </section>
+
+    <section id="ghi">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Ghi và nhận bản mới</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  B["build_menu"] --> J["render_js: comment + window.MENU_DATA = JSON"]
+  J --> C{"menu_body mới == menu_body trên đĩa? (bỏ generatedAt, sort_keys)"}
+  C -->|"bằng"| U["os.utime: chỉ đổi mtime để lần hỏi sau không dựng lại"]
+  C -->|"khác hoặc không đọc được"| W["ghi .menu-data.js.tmp rồi replace"]
+  W --> P["Trang: checkMenuFreshness mỗi 5 s, có cờ đang chạy"]
+  P --> D{"generatedAt khác?"}
+  D -->|"không"| X["Không làm gì"]
+  D -->|"có"| I{"order hoặc selected đang có?"}
+  I -->|"có"| S["menuStale = true, chip update ready"]
+  I -->|"không"| A["adoptMenu: new Function chạy file với window giả, thay CATS, ITEMS, FEATURED, BESTSELLER, LAYOUT tại chỗ"]
+  S -->|"khách xong đơn"| A
+  class B,J,W proc
+  class C,D,I dec
+  class U,X muted
+  class P ui
+  class A ok
+  class S file
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Trang không tải lại: tải lại làm trình duyệt nhớ vị trí cuộn, mất ô tìm kiếm và lựa chọn ngôn ngữ. Các mảng là <code>const</code> nên được làm rỗng rồi đổ lại, để mọi hàm vẽ đang giữ tham chiếu vẫn thấy dữ liệu mới.</figcaption>
+      </figure>
+      <p class="prose">Vòng <code>watch</code> của thread: ngủ <code>max(10, phút × 60)</code> giây, dựng menu; lỗi đọc database thì in và chờ vòng sau, database không có món nào thì giữ nguyên file cũ.</p>
+    </section>
+
+    <section id="lenh">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Chạy tay</h2></div>
+      <pre class="wire">python3 -m store_gui.sync_menu                 # ghi một lần, in báo cáo
+python3 -m store_gui.sync_menu --print         # chỉ in nội dung file, không ghi
+python3 -m store_gui.sync_menu --interval 5    # chạy mãi, mỗi 5 phút</pre>
+      <p class="prose">Báo cáo in ra: từng món bán được hay bị chặn và vì sao, món giá 0, món không có tuỳ chọn, thứ tự khối, trạng thái hai dải, món nổi bật đang bị giữ lại vì hết hàng, và món xuất hiện ở cả hai dải.</p>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tên</th><th>Giá trị</th><th>Ở đâu</th></tr></thead>
+          <tbody>
+            <tr><td>Chu kỳ thread</td><td class="num">60 s</td><td><code>MENU_SYNC_INTERVAL_MINUTES</code></td></tr>
+            <tr><td>Dựng lại khi trang hỏi</td><td class="num">20 s</td><td><code>serve.MENU_MAX_AGE_SECONDS</code></td></tr>
+            <tr><td>Trang so mốc</td><td class="num">5 s</td><td><code>MENU_CHECK_MS</code></td></tr>
+            <tr><td>Chip báo menu cũ</td><td class="num">10 phút</td><td><code>MENU_STALE_AFTER_MINUTES</code></td></tr>
+            <tr><td>Nấc nút xoay</td><td class="num">0, 25, 50, 75, 100 %</td><td><code>DIAL_CHOICES</code></td></tr>
+            <tr><td>Cửa sổ / số món bán chạy</td><td class="num">30 ngày (1–365) / 6 (1–12)</td><td><code>BESTSELLER_DEFAULTS</code></td></tr>
+            <tr><td>Số cột dải</td><td class="num">1 (1–3)</td><td><code>STRIP_COLUMN_RANGE</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Ghi chú và điểm còn hở</h2></div>
+      <div class="note crit"><b>Mã hiện có, chưa sửa</b>(1) Lần đọc đầu của thread không tới MySQL thì <code>main</code> trả 1 và cả service khởi động lại. (2) Thông báo lỗi khi thiếu bảng nhắc <code>database/migrate_featured.sql</code>, <code>migrate_bestseller.sql</code>: hai file không còn trong repo. (3) Giá hiện với ký hiệu "$" trong khi báo cáo gửi app gọi cùng con số là VND.</div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="02-store-server.html">← Máy chủ cổng 8080</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="04-order-flow.html">Điều phối đơn →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

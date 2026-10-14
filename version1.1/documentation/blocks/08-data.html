@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dữ liệu máy pha</title>
+<meta name="description" content="Khối 8: MySQL, kết nối, schema và seed, dịch vụ vé, kho, nhật ký lỗi, báo cáo.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 8 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Dữ liệu: một MySQL cục bộ là nguồn sự thật</h1>
+      <p class="lead">Mọi trạng thái cần sống qua lần khởi động lại (vé đã bán, tồn kho, lỗi) nằm trong MySQL trên chính máy. Mỗi lời gọi mở một kết nối riêng và đóng ngay, không có pool: số lời gọi ít, đổi lại không bao giờ có kết nối hỏng bị giữ lại sau khi MySQL khởi động lại.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>database/</code></span>
+      <span><b>Chạy trong:</b> thư viện, gọi từ mọi tiến trình; MySQL cục bộ</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#ket-noi">1. Kết nối, schema, seed</a></li>
+        <li><a href="#ve">2. Vòng đời vé QR</a></li>
+        <li><a href="#kho">3. Kho nguyên liệu</a></li>
+        <li><a href="#nhat-ky">4. Nhật ký lỗi và báo cáo</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="ket-noi">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Kết nối, schema, seed</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Phần</th><th>File</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td>Cấu hình</td><td><a href="../../database/core/config.py"><code>core/config.py</code></a></td><td>Thiếu <code>BEVERAGE_DB_PASSWORD</code> thì ném lỗi ngay lúc import.</td></tr>
+            <tr><td>Kết nối</td><td><a href="../../database/core/connection.py"><code>core/connection.py</code></a></td><td>Mỗi lời gọi một kết nối.</td></tr>
+            <tr><td>Dựng CSDL</td><td><a href="../../database/schema/apply.py"><code>schema/apply.py</code></a></td><td><code>apply_database_sql(reset)</code> chạy schema rồi seed trong một kết nối (45 câu); bộ tách câu hiểu dấu nháy và comment.</td></tr>
+            <tr><td>Bảng</td><td><a href="../../database/schema/schema.sql"><code>schema.sql</code></a></td><td>11 bảng, 6 trigger; ngưỡng cảnh báo đặt 110%.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note crit"><b>Lỗi seed</b>Các dòng công thức trong <code>seed.sql</code> dùng <code>drink_id</code> 1–5, không khớp dải ID đồ uống; menu dựng ra thiếu công thức cho các món đó.</div>
+    </section>
+
+    <section id="ve">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Vòng đời vé QR</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "issued" as i
+  state "in_progress" as p
+  state "completed" as c
+  state "failed" as f
+  state "expired" as e
+  [*] --> i: issue
+  i --> p: claim
+  i --> e: hết hạn, xét lúc claim
+  p --> c: complete
+  p --> f: mark_failed
+  p --> i: release, release_stranded
+  c --> [*]
+  f --> [*]
+  e --> [*]
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption><code>_finish</code> chỉ cập nhật khi vé đang <code>in_progress</code>, nên hai tiến trình cùng kết thúc một vé thì chỉ một cái thắng. <code>release_stranded</code> chạy lúc <code>run_flow</code> khởi động để trả các vé bị kẹt do máy tắt giữa chừng.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Hàm</th><th>Việc</th></tr></thead>
+          <tbody>
+            <tr><td><code>issue</code></td><td>Tạo vé khi khách trả tiền trên màn bán.</td></tr>
+            <tr><td><code>claim</code></td><td>Hết hạn các vé quá giờ rồi <code>UPDATE … WHERE status='issued'</code>; không được thì <code>_refusal</code> nói lý do (đã dùng, hết hạn, không có).</td></tr>
+            <tr><td><code>complete</code>, <code>mark_failed</code>, <code>release</code></td><td>Kết thúc hoặc trả vé.</td></tr>
+            <tr><td><code>lookup</code>, <code>recent</code>, <code>recent_page</code></td><td>Đọc cho màn quản lý và lệnh từ xa.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="kho">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Kho nguyên liệu</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant PR as process_runner
+  participant INV as inventory
+  participant DB as MySQL
+  PR->>INV: consume_recipe_usage(usage)
+  INV->>DB: BEGIN, SELECT ... FOR UPDATE
+  alt đủ
+    INV->>DB: UPDATE tồn, COMMIT
+    INV->>INV: publish_store_menu
+  else thiếu
+    INV->>DB: ROLLBACK
+    INV-->>PR: ném lỗi thiếu nguyên liệu
+  end
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Khoá dòng bằng <code>FOR UPDATE</code> để lệnh nạp kho từ xa và đơn đang pha không ghi đè lên nhau.</figcaption>
+      </figure>
+      <ol class="steps">
+        <li><code>refill</code>: nạp một nguyên liệu hoặc tất cả, tới đầy hoặc một số gram.</li>
+        <li><code>list_ingredients</code>: <code>DEFAULT_MAX_GRAM</code> = 10 000; số bơm suy từ <code>PIN_TO_PUMP</code>.</li>
+        <li><code>publish_store_menu</code>: dựng lại menu để món hết nguyên liệu tắt trên màn bán; <code>check_inventory</code> dùng khi duyệt đơn.</li>
+      </ol>
+    </section>
+
+    <section id="nhat-ky">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Nhật ký lỗi và báo cáo</h2></div>
+      <pre class="wire">log_error(message, severity, drink_id, drink_name,
+          step_label[:16], step_type[:16], ticket_serial)
+# message thêm tiền tố "[Vé #N] " khi có ticket_serial, cắt còn 4000 ký tự
+# không bao giờ ném lỗi: ghi nhật ký hỏng không được làm hỏng đơn</pre>
+      <p class="prose"><code>recent</code>, <code>get</code>, <code>summary(days)</code> đọc lại cho màn quản lý. <a href="../../database/services/reporting.py"><code>reporting</code></a> đọc ở mức <code>REPEATABLE READ</code> để các con số trong một báo cáo cùng một thời điểm.</p>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="07-hardware-drivers.html">← Driver phần cứng</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="09-self-healing.html">Giám sát và tự hồi phục →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

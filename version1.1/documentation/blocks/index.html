@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Khối chức năng máy pha</title>
+<meta name="description" content="Danh sách tài liệu chi tiết từng khối chức năng của backend máy pha FlexMix 1.1.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Mục lục khối · <a href="../machine-backend.html">Kiến trúc backend máy</a></div>
+      <h1>Các khối chức năng của backend máy pha</h1>
+      <p class="lead">Mỗi trang đi sâu vào đúng một khối ở mục 4 của trang kiến trúc backend: luồng chính, các hàm và trách nhiệm, đầu vào và đầu ra, giao thức với khối khác, xử lý lỗi, thông số và điểm còn hở. Đọc trang kiến trúc trước để nắm toàn cục.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+      <span><b>Phạm vi:</b> backend máy; không gồm server</span>
+    </div>
+  </header>
+  <div class="shell" style="grid-template-columns:minmax(0,1fr)">
+    <main>
+    <section id="khoi">
+      <div class="sec-head"><span class="sec-no">Danh sách</span><h2>Mười khối</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>#</th><th>Khối</th><th>Nói về</th><th>Mã chính</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><a href="01-main-service.html">Tiến trình chủ và service</a></td><td>main.py, unit systemd, thứ tự khởi động, thoát và khởi động lại, cấu hình đọc lúc import, kiosk</td><td><code>main.py</code>, <code>deploy/kiosk/</code>, <code>configuration/</code></td></tr>
+            <tr><td class="num">2</td><td><a href="02-store-server.html">Máy chủ cổng 8080</a></td><td>Endpoint cấp vé, vẽ QR, in, chạy không quét, chuyển tiếp sang runner, màn thử, danh sách file được phục vụ, địa chỉ nghe, log</td><td><code>store_gui/serve.py</code>, <code>configuration/served_paths.py</code>, <code>configuration/net_addresses.py</code></td></tr>
+            <tr><td class="num">3</td><td><a href="03-menu-sync.html">Đồng bộ menu ra màn bán</a></td><td>Dựng menu-data.js từ MySQL, cấu trúc dữ liệu, tuỳ chọn theo công thức, dải nổi bật và bán chạy, cách màn bán nhận bản mới</td><td><code>store_gui/sync_menu.py</code>, <code>store_gui/drinks-pos.js</code></td></tr>
+            <tr><td class="num">4</td><td><a href="04-order-flow.html">Điều phối đơn</a></td><td>Vòng nhận mã, khởi động và dọn dẹp, sinh runner, bàn giao màn hình, chốt vé, thông báo cho màn bán, chế độ test</td><td><code>order/run_flow.py</code></td></tr>
+            <tr><td class="num">5</td><td><a href="05-qr-to-recipe.html">Mã QR thành công thức</a></td><td>Giao thức QR v1.4 (cấu trúc, mã hoá, CRC, độ dài), kiểm 8 tầng, áp lựa chọn, dựng công thức, tính giây bơm, claim vé</td><td><code>qrproto/</code>, <code>order/qr_to_recipe.py</code>, <code>database/services/recipe_export.py</code></td></tr>
+            <tr><td class="num">6</td><td><a href="06-process-runner.html">Bộ chạy công thức</a></td><td>process_runner: vòng chạy bước, GuiBridge, API 8000, cân kiểm và châm thêm, bước thủ công, tạm dừng, hủy, tính phí đơn lỗi</td><td><code>order/process_runner.py</code></td></tr>
+            <tr><td class="num">7</td><td><a href="07-hardware-drivers.html">Driver phần cứng</a></td><td>Bơm, hiệu chuẩn, mồi bơm, cân HX711, dò ly, panel đèn nút, máy in tem, đầu quét QR</td><td><code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/panel.py</code>, <code>printer/</code>, <code>scan/scanner.py</code></td></tr>
+            <tr><td class="num">8</td><td><a href="08-data.html">Dữ liệu: MySQL, vé, kho, nhật ký</a></td><td>Kết nối MySQL, schema và seed, vòng đời vé QR, trừ và nạp kho, nhật ký lỗi, báo cáo</td><td><code>database/</code></td></tr>
+            <tr><td class="num">9</td><td><a href="09-self-healing.html">Giám sát và tự hồi phục</a></td><td>Kiosk watchdog, nút 14 và 15, khởi động lại backend, làm mới kiosk, dọn trạng thái lúc khởi động, test_gui</td><td><code>store_gui/kiosk_watchdog.py</code>, <code>panel_control/button_watch.py</code>, <code>test_gui/</code></td></tr>
+            <tr><td class="num">10</td><td><a href="10-remote-entry.html">Cửa vào từ xa trên máy</a></td><td>Vòng long-poll, Dispatcher và mã lỗi, bảy lệnh, danh tính và khoá máy, ghép đôi BLE, cài Wi-Fi</td><td><code>machine/</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <footer class="end">Xem kèm <a href="../../../documentation/review/version1-1-code-manual.html">cẩm nang mã nguồn v1.1</a> cho bản đồ file và kết quả review.</footer>
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mã QR thành công thức</title>
+<meta name="description" content="Khối 5: giao thức QR v1.4, kiểm 8 tầng, áp lựa chọn của khách, dựng công thức process, claim vé.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 5 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Mã QR thành công thức: chứng minh mã của máy này, rồi dựng ly theo lựa chọn</h1>
+      <p class="lead">Nhãn chỉ mang chuỗi chữ số. Khối này có hai nửa: <code>qrproto</code> tạo và kiểm chuỗi đó (mã hoá AES-256-GCM bằng khoá riêng của máy, hai lớp CRC, gắn mã máy và giờ tạo), và <code>qr_to_recipe</code> biến SKU cùng các lựa chọn trong đó thành một công thức chạy được, với số bơm và số giây bơm đã tính theo hiệu chuẩn.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>qrproto/</code>, <code>order/qr_to_recipe.py</code>, <code>database/services/recipe_export.py</code></span>
+      <span><b>Chạy trong:</b> thread <code>run_flow</code> (kiểm, dựng) và thread request 8080 (tạo)</span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#giao-thuc">2. Giao thức QR v1.4</a></li>
+        <li><a href="#kiem">3. Kiểm 8 tầng</a></li>
+        <li><a href="#ap">4. Áp lựa chọn của khách vào công thức</a></li>
+        <li><a href="#dung">5. Dựng công thức process</a></li>
+        <li><a href="#cli">6. Chạy tay</a></li>
+        <li><a href="#ghi-chu">7. Ghi chú và điểm còn hở</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: process_payload</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant F as run_flow
+  participant Q as qr_to_recipe
+  participant P as qrproto.verify
+  participant E as recipe_export
+  participant DB as MySQL
+  participant T as order_ticket
+  F->>Q: process_payload(payload)
+  Q->>P: verify(payload, key, MACHINE_ID)
+  P-->>Q: sku, instructions
+  Q->>Q: busy_steps(current_recipe.json), đang chạy thì từ chối trừ khi force
+  Q->>E: get_recipe_rows, get_action_rows
+  E->>DB: SELECT recipe nối ingredient, recipe_action
+  Q->>Q: lọc theo SKU, apply_choices, renumber_steps
+  Q->>E: build_drinks, attach_actions, build_process_document
+  E->>E: load_pump_calibration, duration_for_gram
+  Q->>Q: order_id = uuid4, ticket_key = sha256(payload)
+  Q->>T: claim(payload)
+  T-->>Q: serial, note
+  Q->>Q: write_recipe, lỗi ghi thì release vé
+  Q-->>F: document
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Claim đứng gần cuối có chủ ý: sau khi đã dựng được công thức (mã của món không có công thức bị từ chối mà khách giữ vé), và ngay trước khi ghi file (máy không bao giờ pha cho một mã người khác đang dùng).</figcaption>
+      </figure>
+    </section>
+
+    <section id="giao-thuc">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Giao thức QR v1.4</h2></div>
+      <pre class="wire">LỚP NGOÀI (in ra)  <VER:2 = "14"> <PHONG BÌ: số thập phân của nonce(12 B) ‖ bản mã ‖ tag(16 B)> <OCRC:5>
+LỚP TRONG (mã hoá) <SKU:4> <COUNT:2> ( <NL:2><KIỂU:2><DỮ LIỆU:4> ) × COUNT <TS:10> <MID:6> <ICRC:5>
+
+Lớp trong được đóng gói BCD (2 chữ số/byte, thêm nibble 0xF vì độ dài luôn lẻ),
+mã hoá AES-256-GCM với AAD = "14". CRC là CRC-16/CCITT-FALSE trên mã ASCII của chuỗi số, viết 5 chữ số.</pre>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trường</th><th>Khoảng</th><th>Ý nghĩa</th></tr></thead>
+          <tbody>
+            <tr><td>SKU</td><td>0000–9999</td><td><code>drink_id</code> (máy dùng 1001–1999)</td></tr>
+            <tr><td>COUNT</td><td>0–12</td><td>Số cặp lựa chọn</td></tr>
+            <tr><td>NL</td><td>01–24</td><td><code>ingredient_id</code>; không được trùng trong một payload</td></tr>
+            <tr><td>KIỂU 01</td><td>0000–9999</td><td>Gram, thay lượng của công thức (đặc tả gốc gọi 01 là phần trăm; máy này dùng cho gram)</td></tr>
+            <tr><td>KIỂU 02</td><td>0000 / 0001</td><td>Bỏ / giữ nguyên liệu</td></tr>
+            <tr><td>TS</td><td>10 chữ số</td><td>Giây Unix lúc tạo</td></tr>
+            <tr><td>MID</td><td>000001–999999</td><td><code>QRPROTO_MACHINE_ID</code>; 000000 cấm</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Số cặp</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr></thead>
+          <tbody>
+            <tr><td>Độ dài lớp ngoài</td><td class="num">109</td><td class="num">118</td><td class="num">128</td><td class="num">138</td><td class="num">147</td><td class="num">157</td><td class="num">166</td><td class="num">176</td><td class="num">186</td><td class="num">195</td><td class="num">205</td><td class="num">215</td><td class="num">224</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Bảng độ dài được tính lúc import và kiểm hai tính chất: mỗi độ dài ứng với đúng một số cặp, và độ rộng phong bì tăng dần. Vì vậy chỉ cần nhìn độ dài là biết số cặp, không cần khoá. Mã QR được vẽ ở chế độ số, mức sửa lỗi H, phiên bản 6–10 tuỳ số cặp.</p>
+    </section>
+
+    <section id="kiem">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Kiểm 8 tầng</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tầng</th><th>Kiểm</th><th>Lỗi</th><th>run_flow coi là</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Chỉ chữ số, độ dài trong bảng, VER = "14", giá trị phong bì vừa số byte</td><td><code>FormatError</code></td><td>đọc sai, quét lại</td></tr>
+            <tr><td>2</td><td>OCRC (tính được không cần khoá)</td><td><code>ChecksumError</code></td><td>đọc sai</td></tr>
+            <tr><td>3</td><td>Giải mã AES-GCM, tag đúng</td><td><code>CryptoError</code></td><td>đọc sai</td></tr>
+            <tr><td>4</td><td>BCD hợp lệ, COUNT khớp độ dài, MID khác 000000</td><td><code>FormatError</code>, <code>ProtocolError</code></td><td>đọc sai</td></tr>
+            <tr><td>5</td><td>ICRC</td><td><code>ChecksumError</code></td><td>đọc sai</td></tr>
+            <tr><td>6</td><td>MID khớp máy</td><td><code>MachineMismatchError</code></td><td>từ chối</td></tr>
+            <tr><td>7</td><td>Tuổi ≤ 600 s, không sớm hơn 30 s</td><td><code>ExpiredError</code>, <code>ClockSkewError</code></td><td>từ chối</td></tr>
+            <tr><td>8</td><td>Nguyên liệu 1–24, không trùng, dữ liệu đúng kiểu</td><td><code>ProtocolError</code></td><td>đọc sai</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Tầng 6 và 7 chạy giữa hai nửa giải mã có chủ ý: payload vừa quá hạn vừa có nguyên liệu sai phải bị từ chối vì quá hạn. Không lỗi nào để lộ nội dung payload ra ngoài.</p>
+    </section>
+
+    <section id="ap">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Áp lựa chọn của khách vào công thức</h2></div>
+      <ol class="steps">
+        <li><b>Nguyên liệu không được nhắc</b> trong payload giữ nguyên công thức. Payload rỗng là món đúng thiết kế.</li>
+        <li><b>Kiểu 02 = 0000</b> bỏ mọi dòng của nguyên liệu đó; <b>0001</b> giữ nguyên.</li>
+        <li><b>Kiểu 01 (gram)</b> thay tổng lượng của nguyên liệu, chia lại cho từng bước theo tỉ lệ của công thức: bước có 30 g trong tổng 50 g, khách chọn 13 g, thì bước đó còn 7,8 g. Kết quả ≤ 0 thì bỏ dòng.</li>
+        <li><b>Nguyên liệu có trong payload mà không có trong công thức</b> bị bỏ qua kèm ghi chú: payload không thêm được nguyên liệu mới.</li>
+        <li><b>Bỏ hết nguyên liệu</b> của một bước thì bước biến mất; các bước được đánh số lại 1, 2, 3 cùng với bước thao tác. Bỏ hết mọi nguyên liệu thì <code>OrderError</code>.</li>
+      </ol>
+    </section>
+
+    <section id="dung">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Dựng công thức process</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  R["Dòng recipe đã áp lựa chọn"] --> T{"ingredient.type"}
+  T -->|"PUMP"| G["gpio G26 thành chân 26, GPIO_TO_PUMP thành số bơm"]
+  T -->|"MANUAL"| PN["gpio P05 thành ô panel 5"]
+  G --> PS["bước pump: các bơm cùng step_no"]
+  PN --> MS["bước Nm: một nút mỗi nguyên liệu"]
+  MS --> DS["bước Nd: kiểm ly quay lại"]
+  A["recipe_action"] --> AS["bước Na, thêm Nad nếu cup_returns"]
+  PS --> SEC["duration_sec = (gram - dead_gram) / gram_per_sec"]
+  class R,A ui
+  class T dec
+  class G,PN,PS,MS,DS,AS proc
+  class SEC ok
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Trong một step_no, thứ tự là: bước bơm, rồi bước thao tác (nếu có) và kiểm ly sau thao tác, rồi bước tay và kiểm ly sau bước tay. Lượng dưới vùng chết của bơm (<code>dead_gram</code>) bị từ chối ngay lúc dựng, không để runner hỏng giữa ly.</figcaption>
+      </figure>
+<pre class="wire">{"step": "1", "order": 1, "type": "pump", "status": "pending",
+ "pumps": [{"pump": 1, "ingredient_id": 1, "ingredient_name": {"vi": "Nước", "en": "Water"},
+            "gram": 120.0, "duration_sec": 12.31}]}
+{"step": "1m", "order": 2, "type": "manual", "status": "pending",
+ "buttons": [{"panel": 5, "ingredient_id": 12, "label": {"vi": "Đá", "en": "Ice"}, "gram": 0, "lit": false}]}
+{"step": "1d", "order": 3, "type": "detect", "status": "pending", "owner": "gui", "icon": "cup",
+ "title": {…}, "detail": {…}, "confirm": {…}}
+{"step": "2a", "order": 4, "type": "action", "status": "pending",
+ "media": {"src": "recipe/media/shake.mp4"}, "title": {…}, "confirm": {…}}</pre>
+      <p class="prose">Tài liệu còn mang <code>schema: "flexmix.process/1"</code>, <code>drink_id</code>, <code>drink_name</code>, <code>image</code>, <code>glass</code>, <code>drink_type</code>, <code>garnish</code> (chỉ để màn pha hiện), <code>order_id</code>, <code>ticket_key</code>, <code>ticket_serial</code>, <code>note</code> của khách, và các mốc giờ.</p>
+    </section>
+
+    <section id="cli">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chạy tay</h2></div>
+      <pre class="wire">python3 -m order.qr_to_recipe                       # mã mới nhất trong raw_qr.json → current_recipe.json
+python3 -m order.qr_to_recipe --dry-run             # in công thức, không ghi, không tiêu vé
+python3 -m order.qr_to_recipe --payload 14… --no-ticket --force
+python3 -c "from qrproto.keys import generate_key; print(generate_key().hex())"   # sinh khoá cho máy mới</pre>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Ghi chú và điểm còn hở</h2></div>
+      <div class="note crit"><b>Lỗi đã kiểm, chưa sửa</b>(1) <code>choices_from_payload</code> gọi <code>qrproto.verify</code> không truyền <code>max_age_seconds</code>, nên nhãn hết dùng sau 10 phút dù vé còn hạn 24 giờ; đồng hồ lệch hơn 30 s cũng bị từ chối. (2) <code>recipe_export.GPIO_TO_PUMP</code> chép cứng dây của máy #1, không theo hồ sơ máy; máy đi dây khác sẽ bị "Unsupported pump GPIO".</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hiện trạng</th></tr></thead>
+          <tbody>
+            <tr><td>Đổi khoá QR</td><td>Không có xoay khoá; đổi khoá làm mọi nhãn chưa quét của máy hỏng vĩnh viễn</td></tr>
+            <tr><td>Mã giao thức cũ</td><td><code>qr_protocol.py</code>, <code>scan/qr_payload.py</code>, <code>scan/generate_drink_qr.py</code> là v1.3, không nằm trên đường chạy</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="04-order-flow.html">← Điều phối đơn</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="06-process-runner.html">Bộ chạy công thức →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

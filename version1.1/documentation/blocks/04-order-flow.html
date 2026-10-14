@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Điều phối đơn</title>
+<meta name="description" content="Khối 4: run_flow.py, vòng nhận mã, sinh runner, bàn giao màn hình, chốt vé, thông báo, chế độ test.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 4 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Điều phối đơn: người nhạc trưởng không chạm phần cứng</h1>
+      <p class="lead"><code>run_flow</code> chờ mã mới, nhờ <code>qr_to_recipe</code> biến mã thành công thức, sinh một <code>process_runner</code> cho riêng đơn đó, báo trình duyệt chuyển màn, đợi runner thoát rồi dọn dẹp, bất kể đơn kết thúc thế nào. Nó là người duy nhất quyết định một đơn bắt đầu và kết thúc, và là người trả lời câu hỏi "vé này giờ ra sao".</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>order/run_flow.py</code></span>
+      <span><b>Chạy trong:</b> thread <code>run_flow</code> của <code>main.py</code></span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#khoi-dong">2. Khởi động và phục hồi</a></li>
+        <li><a href="#tu-choi">3. Phân loại lỗi và thông báo cho màn bán</a></li>
+        <li><a href="#chot">4. Kết thúc đơn</a></li>
+        <li><a href="#che-do-test">5. Chế độ test</a></li>
+        <li><a href="#cli">6. Chạy tay</a></li>
+        <li><a href="#thong-so">7. Thông số</a></li>
+        <li><a href="#ghi-chu">8. Ghi chú và điểm còn hở</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: một mã quét tới một ly xong</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant RAW as raw_qr.json
+  participant F as run_flow
+  participant Q as qr_to_recipe
+  participant W as ButtonWatcher
+  participant R as process_runner
+  participant H as handoff.json
+  participant T as order_ticket
+  F->>F: wait_while_test_mode
+  F->>RAW: read_scan mỗi 0,5 s
+  RAW-->>F: (qr_code, timestamp) khác lần trước
+  F->>F: scan_source, store_screen thì no_qr
+  F->>F: clear_scan_notice
+  F->>Q: process_payload(payload, force, use_ticket)
+  Q-->>F: document có ticket_key, ticket_serial
+  F->>W: pause
+  F->>R: start_runner, python -m order.process_runner recipe --serve 8000
+  F->>F: wait_for_server, cổng mở trong 30 s
+  F->>H: write_handoff
+  R-->>F: thoát mã 0
+  F->>H: mark_handoff_finished
+  F->>F: sleep 8 s cho lời cảm ơn
+  F->>H: clear_handoff
+  F->>T: settle_ticket, complete
+  F->>F: reset_machine_hardware
+  F->>W: resume
+  F->>RAW: clear_order_files, ghi {}
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Các bước từ 14 trở đi nằm trong <code>finally</code> của <code>run_one_order</code>, nên vẫn chạy khi đơn hỏng, bị huỷ hay bị ngắt. Chỉ khác ở việc chốt vé và giữ hay xoá công thức (mục 4).</figcaption>
+      </figure>
+    </section>
+
+    <section id="khoi-dong">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Khởi động và phục hồi</h2></div>
+      <ol class="steps">
+        <li><b>Khoá một flow duy nhất</b>: <code>flock</code> trên <code>order/.run_flow.lock</code> (mở để ghi thêm, không xoá PID người giữ). Bận thì in PID người giữ và trả 1; <code>--wait</code> thì xếp hàng.</li>
+        <li><b>Cổng 8000 phải trống</b>, không thì trả 1: có runner khác đang chạy.</li>
+        <li><b>Công thức còn trạng thái đang chạy</b> từ lần trước nhưng không ai phục vụ cổng 8000: coi là đơn ma; đơn đầu tiên sẽ ghi đè bằng <code>force</code>.</li>
+        <li><b>Trả vé kẹt</b>: <code>order_ticket.release_stranded()</code> đưa mọi vé <code>in_progress</code> về <code>unused</code> và ghi từng vé vào <code>flow.log</code>. Lỗi database ở đây không chặn khởi động.</li>
+        <li><b>Dọn file</b>: xoá <code>handoff.json</code>, <code>scan_notice.json</code>; xoá cờ chế độ test còn sót.</li>
+        <li><b>Mở scanner</b>: <code>reap_orphan_scanners()</code> SIGTERM các tiến trình <code>scan.scanner</code> có cha là PID 1, rồi <code>Popen([python, -m, scan.scanner])</code>; sau 2 s mà nó đã thoát thì vẫn chạy tiếp và chỉ theo dõi file.</li>
+        <li><b>Nạp sẵn màn thử</b> (<code>import test_gui.serve</code>), <b>đưa phần cứng về nghỉ</b>, <b>mở <code>ButtonWatcher</code></b>, và <b>làm mới kiosk</b> nếu lần khởi động này do nút 14.</li>
+      </ol>
+    </section>
+
+    <section id="tu-choi">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Phân loại lỗi và thông báo cho màn bán</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tình huống</th><th>Lỗi</th><th><code>scan_notice.kind</code></th><th>Ghi <code>error_log</code>?</th><th>Vé</th></tr></thead>
+          <tbody>
+            <tr><td>CRC sai, giải mã hỏng, độ dài lạ, ngữ nghĩa cặp sai</td><td><code>ScanError</code></td><td><code>rescan</code> "Không đọc được mã QR. Vui lòng quét lại."</td><td>Không</td><td>Không đụng</td></tr>
+            <tr><td>Máy khác, quá hạn, lệch giờ, đã dùng, đang pha, không có công thức</td><td><code>OrderError</code></td><td><code>refused</code> + câu của <code>TicketError</code></td><td>Có, "Vé QR: …"</td><td>Không đụng</td></tr>
+            <tr><td>Runner không khởi động</td><td>bất kỳ</td><td><code>refused</code> "Máy pha không khởi động được: …"</td><td>Có</td><td>Trả lại</td></tr>
+            <tr><td>Đơn bị huỷ trên màn pha</td><td>runner thoát 1, có <code>cancelled_at</code></td><td><code>fault</code> "… đã bị hủy. Vui lòng đặt lại đơn mới."</td><td>Runner đã ghi</td><td>Trả lại / <code>noqr_err</code></td></tr>
+            <tr><td>Đơn hỏng giữa chừng</td><td>runner thoát khác 0</td><td><code>fault</code> "Máy đang gặp sự cố…" + chi tiết</td><td>Runner đã ghi</td><td>Trả lại / <code>noqr_err</code></td></tr>
+            <tr><td>Nút 14 lúc rảnh</td><td>–</td><td><code>restart</code> "Máy sẽ sẵn sàng lại sau vài giây."</td><td>Không</td><td>–</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="wire">order/scan_notice.json
+{"id": "3f2a…", "kind": "refused", "title": "", "message": "QR này đã được dùng rồi (mã vé 5499e19f..., lúc 2026-10-14 15:02:11).",
+ "payload": "1418…", "created_at": "2026-10-14T15:20:31.482+07:00"}</pre>
+      <p class="prose">Thông báo chỉ được ghi khi khách còn nhìn màn bán: trước khi bàn giao màn hình, hoặc sau khi đơn kết thúc (lúc trình duyệt quay về). <code>id</code> mới mỗi lần, nên hai lần từ chối giống nhau vẫn là hai thông báo.</p>
+    </section>
+
+    <section id="chot">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Kết thúc đơn</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  E["runner thoát hoặc bị dừng"] --> P{"mã thoát 0?"}
+  P -->|"có"| U["complete: used"]
+  P -->|"không"| C{"cancelled_at trong công thức?"}
+  C -->|"có"| N{"no_qr?"}
+  C -->|"không"| N2{"no_qr?"}
+  N -->|"không"| R1["release: unused"]
+  N -->|"có"| M1["mark_failed: noqr_err"]
+  N2 -->|"không"| R2["release: unused"]
+  N2 -->|"có"| M2["mark_failed: noqr_err"]
+  U --> CL1["xoá công thức và raw_qr"]
+  R1 --> CL1
+  M1 --> CL1
+  R2 --> CL2["giữ công thức để xem lỗi, xoá raw_qr"]
+  M2 --> CL2
+  CL1 --> HW["reset phần cứng, watcher.resume"]
+  CL2 --> HW
+  class E ui
+  class P,C,N,N2 dec
+  class U ok
+  class R1,R2,M1,M2 proc
+  class CL1,CL2,HW proc
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Việc chốt vé không bao giờ ném lỗi ra ngoài: một vé không chốt được không được phép chặn khách kế tiếp; vé kẹt sẽ được trả lại ở lần khởi động sau hoặc hết hạn sau 24 giờ.</figcaption>
+      </figure>
+      <ol class="steps">
+        <li><b>Ctrl+C trong lúc pha</b>: ghi "Đơn đã bị hủy." vào công thức và thông báo cho màn bán trước, rồi mới SIGTERM runner, vì sau khi runner chết màn pha chế không còn đường đọc.</li>
+        <li><b>Chờ 8 s chỉ khi đơn thành công</b>, để lời cảm ơn trên màn pha không bị cắt. Đơn hỏng thì báo ngay.</li>
+        <li><b>Cờ <code>finished</code> trong <code>handoff.json</code></b> nói cho màn bán biết ly đã xong trong 8 s chờ, để nó không báo "máy đang bận làm đơn của bạn" với một khách đang cầm ly.</li>
+      </ol>
+    </section>
+
+    <section id="che-do-test">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Chế độ test</h2></div>
+      <p class="prose">Nút bảng 15 đảo <code>test_gui/mode.json</code>. <code>wait_while_test_mode()</code> chặn trước khi lấy mã: trong lúc test, mã không được đọc (không bị tiêu). Thoát chế độ test thì giải phóng mọi chân GPIO mà màn thử có thể còn giữ (<code>test_gui.hardware.release_all_gpio</code>), mỗi lần bật/tắt (nhận ra bằng <code>id</code>) chỉ dọn một lần. Nếu nút được bấm trong lúc đang chờ mã thì mã vừa tới bị bỏ qua và lấy lại mốc.</p>
+    </section>
+
+    <section id="cli">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Chạy tay</h2></div>
+      <pre class="wire">python3 -m order.run_flow                   # phục vụ đơn tới khi dừng (tự mở scanner)
+python3 -m order.run_flow --no-scanner      # scanner chạy riêng ở terminal khác
+python3 -m order.run_flow --once            # một đơn rồi thoát
+python3 -m order.run_flow --dry-run         # không bơm, không trừ kho, không màn hình, không tiêu vé
+python3 -m order.run_flow --payload 14…     # bỏ qua scanner cho đơn đầu
+python3 -m order.run_flow --no-ticket       # thử máy: mã nào cũng chạy, không tiêu vé
+python3 -m order.run_flow --wait            # xếp hàng sau flow đang chạy
+python3 -m order.run_flow --no-inventory --force --port 8000 --test-port 8080 --no-test-gui</pre>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tên</th><th>Giá trị</th></tr></thead>
+          <tbody>
+            <tr><td><code>SCAN_POLL_SECONDS</code></td><td class="num">0,5 s</td></tr>
+            <tr><td><code>SERVER_START_TIMEOUT_SECONDS</code> / <code>SERVER_POLL_SECONDS</code></td><td class="num">30 s / 0,25 s</td></tr>
+            <tr><td><code>SCANNER_START_SECONDS</code></td><td class="num">2 s</td></tr>
+            <tr><td><code>CLEAR_DELAY_SECONDS</code></td><td class="num">8 s</td></tr>
+            <tr><td><code>CANCEL_NOTICE_SECONDS</code></td><td class="num">0,7 s</td></tr>
+            <tr><td><code>STORE_RESTART_NOTICE_SECONDS</code></td><td class="num">5 s</td></tr>
+            <tr><td><code>TEST_MODE_POLL_SECONDS</code></td><td class="num">1 s</td></tr>
+            <tr><td><code>GUI_PORT</code> (<code>RUNNER_PORT</code>)</td><td class="num">8000</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Ghi chú và điểm còn hở</h2></div>
+      <div class="note crit"><b>Lỗi đã biết, test tái hiện đang thất bại</b>DBG-07: <code>wait_while_test_mode()</code> chặn rồi mới tới <code>wait_for_new_scan(raw, seen)</code> với <code>seen = None</code> sau đơn trước; mã quét trong lúc test vì vậy được coi là mã mới khi thoát test và mở đơn cho người có thể đã bỏ đi. Test: <a href="../../order/tests/test_dbg_stale_scan.py"><code>order/tests/test_dbg_stale_scan.py</code></a>.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm</th><th>Hiện trạng</th></tr></thead>
+          <tbody>
+            <tr><td>Scanner chết giữa ngày</td><td>Chỉ được kiểm 2 s sau khi mở; nếu tiến trình con thoát sau đó (ví dụ không ghi được file) thì không ai mở lại cho tới lần khởi động service sau. Mất kết nối USB thì scanner tự mở lại, không thoát.</td></tr>
+            <tr><td>Nút 14 trong lúc chờ mã</td><td>Watcher báo màn bán, rồi SIGTERM tiến trình chủ; xem khối 9.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="03-menu-sync.html">← Đồng bộ menu ra màn bán</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="05-qr-to-recipe.html">Mã QR thành công thức →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>

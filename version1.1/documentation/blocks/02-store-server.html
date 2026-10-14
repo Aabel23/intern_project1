@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Máy chủ 8080</title>
+<meta name="description" content="Khối 2: store_gui/serve.py, endpoint vé, in, chạy không quét, relay sang runner, màn thử, file tĩnh, địa chỉ nghe.">
+<link rel="stylesheet" href="../../../documentation/assets/fonts.css">
+<link rel="stylesheet" href="../../../documentation/assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .prose code, .note code, figcaption code, ol.steps code, td code{white-space:normal; overflow-wrap:anywhere}
+  .blocknav{font-family:var(--sans); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Khối 2 · <a href="../machine-backend.html">Kiến trúc backend máy</a> · <a href="index.html">Danh sách khối</a></div>
+      <h1>Máy chủ cổng 8080: cửa duy nhất của mọi màn hình</h1>
+      <p class="lead">Trình duyệt chỉ cần biết một cổng. Máy chủ này phục vụ ba màn hình (bán hàng, pha chế, thử máy), và làm bốn việc trình duyệt không tự làm được: mã hoá vé QR bằng khoá của máy, nói với máy in, ghi mã thay máy quét, và chuyển nút của màn pha chế tới tiến trình đang pha. Nó không có đăng nhập; bảo vệ dựa vào việc chỉ nghe trên loopback và Tailscale.</p>
+    </div>
+    <div class="meta">
+      <span><b>Mã:</b> <code>store_gui/serve.py</code>, <code>configuration/served_paths.py</code>, <code>configuration/net_addresses.py</code></span>
+      <span><b>Chạy trong:</b> thread <code>store_gui</code> của <code>main.py</code></span>
+      <span><b>Đối chiếu:</b> <code>version1.1/</code> · 14/10/2026</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#luong">1. Luồng chính</a></li>
+        <li><a href="#dinh-tuyen">2. Định tuyến request</a></li>
+        <li><a href="#endpoint">3. Endpoint xử lý tại chỗ</a></li>
+        <li><a href="#tinh">4. File tĩnh và địa chỉ nghe</a></li>
+        <li><a href="#quy-tac">5. Quy tắc</a></li>
+        <li><a href="#thong-so">6. Thông số</a></li>
+        <li><a href="#ghi-chu">7. Ghi chú và điểm còn hở</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+    <section id="luong">
+      <div class="sec-head"><span class="sec-no">Mục 1</span><h2>Luồng chính: cấp vé, in, rồi nhân viên bấm nút trên màn pha chế</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant B as Trình duyệt
+  participant S as StoreHandler
+  participant Q as qrproto
+  participant DB as order_ticket
+  participant P as spool / printer_qr
+  participant H as handoff.json
+  participant R as runner :8000
+  B->>S: POST /api/ticket
+  S->>S: build_instruction cho từng cặp
+  S->>Q: create(sku, instructions, MACHINE_ID, key)
+  Q-->>S: payload chữ số
+  S->>DB: issue(drink_id, payload, note)
+  DB-->>S: serial, payload_hash
+  S-->>B: 200 {ok, serial, payload_hash, payload}
+  B->>S: POST /api/print {payload}
+  S->>P: python3 -m printer.printer_qr --payload, hạn 30 s
+  P-->>S: mã thoát, stdout
+  S-->>B: 200 {ok, message}
+  B->>S: POST /api/confirm
+  S->>H: đọc gui_port
+  S->>R: POST 127.0.0.1:8000/api/confirm, hạn 30 s
+  R-->>S: 202
+  S-->>B: 202, nguyên thân của runner
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Trình duyệt không bao giờ được trỏ thẳng tới cổng 8000: cổng đó chỉ sống trong lúc pha và chỉ nghe loopback. Máy chủ 8080 đọc lại cổng từ <code>handoff.json</code> mỗi lần, không nhớ, vì runner là tiến trình khác có vòng đời riêng.</figcaption>
+      </figure>
+    </section>
+
+    <section id="dinh-tuyen">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Định tuyến request</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Request</th><th>Xử lý</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td>Mọi request</td><td><code>kiosk_watchdog.note_request()</code></td><td>Mỗi request là một nhịp "trang còn sống" cho watchdog (khối 9).</td></tr>
+            <tr><td><code>GET /api/status</code></td><td><code>test_gui.serve.handle_get</code></td><td>Import lười: máy không có phần cứng vẫn mở được màn bán.</td></tr>
+            <tr><td><code>GET /api/qr?payload=</code></td><td><code>render_qr_svg</code></td><td>SVG, mức sửa lỗi H, viền 4; cùng thư viện với nhãn in.</td></tr>
+            <tr><td><code>GET /store_gui/menu-data.js</code></td><td><code>refresh_menu_if_stale</code> rồi file tĩnh</td><td>Dựng lại nếu file cũ hơn 20 s; lỗi thì in ra stderr và vẫn phục vụ bản cũ.</td></tr>
+            <tr><td>Sáu đường của runner</td><td><code>_relay_to_runner</code></td><td><code>/api/confirm</code>, <code>/api/pause</code>, <code>/api/resume</code>, <code>/api/cancel</code>, <code>/api/process/button</code>, <code>/api/process/detect</code>. Thân được chuyển nguyên, không parse.</td></tr>
+            <tr><td>Bảy đường POST của màn thử</td><td><code>test_gui.serve.handle_post</code></td><td><code>/api/stop</code>, <code>/api/pump/hold</code>, <code>/api/pump/release</code>, <code>/api/prime</code>, <code>/api/panel/leds</code>, <code>/api/panel/buttons</code>, <code>/api/scale</code> (khối 9).</td></tr>
+            <tr><td><code>POST /api/ticket</code>, <code>/api/print</code>, <code>/api/start</code></td><td><code>_issue_ticket</code>, <code>_print_label</code>, <code>_start_order</code></td><td>Thân JSON; sai JSON trả 400.</td></tr>
+            <tr><td>Còn lại</td><td><code>SimpleHTTPRequestHandler</code> + <code>served_paths.guard</code></td><td>Ngoài danh sách cho phép trả 404.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="endpoint">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Endpoint xử lý tại chỗ</h2></div>
+      <h3>3.1 · <code>POST /api/ticket</code></h3>
+      <pre class="wire">→ {"drink_id": 1001,
+   "pairs": [{"ingredient": 7, "type": "01", "data": 13},
+             {"ingredient": 8, "type": "02", "data": 1}],
+   "note": "ít đá", "preview": false}
+← 200 {"ok": true, "serial": 12, "payload_hash": "5499e1…", "payload": "1418673741…"}
+← 200 {"ok": true, "preview": true, "payload": "…"}          (preview: không ghi vé)
+← 400 {"ok": false, "error": "Don hang khong hop le: …"}     (sai kiểu, nguyên liệu trùng, ngoài khoảng)
+← 500 {"ok": false, "error": "May chua cau hinh khoa QR (QRPROTO_KEY)."}
+← 500 {"ok": false, "error": "Khong tao duoc ma QR: …"}       (lỗi database, mã món không có)</pre>
+      <ol class="steps">
+        <li><code>type</code> "01" thành <code>Grams(data)</code>, "02" thành <code>bool</code> và chỉ nhận 0/1; kiểu khác là 400.</li>
+        <li><code>note</code> được cắt còn 200 ký tự, vì cột chỉ có 200 và dữ liệu đến từ mạng.</li>
+        <li>Mã hoá xong mới ghi vé; mã hoá lỗi thì không có dòng nào được ghi. Mỗi vé cấp ra được in một dòng <code>[ticket] serial … drink … -&gt; payload</code> ra stderr để truy vết.</li>
+      </ol>
+      <h3>3.2 · <code>POST /api/print</code></h3>
+      <pre class="wire">→ {"payload": "1418…"}
+← 200 {"ok": true,  "error": "",  "message": "CUPS: request id is XP-350BM-41 …"}
+← 500 {"ok": false, "error": "LOI: …", "message": "LOI: …"}   (tiến trình in báo lỗi)
+← 500 {"ok": false, "error": "Khong chay duoc 'python3'."}
+← 504 {"ok": false, "error": "May in khong phan hoi."}      (quá 30 s)</pre>
+      <h3>3.3 · <code>POST /api/start</code></h3>
+      <pre class="wire">→ {"payload": "1418…"}
+← 200 {"ok": true}                    ghi scan/raw_qr.json {"qr_code", "timestamp", "source": "store_screen"}
+← 400 sai hình dạng payload
+← 409 "Máy chưa chạy (order/run_flow.py). Khởi động máy rồi thử lại."
+← 409 "Máy đang ở chế độ test (nút bảng 15). Tắt chế độ test rồi thử lại."
+← 500 "Không ghi được lệnh cho máy: …"</pre>
+      <p class="prose"><code>flow_running()</code> thử lấy <code>flock</code> không chặn trên <code>order/.run_flow.lock</code>: lấy được nghĩa là không ai giữ, tức <code>run_flow</code> không chạy. Hình dạng payload hợp lệ là chỉ chữ số và độ dài thuộc bảng 109, 118, 128, 138, 147, 157, 166, 176, 186, 195, 205, 215, 224.</p>
+      <h3>3.4 · Relay sang runner</h3>
+      <pre class="wire">POST /api/&lt;route&gt;  →  POST http://127.0.0.1:{handoff.gui_port}/api/&lt;route&gt;   (thân giữ nguyên, rỗng thì "{}")
+← mã và thân của runner, nguyên vẹn
+← 503 {"ok": false, "error": "Khong co don nao dang chay."}         (không có handoff.json hoặc gui_port)
+← 502 {"ok": false, "error": "Khong lien lac duoc voi tien trinh pha: …"}  (runner vừa thoát)</pre>
+    </section>
+
+    <section id="tinh">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>File tĩnh và địa chỉ nghe</h2></div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  P["translate_path"] --> R["Path.resolve, giải symlink"]
+  R --> IN{"Nằm trong thư mục dự án?"}
+  IN -->|"không"| B["BLOCKED_PATH, 404"]
+  IN -->|"có"| TOP{"Thư mục đầu là store_gui, bartender_gui, test_gui, recipe?"}
+  TOP -->|"có"| OK["Phục vụ"]
+  TOP -->|"không"| F{"Là order/handoff.json, scan_notice.json, current_recipe.json?"}
+  F -->|"có"| OK
+  F -->|"không"| B
+  class P,R proc
+  class IN,TOP,F dec
+  class OK ok
+  class B bad
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Danh sách cho phép, không phải danh sách chặn: quên thêm một thư mục thì ảnh không tải (thấy ngay), còn quên chặn một file bí mật thì không ai biết. Trước khi có danh sách này, <code>GET /.env</code> từng trả mật khẩu MySQL trên máy thật.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Địa chỉ</th><th>Khi nào</th><th>Lý do</th></tr></thead>
+          <tbody>
+            <tr><td><code>127.0.0.1</code></td><td>Luôn; mở không được thì thoát 1</td><td>Kiosk, màn pha, màn thử trên chính máy đều đi qua đây.</td></tr>
+            <tr><td>Địa chỉ Tailscale <code>100.x</code></td><td>Nếu có; chưa có lúc khởi động thì thread <code>tailnet-watch</code> thử lại mỗi 20 s</td><td>Quản trị từ xa mà không mở ra Wi-Fi quán.</td></tr>
+            <tr><td>Wi-Fi quán</td><td>Không bao giờ, trừ khi <code>--host</code> hoặc <code>FLEXMIX_BIND</code></td><td>API ở đây chạy được bơm và không có đăng nhập.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="prose">Địa chỉ được tìm bằng ba cách gộp lại: UDP probe tới 8.8.8.8 (không gửi gói), <code>getaddrinfo(hostname)</code>, và <code>ip -4 -o addr show</code> (cách duy nhất thấy <code>tailscale0</code>).</p>
+    </section>
+
+    <section id="quy-tac">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Quy tắc</h2></div>
+      <ol class="steps">
+        <li><b>Không cache những gì đổi theo dữ liệu.</b> Mọi <code>.js</code>, <code>.json</code>, <code>.html</code>, <code>.css</code> trả kèm <code>Cache-Control: no-store</code>; ảnh và font được cache.</li>
+        <li><b>Log ồn được nén.</b> Poll bình thường của <code>handoff.json</code>, <code>scan_notice.json</code>, <code>current_recipe.json</code>, <code>menu-data.js</code> (200, 304, 404) không in; cứ 5 phút in một dòng tổng. Mọi 4xx/5xx khác và mọi request tới <code>/api/print</code>, <code>/api/ticket</code> luôn được in.</li>
+        <li><b>Mỗi request một thread</b> (<code>ThreadingHTTPServer</code>). Hai lần in sát nhau chạy song song trong hai tiến trình in.</li>
+        <li><b>Endpoint màn thử dùng chung tiến trình</b> với máy chủ này, nên gọi thẳng hàm, không qua cổng thứ hai.</li>
+      </ol>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Thông số</h2></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tên</th><th>Giá trị</th></tr></thead>
+          <tbody>
+            <tr><td><code>DEFAULT_PORT</code> (<code>STORE_PORT</code>)</td><td class="num">8080</td></tr>
+            <tr><td><code>RUNNER_TIMEOUT_SECONDS</code></td><td class="num">30 s</td></tr>
+            <tr><td><code>MENU_MAX_AGE_SECONDS</code></td><td class="num">20 s</td></tr>
+            <tr><td><code>TAILNET_RETRY_SECONDS</code></td><td class="num">20 s</td></tr>
+            <tr><td><code>QUIET_SUMMARY_SECONDS</code></td><td class="num">300 s</td></tr>
+            <tr><td><code>PRINT_TIMEOUT_SECONDS</code> (<code>spool</code>)</td><td class="num">30 s</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Ghi chú và điểm còn hở</h2></div>
+      <div class="note crit"><b>Mã hiện có, chưa sửa</b>(1) Trang bán gọi <code>GET /api/order-mode</code>, máy chủ không có đường này nên trả 404 và trang giữ mặc định; <code>configuration/order_mode.py</code> không được dùng ở đâu. (2) <code>/api/ticket</code> cấp vé cả cho món hết hàng hoặc đã tắt; chỉ giao diện chặn. (3) Tiến trình in dùng <code>python3</code> theo <code>PATH</code>, không phải venv, và mọi lần in vẽ vào cùng <code>printer/order_qr.png</code>. (4) Cả thư mục <code>store_gui/</code> được phục vụ nên mã nguồn <code>serve.py</code> cũng tải được (không chứa bí mật).</div>
+    </section>
+
+    <footer class="end"><div class="blocknav"><a href="01-main-service.html">← Tiến trình chủ và service</a> · <a href="../machine-backend.html">Kiến trúc backend</a> · <a href="03-menu-sync.html">Đồng bộ menu ra màn bán →</a></div>Sơ đồ vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); không tải được thì khung hiện mã nguồn sơ đồ. "Phóng to" mở kích thước thật. Liên kết mã trỏ tới nguồn trong repo.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+<script src="../../../documentation/assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../../documentation/assets/doc.js"></script>
+</body>
+</html>
