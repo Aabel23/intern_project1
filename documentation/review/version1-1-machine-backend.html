@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kiến trúc backend máy pha</title>
+<meta name="description" content="Kiến trúc backend chạy trên máy pha FlexMix 1.1: tiến trình, thread, khối, luồng một đơn, giao thức liên lạc giữa các luồng và thông số.">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/doc.css">
+<style>
+  pre.wire{margin:0; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; color:var(--ink-2)}
+  .comp code, .prose code, .note code, figcaption code, ol.steps code{white-space:normal; overflow-wrap:anywhere}
+  .comp h5{font-family:var(--sans); font-size:13.5px; margin:4px 0 0; color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div style="display:grid;gap:4px">
+      <div class="eyebrow">Kiến trúc backend máy · project1_app v1.1</div>
+      <h1>Backend máy pha: tiến trình, khối, luồng và giao thức nội bộ</h1>
+      <p class="lead">Tài liệu này chỉ nói về phần mềm chạy trên chính máy pha (Raspberry Pi): một service, ba thread, hai tiến trình con, vài file JSON làm cầu nối và hai cổng HTTP nội bộ. Server hãng và app nằm ngoài phạm vi; khối kết nối của máy chỉ được nhắc tới ở chỗ nó chạm vào dữ liệu máy. Mọi tên hàm, file và con số lấy từ mã hiện tại; chỗ mã còn lỗi được đánh dấu và dẫn sang <a href="version1-1-code-manual.html">cẩm nang mã nguồn</a>.</p>
+    </div>
+    <div class="meta">
+      <span><b>Đối chiếu mã:</b> <code>version1.1/</code> · <code>ad76714</code></span>
+      <span><b>Ngày:</b> 14/10/2026</span>
+      <span><b>Phạm vi:</b> backend máy; không gồm server</span>
+    </div>
+  </header>
+
+  <section class="overview" id="tong-quan">
+    <div class="ov-head">
+      <h2>1 · Bức tranh toàn cục</h2>
+      <div class="legend" aria-label="Chú giải">
+        <span><i class="sw ui"></i>Giao diện trên trình duyệt</span>
+        <span><i class="sw proc"></i>Tiến trình / thread Python</span>
+        <span><i class="sw hw"></i>Phần cứng</span>
+        <span><i class="sw store"></i>Dữ liệu bền</span>
+        <span><i class="sw file"></i>File trung gian</span>
+        <span><i class="ln"></i>Gọi trực tiếp (số = thứ tự một đơn)</span>
+        <span><i class="ln g"></i>Đọc / ghi file, dữ liệu</span>
+      </div>
+    </div>
+    <figure class="dg ov-fig" style="padding:0;border:0;background:none">
+      <div class="ov-frame">
+<svg class="ov" viewBox="0 0 1100 600" role="img" aria-labelledby="ov-t ov-d">
+<title id="ov-t">Tiến trình và cầu nối của backend máy pha</title>
+<desc id="ov-d">systemd chạy main.py gồm ba thread store_gui, sync_menu và run_flow. run_flow sinh hai tiến trình con là scan.scanner và process_runner. Firefox kiosk gọi cổng 8080; store_gui chuyển tiếp nút màn pha chế sang cổng 8000 của process_runner. Các tiến trình trao đổi qua file JSON trong scan, order, test_gui và qua MySQL. process_runner là chủ duy nhất của bơm, cân và bảng nút trong lúc pha.</desc>
+<defs><marker id="ag" class="mk-g" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="aa" class="mk-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+<rect class="zn" x="16" y="34" width="250" height="250" rx="12"/>
+<text x="18" y="24" class="zt">MÀN HÌNH CẢM ỨNG · X + OPENBOX</text>
+<g class="nd ui"><rect x="36" y="58" width="210" height="100" rx="8"/>
+<text x="141" y="84" class="tt" text-anchor="middle">Firefox kiosk</text>
+<text x="141" y="104" class="ts" text-anchor="middle">store_gui/drinks-pos.html</text>
+<text x="141" y="121" class="ts" text-anchor="middle">bartender_gui/index.html</text>
+<text x="141" y="138" class="ts" text-anchor="middle">test_gui/index.html</text></g>
+<text x="141" y="186" class="tn" text-anchor="middle">poll file mỗi 1 s (màn bán)</text>
+<text x="141" y="203" class="tn" text-anchor="middle">poll công thức mỗi 120 ms (màn pha)</text>
+<text x="141" y="230" class="tn" text-anchor="middle">khởi động lại bởi vòng while true</text>
+<text x="141" y="247" class="tn" text-anchor="middle">trong kiosk-openbox-autostart.sh</text>
+
+<rect class="zn" x="300" y="34" width="784" height="380" rx="12"/>
+<text x="302" y="24" class="zt">flexmix-backend.service → .venv/bin/python3 main.py · user flexxource</text>
+<g class="nd proc"><rect x="320" y="58" width="230" height="100" rx="8"/>
+<text x="435" y="84" class="tt" text-anchor="middle">thread store_gui</text>
+<text x="435" y="104" class="tm" text-anchor="middle">store_gui.serve :8080</text>
+<text x="435" y="121" class="ts" text-anchor="middle">file tĩnh · vé · in · relay · màn thử</text>
+<text x="435" y="138" class="ts" text-anchor="middle">+ thread watchdog, tailnet-watch</text></g>
+<g class="nd proc"><rect x="320" y="184" width="230" height="64" rx="8"/>
+<text x="435" y="210" class="tt" text-anchor="middle">thread sync_menu</text>
+<text x="435" y="229" class="ts" text-anchor="middle">dựng menu-data.js mỗi 60 s</text></g>
+<g class="nd hot"><rect x="590" y="58" width="230" height="100" rx="8"/>
+<text x="705" y="84" class="tt" text-anchor="middle">thread run_flow</text>
+<text x="705" y="104" class="tm" text-anchor="middle">order.run_flow</text>
+<text x="705" y="121" class="ts" text-anchor="middle">vòng nhận mã · điều phối đơn</text>
+<text x="705" y="138" class="ts" text-anchor="middle">+ thread button-watch (nút 14, 15)</text></g>
+<g class="nd proc"><rect x="590" y="184" width="230" height="64" rx="8"/>
+<text x="705" y="210" class="tt" text-anchor="middle">tiến trình con scan.scanner</text>
+<text x="705" y="229" class="ts" text-anchor="middle">đọc cổng USB serial độc quyền</text></g>
+<g class="nd proc"><rect x="850" y="58" width="214" height="100" rx="8"/>
+<text x="957" y="84" class="tt" text-anchor="middle">tiến trình con</text>
+<text x="957" y="104" class="tm" text-anchor="middle">order.process_runner</text>
+<text x="957" y="121" class="ts" text-anchor="middle">:8000 loopback · 1 đơn</text>
+<text x="957" y="138" class="ts" text-anchor="middle">+ thread panel, gui-server, bơm</text></g>
+
+<g class="nd file"><rect x="320" y="290" width="744" height="104" rx="8"/></g>
+<text x="338" y="312" class="zt2">FILE TRUNG GIAN · GHI TẠM RỒI ĐỔI TÊN</text>
+<text x="338" y="334" class="tmono">scan/raw_qr.json</text><text x="338" y="350" class="ts">scanner, /api/start → run_flow</text>
+<text x="560" y="334" class="tmono">order/current_recipe.json</text><text x="560" y="350" class="ts">qr_to_recipe, runner → runner, màn pha</text>
+<text x="830" y="334" class="tmono">order/handoff.json</text><text x="830" y="350" class="ts">run_flow → màn bán, serve, watchdog</text>
+<text x="338" y="374" class="tmono">order/scan_notice.json</text><text x="490" y="374" class="ts">run_flow → màn bán</text>
+<text x="640" y="374" class="tmono">test_gui/mode.json</text><text x="760" y="374" class="ts">nút 15 → mọi bên</text>
+<text x="870" y="374" class="tmono">store_gui/menu-data.js</text>
+
+<rect class="zn" x="16" y="440" width="1068" height="140" rx="12"/>
+<text x="18" y="432" class="zt">PHẦN CỨNG VÀ DỮ LIỆU BỀN</text>
+<g class="nd hw"><rect x="36" y="462" width="200" height="96" rx="8"/>
+<text x="136" y="490" class="tt" text-anchor="middle">10 bơm (PWM)</text><text x="136" y="510" class="ts" text-anchor="middle">GPIO BCM qua gpiozero/lgpio</text><text x="136" y="528" class="ts" text-anchor="middle">cân HX711 · GPIO 4/18</text></g>
+<g class="nd hw"><rect x="256" y="462" width="200" height="96" rx="8"/>
+<text x="356" y="490" class="tt" text-anchor="middle">Bảng nút 16 ô</text><text x="356" y="510" class="ts" text-anchor="middle">I²C bus 1 · PCF8575</text><text x="356" y="528" class="ts" text-anchor="middle">đèn 0x21 · nút 0x20</text></g>
+<g class="nd hw"><rect x="476" y="462" width="200" height="96" rx="8"/>
+<text x="576" y="490" class="tt" text-anchor="middle">Máy in · máy quét</text><text x="576" y="510" class="ts" text-anchor="middle">CUPS raw TSPL · XP-350BM</text><text x="576" y="528" class="ts" text-anchor="middle">USB CDC-ACM 9600 baud</text></g>
+<g class="nd store"><path d="M716,478 a80,9 0 0 1 160,0 v62 a80,9 0 0 1 -160,0 z"/><path class="lid" d="M716,478 a80,9 0 0 0 160,0"/>
+<text x="796" y="506" class="tt" text-anchor="middle">MySQL beveragepos</text><text x="796" y="524" class="ts" text-anchor="middle">món · kho · vé · lỗi</text></g>
+<g class="nd store"><path d="M906,478 a80,9 0 0 1 160,0 v62 a80,9 0 0 1 -160,0 z"/><path class="lid" d="M906,478 a80,9 0 0 0 160,0"/>
+<text x="986" y="506" class="tt" text-anchor="middle">/var/lib/flexmix</text><text x="986" y="524" class="ts" text-anchor="middle">hiệu chuẩn · độ phân giải</text></g>
+
+<path class="e main" d="M246,96 L318,96" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="282" cy="96" r="9.5"/><text x="282" y="99.8" text-anchor="middle">1</text></g>
+<path class="e main" d="M705,184 L705,160" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="722" cy="172" r="9.5"/><text x="722" y="175.8" text-anchor="middle">2</text></g>
+<path class="e main" d="M820,108 L848,108" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="834" cy="90" r="9.5"/><text x="834" y="93.8" text-anchor="middle">3</text></g>
+<path class="e main" d="M550,74 L570,74 L570,40 L957,40 L957,56" marker-end="url(#aa)"/>
+<text x="680" y="52" class="tl">relay nút màn pha chế → 127.0.0.1:8000</text>
+<path class="e main" d="M957,158 L957,270 L136,270 L136,460" marker-end="url(#aa)"/>
+<g class="bd"><circle cx="957" cy="215" r="9.5"/><text x="957" y="218.8" text-anchor="middle">4</text></g>
+<path class="e main" d="M1040,158 L1040,280 L356,280 L356,460" marker-end="url(#aa)"/>
+<path class="e" d="M435,248 L435,288" marker-end="url(#ag)"/>
+<path class="e" d="M705,248 L705,288" marker-end="url(#ag)"/>
+<path class="e" d="M796,394 L796,466" marker-end="url(#ag)"/>
+<path class="e dash" d="M330,158 L330,175 L300,175 L300,420 L576,420 L576,460" marker-end="url(#ag)"/>
+<text x="590" y="440" class="tl">in nhãn: tiến trình con printer_qr</text>
+<text x="806" y="440" class="tl">vé, kho, lỗi</text>
+</svg>
+      </div>
+      <div class="dg-tools"><button type="button" data-zoom>Phóng to</button></div>
+      <figcaption>Một đơn đi theo số: (1) trình duyệt gọi máy chủ 8080 để cấp vé và in; (2) máy quét ghi mã vào <code>raw_qr.json</code>, <code>run_flow</code> đọc nó; (3) <code>run_flow</code> sinh <code>process_runner</code> cho riêng đơn này; (4) runner chạy bơm, cân và bảng nút. Ngoài các mũi tên gọi trực tiếp đó, mọi trao đổi giữa tiến trình đi qua file trong dải giữa hoặc qua MySQL. Ô viền đỏ là điểm điều phối: <code>run_flow</code> chết thì cả service khởi động lại.</figcaption>
+    </figure>
+  </section>
+
+  <div class="shell">
+    <nav class="toc" aria-label="Mục lục">
+      <div class="lbl">Mục lục</div>
+      <ol>
+        <li><a href="#tong-quan">1. Bức tranh toàn cục</a></li>
+        <li><a href="#nguyen-tac">2. Tám nguyên tắc</a></li>
+        <li><a href="#luong-chinh">3. Luồng chính: một ly</a></li>
+        <li><a href="#thanh-phan">4. Từng khối</a></li>
+        <li class="sub"><a href="#c-main">4.1 Tiến trình chủ</a></li>
+        <li class="sub"><a href="#c-serve">4.2 Máy chủ 8080</a></li>
+        <li class="sub"><a href="#c-menu">4.3 Đồng bộ menu</a></li>
+        <li class="sub"><a href="#c-flow">4.4 Điều phối đơn</a></li>
+        <li class="sub"><a href="#c-qr">4.5 Mã QR thành công thức</a></li>
+        <li class="sub"><a href="#c-runner">4.6 Bộ chạy công thức</a></li>
+        <li class="sub"><a href="#c-driver">4.7 Driver phần cứng</a></li>
+        <li class="sub"><a href="#c-data">4.8 Dữ liệu</a></li>
+        <li class="sub"><a href="#c-heal">4.9 Giám sát, tự hồi phục</a></li>
+        <li class="sub"><a href="#c-machine">4.10 Cửa vào từ xa</a></li>
+        <li><a href="#giao-thuc">5. Giao thức giữa các luồng</a></li>
+        <li class="sub"><a href="#g-luong">5.1 Bảng thread, tiến trình</a></li>
+        <li class="sub"><a href="#g-file">5.2 File trung gian</a></li>
+        <li class="sub"><a href="#g-http">5.3 HTTP nội bộ</a></li>
+        <li class="sub"><a href="#g-queue">5.4 Hàng đợi trong runner</a></li>
+        <li class="sub"><a href="#g-owner">5.5 Quyền giữ thiết bị</a></li>
+        <li class="sub"><a href="#g-signal">5.6 Mã thoát, tín hiệu</a></li>
+        <li><a href="#thong-so">6. Sổ thông số</a></li>
+        <li><a href="#ghi-chu">7. Đã biết và để sau</a></li>
+        <li><a href="#chu-thich">8. Chú thích</a></li>
+      </ol>
+    </nav>
+
+    <main>
+    <section id="nguyen-tac">
+      <div class="sec-head"><span class="sec-no">Mục 2</span><h2>Tám nguyên tắc đang có trong mã</h2></div>
+      <p class="prose">Không phải nguyên tắc đề xuất: đây là các quyết định mà mã hiện tại đã làm, đọc ra từ comment và từ cách các module gọi nhau. Mỗi dòng trả lời câu hỏi "vì sao khối này được làm như vậy".</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>#</th><th>Nguyên tắc</th><th>Vì sao</th><th>Ở đâu</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><b>Một tiến trình chủ, chết là thoát hẳn.</b> Ba phần chính là ba thread của <code>main.py</code>; một thread kết thúc thì <code>os._exit(1)</code> để systemd<sup class="fn" id="fnr-1"><a href="#fn-1">1</a></sup> dựng lại cả khối.</td><td>Một thread chết lặng lẽ là kiểu hỏng tệ nhất: màn bán vẫn thu tiền mà không ly nào được pha.</td><td><code>main.py</code></td></tr>
+            <tr><td class="num">2</td><td><b>Phần cứng chạy trong tiến trình con riêng cho mỗi đơn.</b> <code>process_runner</code> sinh ra khi có đơn, thoát khi đơn xong.</td><td>Driver treo hay crash giữa ly không kéo máy chủ màn bán chết theo; chân GPIO được trả hết khi tiến trình thoát.</td><td><code>run_flow.start_runner</code></td></tr>
+            <tr><td class="num">3</td><td><b>Mỗi thiết bị có đúng một chủ tại một thời điểm.</b> Trong lúc pha, chỉ thread chính của runner chạm bơm và cân; chỉ thread panel chạm chip I²C<sup class="fn" id="fnr-2"><a href="#fn-2">2</a></sup>.</td><td>Hai luồng cùng đọc HX711<sup class="fn" id="fnr-3"><a href="#fn-3">3</a></sup> hay cùng một bus I²C làm hỏng bit của nhau; máy đã mất đơn vì lỗi này.</td><td><code>GuiBridge</code>, <code>ButtonWatcher.pause</code></td></tr>
+            <tr><td class="num">4</td><td><b>Giữa tiến trình nói bằng file JSON ghi tạm rồi đổi tên</b>, không bằng socket hay hàng đợi ngoài.</td><td>Trình duyệt (có thể trên máy tính bảng khác) chỉ đọc được file qua HTTP; người đọc luôn thấy bản cũ hoặc bản mới, không thấy bản ghi dở.</td><td><code>write_handoff</code>, <code>write_scan</code>, <code>save_process</code></td></tr>
+            <tr><td class="num">5</td><td><b>MySQL là nguồn sự thật, trigger giữ dữ liệu suy ra.</b> <code>drink.in_stock</code> do trigger tính, kể cả khi ai đó sửa thẳng trong SQL.</td><td>Màn bán không bao giờ tin một bản tính tay đã cũ.</td><td><code>schema.sql</code></td></tr>
+            <tr><td class="num">6</td><td><b>Vé dùng một lần do database quyết định</b>, không do giấy. Claim là một câu <code>UPDATE … WHERE status='unused'</code>.</td><td>Giấy không biết mình đã được quét; hai lần quét cùng lúc chỉ một lần thắng.</td><td><code>order_ticket.claim</code></td></tr>
+            <tr><td class="num">7</td><td><b>Thứ máy tự đo và thứ người đặt nằm ngoài thư mục mã.</b> Hiệu chuẩn ở <code>/var/lib/flexmix</code>, hồ sơ dây và bí mật ở <code>/etc/flexmix</code>.</td><td>Phát hành kiểu "checkout tag + đổi symlink" thay cả thư mục mã; số đo của máy này không được theo bản clone sang máy khác.</td><td><code>configuration/*.py</code></td></tr>
+            <tr><td class="num">8</td><td><b>Không mở gì ra Wi-Fi của quán.</b> Máy chủ chỉ nghe loopback và Tailscale<sup class="fn" id="fnr-4"><a href="#fn-4">4</a></sup>; runner chỉ nghe loopback; file tĩnh theo danh sách cho phép.</td><td>Các API này chạy được bơm và không có đăng nhập.</td><td><code>net_addresses.bind_hosts</code>, <code>served_paths</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="luong-chinh">
+      <div class="sec-head"><span class="sec-no">Mục 3</span><h2>Luồng chính: một ly từ lúc chọn món tới lúc xong</h2></div>
+      <p class="prose">Ví dụ đại diện vì nó đi qua đủ ba thread, hai tiến trình con, bốn file trung gian và MySQL. Mũi tên liền là gọi hoặc ghi, mũi tên đứt là trả lời hoặc đọc. Khung "Không quét" là đường dự phòng khi máy in hay máy quét hỏng: cùng vé, cùng luồng, chỉ khác người ghi <code>raw_qr.json</code>.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant B as Màn bán (Firefox)
+  participant S as store_gui :8080
+  participant DB as MySQL
+  participant Q as scan.scanner
+  participant F as run_flow
+  participant R as process_runner :8000
+  participant P as Màn pha chế
+  B->>S: POST /api/ticket {drink_id, pairs, note}
+  S->>S: qrproto.create, mã hoá bằng khoá máy
+  S->>DB: order_ticket.issue, vé unused, giá lúc bán
+  S-->>B: {serial, payload}
+  B->>S: POST /api/print {payload}
+  S->>S: spool, tiến trình con printer_qr, lp raw
+  Q->>Q: đọc mã từ USB, bỏ trùng 2 s
+  Q->>F: ghi scan/raw_qr.json
+  F->>F: qrproto.verify 8 bước, dựng công thức
+  F->>DB: claim vé, unused sang in_progress
+  F->>F: ghi order/current_recipe.json
+  F->>R: Popen process_runner --serve 8000
+  F->>F: đợi cổng 8000 mở rồi ghi handoff.json
+  B-->>B: thấy handoff.json, chuyển sang màn pha chế
+  P->>S: POST /api/confirm
+  S->>R: relay tới 127.0.0.1:8000
+  R->>R: cân ly, chạy bơm, cân kiểm, bước tay
+  P-->>R: poll current_recipe.json mỗi 120 ms
+  R->>DB: trừ kho đúng lượng đã bơm
+  R-->>F: thoát mã 0
+  F->>DB: chốt vé used
+  F->>F: xoá handoff.json, raw_qr.json, đưa phần cứng về nghỉ
+  alt Không quét
+    B->>S: POST /api/start {payload}
+    S->>F: ghi raw_qr.json với source store_screen
+  end
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Bước 10 là chỗ quan trọng nhất: vé chỉ bị dùng sau khi mã đã kiểm xong và công thức đã dựng được, và ngay trước khi công thức được ghi. Mã của món không có công thức bị từ chối mà khách không mất vé; ghi công thức hỏng thì vé được trả lại. Bước 13 chờ cổng mở là để trình duyệt không bị đưa tới một trang chưa có ai phục vụ.</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Trong sơ đồ</th><th>Mã</th><th>Kết thúc không bình thường thì sao</th></tr></thead>
+          <tbody>
+            <tr><td>1–4 cấp vé</td><td><code>StoreHandler._issue_ticket</code>, <code>order_ticket.issue</code></td><td>Thiếu khoá QR: 500 "Máy chưa cấu hình khoá QR". Mã món không có: không ghi vé.</td></tr>
+            <tr><td>5–6 in</td><td><code>spool.send_payload</code>, <code>printer_qr</code></td><td>Quá 30 s: 504. In lại dùng đúng payload cũ, không cấp vé mới.</td></tr>
+            <tr><td>7–11 nhận mã</td><td><code>scan_forever</code>, <code>qr_to_recipe.process_payload</code></td><td>Đọc sai: thông báo "quét lại", không ghi lỗi. Mã bị từ chối: thông báo đỏ, ghi <code>error_log</code>.</td></tr>
+            <tr><td>12–14 bàn giao</td><td><code>start_runner</code>, <code>wait_for_server</code>, <code>write_handoff</code></td><td>Runner không lên trong 30 s: trả vé, thông báo "máy không khởi động được".</td></tr>
+            <tr><td>15–19 pha</td><td><code>run_process</code></td><td>Hỏng bước: ghi lỗi vào công thức và <code>error_log</code>, trừ kho phần đã rót, thoát mã khác 0.</td></tr>
+            <tr><td>20–22 chốt</td><td><code>settle_ticket</code>, <code>reset_machine_hardware</code></td><td>Không rót xong: vé về <code>unused</code> nếu có nhãn, về <code>noqr_err</code> nếu chạy không quét.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thanh-phan">
+      <div class="sec-head"><span class="sec-no">Mục 4</span><h2>Từng khối</h2></div>
+
+      <article class="comp" id="c-main">
+        <header><h3>4.1 · Tiến trình chủ và vòng đời service <span class="pill m">Đang chạy</span></h3><div class="src"><code>main.py</code>, <code>deploy/kiosk/flexmix-backend.service</code> · Sơ đồ: trạng thái · 5 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Dựng ba phần dài hạn trong một tiến trình và bảo đảm rằng hễ một phần dừng thì cả tiến trình dừng, để systemd khởi động lại từ đầu sau 3 giây. Phần cứng không cần dọn ở đây: lần chạy kế tiếp tự đưa bơm và bảng nút về nghỉ khi <code>run_flow</code> khởi động.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction TB
+  state "Chờ mạng, MySQL, đồng hồ (tối đa 90 s)" as wait
+  state "Nạp module, đọc hồ sơ máy" as load
+  state "Ba thread đang chạy" as run
+  state "Một thread kết thúc" as dead
+  state "Thoát mã 1" as exit
+  [*] --> wait
+  wait --> load: After network, mysql, time-sync
+  load --> exit: hồ sơ hỏng, thiếu mật khẩu DB
+  load --> run: start store_gui, sync_menu, run_flow
+  run --> dead: lỗi hoặc tự return
+  dead --> exit: in traceback, os._exit(1)
+  exit --> wait: Restart=always, RestartSec=3
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Thread và việc của nó</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">store_gui</td></tr>
+                <tr><td>Hàm</td><td><code>store_gui.serve.main([])</code></td></tr>
+                <tr><td>Kết thúc khi</td><td>không mở được 127.0.0.1:8080</td></tr>
+                <tr class="grp"><td colspan="2">sync_menu</td></tr>
+                <tr><td>Hàm</td><td><code>sync_menu.main(["--interval", "1"])</code></td></tr>
+                <tr><td>Kết thúc khi</td><td>lần đọc đầu không tới MySQL, hoặc database không có món</td></tr>
+                <tr class="grp"><td colspan="2">run_flow</td></tr>
+                <tr><td>Hàm</td><td><code>run_flow.main([])</code></td></tr>
+                <tr><td>Kết thúc khi</td><td>khoá flow đã bị giữ, cổng 8000 đang bận</td></tr>
+                <tr class="grp"><td colspan="2">Unit</td></tr>
+                <tr><td>Quyền</td><td>user <code>flexxource</code>, chỉ thêm <code>CAP_SYS_NICE</code></td></tr>
+                <tr><td>Môi trường</td><td><code>/etc/flexmix/qrproto.env</code>, <code>FLEXMIX_KIOSK_WATCHDOG=1</code></td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Ba thread là thread daemon; thread chính chỉ <code>join</code>. Vì thoát bằng <code>os._exit</code>, stdout và stderr được flush tay trước đó để journal giữ được traceback.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Import có tác dụng phụ.</b> <code>configuration.machine</code> đọc và kiểm hồ sơ máy ngay lúc import, <code>database.core.config</code> ném lỗi nếu thiếu <code>BEVERAGE_DB_PASSWORD</code>. Cả hai làm tiến trình chết trước khi có thread nào, và systemd ghi đúng câu lỗi.</li>
+          <li><b>Chờ đồng hồ có giới hạn.</b> Unit khai <code>After=time-sync.target</code> và <code>install.sh</code> bật <code>systemd-time-wait-sync</code> với hạn 90 s, để vé và nhật ký có giờ đúng mà mất mạng vẫn bán được.</li>
+          <li><b>Kiosk không nằm trong service.</b> Firefox do Openbox chạy sau khi X lên; script autostart đợi trang 8080 trả lời rồi mới mở trình duyệt, và mở lại nếu trình duyệt thoát.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-serve">
+        <header><h3>4.2 · Máy chủ cổng 8080 <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/serve.py</code> · Sơ đồ: luồng · 5 nhánh xử lý</div></header>
+        <h4>Làm gì</h4>
+        <p>Cổng duy nhất trình duyệt cần. Mọi màn hình (bán, pha chế, thử) được phục vụ từ đây. Ngoài file tĩnh, nó làm bốn việc mà trình duyệt không tự làm được: mã hoá vé, nói với máy in, ghi mã thay máy quét, và chuyển nút của màn pha chế sang runner. Mỗi request là một thread của <code>ThreadingHTTPServer</code>.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  IN["Request tới :8080"] --> W["kiosk_watchdog.note_request"]
+  W --> M{"Đường dẫn?"}
+  M -->|"6 đường của runner"| RL["Chuyển tiếp POST tới 127.0.0.1:gui_port"]
+  M -->|"8 đường màn thử"| TG["test_gui.serve.handle_get / handle_post"]
+  M -->|"/api/ticket /api/print /api/start /api/qr"| API["Xử lý tại chỗ"]
+  M -->|"/store_gui/menu-data.js"| MENU["Dựng lại nếu cũ hơn 20 s"]
+  M -->|"còn lại"| ST{"Trong danh sách cho phép?"}
+  MENU --> ST
+  ST -->|"có"| FILE["Gửi file, no-store cho js json html css"]
+  ST -->|"không"| NF["404"]
+  RL --> HF[("order/handoff.json")]
+  class IN ui
+  class M,ST dec
+  class RL,TG,API,MENU,W proc
+  class FILE ok
+  class NF muted
+  class HF file
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Bên trong các nhánh</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">Chuyển tiếp runner</td></tr>
+                <tr><td>Cổng</td><td>đọc <code>gui_port</code> từ <code>handoff.json</code> mỗi lần, không cache</td></tr>
+                <tr><td>Không có đơn</td><td>503 "Khong co don nao dang chay"</td></tr>
+                <tr><td>Runner mất</td><td>502; quá hạn 30 s</td></tr>
+                <tr class="grp"><td colspan="2">Màn thử</td></tr>
+                <tr><td>Import</td><td>lười, để máy không có phần cứng vẫn mở được màn bán</td></tr>
+                <tr class="grp"><td colspan="2">File tĩnh</td></tr>
+                <tr><td>Cho phép</td><td><code>store_gui/</code>, <code>bartender_gui/</code>, <code>test_gui/</code>, <code>recipe/</code> và ba file trong <code>order/</code></td></tr>
+                <tr><td>Từ chối</td><td>404, không 403; symlink được giải trước khi xét</td></tr>
+                <tr class="grp"><td colspan="2">Địa chỉ nghe</td></tr>
+                <tr><td>Luôn</td><td>127.0.0.1</td></tr>
+                <tr><td>Nếu có</td><td>địa chỉ Tailscale; thread <code>tailnet-watch</code> thử lại mỗi 20 s</td></tr>
+                <tr><td>Ghi đè</td><td><code>--host</code>, <code>FLEXMIX_BIND</code> (chỉ máy phát triển)</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Mọi request, kể cả poll, được ghi nhận là "trang còn sống" cho watchdog. Log được nén: poll bình thường (kể cả 404 của <code>handoff.json</code> lúc máy rảnh) chỉ được đếm và in tổng mỗi 5 phút.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Payload chỉ được tạo ở đây.</b> Trình duyệt gửi <code>{drink_id, pairs: [{ingredient, type, data}], note, preview}</code>; <code>type</code> "01" là gram, "02" là có/không. Máy chủ gọi <code>qrproto.create</code> với <code>QRPROTO_MACHINE_ID</code> và khoá máy. <code>preview</code> chỉ mã hoá, không ghi vé.</li>
+          <li><b>Kiểm hình dạng payload trước khi dùng</b>: chỉ chữ số và độ dài thuộc bảng 109, 118, 128, … 224 của giao thức v1.4. Áp dụng cho <code>/api/qr</code>, <code>/api/print</code>, <code>/api/start</code>.</li>
+          <li><b><code>/api/start</code> từ chối sớm</b> với 409 nếu không ai giữ khoá <code>order/.run_flow.lock</code> (nghĩa là <code>run_flow</code> không chạy) hoặc máy đang ở chế độ test, thay vì ghi một mã mà không ai đọc.</li>
+          <li><b>QR trên màn hình vẽ bằng cùng thư viện và cùng mức sửa lỗi H</b> như nhãn in, trả về SVG, để mã trên màn và mã trên giấy giống nhau từng ô.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-menu">
+        <header><h3>4.3 · Đồng bộ menu ra màn bán <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/sync_menu.py</code>, <code>store_gui/drinks-pos.js</code> · Sơ đồ: luồng · 2 vòng</div></header>
+        <h4>Làm gì</h4>
+        <p>Màn bán là trang tĩnh, không gọi được MySQL. Khối này đọc database và ghi một bản chụp <code>store_gui/menu-data.js</code> (một câu gán <code>window.MENU_DATA</code>). Hai vòng giữ bản chụp mới: thread <code>sync_menu</code> mỗi 60 s, và máy chủ dựng lại khi trang hỏi mà file đã cũ hơn 20 s. Lệnh nạp kho từ xa và việc trừ kho sau mỗi đơn cũng gọi dựng lại.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  T["Thread sync_menu, mỗi 60 s"] --> RD
+  G["GET menu-data.js, file cũ hơn 20 s"] --> RD
+  K["Nạp kho, trừ kho"] --> RD
+  RD["read_menu: drink, category, recipe, ingredient, store_setting, vé đã bán"] --> BM["build_menu"]
+  BM --> CMP{"Khác bản trên đĩa? (bỏ generatedAt)"}
+  CMP -->|"không"| TOUCH["Chỉ đổi mtime"]
+  CMP -->|"có"| WR["Ghi tạm rồi đổi tên menu-data.js"]
+  WR --> PG["Trang so generatedAt mỗi 5 s"]
+  PG --> IDLE{"Khách đang chọn món?"}
+  IDLE -->|"có"| WAIT["Giữ menu cũ, báo update ready"]
+  IDLE -->|"không"| ADOPT["Chạy file trong sandbox, thay dữ liệu, vẽ lại"]
+  class T,G,K ui
+  class RD,BM,WR proc
+  class CMP,IDLE dec
+  class TOUCH,WAIT muted
+  class ADOPT ok
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Chỉ ghi khi dữ liệu thật sự đổi, vì trang coi mỗi lần <code>generatedAt</code> đổi là một menu mới. Ghi vô điều kiện từng làm màn hình tự tải lại mỗi phút.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Tuỳ chọn của món lấy từ chính công thức của món.</b> Nguyên liệu <code>boolean</code> thành ô tick, mặc định tick; <code>percentage</code> thành nút xoay 0/25/50/75/100% kèm gram ở 100%; <code>weight</code> không hiện cho khách.</li>
+          <li><b>Món bán được</b> khi <code>available</code> (nhân viên bật) và <code>in_stock</code> (trigger tính). Món không bán được vẫn hiện, kèm lý do "Off the menu" hoặc "Out of …".</li>
+          <li><b>Hai dải trên đầu:</b> "Món nổi bật" từ <code>drink.featured</code>; "Bán chạy" đếm vé <code>used</code> trong cửa sổ 30 ngày (1–365), lấy 6 món (1–12). Thứ tự khối, tiêu đề, kiểu hiển thị lấy từ bảng <code>store_setting</code>.</li>
+          <li><b>Trang tự quy đổi phần trăm thành gram</b> trước khi gửi vé: đường 50 g ở 25% gửi đi là 13 g, nên máy chỉ đọc số gram, không tính lại.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-flow">
+        <header><h3>4.4 · Điều phối đơn <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/run_flow.py</code> · Sơ đồ: trạng thái · 8 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Người nhạc trưởng: không chạm phần cứng, không truy vấn trực tiếp ngoài qua <code>order_ticket</code> và <code>error_log</code>. Nó chờ mã mới, nhờ <code>qr_to_recipe</code> đổi mã thành công thức, sinh runner, báo trình duyệt chuyển màn, đợi runner xong và dọn dẹp, bất kể đơn kết thúc thế nào. Chỉ một flow được chạy: khoá <code>flock</code> trên <code>order/.run_flow.lock</code>, kernel tự nhả khi tiến trình chết.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction TB
+  state "Khởi động: khoá, trả vé kẹt, dọn file, reset phần cứng, mở scanner, mở button-watch" as boot
+  state "Đang ở chế độ test" as test
+  state "Chờ mã mới (0,5 s)" as idle
+  state "Kiểm mã, dựng công thức, claim vé" as build
+  state "Sinh runner, đợi cổng 8000" as spawn
+  state "Đơn đang pha (handoff.json có mặt)" as pour
+  state "Đợi 8 s cho lời cảm ơn" as thanks
+  state "Dọn: chốt vé, reset phần cứng, xoá file" as clean
+  [*] --> boot
+  boot --> idle
+  idle --> test: mode.json open
+  test --> idle: nút 15 lần nữa
+  idle --> build: raw_qr.json đổi mã hoặc giờ
+  build --> idle: từ chối, ghi scan_notice
+  build --> spawn: watcher.pause
+  spawn --> clean: không lên trong 30 s
+  spawn --> pour: ghi handoff.json
+  pour --> thanks: runner thoát 0, đánh dấu finished
+  pour --> clean: thoát khác 0 hoặc huỷ
+  thanks --> clean
+  clean --> idle: watcher.resume
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Nhánh dọn nằm trong <code>finally</code>, nên chạy cả khi đơn hỏng, bị huỷ hay bị Ctrl+C. Công thức của đơn hỏng được giữ lại làm bằng chứng; <code>raw_qr.json</code> luôn được xoá thành <code>{}</code> để mã tiếp theo, kể cả cùng món, được coi là mới.</figcaption>
+        </figure>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Thứ tự lúc khởi động</b>: khoá flow; kiểm cổng 8000 trống; trả mọi vé <code>in_progress</code> về <code>unused</code>; xoá handoff và thông báo cũ; tắt chế độ test còn sót; dọn scanner mồ côi (cha là PID 1) rồi mở scanner mới; <code>all_pumps_off</code> và <code>reset_panel</code>; mở <code>ButtonWatcher</code>; làm mới kiosk nếu lần khởi động này do nút 14.</li>
+          <li><b>Phân loại lỗi để nói đúng với khách.</b> <code>ScanError</code> (CRC, giải mã, độ dài) là đọc sai: hộp vàng "quét lại", không ghi lỗi. <code>OrderError</code> (đã dùng, quá hạn, máy khác, không có công thức) là từ chối thật: hộp đỏ và một dòng <code>error_log</code> "Vé QR: …".</li>
+          <li><b>Chỉ ghi thông báo trước khi bàn giao màn.</b> Sau khi trình duyệt đã sang màn pha chế, lỗi do màn pha chế hiện; khi đơn kết thúc, <code>scan_notice.json</code> mới mang câu "đã bị huỷ" hoặc "máy đang gặp sự cố" để màn bán hiện lúc khách quay về.</li>
+          <li><b>Mã nguồn đơn quyết định cách trả vé.</b> <code>source: "store_screen"</code> trong <code>raw_qr.json</code> nghĩa là không có nhãn; đơn hỏng khi đó thành <code>noqr_err</code> thay vì <code>unused</code>.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-qr">
+        <header><h3>4.5 · Mã QR thành công thức <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/qr_to_recipe.py</code>, <code>qrproto/</code>, <code>database/services/recipe_export.py</code> · Sơ đồ: luồng · 8 tầng kiểm</div></header>
+        <h4>Làm gì</h4>
+        <p>Nhận chuỗi chữ số vừa quét, chứng minh nó do chính máy này cấp, rồi biến SKU (mã món) và các lựa chọn trong đó thành một công thức chạy được: danh sách bước có số bơm và số giây bơm đã tính theo hiệu chuẩn.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  P["Payload chữ số"] --> S12["Tầng 1-2: độ dài, VER 14, CRC ngoài"]
+  S12 --> S3["Tầng 3: giải mã AES-256-GCM"]
+  S3 --> S45["Tầng 4-5: cấu trúc, CRC trong"]
+  S45 --> S6["Tầng 6: mã máy khớp"]
+  S6 --> S7["Tầng 7: tuổi tối đa 600 s, lệch giờ 30 s"]
+  S7 --> S8["Tầng 8: nguyên liệu 1-24, không trùng, giá trị đúng kiểu"]
+  S8 --> RC["Đọc recipe của SKU"]
+  RC --> CH["Áp lựa chọn: bỏ nguyên liệu, thay gram"]
+  CH --> BD["build_drinks: bơm theo chân GPIO, tay theo vị trí panel"]
+  BD --> DOC["build_process_document: giây = (gram - dead_gram) / gram_per_sec"]
+  DOC --> CL["Claim vé, ghi current_recipe.json"]
+  S12 -.->|"lỗi"| SE["ScanError"]
+  S45 -.->|"lỗi"| SE
+  S6 -.->|"lỗi"| OE["OrderError"]
+  S7 -.->|"lỗi"| OE
+  RC -.->|"không có"| OE
+  class P ui
+  class S12,S3,S45,S6,S7,S8 proc
+  class RC,CH,BD,DOC proc
+  class CL ok
+  class SE,OE bad
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Hình dạng payload v1.4</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">Lớp ngoài (in ra)</td></tr>
+                <tr><td>VER</td><td>2 chữ số, "14"</td></tr>
+                <tr><td>Phong bì</td><td>nonce 12 B ‖ bản mã ‖ tag 16 B, viết bằng số thập phân</td></tr>
+                <tr><td>OCRC</td><td>5 chữ số, CRC-16/CCITT-FALSE</td></tr>
+                <tr class="grp"><td colspan="2">Lớp trong (mã hoá)</td></tr>
+                <tr><td>SKU</td><td>4 chữ số = <code>drink_id</code></td></tr>
+                <tr><td>COUNT</td><td>2 chữ số, 0–12 cặp</td></tr>
+                <tr><td>Cặp</td><td>nguyên liệu 2 · kiểu 2 · dữ liệu 4</td></tr>
+                <tr><td>TS, MID</td><td>10 và 6 chữ số</td></tr>
+                <tr><td>ICRC</td><td>5 chữ số</td></tr>
+                <tr class="grp"><td colspan="2">Kiểu</td></tr>
+                <tr><td>01</td><td>gram 0–9999 (khác bản đặc tả gốc)</td></tr>
+                <tr><td>02</td><td>0000 bỏ · 0001 giữ</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Độ dài lớp ngoài cho biết số cặp: 0 cặp là 109 chữ số, 12 cặp là 224. Nguyên liệu không được nhắc trong payload thì giữ đúng công thức; payload chỉ bỏ hoặc đổi lượng nguyên liệu đã có, không thêm được nguyên liệu mới.</figcaption>
+        </figure>
+        <h4>Hình dạng công thức ghi ra <code>order/current_recipe.json</code></h4>
+<pre class="wire">{
+  "schema": "flexmix.process/1",
+  "drink_id": 1001, "drink_name": "Peach Tea", "order_id": "9f1c…", "ticket_key": "5499e1…", "ticket_serial": 12,
+  "note": "ít đá", "glass": {…}, "drink_type": {…}, "garnish": "…", "error": null,
+  "steps": [
+    {"step": "1",  "order": 1, "type": "pump",   "status": "pending",
+     "pumps": [{"pump": 1, "ingredient_id": 1, "gram": 120, "duration_sec": 12.31},
+               {"pump": 2, "ingredient_id": 2, "gram": 80,  "duration_sec": 8.05}]},
+    {"step": "1m", "order": 2, "type": "manual", "status": "pending",
+     "buttons": [{"panel": 5, "ingredient_id": 12, "label": {"vi": "Đá", "en": "Ice"}, "lit": false}]},
+    {"step": "1d", "order": 3, "type": "detect", "status": "pending", "owner": "gui"},
+    {"step": "2a", "order": 4, "type": "action", "status": "pending", "media": {"src": "recipe/media/…"}}
+  ]
+}</pre>
+        <ol class="steps">
+          <li><b>Nhãn bước có hậu tố</b>: số là bước gốc trong bảng <code>recipe</code>; <code>m</code> là bước tay, <code>d</code> là kiểm ly sau bước tay, <code>a</code> là bước thao tác, <code>ad</code> là kiểm ly sau thao tác khi <code>cup_returns</code>. Bước bị bỏ hết nguyên liệu thì biến mất và các bước được đánh số lại.</li>
+          <li><b>Runner tự thêm bước 0</b> (cổng "Đặt ly lên máy") khi bắt đầu; công thức không chứa nó.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-runner">
+        <header><h3>4.6 · Bộ chạy công thức <span class="pill m">Đang chạy</span></h3><div class="src"><code>order/process_runner.py</code> · Sơ đồ: trạng thái bước + thread · 5 trạng thái</div></header>
+        <h4>Làm gì</h4>
+        <p>Tiến trình duy nhất được chạm bơm, cân và bảng nút trong lúc pha. Nó đọc công thức, chạy từng bước theo <code>order</code>, ghi trạng thái từng bước ngược lại vào cùng file sau mỗi thay đổi, và phục vụ màn pha chế trên 127.0.0.1:8000. Chạy lại cùng file thì bỏ qua các bước đã <code>done</code>.</p>
+        <figure class="dg dg-split">
+          <div class="dg-main">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "pending" as p
+  state "waiting (2 s lắng)" as w
+  state "running" as r
+  state "done" as d
+  state "failed" as f
+  [*] --> p
+  p --> w: bước kế, không phải bước đầu
+  p --> r: bước đầu
+  w --> r: hết thời gian lắng
+  r --> d: chạy xong, cân kiểm đạt
+  r --> f: lỗi phần cứng, sai khối lượng, huỷ
+  d --> [*]
+  f --> [*]
+          </script>
+          <div class="dg-canvas"></div>
+          </div>
+          <aside class="dg-side">
+            <table>
+              <thead><tr><th colspan="2">Thread trong runner</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="2">Thread chính</td></tr>
+                <tr><td>Việc</td><td><code>run_process</code>: bơm, cân, quyết định trạng thái</td></tr>
+                <tr><td>Chủ của</td><td>chân bơm, HX711</td></tr>
+                <tr class="grp"><td colspan="2">pump-N</td></tr>
+                <tr><td>Việc</td><td>một thread mỗi bơm trong bước, chạy song song</td></tr>
+                <tr class="grp"><td colspan="2">panel</td></tr>
+                <tr><td>Việc</td><td><code>panel_worker</code>: đèn và nút, 50 lần/giây</td></tr>
+                <tr><td>Chủ của</td><td>hai chip PCF8575</td></tr>
+                <tr class="grp"><td colspan="2">gui-server</td></tr>
+                <tr><td>Việc</td><td>nhận nút màn pha chế, chỉ đặt cờ vào <code>GuiBridge</code></td></tr>
+                <tr><td>Không bao giờ</td><td>tự đọc phần cứng</td></tr>
+                <tr class="grp"><td colspan="2">link-panel</td></tr>
+                <tr><td>Việc</td><td>chip panel chết mà công thức có bước tay thì dừng đơn</td></tr>
+              </tbody>
+            </table>
+          </aside>
+          <figcaption>Màn pha chế dịch trạng thái sang từ của nó (<code>done</code> thành hoàn tất, <code>running</code> thành đang xử lý) và đoán loại cổng từ hình dạng bước: có <code>buttons</code> là bảng nút giải phóng, có <code>sensor</code> là cân giải phóng, không có gì là một nút xác nhận trên màn.</figcaption>
+        </figure>
+        <h4>Từng loại bước</h4>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Bước</th><th>Đầu vào</th><th>Máy làm gì</th><th>Đạt khi</th></tr></thead>
+            <tbody>
+              <tr><td>0 · đặt ly</td><td><code>/api/confirm</code></td><td>Mỗi lần bấm cân ly tối đa 3 lần; không thấy ly thì canh cân thêm 30 s</td><td>cân ≥ 15 g; trọng lượng ly giữ cho cả đơn</td></tr>
+              <tr><td><code>pump</code></td><td>công thức</td><td>Các bơm chạy song song bằng PWM<sup class="fn" id="fnr-5"><a href="#fn-5">5</a></sup> 1 kHz đúng số giây; đợi 2 s rồi cân</td><td>lượng rót lệch ≤ 20 g so với mục tiêu tính từ lần cân trước</td></tr>
+              <tr><td><code>manual</code></td><td>nút thật hoặc <code>/api/process/button</code></td><td>Bật đèn các ô cần thêm tay, đợi đủ xác nhận</td><td>mọi đèn của bước đã được bấm</td></tr>
+              <tr><td><code>detect</code></td><td><code>/api/confirm</code> hoặc <code>/api/process/detect</code></td><td>Mỗi lần bấm đọc cân một lần</td><td>cân ≥ 15 g</td></tr>
+              <tr><td><code>action</code></td><td><code>/api/confirm</code></td><td>Màn lặp clip hướng dẫn; máy không nhìn cân</td><td>một lần bấm</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Các bước</h4>
+        <ol class="steps">
+          <li><b>Kiểm khối lượng sau mỗi bước bơm</b>: thiếu thì bơm bù tối đa 2 lần, chỉ khi bước có một bơm và phần thiếu ≥ 2 g; rót dư là hỏng ngay; cân nhẹ hơn lần trước quá 10 g nghĩa là ly bị nhấc, không phải rót thiếu.</li>
+          <li><b>Mốc cân được làm mới sau mọi bước không phải bơm</b>, trừ khi cân cho thấy ly chưa trở lại.</li>
+          <li><b>Tạm dừng và huỷ chỉ có hiệu lực ở cuối bước</b>, để ly không bao giờ dừng ở một lượng không ai chọn. Huỷ mang lý do (≤ 64 ký tự) và ghi chú (≤ 500), được ghi vào công thức và <code>error_log</code> mức <code>warning</code>.</li>
+          <li><b>Trừ kho</b>: đơn xong trừ đúng lượng các bước đã chạy trong một giao dịch; đơn hỏng trừ phần đã rót tới bước hỏng.</li>
+          <li><b>Nút 14 trong lúc pha</b> do thread panel thấy; runner từ chối khởi động lại khi cờ <code>POURING</code> đang bật, ngoài ra báo màn bán rồi gửi SIGTERM tới tiến trình chủ.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-driver">
+        <header><h3>4.7 · Driver phần cứng <span class="pill m">Đang chạy</span></h3><div class="src"><code>pump_control/</code>, <code>loadcell/</code>, <code>panel_control/</code>, <code>printer/</code>, <code>scan/</code> · Sơ đồ: luồng · 5 thiết bị</div></header>
+        <h4>Làm gì</h4>
+        <p>Mỗi thiết bị một module, mọi con số đi dây đọc từ <code>configuration/machine.py</code> (máy #1 làm mặc định, ghi đè bằng <code>/etc/flexmix/machine_profile.json</code>). Không module nào trong lõi đơn hàng tự mở thiết bị: chỉ runner, công cụ hiệu chuẩn, màn thử và <code>ButtonWatcher</code> làm việc đó, và không bao giờ cùng lúc.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart LR
+  subgraph RUN["process_runner (trong đơn)"]
+    PR["run_pump_for_duration"]
+    CD["cup_detection.read_current_gram"]
+    PW["panel_worker"]
+  end
+  subgraph IDLE["run_flow (lúc rảnh)"]
+    BW["ButtonWatcher"]
+    RST["reset_machine_hardware"]
+  end
+  subgraph SRV["store_gui (mọi lúc)"]
+    SP["spool.send_payload"]
+    TH["test_gui.hardware"]
+  end
+  SC["scan.scanner (tiến trình con)"]
+  PR --> PUMP["PWMLED chân BCM, 1 kHz"]
+  RST --> PUMP
+  CD --> HX["HX711: GPIO 4 SCK, 18 DT"]
+  PW --> I2C["PCF8575 0x21 đèn, 0x20 nút"]
+  BW --> I2C
+  RST --> I2C
+  SP --> LP["lp -d XP-350BM -o raw"]
+  SC --> USB["/dev/serial/by-id/*usbscn*"]
+  TH -.->|"chỉ ở chế độ test"| PUMP
+  TH -.-> HX
+  TH -.-> I2C
+  class PR,CD,PW,BW,RST,SP,TH,SC proc
+  class PUMP,HX,I2C,LP,USB hw
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Mũi tên đứt là đường của màn thử: chỉ chạy khi không có đơn và (nếu <code>run_flow</code> đang chạy) máy đang ở chế độ test; nó mượn chip nút bằng <code>pause_active</code>.</figcaption>
+        </figure>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Thiết bị</th><th>Giao tiếp</th><th>Chi tiết đáng nhớ</th></tr></thead>
+            <tbody>
+              <tr><td>Bơm 1–10</td><td>gpiozero <code>PWMLED</code> trên lgpio; bảng <code>PUMP_GPIO</code> 1→26, 2→15, 3→21, 4→20, 5→16, 6→12, 7→13, 8→6, 9→5, 10→14</td><td>Chạy theo giây, không theo cân. Sau khi đóng phải gọi <code>lgpio.gpio_free</code> (<code>gpio_lines.py</code>), không thì tiến trình kế báo "GPIO busy". Trùng chân bị từ chối lúc import.</td></tr>
+              <tr><td>Cân</td><td>HX711, 24 bit + 1 xung chọn gain, khoảng 10 mẫu/giây</td><td>Luồng đọc tự nâng lên SCHED_FIFO trong ~0,3 ms phát xung (cần <code>CAP_SYS_NICE</code>). Một lần đọc tĩnh lấy 10 mẫu thô, cần ít nhất 6 mẫu nằm trong ±3 g quanh trung vị, không thì trả <code>None</code>. Hiệu chuẩn <code>OFFSET</code>, <code>SCALE</code> trong <code>calib_loadcell.json</code>.</td></tr>
+              <tr><td>Bảng nút</td><td>I²C bus 1, hai PCF8575 tích cực mức thấp</td><td>Ô 0–15 ánh xạ khác nhau trên chip đèn và chip nút (<code>LED_PIN_MAP</code>, <code>BUTTON_PIN_MAP</code>). Tối đa 4 đèn sáng cùng lúc: 16 đèn từng làm chip latch-up và mất địa chỉ trên bus.</td></tr>
+              <tr><td>Máy in</td><td>tiến trình con <code>python3 -m printer.printer_qr</code>, hạn 30 s</td><td>QR mức H, ô 10 px, viền 4 → PNG 1 bit → lệnh TSPL<sup class="fn" id="fnr-6"><a href="#fn-6">6</a></sup> <code>SIZE 50 mm,30 mm</code>, <code>GAP 2 mm</code>, 203 dpi → hàng đợi CUPS raw.</td></tr>
+              <tr><td>Máy quét</td><td>pyserial, 9600 baud, mở độc quyền</td><td>Tìm theo <code>/dev/serial/by-id</code> có chữ "usbscn"; mất kết nối thì mở lại sau 2 s. Ở chế độ HID máy quét không có cổng serial; <code>explain_missing_port</code> đọc sysfs để nói rõ.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="comp" id="c-data">
+        <header><h3>4.8 · Dữ liệu: MySQL, vé, kho, nhật ký <span class="pill m">Đang chạy</span></h3><div class="src"><code>database/</code> · Sơ đồ: luồng · vòng đời vé</div></header>
+        <h4>Làm gì</h4>
+        <p>Một module mở kết nối (<code>database/core/connection.py</code>); mỗi lời gọi dịch vụ mở một kết nối mới và đóng ngay, không có pool. Schema và dữ liệu mặc định áp lại được nhiều lần bằng <code>apply_database_sql</code>; không có migration tăng dần.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="state">
+stateDiagram-v2
+  direction LR
+  state "unused" as u
+  state "in_progress" as ip
+  state "used" as us
+  state "expired" as ex
+  state "noqr_err" as nq
+  [*] --> u: issue (store_gui)
+  u --> ip: claim (run_flow)
+  u --> ex: claim thấy quá 24 giờ
+  ip --> us: complete, đã rót
+  ip --> u: release, đơn có nhãn hỏng hoặc huỷ
+  ip --> nq: mark_failed, đơn không quét hỏng
+  ip --> u: release_stranded lúc khởi động
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Mọi chuyển trạng thái rời <code>in_progress</code> đều có điều kiện <code>WHERE status='in_progress'</code>, nên một lần chốt muộn không ghi đè được vé đã xong.</figcaption>
+        </figure>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Dịch vụ</th><th>Ai gọi</th><th>Ghi gì</th></tr></thead>
+            <tbody>
+              <tr><td><code>order_ticket</code></td><td>store_gui, qr_to_recipe, run_flow, lệnh từ xa</td><td>Vé, khoá tra là SHA-256 của payload; <code>serial</code> chỉ để hiển thị và gắn lỗi.</td></tr>
+              <tr><td><code>inventory</code></td><td>runner, lệnh từ xa, install.sh</td><td><code>consume_recipe_usage</code> khoá dòng <code>FOR UPDATE</code>, từ chối nếu kho ít hơn lượng dùng; <code>refill</code> đặt giá trị tuyệt đối; sau đó dựng lại menu.</td></tr>
+              <tr><td><code>recipe_export</code></td><td>qr_to_recipe, prime_all</td><td>Không ghi; đọc công thức và hiệu chuẩn bơm.</td></tr>
+              <tr><td><code>error_log</code></td><td>run_flow, runner, prime_all</td><td>Câu lỗi có mức <code>info</code>/<code>warning</code>/<code>error</code>, gắn thẻ <code>[Vé #serial]</code> ở đầu câu.</td></tr>
+              <tr><td><code>reporting</code></td><td>lệnh từ xa</td><td>Không ghi; tổng ly và tiền theo ngày trong một bản chụp REPEATABLE READ.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="prose">Sáu trigger giữ hai cột suy ra: <code>ingredient.in_stock = amount ≥ threshold_gram</code>, và <code>drink.in_stock</code> = có công thức và mọi nguyên liệu còn. Ngưỡng mặc định là 110% lượng dùng lớn nhất trong một món. Mã nguyên liệu bị giới hạn 1–24 vì trường nguyên liệu trong QR chỉ có 2 chữ số.</p>
+      </article>
+
+      <article class="comp" id="c-heal">
+        <header><h3>4.9 · Giám sát và tự hồi phục <span class="pill m">Đang chạy</span></h3><div class="src"><code>store_gui/kiosk_watchdog.py</code>, <code>panel_control/button_watch.py</code>, <code>order/run_flow.py</code> · Sơ đồ: luồng · 4 cơ chế</div></header>
+        <h4>Làm gì</h4>
+        <p>Máy đặt ở quán, không có bàn phím, thường không ai đứng cạnh. Khối này gom các cơ chế tự đưa máy về trạng thái bán được mà không cần người kỹ thuật.</p>
+        <figure class="dg">
+          <script type="text/x-mermaid" data-kind="flow">
+flowchart TD
+  subgraph WD["kiosk_watchdog, mỗi 5 s"]
+    A1{"CmaFree dưới 120 MB hai lần liền?"} -->|"có, không có đơn"| K1["SIGTERM trình duyệt kiosk"]
+    A2{"Không request nào trong 45 s?"} -->|"có, trình duyệt còn chạy"| K1
+    K1 --> CD["Nghỉ 90 s"]
+  end
+  subgraph B14["Nút 14"]
+    N1["Ghi scan_notice restart, ghi order/.kiosk_refresh"] --> N2["SIGTERM MainPID của unit"]
+    N2 --> N3["systemd dựng lại sau 3 s"]
+    N3 --> N4["Backend mới làm mới trình duyệt"]
+  end
+  subgraph B15["Nút 15"]
+    T1["Đảo test_gui/mode.json"] --> T2["run_flow ngừng nhận mã"]
+    T2 --> T3["Màn bán tự sang màn thử"]
+  end
+  subgraph ST["Khởi động run_flow"]
+    S1["Trả vé kẹt"] --> S2["Tắt bơm, tắt đèn"] --> S3["Dọn scanner mồ côi"]
+  end
+  class A1,A2 dec
+  class K1,N2,T1 hot
+  class CD muted
+  class N1,N3,N4,T2,T3,S1,S2,S3 proc
+          </script>
+          <div class="dg-canvas"></div>
+          <figcaption>Watchdog chỉ bật khi <code>FLEXMIX_KIOSK_WATCHDOG=1</code> (unit đặt), vì nó không phân biệt được máy chủ thật với một lần chạy thử trên cùng máy. CMA<sup class="fn" id="fnr-7"><a href="#fn-7">7</a></sup> là vùng nhớ liền khối mà tầng đồ hoạ của Pi dùng; cạn vùng này làm tab trình duyệt chết.</figcaption>
+        </figure>
+        <ol class="steps">
+          <li><b>Dưới systemd, nút 14 không dùng sudo</b>: unit giới hạn capability nên sudo không lên được root; <code>restart_backend</code> đọc <code>MainPID</code> bằng <code>systemctl show</code> và tự gửi SIGTERM. Ngoài systemd (chạy tay), nó thử <code>sudo -n systemctl restart --no-block</code>.</li>
+          <li><b>Màn bán chịu được việc máy chủ biến mất</b>: thấy thông báo <code>restart</code>, nó đếm 5 s rồi gõ cửa mỗi 0,5 s (tối đa 60 s) và chỉ tải lại khi máy chủ trả lời, để không rơi vào trang lỗi của trình duyệt.</li>
+          <li><b>Màn bán không bao giờ chuyển trang vào chỗ chết</b>: trước khi sang màn pha chế hay màn thử, nó gửi một GET thử tới đích; không được thì ở lại và báo.</li>
+        </ol>
+      </article>
+
+      <article class="comp" id="c-machine">
+        <header><h3>4.10 · Cửa vào từ xa trên máy <span class="pill h">Chưa có unit</span></h3><div class="src"><code>machine/</code> · chỉ phần chạm dữ liệu máy · không gồm server</div></header>
+        <h4>Làm gì</h4>
+        <p>Một tiến trình riêng (<code>python -m machine.main</code>) nhận lệnh từ xa và đổi chúng thành lời gọi vào cùng các dịch vụ database ở mục 4.8. Nó không chạm phần cứng và không đi qua <code>run_flow</code>; hiệu ứng duy nhất lên màn bán là dựng lại <code>menu-data.js</code>. Một tiến trình khác (<code>machine.pairing.machine_bluetooth_pair</code>) lo nhận máy qua BLE<sup class="fn" id="fnr-8"><a href="#fn-8">8</a></sup>. Cả hai chưa có unit khởi động.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Lệnh</th><th>Gọi vào</th><th>Ảnh hưởng tới backend máy</th></tr></thead>
+            <tbody>
+              <tr><td><code>machine.status.read</code></td><td>bộ nhớ của tiến trình</td><td>Không.</td></tr>
+              <tr><td><code>nhan_menu</code>, <code>cap_nhat_menu</code></td><td>bảng <code>drink</code> (chỉ <code>price</code>, <code>available</code>)</td><td>Màn bán thấy thay đổi trong ≤ 20 s nhờ máy chủ dựng lại khi trang hỏi; lệnh không tự dựng lại.</td></tr>
+              <tr><td><code>nhan_kho</code>, <code>nap_kho</code></td><td><code>inventory.list_ingredients</code>, <code>refill</code></td><td>Trigger tính lại <code>in_stock</code>; lệnh dựng lại menu ngay.</td></tr>
+              <tr><td><code>nhan_ve_qr</code></td><td><code>order_ticket.recent_page</code></td><td>Chỉ đọc, không trả payload, hash hay ghi chú.</td></tr>
+              <tr><td><code>nhan_bao_cao</code></td><td><code>reporting.read_report_rows</code></td><td>Chỉ đọc.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="prose">Lệnh trùng <code>request_id</code> được trả lại kết quả cũ từ bộ nhớ (32 kết quả gần nhất). Hai lệnh ghi đều an toàn khi chạy lại: <code>cap_nhat_menu</code> được chặn bằng số phiên bản menu, <code>nap_kho</code> đặt giá trị tuyệt đối.</p>
+      </article>
+    </section>
+
+    <section id="giao-thuc">
+      <div class="sec-head"><span class="sec-no">Mục 5</span><h2>Giao thức liên lạc giữa các luồng</h2></div>
+      <p class="prose">Backend dùng bốn cách nói chuyện, mỗi cách cho một ranh giới: file JSON giữa các tiến trình và với trình duyệt, HTTP loopback cho lệnh cần trả lời ngay, hàng đợi và cờ <code>threading.Event</code> giữa các thread trong runner, và tín hiệu hệ điều hành cho việc sống chết.</p>
+
+      <h3 id="g-luong">5.1 · Bảng thread và tiến trình</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tên</th><th>Loại · cha</th><th>Vòng lặp</th><th>Nhịp</th><th>Chủ của</th></tr></thead>
+          <tbody>
+            <tr><td><code>main</code></td><td>tiến trình · systemd</td><td>join ba thread</td><td>–</td><td>–</td></tr>
+            <tr><td><code>store_gui</code></td><td>thread · main</td><td>ngủ 3600 s; máy chủ chạy trong thread <code>http-127.0.0.1</code>, <code>http-100.x</code></td><td>mỗi request một thread</td><td>cổng 8080</td></tr>
+            <tr><td><code>kiosk-watchdog</code></td><td>thread · store_gui</td><td><code>_tick</code></td><td>5 s</td><td>quyền SIGTERM trình duyệt</td></tr>
+            <tr><td><code>tailnet-watch</code></td><td>thread · store_gui</td><td>tìm địa chỉ Tailscale, dừng khi thấy</td><td>20 s</td><td>–</td></tr>
+            <tr><td><code>sync_menu</code></td><td>thread · main</td><td><code>watch</code></td><td>60 s</td><td>ghi <code>menu-data.js</code> (cùng máy chủ)</td></tr>
+            <tr><td><code>run_flow</code></td><td>thread · main</td><td><code>wait_for_new_scan</code>, <code>run_one_order</code></td><td>0,5 s</td><td>khoá flow, quyết định đơn</td></tr>
+            <tr><td><code>button-watch</code></td><td>thread · run_flow</td><td>đọc chip 0x20</td><td>0,25 s</td><td>chip nút khi rảnh</td></tr>
+            <tr><td><code>kiosk-refresh</code></td><td>thread · run_flow</td><td>một lần, sau nút 14</td><td>–</td><td>–</td></tr>
+            <tr><td><code>scan.scanner</code></td><td>tiến trình con · run_flow</td><td><code>scan_forever</code></td><td>đọc serial 0,2 s</td><td>cổng USB serial (độc quyền)</td></tr>
+            <tr><td><code>process_runner</code></td><td>tiến trình con · run_flow, một mỗi đơn</td><td><code>run_process</code></td><td>bước</td><td>bơm, HX711, cổng 8000</td></tr>
+            <tr><td><code>panel</code></td><td>thread · runner</td><td><code>panel_worker</code></td><td>0,02 s</td><td>chip đèn và chip nút</td></tr>
+            <tr><td><code>gui-server</code></td><td>thread · runner</td><td>máy chủ 127.0.0.1:8000</td><td>mỗi request</td><td>–</td></tr>
+            <tr><td><code>printer_qr</code></td><td>tiến trình con · store_gui, một mỗi lần in</td><td>một lần</td><td>hạn 30 s</td><td>file PNG tạm, lệnh <code>lp</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="g-file">5.2 · File trung gian</h3>
+      <p class="prose">Quy ước chung: người ghi viết ra file tạm cùng thư mục (tên bắt đầu bằng dấu chấm, đuôi <code>.tmp</code>), <code>fsync</code> với các file quan trọng, rồi <code>os.replace</code> sang tên thật. Người đọc coi file thiếu hoặc hỏng là "không có gì", không phải lỗi. "Mới" được nhận ra bằng một trường đổi giá trị (<code>id</code>, <code>order_id</code>, <code>timestamp</code>), và mỗi trang lấy giá trị ở lần đọc đầu làm mốc để không phản ứng với dữ liệu cũ.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>File</th><th>Ghi · đọc</th><th>Nội dung</th><th>Vòng đời</th></tr></thead>
+          <tbody>
+            <tr><td><code>scan/raw_qr.json</code></td><td>scanner, <code>/api/start</code> · run_flow</td><td><code>{"qr_code", "timestamp", "source"?}</code></td><td>Ghi đè mỗi lần quét; xoá thành <code>{}</code> khi đơn kết thúc.</td></tr>
+            <tr><td><code>order/current_recipe.json</code></td><td>qr_to_recipe, runner · runner, màn pha</td><td>Công thức <code>flexmix.process/1</code> (mục 4.5) cộng trạng thái từng bước, <code>paused_at</code>, <code>cancelled_at</code>, <code>error</code></td><td>Xoá thành <code>{}</code> khi xong hay huỷ; giữ lại khi hỏng.</td></tr>
+            <tr><td><code>order/handoff.json</code></td><td>run_flow · màn bán, store_gui, watchdog</td><td><code>{"order_id", "drink_id", "drink_name", "gui_port": 8000, "gui_path", "created_at", "finished"?}</code></td><td>Có mặt đúng bằng thời gian một đơn; xoá khi đơn kết thúc.</td></tr>
+            <tr><td><code>order/scan_notice.json</code></td><td>run_flow · màn bán</td><td><code>{"id", "kind": refused|rescan|fault|restart, "title", "message", "payload", "created_at"}</code></td><td>Xoá đầu mỗi đơn và lúc khởi động; trang nhớ <code>id</code> đã đóng trong localStorage.</td></tr>
+            <tr><td><code>test_gui/mode.json</code></td><td>button-watch · run_flow, màn bán, màn thử, <code>/api/start</code></td><td><code>{"open", "id", "port", "path"}</code></td><td><code>id</code> đổi mỗi lần bấm nút 15; xoá cờ khi run_flow dừng hoặc khởi động.</td></tr>
+            <tr><td><code>store_gui/menu-data.js</code></td><td>sync_menu, store_gui, dịch vụ kho · màn bán</td><td><code>window.MENU_DATA = {generatedAt, categories, drinks, layout, featured, bestseller, toppings}</code></td><td>Chỉ ghi khi dữ liệu đổi.</td></tr>
+            <tr><td><code>order/.run_flow.lock</code></td><td>run_flow (flock) · store_gui, màn thử thử khoá</td><td>PID người giữ</td><td>Kernel nhả khi tiến trình chết.</td></tr>
+            <tr><td><code>order/.kiosk_refresh</code></td><td>nút 14 · run_flow mới</td><td>thời điểm</td><td>Xoá trước khi làm mới trình duyệt.</td></tr>
+            <tr><td><code>order/flow.log</code></td><td>run_flow</td><td>một dòng mỗi sự kiện đơn, có giờ</td><td>Chỉ ghi thêm.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant B as Màn bán
+  participant H as handoff.json
+  participant N as scan_notice.json
+  participant M as mode.json
+  participant F as run_flow
+  loop mỗi 1 s, không chồng lần poll
+    B->>H: GET
+    B->>N: GET
+    B->>M: GET
+  end
+  Note over B: Lần đầu: lấy order_id, id làm mốc, không phản ứng
+  F->>H: ghi order_id mới
+  B->>B: order_id khác mốc, khách đang dở đơn thì hỏi trước
+  B->>B: GET thử /bartender_gui/index.html rồi mới chuyển trang
+  F->>N: ghi id mới khi từ chối mã
+  B->>B: id khác mốc, hiện hộp 20 s
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Ba lần poll đi cùng một nhịp, có cờ "đang poll" để lần chậm không chồng lên lần sau. Thông báo mới hơn 60 s vẫn được hiện khi trang vừa tải lại, vì trường hợp hay gặp nhất là đơn bị huỷ rồi trình duyệt quay về màn bán.</figcaption>
+      </figure>
+
+      <h3 id="g-http">5.3 · HTTP nội bộ</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Đường</th><th>Ở</th><th>Thân gửi</th><th>Trả lời</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/ticket</code></td><td>8080</td><td><code>{drink_id, pairs, note, preview}</code></td><td>200 <code>{ok, serial, payload_hash, payload}</code> · 400 đơn sai · 500 thiếu khoá, lỗi DB</td></tr>
+            <tr><td><code>GET /api/qr?payload=</code></td><td>8080</td><td>–</td><td>SVG · 400 sai hình dạng</td></tr>
+            <tr><td><code>POST /api/print</code></td><td>8080</td><td><code>{payload}</code></td><td>200 <code>{ok, message}</code> · 500 máy in báo lỗi · 504 quá hạn</td></tr>
+            <tr><td><code>POST /api/start</code></td><td>8080</td><td><code>{payload}</code></td><td>200 · 409 run_flow không chạy hoặc đang test · 500 không ghi được file</td></tr>
+            <tr><td><code>POST /api/confirm</code></td><td>8080 → 8000</td><td>–</td><td>202 <code>{accepted}</code>; đặt <code>confirm_event</code></td></tr>
+            <tr><td><code>POST /api/pause</code>, <code>/api/resume</code></td><td>8080 → 8000</td><td>–</td><td>202; đặt/xoá <code>pause_event</code>, <code>resume_event</code></td></tr>
+            <tr><td><code>POST /api/cancel</code></td><td>8080 → 8000</td><td><code>{reason, note}</code></td><td>202; đặt <code>cancel_event</code></td></tr>
+            <tr><td><code>POST /api/process/button</code></td><td>8080 → 8000</td><td><code>{step, panel}</code></td><td>202 · 400 thiếu trường · 503 hàng đợi đầy</td></tr>
+            <tr><td><code>POST /api/process/detect</code></td><td>8080 → 8000</td><td>–</td><td>200 <code>{detected, current_gram, min_gram}</code> · 503 runner không trả lời trong 10 s</td></tr>
+            <tr><td><code>GET /api/status</code></td><td>8080 (màn thử)</td><td>–</td><td>trạng thái job, lý do bận, bơm đang giữ</td></tr>
+            <tr><td><code>POST /api/stop</code>, <code>/api/prime</code>, <code>/api/panel/leds</code>, <code>/api/panel/buttons</code>, <code>/api/scale</code></td><td>8080 (màn thử)</td><td>tuỳ job</td><td>200 đã nhận · 409 máy bận</td></tr>
+            <tr><td><code>POST /api/pump/hold</code>, <code>/api/pump/release</code></td><td>8080 (màn thử)</td><td><code>{pump, token}</code></td><td>Giữ-để-bơm: gửi lặp lại khi đang giữ; ngừng nhận quá 1 s thì bơm tự tắt, tối đa 60 s</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="g-queue">5.4 · Hàng đợi và cờ trong runner</h3>
+      <p class="prose">Bên trong <code>process_runner</code>, thread máy chủ và thread panel không bao giờ tự làm việc với thiết bị. Chúng đặt yêu cầu vào hàng đợi hoặc bật cờ; thread chính lấy ra và làm. Lệnh xuống thread panel đi qua <code>panel_command_queue</code> (tối đa 32) dưới dạng cặp <code>(action, payload)</code>: <code>show</code> với danh sách ô (bật đèn và cho phép nút), <code>done</code>, <code>retry</code>, <code>clear</code>. Nút được chấp nhận đi lên qua <code>button_event_queue</code> (tối đa 32) dưới dạng số ô; một nút chỉ được nhận một lần cho tới khi được cho phép lại.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant P as Màn pha chế
+  participant G as gui-server
+  participant R as thread chính
+  participant W as thread panel
+  participant C as Chip PCF8575
+  R->>W: panel_command_queue ("show", [5, 6])
+  W->>C: ghi từ 16 bit đèn 0x21
+  R->>R: ghi lit=false vào công thức
+  alt Nhân viên bấm nút thật
+    C-->>W: bit nút 5 về 0 (lần đọc 20 ms)
+    W->>R: button_event_queue 5
+  else Bấm trên màn hình
+    P->>G: POST /api/process/button {step, panel 6}
+    G->>R: bridge.button_queue ("1m", 6)
+  end
+  R->>R: đánh dấu lit, lưu công thức
+  R->>W: ("show", các ô còn lại) hoặc ("clear", None)
+  W->>C: tắt đèn
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption>Bấm trên màn mang nhãn bước; thread chính bỏ qua nếu nhãn không phải bước hiện tại, để một cú bấm cũ không giải phóng bước sau. Nút số 14 không thuộc bước nào thì panel gọi thẳng hàm khởi động lại (mục 4.6).</figcaption>
+      </figure>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Cờ trong <code>GuiBridge</code></th><th>Ai bật</th><th>Ai đợi</th><th>Nghĩa</th></tr></thead>
+          <tbody>
+            <tr><td><code>confirm_event</code></td><td>gui-server</td><td>bước 0, detect, action</td><td>Một lần bấm nút xác nhận; xoá trước mỗi bước.</td></tr>
+            <tr><td><code>detect_request</code> → <code>detect_done</code></td><td>gui-server → thread chính</td><td>gui-server, tối đa 10 s</td><td>Hỏi một lần cân; câu trả lời nằm ở <code>detected</code>, <code>detect_sensor</code>.</td></tr>
+            <tr><td><code>pause_event</code>, <code>resume_event</code>, <code>paused_now</code></td><td>gui-server / thread chính</td><td>thread chính / màn</td><td>Dừng ở cuối bước; <code>paused_now</code> và <code>paused_at</code> cho màn biết máy đã thật sự dừng.</td></tr>
+            <tr><td><code>cancel_event</code> + <code>cancel_lock</code></td><td>gui-server</td><td>thread chính</td><td>Huỷ với lý do; lý do đầu tiên thắng.</td></tr>
+            <tr><td><code>stop_event</code></td><td>main, link-panel</td><td>mọi vòng chờ, mọi bơm</td><td>Dừng cả đơn; bơm đang chạy ném lỗi "interrupted by shutdown".</td></tr>
+            <tr><td><code>panel_stop_event</code></td><td>main / thread panel</td><td>thread panel / link-panel</td><td>Hai chiều: main bảo panel dừng; panel báo chip hỏng.</td></tr>
+            <tr><td><code>POURING</code></td><td>bước bơm</td><td>nút 14</td><td>Đang có chất lỏng chảy: không khởi động lại.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="g-owner">5.5 · Quyền giữ thiết bị giữa các tiến trình</h3>
+      <p class="prose">Chip nút 0x20 có hai người đọc: <code>ButtonWatcher</code> trong <code>run_flow</code> (lúc rảnh, chỉ để thấy nút 14 và 15) và <code>panel_worker</code> trong runner (lúc pha). Hai người đọc cùng lúc trên một bus I²C làm hỏng dữ liệu của nhau, nên quyền được trao tay theo thứ tự cố định quanh mỗi đơn.</p>
+      <figure class="dg">
+        <script type="text/x-mermaid" data-kind="seq">
+sequenceDiagram
+  autonumber
+  participant F as run_flow
+  participant W as ButtonWatcher
+  participant R as process_runner
+  participant H as Phần cứng
+  F->>W: pause(), watcher đóng chip trong 0,5 s
+  F->>R: Popen
+  R->>H: mở chip đèn và nút, chân bơm, HX711
+  R->>H: pha xong, đóng chip, gpio_free chân bơm
+  R-->>F: thoát
+  F->>H: reset_machine_hardware, tắt bơm, tắt đèn
+  F->>W: resume(), watcher mở lại chip
+        </script>
+        <div class="dg-canvas"></div>
+        <figcaption><code>reset_machine_hardware</code> chạy giữa lúc runner thoát và lúc watcher đọc lại chip, để hai bên không bao giờ cùng trên bus và để một runner bị giết giữa ly không bỏ lại bơm đang chạy hay đèn đang sáng.</figcaption>
+      </figure>
+      <div class="note crit"><b>Lỗi đã biết ở chỗ trao tay</b><code>pause</code>/<code>resume</code> chỉ là một cờ, không đếm người mượn. Màn thử cũng mượn chip bằng <code>pause_active</code>/<code>resume_active</code>; nếu job thử xong giữa lúc một đơn đang pha thì watcher mở chip lại song song với runner (DBG-06, test tái hiện đang thất bại).</div>
+
+      <h3 id="g-signal">5.6 · Mã thoát và tín hiệu</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Ai</th><th>Mã / tín hiệu</th><th>Nghĩa với bên kia</th></tr></thead>
+          <tbody>
+            <tr><td><code>main.py</code></td><td>thoát 1</td><td>systemd khởi động lại sau 3 s</td></tr>
+            <tr><td><code>process_runner</code></td><td>0 / 1</td><td>0: đã rót xong, chốt vé <code>used</code>, đợi 8 s lời cảm ơn. 1: hỏng hoặc huỷ; <code>run_flow</code> đọc <code>cancelled_at</code> trong công thức để phân biệt.</td></tr>
+            <tr><td><code>run_flow</code> → runner</td><td>SIGTERM</td><td>Ctrl+C hoặc <code>FlowError</code>; trước đó ghi "đã huỷ" vào công thức để màn pha chế biết.</td></tr>
+            <tr><td><code>scan.scanner</code></td><td>0 / 1 / 2</td><td>dừng bình thường / không mở được cổng lần đầu / không ghi được file</td></tr>
+            <tr><td><code>printer_qr</code></td><td>0 kèm chữ "LOI:"</td><td><code>spool</code> coi là in hỏng dù mã thoát 0</td></tr>
+            <tr><td>Nút 14</td><td>SIGTERM tới <code>MainPID</code></td><td>Cả service dừng, systemd dựng lại</td></tr>
+            <tr><td>kiosk_watchdog</td><td>SIGTERM tới Firefox</td><td>Vòng <code>while true</code> trong autostart mở lại sau 1 s</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="thong-so">
+      <div class="sec-head"><span class="sec-no">Mục 6</span><h2>Sổ thông số</h2></div>
+      <p class="prose">Hai loại con số. Thông số của máy (dây, cổng, máy in, chính sách) nằm trong <code>configuration/machine.py</code> và ghi đè được bằng hồ sơ máy. Hằng số thuộc thuật toán nằm cạnh mã dùng nó và không nằm trong hồ sơ.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Tên</th><th>Giá trị</th><th>Ở đâu</th><th>Hồ sơ máy?</th></tr></thead>
+          <tbody>
+            <tr><td>Cổng màn hình / runner / màn thử chạy riêng</td><td class="num">8080 / 8000 / 8090</td><td><code>STORE_PORT</code>, <code>RUNNER_PORT</code>, <code>TEST_STANDALONE_PORT</code></td><td>có</td></tr>
+            <tr><td>Tần số PWM bơm</td><td class="num">1000 Hz</td><td><code>PUMP_FREQUENCY_HZ</code></td><td>có</td></tr>
+            <tr><td>Đèn sáng cùng lúc tối đa</td><td class="num">4</td><td><code>PANEL_MAX_LEDS_ON</code></td><td>có</td></tr>
+            <tr><td>Nút khởi động lại / chế độ test</td><td class="num">14 / 15</td><td><code>PANEL_BUTTON_RESTART</code>, <code>PANEL_BUTTON_TEST_MODE</code></td><td>có</td></tr>
+            <tr><td>Hạn vé</td><td class="num">24 giờ</td><td><code>TICKET_LIFETIME_HOURS</code></td><td>có</td></tr>
+            <tr><td>Chu kỳ dựng menu</td><td class="num">1 phút</td><td><code>MENU_SYNC_INTERVAL_MINUTES</code></td><td>có</td></tr>
+            <tr><td>Tuổi tối đa payload / lệch giờ</td><td class="num">600 s / 30 s</td><td>mặc định của <code>qrproto.verify</code></td><td>không</td></tr>
+            <tr><td>Dựng lại menu khi trang hỏi</td><td class="num">20 s</td><td><code>MENU_MAX_AGE_SECONDS</code></td><td>không</td></tr>
+            <tr><td>Poll màn bán / so menu / màn pha</td><td class="num">1 s / 5 s / 120 ms</td><td><code>drinks-pos.js</code>, <code>guide.js</code></td><td>không</td></tr>
+            <tr><td>Poll mã quét / bỏ trùng / mở lại cổng quét</td><td class="num">0,5 s / 2 s / 2 s</td><td><code>SCAN_POLL_SECONDS</code>, <code>DEDUP_WINDOW_SECONDS</code></td><td>không</td></tr>
+            <tr><td>Đợi runner lên / lời cảm ơn</td><td class="num">30 s / 8 s</td><td><code>SERVER_START_TIMEOUT_SECONDS</code>, <code>CLEAR_DELAY_SECONDS</code></td><td>không</td></tr>
+            <tr><td>Lắng giữa bước / lắng trước khi cân</td><td class="num">2 s / 2 s</td><td><code>STEP_DELAY_SECONDS</code>, <code>WEIGHT_SETTLE_SECONDS</code></td><td>không</td></tr>
+            <tr><td>Có ly / sai số rót / mất ly</td><td class="num">15 g / 20 g / 10 g</td><td><code>CUP_MIN_GRAM</code>, <code>WEIGHT_TOLERANCE_GRAM</code>, <code>WEIGHT_LOSS_LIMIT_GRAM</code></td><td>không</td></tr>
+            <tr><td>Bơm bù tối đa / tối thiểu</td><td class="num">2 lần / 2 g</td><td><code>TOPUP_MAX_ATTEMPTS</code>, <code>TOPUP_MIN_GRAM</code></td><td>không</td></tr>
+            <tr><td>Đợi màn hỏi cân</td><td class="num">10 s</td><td><code>GUI_DETECT_TIMEOUT_SECONDS</code></td><td>không</td></tr>
+            <tr><td>Relay tới runner / in</td><td class="num">30 s / 30 s</td><td><code>RUNNER_TIMEOUT_SECONDS</code>, <code>PRINT_TIMEOUT_SECONDS</code></td><td>không</td></tr>
+            <tr><td>Watchdog: im lặng / CMA thấp / nghỉ</td><td class="num">45 s / 120 MB × 2 / 90 s</td><td><code>kiosk_watchdog.py</code></td><td>không</td></tr>
+            <tr><td>Watcher nút: poll / chống dội / nghỉ khi lỗi</td><td class="num">0,25 s / 0,35 s / 3 s</td><td><code>button_watch.py</code></td><td>không</td></tr>
+            <tr><td>Panel trong đơn</td><td class="num">0,02 s</td><td><code>POLL_INTERVAL</code></td><td>không</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ghi-chu">
+      <div class="sec-head"><span class="sec-no">Mục 7</span><h2>Đã biết và để sau</h2></div>
+      <div class="note crit"><b>Lỗi đã kiểm, chưa sửa mã</b>(1) Database cài mới không có công thức nào vì <code>seed.sql</code> dùng mã món 1–5 thay vì 1001–1005. (2) Nhãn chỉ quét được trong 10 phút do <code>qrproto.verify</code> dùng tuổi mặc định 600 s, trong khi vé còn hạn 24 giờ. (3) Năm lỗi DBG-01, 02, 03, 06, 07 vẫn tái hiện. Chi tiết, bằng chứng và kết quả chạy ở <a href="version1-1-code-manual.html#findings">cẩm nang mã nguồn, mục 5</a>.</div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Điểm thiết kế còn hở</th><th>Hiện trạng</th><th>Mục</th></tr></thead>
+          <tbody>
+            <tr><td>Bảng chân bơm có hai nguồn</td><td><code>recipe_export.GPIO_TO_PUMP</code> chép cứng máy #1, không theo hồ sơ máy</td><td>4.5, 4.7</td></tr>
+            <tr><td>MySQL vắng lúc khởi động</td><td><code>sync_menu</code> thoát, kéo cả máy chủ 8080 quay vòng khởi động lại</td><td>4.1, 4.3</td></tr>
+            <tr><td>Trace debug</td><td><code>FLEXMIX_DEBUG_ON = True</code> mặc định, unit không tắt</td><td>4.1</td></tr>
+            <tr><td>In song song</td><td>Mọi lần in vẽ vào cùng một file PNG; tiến trình in dùng <code>python3</code> theo PATH</td><td>4.7</td></tr>
+            <tr><td>Làm mới trình duyệt sau nút 14</td><td>Tìm tiến trình Chromium, kiosk đã là Firefox</td><td>4.9</td></tr>
+            <tr><td>Cài đặt cách nhận đơn</td><td>Trang gọi <code>/api/order-mode</code>, không máy chủ nào phục vụ</td><td>4.2</td></tr>
+            <tr><td>Cửa vào từ xa</td><td>Không có unit cho <code>machine.main</code> và dịch vụ BLE; thiếu gói <code>dbus</code>, <code>gi</code></td><td>4.10</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Để sau</th><th>Khi nào cần</th></tr></thead>
+          <tbody>
+            <tr><td>Đếm người mượn chip nút thay cho một cờ</td><td>Trước khi dùng màn thử lúc máy đang mở bán</td></tr>
+            <tr><td>Gom các hằng số thuật toán thành một sổ thông số có tên</td><td>Khi cần chỉnh từ xa hoặc khác nhau giữa các đời máy</td></tr>
+            <tr><td>Pool kết nối MySQL</td><td>Khi lệnh từ xa và đơn tại chỗ cùng nhiều</td></tr>
+            <tr><td>Lưu kết quả lệnh từ xa xuống đĩa</td><td>Khi có lệnh ghi không tự an toàn khi chạy lại</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="chu-thich">
+      <div class="sec-head"><span class="sec-no">Mục 8</span><h2>Chú thích</h2></div>
+      <ol class="fnotes">
+        <li id="fn-1"><b>systemd.</b> Trình quản lý dịch vụ của Linux; unit <code>flexmix-backend.service</code> chạy <code>main.py</code> và khởi động lại khi tiến trình thoát. <a class="fn-back" href="#fnr-1" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-2"><b>I²C.</b> Bus hai dây nối Pi với các chip ngoại vi; ở đây là hai chip mở rộng 16 chân PCF8575. <a class="fn-back" href="#fnr-2" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-3"><b>HX711.</b> Chip khuếch đại và chuyển đổi tín hiệu cảm biến cân sang số 24 bit, đọc bằng một chân xung và một chân dữ liệu. <a class="fn-back" href="#fnr-3" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-4"><b>Tailscale.</b> Mạng riêng ảo giữa các thiết bị của nhóm, địa chỉ dạng 100.x, dùng để quản trị máy từ xa mà không mở cổng ra Wi-Fi của quán. <a class="fn-back" href="#fnr-4" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-5"><b>PWM (Pulse Width Modulation).</b> Bật tắt chân điều khiển rất nhanh; ở đây chạy hết công suất ở tần số 1 kHz để đóng MOSFET của bơm. <a class="fn-back" href="#fnr-5" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-6"><b>TSPL và CUPS.</b> TSPL là ngôn ngữ lệnh của máy in nhãn; CUPS là hệ thống hàng đợi in của Linux, ở đây chuyển nguyên byte qua hàng đợi <code>raw</code>. <a class="fn-back" href="#fnr-6" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-7"><b>CMA (Contiguous Memory Allocator).</b> Vùng RAM liền khối 320 MB mà tầng đồ hoạ của Pi cấp buffer. <a class="fn-back" href="#fnr-7" aria-label="Quay lại chỗ dẫn">↩</a></li>
+        <li id="fn-8"><b>BLE (Bluetooth Low Energy).</b> Bluetooth năng lượng thấp, dùng để điện thoại nhận máy tại chỗ. <a class="fn-back" href="#fnr-8" aria-label="Quay lại chỗ dẫn">↩</a></li>
+      </ol>
+    </section>
+
+    <footer class="end">Sơ đồ chi tiết vẽ bằng Mermaid (cdn.jsdelivr.net, cần mạng lần đầu); sơ đồ toàn cục là SVG tĩnh. Mermaid không tải được thì khung hiện mã nguồn sơ đồ. "Mã nguồn" chép mã; "Phóng to" mở kích thước thật. Xem kèm <a href="version1-1-code-manual.html">cẩm nang mã nguồn v1.1</a> cho bản đồ file và kết quả review.</footer>
+    </main>
+  </div>
+</div>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ phóng to">
+  <div class="zoom-bar"><span>Kéo hoặc cuộn để xem · Esc để đóng</span><button type="button" id="zoom-close">Đóng</button></div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script src="../assets/sequence-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../assets/doc.js"></script>
+</body>
+</html>
